@@ -17,7 +17,7 @@ import DateRangeSelector from "./components/DateRangeSelector";
 import { AdminDateRangeProvider, useAdminDateRange } from "./context/AdminDateRangeContext";
 import { RoleProvider } from "./context/RoleContext";
 import { User as UserIcon, Building2, Receipt, Droplets, BarChart3, NotepadTextDashed, FolderOpenDot, Layers, FilePenLine, ChartLine, CalendarPlus, ExternalLink, Globe, RefreshCw, Server, Cloud, Megaphone, Terminal } from "lucide-react";
-import { MdCreditCard, MdNotifications, MdMenu, MdSearch, MdDashboard, MdAccountBalanceWallet, MdInsertDriveFile, MdGroup, MdInventory2, MdLogout, MdClose, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdWorkOutline, MdKeyboardDoubleArrowLeft, MdKeyboardDoubleArrowRight, MdCalendarToday, MdAdd, MdAccessTime, MdSettings, MdAttachMoney, MdDownload, MdMenuBook, MdAccountBalance, MdLockOutline, MdWarning } from "react-icons/md";
+import { MdCreditCard, MdNotifications, MdMenu, MdSearch, MdDashboard, MdAccountBalanceWallet, MdInsertDriveFile, MdGroup, MdInventory2, MdLogout, MdClose, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdWorkOutline, MdKeyboardDoubleArrowLeft, MdKeyboardDoubleArrowRight, MdCalendarToday, MdAdd, MdAccessTime, MdSettings, MdAttachMoney, MdDownload, MdMenuBook, MdAccountBalance, MdLockOutline, MdLock, MdWarning } from "react-icons/md";
 import { AppLockProvider, useAppLock, LockScreen } from "./components/AppLockProvider";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { UpgradeModal } from "./components/UpgradeModal";
@@ -757,6 +757,12 @@ const Sidebar = ({
                 </div>
               </Link>
               <LockSidebarButton />
+            </div>
+            
+            <div className="px-2 pt-3 pb-1 text-[10px] text-gray-500 leading-relaxed text-center border-t border-border/50 flex flex-col items-center justify-center gap-1.5">
+              <p className="max-w-[200px]">
+                All Data are Secured &amp; <span className="text-brand-500 font-medium">End to End encrypted</span>. Guaranteed by <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a> @{new Date().getFullYear()}
+              </p>
             </div>
           </div>
         </div>

@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 import { useSession, signOut } from 'next-auth/react';
 import { IdCard, Globe, Save, Building, Copy, Terminal, Sliders } from "lucide-react";
-import { MdPerson, MdMailOutline, MdKeyboardArrowRight, MdKeyboardArrowLeft, MdLocationOn, MdPhone, MdUpload, MdDownload, MdCheck, MdShowChart, MdCreditCard, MdGroup, MdBusiness, MdHistory, MdLogout, MdWarning, MdSecurity, MdDelete } from "react-icons/md";
+import { MdPerson, MdMailOutline, MdKeyboardArrowRight, MdKeyboardArrowLeft, MdLocationOn, MdPhone, MdUpload, MdDownload, MdCheck, MdShowChart, MdCreditCard, MdGroup, MdBusiness, MdHistory, MdLogout, MdWarning, MdSecurity, MdDelete, MdLock } from "react-icons/md";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { updateTenantInfo, getTeamMembers, updateTeamMemberRole, removeTeamMember, leaveTeam, getCurrentUserRole, resetWorkspace, deleteWorkspace, deletePersonalAccount, deleteTeamInvitation } from "../actions/tenants";
@@ -577,6 +577,15 @@ export default function SettingsPage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="mt-8 text-xs text-gray-500 leading-relaxed text-center pb-4 border-t border-border/50 pt-5 flex flex-col items-center justify-center gap-2">
+              <div className="p-1.5 rounded-full bg-brand-500/10 border border-brand-500/20">
+                <MdLock className="w-4 h-4 text-brand-500" />
+              </div>
+              <p className="max-w-[250px]">
+                All Data are Secured &amp; <span className="text-brand-500 font-medium">End to End encrypted</span>. Guaranteed by <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a> @{new Date().getFullYear()}
+              </p>
             </div>
 
           </div>
