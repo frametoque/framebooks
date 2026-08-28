@@ -41,7 +41,7 @@ export async function uploadReceipt(formData: FormData, type: 'income' | 'expens
   }
 }
 
-import { unstable_cache } from 'next/cache';
+import { unstable_cache, revalidateTag } from 'next/cache';
 
 // -- DASHBOARD --
 export async function getDashboardData(startDate?: string, endDate?: string) {
@@ -1349,6 +1349,10 @@ export async function updateInvoice(invoiceId: string, invoiceData: any, lineIte
   }
 
   await logSystemAction(`Updated invoice: "${invoiceData.projectName}" (${invoiceId})`);
+  
+  revalidateTag(`invoices-${tenantId}`, {});
+  revalidateTag(`dashboard-${tenantId}`, {});
+
   return { success: true };
 }
 

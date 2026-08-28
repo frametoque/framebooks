@@ -402,7 +402,6 @@ export default function InvoicesPage() {
               <tr className="border-b border-border text-gray-500 dark:text-gray-400 text-sm">
                 <th className="p-4 font-medium">Invoice #</th>
                 <th className="p-4 font-medium">Client</th>
-                <th className="p-4 font-medium">Service</th>
                 <th className="p-4 font-medium">Amount</th>
                 <th className="p-4 font-medium">Date</th>
 
@@ -438,7 +437,6 @@ export default function InvoicesPage() {
                         <div className="text-xs text-gray-500 mt-0.5">{row.clientEmail}</div>
                       )}
                     </td>
-                    <td className="p-4 text-sm text-gray-500 dark:text-gray-300">{row.service}</td>
                     <td className="p-4">
                       <div className="font-semibold text-foreground">{formatLKR(row.amount)}</div>
                       {paymentStatus !== 'fully paid' && (

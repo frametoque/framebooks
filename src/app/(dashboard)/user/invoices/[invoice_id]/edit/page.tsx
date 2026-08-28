@@ -344,13 +344,8 @@ export default function EditInvoicePage() {
 
           {/* Invoice Details */}
           <div className="bg-transparent border border-border rounded-3xl p-6 space-y-4">
-            <h2 className="text-xl font-semibold mb-4">Project & Invoice Details</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-sm text-gray-400">Project Name</label>
-                <input type="text" name="projectName" value={formData.projectName} onChange={handleFormChange}
-                  className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors" />
-              </div>
+            <h2 className="text-xl font-semibold mb-4">Invoice Details</h2>
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-1">
                 <label className="text-sm text-gray-400">Date</label>
                 <input type="date" name="date" value={formData.date} onChange={handleFormChange}
@@ -486,12 +481,10 @@ export default function EditInvoicePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
-            <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-transparent border border-border hover:bg-black/10 dark:hover:bg-white/10 text-foreground rounded-3xl font-semibold transition-colors">
-              <Save className="w-5 h-5" /> Save Draft
-            </button>
+            {/* Removed Save Draft */}
             <button onClick={handleSave} disabled={isSubmitting}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors ml-auto disabled:opacity-50 disabled:cursor-not-allowed">
-              <Send className="w-5 h-5" /> {isSubmitting ? "Updating..." : "Update Invoice"}
+              <Save className="w-5 h-5" /> {isSubmitting ? "Updating..." : "Update Invoice"}
             </button>
           </div>
         </div>
