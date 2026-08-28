@@ -519,7 +519,8 @@ export default function SettingsPage() {
                     src={user.image || "/logos/ft/logo.png"}
                     alt="Profile"
                     className="w-full h-full object-cover"
-                    onError={(e) = width={800} height={800} unoptimized={true} /> {
+                    width={800} height={800} unoptimized={true}
+                    onError={(e) => {
                       e.currentTarget.src = "/logos/ft/logo.png";
                       e.currentTarget.onerror = null;
                     }}
@@ -1174,7 +1175,8 @@ export default function SettingsPage() {
                       src={user.image || "/logos/ft/logo.png"}
                       alt="Profile"
                       className="w-full h-full object-cover"
-                      onError={(e) = width={800} height={800} unoptimized={true} /> { e.currentTarget.src = "/logos/ft/logo.png"; e.currentTarget.onerror = null; }}
+                      width={800} height={800} unoptimized={true}
+                      onError={(e) => { e.currentTarget.src = "/logos/ft/logo.png"; e.currentTarget.onerror = null; }}
                     />
                   </div>
                   <div className="flex-1 flex flex-col items-start gap-1">
