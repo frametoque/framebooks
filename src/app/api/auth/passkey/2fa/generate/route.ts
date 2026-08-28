@@ -4,10 +4,9 @@ export const dynamic = 'force-dynamic';
 import {  clerkClient, auth  } from '@/lib/auth';
 import sql from '@/lib/db';
 
-const rpID = 'localhost';
-
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
+  const rpID = new URL(req.url).hostname;
   const email = searchParams.get('email');
   
   let userId;

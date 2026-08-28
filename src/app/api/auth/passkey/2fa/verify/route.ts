@@ -5,10 +5,9 @@ import sql from '@/lib/db';
 import { cookies } from 'next/headers';
 import {  auth  } from '@/lib/auth';
 
-const rpID = 'localhost';
-const origin = 'http://localhost:3000';
-
 export async function POST(req: Request) {
+  const rpID = new URL(req.url).hostname;
+  const origin = new URL(req.url).origin;
   const body = await req.json();
   const cookieStore = await cookies();
   const expectedChallenge = cookieStore.get('currentChallenge')?.value;

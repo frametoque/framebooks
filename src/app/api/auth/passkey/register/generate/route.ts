@@ -4,9 +4,9 @@ import {  auth, currentUser  } from '@/lib/auth';
 import sql from '@/lib/db';
 
 const rpName = 'Framebooks';
-const rpID = 'localhost';
 
-export async function GET() {
+export async function GET(req: Request) {
+  const rpID = new URL(req.url).hostname;
   const { userId } = await auth();
   const user = await currentUser();
   

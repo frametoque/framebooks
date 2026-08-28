@@ -4,10 +4,10 @@ import {  auth, currentUser  } from '@/lib/auth';
 import sql from '@/lib/db';
 
 const rpName = 'Framebooks';
-const rpID = 'localhost';
-const origin = 'http://localhost:3000';
 
-export async function GET() {
+export async function GET(req: Request) {
+  const rpID = new URL(req.url).hostname;
+  const origin = new URL(req.url).origin;
   const { userId } = await auth();
   const user = await currentUser();
   
