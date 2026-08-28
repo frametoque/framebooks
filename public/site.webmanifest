@@ -1,0 +1,105 @@
+{
+  "name": "FrameToque Digital Media",
+  "short_name": "FrameToque",
+  "description": "A modern visual storytelling platform built for the future.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui", "window-controls-overlay", "tabbed"],
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "en",
+  "dir": "ltr",
+
+  "categories": ["graphic design", "videography", "Web Development", "productivity"], 
+  "prefer_related_applications": true,
+
+  "icons": [
+    { "src": "/favicon-16x16.png", "sizes": "16x16", "type": "image/png" },
+    { "src": "/favicon-32x32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "/favicon-96x96.png", "sizes": "96x96", "type": "image/png" },
+    { "src": "/favicon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/favicon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ],
+
+  "screenshots": [
+    {
+      "src": "/screenshots/wide1.png",
+      "sizes": "3099x1869",
+      "type": "image/png",
+      "label": "Frametoque on desktop",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshots/handheld1.png",
+      "sizes": "1290x2796",
+      "type": "image/png",
+      "label": "Frametoque on mobile",
+      "form_factor": "narrow"
+    }
+  ],
+
+  "id": "/?source=pwa",
+
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icons/layout-dashboard.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "My Projects",
+      "short_name": "Projects",
+      "url": "/dashboard/projects",
+      "icons": [{ "src": "/icons/clipboard-list.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Settings",
+      "short_name": "Settings",
+      "url": "/dashboard/settings",
+      "icons": [{ "src": "/icons/settings.png", "sizes": "96x96", "type": "image/png" }]
+    }
+  ],
+
+
+  "launch_handler": { "client_mode": "focus-existing" },
+
+
+  "related_applications": [
+    { "platform": "play", "url": "https://play.google.com/store/apps/details?id=com.frametoque", "id": "com.frametoque" }
+  ],
+
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [{ "name": "media", "accept": ["image/*", "video/*"] }]
+    }
+  },
+
+  "iarc_rating_id": "L-Frametoque-01",
+
+  "widgets": [
+    {
+      "src": "/dashboard",
+      "name": "Frametoque Dashboard",
+      "description": "Quick access to your dashboard",
+      "sizes": ["120x120", "240x240"],
+      "tag": "dashboard"
+    }
+  ],
+
+  "edge_side_panel": { "src": "/dashboard", "enabled": true },
+
+  "note_taking": {
+    "new_note_url": "/dashboard/settings",
+    "name": "Frametoque Notes",
+    "description": "Create a new note quickly from anywhere"
+  }
+}
