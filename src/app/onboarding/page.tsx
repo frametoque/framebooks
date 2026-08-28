@@ -296,7 +296,7 @@ export default function OnboardingPage() {
                     >
                       {logoPreview ? (
                         <div className="relative w-full h-full flex items-center justify-center p-4">
-                          <img src={logoPreview} alt="Logo Preview" className="max-h-full max-w-full object-contain rounded-xl" />
+                          <Image src={logoPreview} alt="Logo Preview" className="max-h-full max-w-full object-contain rounded-xl"  width={800} height={800} unoptimized={true} />
                           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl flex items-center justify-center">
                             <span className="text-sm font-medium text-foreground">Change Logo</span>
                           </div>

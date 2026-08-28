@@ -21,6 +21,7 @@ import { useAdminDateRange } from "../context/AdminDateRangeContext";
 import { useAppLock } from "../components/AppLockProvider";
 import { useRole } from "../context/RoleContext";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
+import Image from "next/image";
 
 const filters = ["All", "Web dev", "Graphic design", "Video editing", "Photography", "Videography"];
 
@@ -494,11 +495,11 @@ const handleDelete = async (id: number) => {
             </div>
 
             <div className="w-full md:w-2/3 bg-black/50 flex items-center justify-center p-6 min-h-[300px] overflow-hidden">
-              <img 
+              <Image 
                 src={viewingReceipt.receiptUrl} 
                 alt="Quotation Attachment" 
                 className="max-w-full max-h-full object-contain rounded-xl shadow-lg border border-border"
-              />
+               width={800} height={800} unoptimized={true} />
             </div>
           </div>
         </div>

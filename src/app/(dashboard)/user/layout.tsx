@@ -570,7 +570,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
               const isPro = !isProPlus && plan.includes("pro");
               
               const Inner = () => tenantInfo.logo_url ? (
-                <img src={tenantInfo.logo_url} alt="Logo" className="w-9 h-9 rounded-full object-cover" />
+                <Image src={tenantInfo.logo_url} alt="Logo" width={36} height={36} className="w-9 h-9 rounded-full object-cover" />
               ) : (
                 <div className="w-9 h-9 rounded-full bg-card flex items-center justify-center">
                   <Building2 className="w-4 h-4 text-gray-400" />
@@ -712,14 +712,22 @@ const Sidebar = ({
               const Icon = item.icon;
               const active = isActive(item.href);
               return (
-                <div key={item.href}>
+                <div key={item.href} className="relative">
+                  {active && (
+                    <motion.div
+                      layoutId="active-sidebar-tab"
+                      className="absolute inset-0 bg-white/10 rounded-full"
+                      initial={false}
+                      transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                    />
+                  )}
                   <Link
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
                     target={item.newtab ? "_blank" : "_self"}
-                    className={`flex items-center gap-3 pl-[14px] pr-3 py-2.5 rounded-full transition-colors duration-150 overflow-hidden w-full justify-start
+                    className={`relative z-10 flex items-center gap-3 pl-[14px] pr-3 py-2.5 rounded-full transition-colors duration-150 overflow-hidden w-full justify-start
                       ${active
-                        ? "bg-white/10 text-brand-500 font-semibold"
+                        ? "text-brand-500 font-semibold"
                         : "text-foreground font-medium hover:text-brand-500 bg-transparent"
                       }`}
                   >
@@ -759,9 +767,12 @@ const Sidebar = ({
               <LockSidebarButton />
             </div>
             
-            <div className="px-2 pt-3 pb-1 text-[10px] text-gray-500 leading-relaxed text-center border-t border-border/50 flex flex-col items-center justify-center gap-1.5">
-              <p className="max-w-[200px]">
-                All Data are Secured &amp; <span className="text-brand-500 font-medium">End to End encrypted</span>. Guaranteed by <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a> @{new Date().getFullYear()}
+            <div className="px-2 pt-3 pb-1 text-[10px] text-gray-500 dark:text-white leading-relaxed text-center border-t border-border/50 flex flex-col items-center justify-center gap-1.5">
+              <p className="max-w-[250px]">
+                Your data stays secure with<br/>
+                <span className="text-brand-500 font-medium">end-to-end encryption</span>.<br/>
+                &copy; {new Date().getFullYear()}. <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a>.<br/>
+                All rights reserved.
               </p>
             </div>
           </div>

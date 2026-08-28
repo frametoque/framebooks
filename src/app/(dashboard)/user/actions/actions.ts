@@ -41,14 +41,23 @@ export async function uploadReceipt(formData: FormData, type: 'income' | 'expens
   }
 }
 
+import { unstable_cache } from 'next/cache';
+
 // -- DASHBOARD --
 export async function getDashboardData(startDate?: string, endDate?: string) {
   const start = startDate || '1970-01-01';
   const end = endDate || '2099-12-31';
+  const tenantId = await getTenantId();
+  if (!tenantId) return null;
 
-    const tenantId = await getTenantId();
-    if (!tenantId) return null;
-    
+  return unstable_cache(
+    async () => _getDashboardData(tenantId, start, end),
+    [`dashboard-data-${tenantId}-${start}-${end}`],
+    { tags: [`dashboard-${tenantId}`], revalidate: 3600 }
+  )();
+}
+
+async function _getDashboardData(tenantId: string, start: string, end: string) {
     const [
       incomes,
       expenses,
@@ -163,7 +172,7 @@ export async function getDashboardData(startDate?: string, endDate?: string) {
     sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date_trunc('month', date) = date_trunc('month', current_date)`,
     sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date_trunc('month', date) = date_trunc('month', current_date - interval '1 month')`,
     sql`SELECT COUNT(*) as count FROM admin_clients WHERE tenant_id = ${tenantId}`,
-    import('./accounts').then(m => m.getAccounts(start, end))
+    import('./accounts').then(m => m.getAccounts(start, end, tenantId))
   ]);
 
   const totalAssets = accounts.reduce((sum: number, a: any) => sum + (a.currentBalance || 0), 0);
@@ -824,10 +833,15 @@ export async function payScheduledExpense(id: number) {
 }
 
 // -- INVOICES --
+import { cachedQuery } from '@/lib/db';
+
 export async function getInvoices() {
   const tenantId = await getTenantId();
-  const [totalIssuedCount, rows, nonAdvancePaymentsRows] = await Promise.all([
-    sql`SELECT COUNT(*) as count FROM invoices WHERE tenant_id = ${tenantId}`,
+  if (!tenantId) return { invoices: [], totalIssued: 0, totalRevenue: 0, totalOutstanding: 0 };
+
+  const [totalIssuedCount, rows, nonAdvancePaymentsRows] = await cachedQuery(
+    () => Promise.all([
+      sql`SELECT COUNT(*) as count FROM invoices WHERE tenant_id = ${tenantId}`,
     sql`
       SELECT 
         i.invoice_id as id, 
@@ -844,7 +858,9 @@ export async function getInvoices() {
       WHERE tenant_id = ${tenantId} AND invoice_id IS NOT NULL AND LOWER(description) NOT LIKE 'advance:%' AND LOWER(description) NOT LIKE 'advance payment%'
       GROUP BY invoice_id
     `
-  ]);
+    ])
+  , [`invoices-${tenantId}`], 3600);
+  
   const paymentsMap: Record<string, number> = {};
   nonAdvancePaymentsRows.forEach((p: any) => {
     paymentsMap[p.invoice_id] = parseFloat(p.paid_sum || '0');

@@ -17,6 +17,7 @@ import AnimatedNumber from "../components/AnimatedNumber";
 import { useAdminDateRange } from "../context/AdminDateRangeContext";
 import { useAppLock } from "../components/AppLockProvider";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
+import Image from "next/image";
 
 const formatLKR = (amount: number) => {
   const num = new Intl.NumberFormat('en-LK', {
@@ -1035,7 +1036,7 @@ export default function IncomePage() {
                   </object>
                 </div>
               ) : (
-                <img src={viewingReceipt.receiptUrl} alt="Receipt" className="max-w-full max-h-full object-contain rounded-xl shadow-lg border border-border" />
+                <Image src={viewingReceipt.receiptUrl} alt="Receipt" className="max-w-full max-h-full object-contain rounded-xl shadow-lg border border-border"  width={800} height={800} unoptimized={true} />
               )}
             </div>
           </div>

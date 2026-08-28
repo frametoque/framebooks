@@ -18,6 +18,7 @@ import { useAppLock } from "../components/AppLockProvider";
 import AuditLogsTab from "./AuditLogsTab";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import { UpgradeOverlay } from "../components/UpgradeOverlay";
+import Image from "next/image";
 
 const plans = [
   {
@@ -489,11 +490,11 @@ export default function SettingsPage() {
             <div className="bg-card rounded-[32px] p-8 flex flex-col items-center text-center shadow-lg">
               <div className="relative w-20 h-20 rounded-full overflow-hidden mb-4 border-2 border-border">
                 {tenantInfo.logo_url ? (
-                  <img
+                  <Image
                     src={tenantInfo.logo_url}
                     alt="Business Logo"
                     className="w-full h-full object-cover"
-                  />
+                   width={800} height={800} unoptimized={true} />
                 ) : (
                   <div className="w-full h-full bg-card flex items-center justify-center">
                     <Building className="w-8 h-8 text-gray-500" />
@@ -514,11 +515,11 @@ export default function SettingsPage() {
             <div className="bg-card rounded-2xl p-5 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0 border border-border">
-                  <img
+                  <Image
                     src={user.image || "/logos/ft/logo.png"}
                     alt="Profile"
                     className="w-full h-full object-cover"
-                    onError={(e) => {
+                    onError={(e) = width={800} height={800} unoptimized={true} /> {
                       e.currentTarget.src = "/logos/ft/logo.png";
                       e.currentTarget.onerror = null;
                     }}
@@ -579,12 +580,12 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="mt-8 text-xs text-gray-500 leading-relaxed text-center pb-4 border-t border-border/50 pt-5 flex flex-col items-center justify-center gap-2">
-              <div className="p-1.5 rounded-full bg-brand-500/10 border border-brand-500/20">
+            <div className="mt-8 text-xs text-gray-500 dark:text-white leading-relaxed pb-4 border-t border-border/50 pt-5 flex flex-row items-center justify-center gap-4 text-left">
+              <div className="p-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 shrink-0">
                 <MdLock className="w-4 h-4 text-brand-500" />
               </div>
-              <p className="max-w-[250px]">
-                All Data are Secured &amp; <span className="text-brand-500 font-medium">End to End encrypted</span>. Guaranteed by <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a> @{new Date().getFullYear()}
+              <p>
+                Your data stays secure with <span className="text-brand-500 font-medium">end-to-end encryption</span>. &copy; {new Date().getFullYear()}. <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a>. All rights reserved.
               </p>
             </div>
 
@@ -786,7 +787,7 @@ export default function SettingsPage() {
                         <Loader />
                       </div>
                     ) : tenantInfo.logo_url ? (
-                      <img src={tenantInfo.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                      <Image src={tenantInfo.logo_url} alt="Logo" className="w-full h-full object-cover"  width={800} height={800} unoptimized={true} />
                     ) : (
                       <div className="w-full h-full bg-card flex items-center justify-center">
                         <Building className="w-8 h-8 text-gray-500" />
@@ -1169,11 +1170,11 @@ export default function SettingsPage() {
                 {/* Personal Info - simplified: name, photo, connected accounts */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-6 border-b border-border">
                   <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-border shrink-0">
-                    <img
+                    <Image
                       src={user.image || "/logos/ft/logo.png"}
                       alt="Profile"
                       className="w-full h-full object-cover"
-                      onError={(e) => { e.currentTarget.src = "/logos/ft/logo.png"; e.currentTarget.onerror = null; }}
+                      onError={(e) = width={800} height={800} unoptimized={true} /> { e.currentTarget.src = "/logos/ft/logo.png"; e.currentTarget.onerror = null; }}
                     />
                   </div>
                   <div className="flex-1 flex flex-col items-start gap-1">

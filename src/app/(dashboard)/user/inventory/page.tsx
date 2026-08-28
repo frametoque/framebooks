@@ -13,6 +13,7 @@ import { useRole } from "../context/RoleContext";
 import { PlanType } from "@/lib/plans";
 import { getTenantPlan } from "../actions/plan";
 import { UpgradeOverlay } from "../components/UpgradeOverlay";
+import Image from "next/image";
 
 const formatLKR = (amount: number) => {
   const num = new Intl.NumberFormat('en-LK', {
@@ -668,12 +669,12 @@ export default function InventoryPage() {
                 {viewingItemTab === 'invoice' && viewingItem.expense_receipt_url && (
                   viewingItem.expense_receipt_url.match(/\.pdf/i)
                     ? <iframe src={viewingItem.expense_receipt_url} className="w-full h-full min-h-[60vh] rounded-xl border border-border" title="Purchase Invoice" />
-                    : <img src={viewingItem.expense_receipt_url} alt="Purchase Invoice" className="max-w-full max-h-[70vh] object-contain rounded-xl" />
+                    : <Image src={viewingItem.expense_receipt_url} alt="Purchase Invoice" className="max-w-full max-h-[70vh] object-contain rounded-xl"  width={800} height={800} unoptimized={true} />
                 )}
                 {viewingItemTab === 'warranty' && viewingItem.warranty_letter_url && (
                   viewingItem.warranty_letter_url.match(/\.pdf/i)
                     ? <iframe src={viewingItem.warranty_letter_url} className="w-full h-full min-h-[60vh] rounded-xl border border-border" title="Warranty Letter" />
-                    : <img src={viewingItem.warranty_letter_url} alt="Warranty Letter" className="max-w-full max-h-[70vh] object-contain rounded-xl" />
+                    : <Image src={viewingItem.warranty_letter_url} alt="Warranty Letter" className="max-w-full max-h-[70vh] object-contain rounded-xl"  width={800} height={800} unoptimized={true} />
                 )}
               </div>
             </div>
@@ -700,7 +701,7 @@ export default function InventoryPage() {
               {viewingDoc.url.match(/\.pdf/i) ? (
                 <iframe src={viewingDoc.url} className="w-full h-[75vh] rounded-xl border border-border" title={viewingDoc.title} />
               ) : (
-                <img src={viewingDoc.url} alt={viewingDoc.title} className="max-w-full max-h-[75vh] object-contain rounded-xl" />
+                <Image src={viewingDoc.url} alt={viewingDoc.title} className="max-w-full max-h-[75vh] object-contain rounded-xl"  width={800} height={800} unoptimized={true} />
               )}
             </div>
           </div>

@@ -12,6 +12,7 @@ import { getTenantInfo } from "../actions/tenants";
 import { useAppLock } from "../components/AppLockProvider";
 import AnimatedNumber from "../components/AnimatedNumber";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
+import Image from "next/image";
 
 const filters = ["All", "Fully Paid", "Partially Paid", "On Review", "Overdue", "Advance-Paid", "Unpaid"];
 
@@ -610,7 +611,7 @@ export default function InvoicesPage() {
                   </label>
                 ) : slipPreview ? (
                   <div className="relative rounded-xl overflow-hidden border border-border">
-                    <img src={slipPreview} alt="Slip preview" className="w-full h-40 object-cover" />
+                    <Image src={slipPreview} alt="Slip preview" className="w-full h-40 object-cover"  width={800} height={800} unoptimized={true} />
                     <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 rounded-lg text-xs text-foreground flex items-center gap-1">
                       <ImageIcon className="w-3 h-3" />
                       {slipFile?.name}

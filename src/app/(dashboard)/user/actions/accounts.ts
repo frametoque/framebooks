@@ -7,11 +7,11 @@ import { logSystemAction } from "@/lib/logger";
 import { getTenantId } from "./actions";
 
 // Fetch all accounts and calculate running balances
-export async function getAccounts(startDate?: string, endDate?: string) {
+export async function getAccounts(startDate?: string, endDate?: string, providedTenantId?: string) {
   const start = startDate || '1970-01-01';
   const end = endDate || '2099-12-31';
 
-  const tenantId = await getTenantId();
+  const tenantId = providedTenantId || await getTenantId();
   let rows;
   try {
     rows = await sql`
