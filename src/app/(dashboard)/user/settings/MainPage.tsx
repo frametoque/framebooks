@@ -81,7 +81,7 @@ export default function SettingsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "profile");
-  const [activeView, setActiveView] = useState("hub");
+  const [activeView, setActiveView] = useState(searchParams.get("tab") ? "form" : "hub");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -416,8 +416,7 @@ export default function SettingsPage() {
       ? [{ id: "billing", name: "Billing & Plans", icon: MdCreditCard }] : []),
     ...(currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin' 
       ? [
-          { id: "prefs", name: "Admin Preferences", icon: Sliders },
-          { id: "system", name: "System Status", icon: MdShowChart }
+          { id: "prefs", name: "Admin Preferences", icon: Sliders }
         ] : []),
   ];
 
@@ -554,7 +553,6 @@ export default function SettingsPage() {
                   { name: "Billing & Plans", sub: "Manage your subscription and payments.", icon: MdCreditCard, id: "billing", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
                   { name: "Team Settings", sub: "Manage team members and roles.", icon: MdGroup, id: "team", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
                   { name: "Roles & Permissions", sub: "Configure custom roles.", icon: MdSecurity, id: "roles", allowed: currentUserRole === 'owner' },
-                  { name: "System Status", sub: "View active sessions and platform health.", icon: MdShowChart, id: "system", allowed: true },
                   { name: "Audit Logs", sub: "View system and user activity.", icon: MdHistory, id: "audit_logs", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
                   { name: "Data Export", sub: "Export your workspace data to CSV.", icon: MdDownload, id: "export", allowed: currentUserRole === 'owner' },
                   { name: "Danger Zone", sub: "Destructive account and workspace actions.", icon: MdWarning, id: "danger", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' }
@@ -1367,10 +1365,6 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {activeTab === "system" && (
-              <SystemStatusView />
-            )}
-
             {activeTab === "audit_logs" && (
               <AuditLogsTab />
             )}
@@ -1877,91 +1871,6 @@ function AdminPreferencesView() {
           </button>
         </div>
       </form>
-    </div>
-  );
-}
-
-function SystemStatusView() {
-  const [status, setStatus] = useState({
-    dbStatus: "Checking...",
-    blobStatus: "Checking...",
-    env: "production",
-  });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const res = await fetch("/api/admin/system-status");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success) {
-            setStatus({
-              dbStatus: data.dbStatus,
-              blobStatus: data.blobStatus,
-              env: data.env,
-            });
-          }
-        }
-      } catch (e) {
-        console.error("Failed to check status", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStatus();
-  }, []);
-
-  return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold text-foreground mb-6">System Status & Diagnostics</h2>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Database */}
-        <div className="p-5 bg-transparent border border-border rounded-3xl flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-400 mb-1">Database Connectivity</p>
-            <p className={`text-lg font-bold flex items-center gap-1.5 ${status.dbStatus === "Connected" ? "text-green-400" : "text-red-400"}`}>
-              <span className={`w-2.5 h-2.5 rounded-full ${status.dbStatus === "Connected" ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
-              {status.dbStatus}
-            </p>
-          </div>
-          <MdShowChart className="w-8 h-8 text-foreground/10" />
-        </div>
-
-        {/* Vercel Blob */}
-        <div className="p-5 bg-transparent border border-border rounded-3xl flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-400 mb-1">Vercel Blob CDN Status</p>
-            <p className={`text-lg font-bold flex items-center gap-1.5 ${status.blobStatus === "Connected" ? "text-green-400" : "text-yellow-400"}`}>
-              <span className={`w-2.5 h-2.5 rounded-full ${status.blobStatus === "Connected" ? "bg-green-500 animate-pulse" : "bg-yellow-500"}`} />
-              {status.blobStatus}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="p-6 bg-transparent border border-border rounded-3xl space-y-4">
-        <h3 className="text-lg font-semibold text-foreground">Diagnostics Information</h3>
-        <div className="space-y-2 text-sm text-gray-300">
-          <div className="flex justify-between py-2 border-b border-border">
-            <span>Next.js Framework</span>
-            <span className="font-mono text-gray-400">16.2.9</span>
-          </div>
-          <div className="flex justify-between py-2 border-b border-border">
-            <span>Clerk Authentication</span>
-            <span className="font-mono text-gray-400">v6 (Active)</span>
-          </div>
-          <div className="flex justify-between py-2 border-b border-border">
-            <span>Primary Database Provider</span>
-            <span className="font-mono text-gray-400">Neon PostgreSQL (Serverless)</span>
-          </div>
-          <div className="flex justify-between py-2">
-            <span>Environment Mode</span>
-            <span className="font-mono text-gray-400 capitalize">{status.env}</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

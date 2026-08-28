@@ -77,6 +77,8 @@ export const formatMoneySlash = (value: any, currency = "LKR") => {
 }
 
 export const wrapText = (text: string, font: any, fontSize: number, maxWidth: number) => {
+  if (!text) return [];
+  text = String(text);
   const words = text.split(' ');
   const lines: string[] = [];
   let currentLine = words[0];
@@ -95,237 +97,270 @@ export const wrapText = (text: string, font: any, fontSize: number, maxWidth: nu
   return lines;
 }
 
-export async function generateInvoicePDF(invoice: any): Promise<Uint8Array> {
+export async function generateInvoicePDF(invoice: any, tenantPlan: string = "Free", tenantInfo: any = null): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([595.276, 841.89]); // A4 Size
 
-  // A4 size: 595.276 x 841.89 points
-  const page = pdfDoc.addPage([595.276, 841.89]);
-
-  // Embed fonts
-  const helvetica     = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  // ── Background template ────────────────────────────────────────────────────
-  try {
-    const bgResponse = await fetch("/invoice.png");
-    if (!bgResponse.ok) throw new Error(`Failed to fetch /invoice.png: ${bgResponse.statusText}`);
-    const bgBytes = await bgResponse.arrayBuffer();
-    const bgImage = await pdfDoc.embedPng(bgBytes);
-    page.drawImage(bgImage, { x: 0, y: 0, width: 595.276, height: 841.89 });
-  } catch (error) {
-    console.error("Could not load invoice background image, proceeding without background:", error);
-  }
-
   const {
-    invoice_id,
-    client_name,
-    billing_address,
-    date,
-    currency,
-    subtotal,
-    discount,
-    advance,
-    total,
-    total_due,
-    payment_status,
-    tax_rate,
-    items = [],
-    bank_acc_name,
-    bank_acc_number,
-    bank_acc_bank,
-    bank_acc_branch,
-    legal_name,
+    invoice_id, date, currency, subtotal, discount, advance, total, total_due,
+    payment_status, tax_rate, items: rawItems, legal_name, billing_address,
+    bank_acc_name, bank_acc_number, bank_acc_bank, bank_acc_branch
   } = invoice;
 
-  const width     = 595.276;
-  const height    = 841.89;
-  const scaleX    = width  / 2480;
-  const scaleY    = height / 3508;
-  const scaleFont = scaleX;
+  const items = Array.isArray(rawItems) ? rawItems : (typeof rawItems === 'string' ? JSON.parse(rawItems) : []);
 
-  /** Convert pixel coords on the 2480×3508 template to PDF points */
-  const convert = (topPx: number, leftPx: number, fontPx = 37) => ({
-    x:    leftPx * scaleX,
-    y:    height - topPx * scaleY,
-    size: fontPx * scaleFont,
-  });
+  const width = 595.276;
+  const height = 841.89;
 
-  const drawTextAligned = (
-    text: string,
-    leftPx: number,
-    topPx: number,
-    fontPx: number,
-    font: any,
-    colorHex: string,
-    align: "left" | "center" | "right" = "left",
-    widthPx?: number
-  ) => {
-    if (!text) return;
-    const { x, y, size } = convert(topPx, leftPx, fontPx);
-    const yAdj  = y - size;
-    const color = hexToRgb(colorHex);
-    let finalX  = x;
-    if (align !== "left" && widthPx !== undefined) {
-      const boxW  = widthPx * scaleX;
-      const textW = font.widthOfTextAtSize(text, size);
-      finalX = align === "right" ? x + boxW - textW : x + (boxW - textW) / 2;
-    }
-    page.drawText(text, { x: finalX, y: yAdj, size, font, color });
-  };
+  // Colors
+  const primaryColor = hexToRgb("#1a3a4a");
+  const textColor = hexToRgb("#222222");
+  const lightGray = hexToRgb("#f3f4f6");
+  const borderGray = hexToRgb("#e5e7eb");
 
-  // ── 1. Invoice Number ────────────────────────────────────────────────────────
-  drawTextAligned(invoice_id || "", 1942, 473, 40, helveticaBold, "#1a3a4a");
+  let currentY = height - 50;
 
-  // ── 2. Billing Address ────────────────────────────────────────
-  if (legal_name || billing_address) {
-    const { x, y, size } = convert(940, 130, 45);
-    const color       = hexToRgb("#1a3a4a");
-    const lineSpacing = size * 1.35;
-    let   currentY    = y - size;
-
-    if (legal_name) {
-      page.drawText(legal_name, { x, y: currentY, size, font: helveticaBold, color });
-      currentY -= lineSpacing;
-    }
-    if (billing_address) {
-      const lines = wrapText(billing_address, helveticaBold, size, 470 * scaleX);
-      for (const line of lines) {
-        page.drawText(line, { x, y: currentY, size, font: helveticaBold, color });
-        currentY -= lineSpacing;
+  // Top Section: Logo & Business Name
+  if (tenantInfo?.logo_url) {
+    try {
+      const logoRes = await fetch(tenantInfo.logo_url);
+      if (logoRes.ok) {
+        const logoBytes = await logoRes.arrayBuffer();
+        let logoImage;
+        const lowerUrl = tenantInfo.logo_url.toLowerCase();
+        if (lowerUrl.includes('.png')) {
+          logoImage = await pdfDoc.embedPng(logoBytes);
+        } else {
+          logoImage = await pdfDoc.embedJpg(logoBytes);
+        }
+        
+        const logoDims = logoImage.scaleToFit(120, 50);
+        page.drawImage(logoImage, {
+          x: 40,
+          y: currentY - logoDims.height + 15,
+          width: logoDims.width,
+          height: logoDims.height
+        });
       }
+    } catch (e) {
+      console.error("Failed to load logo", e);
     }
   }
 
-  // ── 3. Date ──────────────────────────────────────────────────────────────────
-  drawTextAligned(formatDate(date), 930, 842, 46, helvetica, "#222222");
+  // Draw Business Name
+  page.drawText(tenantInfo?.name || "Business", {
+    x: 40,
+    y: currentY - 60,
+    size: 20,
+    font: helveticaBold,
+    color: primaryColor,
+  });
 
-  const subtotalVal = parseFloat(subtotal || 0);
-  const discountVal = parseFloat(discount || 0);
-  const advanceVal  = parseFloat(advance || 0);
-  const taxRateVal  = parseFloat(tax_rate || 0);
-  const taxAmountVal = subtotalVal * (taxRateVal / 100);
-  const totalVal    = parseFloat(total || (subtotalVal + taxAmountVal - discountVal));
+  // Invoice Title & Details (Right side)
+  page.drawText("INVOICE", {
+    x: width - 180,
+    y: currentY - 20,
+    size: 32,
+    font: helveticaBold,
+    color: primaryColor,
+  });
+  
+  page.drawText(`Invoice No: ${invoice_id}`, {
+    x: width - 180,
+    y: currentY - 45,
+    size: 10,
+    font: helvetica,
+    color: textColor,
+  });
+  page.drawText(`Date: ${formatDate(date)}`, {
+    x: width - 180,
+    y: currentY - 60,
+    size: 10,
+    font: helvetica,
+    color: textColor,
+  });
 
-  const paymentsList = Array.isArray(invoice.payments) ? invoice.payments : [];
-  const totalPaymentsVal = paymentsList
-    .filter((p: any) => !String(p.description || '').toLowerCase().startsWith('advance'))
-    .reduce((sum: number, p: any) => sum + (parseFloat(p.amount) || 0), 0);
+  currentY -= 110;
 
+  // Bill To
+  page.drawText("Bill To:", {
+    x: 40,
+    y: currentY,
+    size: 12,
+    font: helveticaBold,
+    color: primaryColor,
+  });
+  
+  currentY -= 20;
+  if (legal_name) {
+    page.drawText(legal_name, { x: 40, y: currentY, size: 10, font: helveticaBold, color: textColor });
+    currentY -= 15;
+  }
+  if (billing_address) {
+    const addressLines = wrapText(billing_address, helvetica, 10, 250);
+    for (const line of addressLines) {
+      page.drawText(line, { x: 40, y: currentY, size: 10, font: helvetica, color: textColor });
+      currentY -= 15;
+    }
+  }
+
+  // Total Due on right
   const calculatedTotalDue = total_due !== undefined && total_due !== null
     ? parseFloat(total_due)
-    : Math.max(0, totalVal - advanceVal - totalPaymentsVal);
+    : Math.max(0, parseFloat(total || 0) - parseFloat(advance || 0));
 
-  // ── 4. Total Due ─────────────────────────────────────────────────────────────
-  drawTextAligned(
-    formatMoney(calculatedTotalDue, currency),
-    769, 955, 70, helveticaBold, "#1a3a4a"
-  );
-
-  // ── 5. Line Items ────────────────────────────────────────────────────────────
-  const rowTops = [1470, 1645, 1820, 1995];
-  items.forEach((item: any, i: number) => {
-    if (!item.description) return;
-    const rowTop = rowTops[i] ?? (1470 + i * 175);
-
-    // Description
-    const { x, y, size } = convert(rowTop, 875, 37);
-    const color           = hexToRgb("#222222");
-    const descLines       = wrapText(item.description, helvetica, size, (1525 - 875 - 30) * scaleX);
-    let   descY           = y - size;
-    const descLineSpacing = size * 1.35;
-    descLines.forEach((line) => {
-      page.drawText(line, { x, y: descY, size, font: helvetica, color });
-      descY -= descLineSpacing;
-    });
-
-    // Price
-    let priceText = "-";
-    if (item.price) {
-      const formattedPrice = `${currency === "LKR" ? "Rs." : currency} ${item.price}`;
-      const qty = Number(item.quantity || item.qty) || 1;
-      priceText = `${qty} x ${formattedPrice}`;
-    }
-    drawTextAligned(priceText, 1525, rowTop, 37, helvetica, "#222222", "center", 439);
-
-    // Total
-    drawTextAligned(formatMoney(item.total, currency), 1700, rowTop, 37, helvetica, "#222222", "right", 562);
+  page.drawText("Amount Due", {
+    x: width - 180,
+    y: currentY + 35, // Align with Bill To
+    size: 12,
+    font: helveticaBold,
+    color: primaryColor,
+  });
+  page.drawText(formatMoney(calculatedTotalDue, currency), {
+    x: width - 180,
+    y: currentY + 10,
+    size: 22,
+    font: helveticaBold,
+    color: primaryColor,
   });
 
-  // ── 6. Subtotal ───────────────────────────────────────────────────────────────
-  drawTextAligned(formatMoneySlash(subtotal, currency), 1640, 2225, 45, helvetica, "#222222", "right", 649);
+  currentY -= 30;
 
-  // ── 7. Discount ───────────────────────────────────────────────────────────────
-  drawTextAligned(formatMoneySlash(discount, currency), 1640, 2300, 45, helvetica, "#222222", "right", 649);
+  // Table Header
+  page.drawRectangle({
+    x: 40,
+    y: currentY - 15,
+    width: width - 80,
+    height: 25,
+    color: lightGray,
+  });
+  
+  page.drawText("Description", { x: 50, y: currentY - 5, size: 10, font: helveticaBold, color: primaryColor });
+  page.drawText("Price", { x: 350, y: currentY - 5, size: 10, font: helveticaBold, color: primaryColor });
+  page.drawText("Amount", { x: width - 100, y: currentY - 5, size: 10, font: helveticaBold, color: primaryColor });
 
-  // ── 8. Advance ────────────────────────────────────────────────────────────────
-  drawTextAligned(formatMoneySlash(advance, currency), 1640, 2390, 45, helvetica, "#222222", "right", 649);
+  currentY -= 30;
 
-  // ── 8.5. Tax ──────────────────────────────────────────────────────────────────
-  if (taxRateVal > 0) {
-    const taxAmount = parseFloat(subtotal || 0) * (taxRateVal / 100);
-    drawTextAligned(`Tax (${taxRateVal}%)`, 1450, 2475, 45, helvetica, "#222222", "center", 440);
-    drawTextAligned(formatMoneySlash(taxAmount, currency), 1640, 2475, 45, helvetica, "#222222", "right", 649);
+  // Items
+  items.forEach((item: any) => {
+    if (!item || !item.description) return;
+    const descLines = wrapText(item.description, helvetica, 10, 280);
+    let itemY = currentY;
+
+    descLines.forEach(line => {
+      page.drawText(line, { x: 50, y: itemY, size: 10, font: helvetica, color: textColor });
+      itemY -= 15;
+    });
+
+    if (item.price) {
+      const qty = Number(item.quantity || item.qty) || 1;
+      const priceText = `${qty} x ${currency === "LKR" ? "Rs." : currency} ${item.price}`;
+      page.drawText(priceText, { x: 350, y: currentY, size: 10, font: helvetica, color: textColor });
+    }
+
+    page.drawText(formatMoney(item.total, currency), { x: width - 100, y: currentY, size: 10, font: helvetica, color: textColor });
+
+    currentY = itemY - 10;
+    
+    // Draw row separator
+    page.drawLine({
+      start: { x: 40, y: currentY + 5 },
+      end: { x: width - 40, y: currentY + 5 },
+      color: borderGray,
+      thickness: 1,
+    });
+    currentY -= 10;
+  });
+
+  // Summary
+  currentY -= 20;
+  const summaryX = width - 220;
+  const summaryValX = width - 40;
+
+  const drawSummaryLine = (label: string, value: string, font: any = helvetica, color: any = textColor) => {
+    page.drawText(label, { x: summaryX, y: currentY, size: 10, font: helveticaBold, color: primaryColor });
+    const textW = font.widthOfTextAtSize(value, 10);
+    page.drawText(value, { x: summaryValX - textW, y: currentY, size: 10, font, color });
+    currentY -= 20;
+  };
+
+  drawSummaryLine("Subtotal", formatMoneySlash(subtotal, currency));
+  if (parseFloat(discount || 0) > 0) drawSummaryLine("Discount", formatMoneySlash(discount, currency));
+  if (parseFloat(tax_rate || 0) > 0) {
+    const taxAmount = parseFloat(subtotal || 0) * (parseFloat(tax_rate) / 100);
+    drawSummaryLine(`Tax (${tax_rate}%)`, formatMoneySlash(taxAmount, currency));
   }
+  if (parseFloat(advance || 0) > 0) drawSummaryLine("Advance", formatMoneySlash(advance, currency));
 
-  // ── 9. Total ──────────────────────────────────────────────────────────────────
-  drawTextAligned(formatMoney(total, currency), 1600, 2560, 60, helveticaBold, "#1a3a4a", "right", 649);
+  page.drawLine({
+    start: { x: summaryX, y: currentY + 10 },
+    end: { x: summaryValX, y: currentY + 10 },
+    color: borderGray,
+    thickness: 1,
+  });
 
-  // ── 10. Bank Account Details ─────────────────────────────────────────────────
+  page.drawText("Total", { x: summaryX, y: currentY - 5, size: 14, font: helveticaBold, color: primaryColor });
+  const totalStr = formatMoney(total, currency);
+  const totalW = helveticaBold.widthOfTextAtSize(totalStr, 14);
+  page.drawText(totalStr, { x: summaryValX - totalW, y: currentY - 5, size: 14, font: helveticaBold, color: primaryColor });
+
+  // Bank Details
+  currentY -= 40;
   if (bank_acc_name || bank_acc_bank || bank_acc_number || bank_acc_branch) {
-    const { x, y, size } = convert(1750, 135, 45);
-    const color       = hexToRgb("#1a3a4a");
-    const lineSpacing = size * 1.35;
-    let   currentY    = y - size;
-
-    if (bank_acc_name) {
-      page.drawText(bank_acc_name, { x, y: currentY, size, font: helveticaBold, color });
-      currentY -= lineSpacing;
-    }
-    if (bank_acc_bank) {
-      const lines = wrapText(bank_acc_bank, helveticaBold, size, 640 * scaleX);
-      for (const line of lines) {
-        page.drawText(line, { x, y: currentY, size, font: helveticaBold, color });
-        currentY -= lineSpacing;
-      }
-    }
-    if (bank_acc_number) {
-      const lines = wrapText(bank_acc_number, helveticaBold, size, 640 * scaleX);
-      for (const line of lines) {
-        page.drawText(line, { x, y: currentY, size, font: helveticaBold, color });
-        currentY -= lineSpacing;
-      }
-    }
-    if (bank_acc_branch) {
-      const lines = wrapText(bank_acc_branch, helveticaBold, size, 640 * scaleX);
-      for (const line of lines) {
-        page.drawText(line, { x, y: currentY, size, font: helveticaBold, color });
-        currentY -= lineSpacing;
-      }
-    }
+    page.drawText("Bank Details", { x: 40, y: currentY, size: 12, font: helveticaBold, color: primaryColor });
+    currentY -= 15;
+    if (bank_acc_name) { page.drawText(`Account Name: ${bank_acc_name}`, { x: 40, y: currentY, size: 10, font: helvetica, color: textColor }); currentY -= 15; }
+    if (bank_acc_bank) { page.drawText(`Bank: ${bank_acc_bank}`, { x: 40, y: currentY, size: 10, font: helvetica, color: textColor }); currentY -= 15; }
+    if (bank_acc_number) { page.drawText(`Account No: ${bank_acc_number}`, { x: 40, y: currentY, size: 10, font: helvetica, color: textColor }); currentY -= 15; }
+    if (bank_acc_branch) { page.drawText(`Branch: ${bank_acc_branch}`, { x: 40, y: currentY, size: 10, font: helvetica, color: textColor }); currentY -= 15; }
   }
 
-  // ── 11. PAID Stamp ────────────────────────────────────────────────────────────
+  // Watermark
+  if (tenantPlan === "Free" || tenantPlan === "Pro") {
+    const watermarkLine1 = "Generated from Framebook Business Management Service by FrameToque Digital Media.";
+    const watermarkLine2 = "https://frametoque.com";
+    
+    const textWidth1 = helvetica.widthOfTextAtSize(watermarkLine1, 9);
+    const textWidth2 = helvetica.widthOfTextAtSize(watermarkLine2, 9);
+    
+    page.drawText(watermarkLine1, {
+      x: (width - textWidth1) / 2,
+      y: 35,
+      size: 9,
+      font: helvetica,
+      color: hexToRgb("#9ca3af"), 
+    });
+    
+    page.drawText(watermarkLine2, {
+      x: (width - textWidth2) / 2,
+      y: 22,
+      size: 9,
+      font: helvetica,
+      color: hexToRgb("#3b82f6"), // blue for link 
+    });
+  }
+
+  // Paid Stamp
   if (payment_status === "fully paid") {
     try {
       const stampResponse = await fetch("/paid-stamp.png");
-      if (!stampResponse.ok) throw new Error("Stamp not found");
-      const stampBytes = await stampResponse.arrayBuffer();
-      const stampImage = await pdfDoc.embedPng(stampBytes);
-
-      const stampSize = 155; 
-      const stampX    = width - stampSize - 38; 
-      const stampY    = 65;                    
-
-      page.drawImage(stampImage, {
-        x: stampX,
-        y: stampY,
-        width:  stampSize,
-        height: stampSize,
-        rotate:  degrees(-12), 
-        opacity: 0.82,        
-      });
-    } catch (err) {
-      console.error("Could not load paid stamp image:", err);
+      if (stampResponse.ok) {
+        const stampBytes = await stampResponse.arrayBuffer();
+        const stampImage = await pdfDoc.embedPng(stampBytes);
+        page.drawImage(stampImage, {
+          x: width - 160,
+          y: currentY + 30, // Place near bottom summary
+          width: 120,
+          height: 120,
+          rotate: degrees(-12),
+          opacity: 0.7,
+        });
+      }
+    } catch (e) {
+      console.error("Failed to load paid stamp", e);
     }
   }
 
@@ -362,6 +397,7 @@ export default function AdminInvoicePage() {
   const [includeSlip, setIncludeSlip] = useState(false);
   const [convertingPdf, setConvertingPdf] = useState(false);
   const [tenantPlan, setTenantPlan] = useState<string>("Free");
+  const [tenantInfo, setTenantInfo] = useState<any>(null);
 
   const convertPdfToImage = async (file: File): Promise<File> => {
     if (file.type !== "application/pdf") return file;
@@ -472,6 +508,7 @@ export default function AdminInvoicePage() {
         if (!data) throw new Error("Invoice not found");
         setInvoice(data);
         setTenantPlan(tInfo?.plan || "Free");
+        setTenantInfo(tInfo);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -496,9 +533,10 @@ export default function AdminInvoicePage() {
   }, [invoice, searchParams]);
 
   const handleDownload = async () => {
+    if (!invoice) return;
     setDownloading(true);
     try {
-      const pdfBytes = await generateInvoicePDF(invoice);
+      const pdfBytes = await generateInvoicePDF(invoice, tenantPlan, tenantInfo);
       const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -508,7 +546,7 @@ export default function AdminInvoicePage() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("PDF generation failed:", err);
-      alert("Failed to generate PDF. Please try again.");
+      alert("Failed to generate PDF. Please try again.\nError: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setDownloading(false);
     }

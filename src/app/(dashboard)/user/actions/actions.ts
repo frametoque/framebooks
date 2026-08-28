@@ -71,15 +71,15 @@ export async function getDashboardData(startDate?: string, endDate?: string) {
     ] = await Promise.all([
       sql`SELECT SUM(amount) as total FROM admin_incomes WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp`,
       sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp`,
-      sql`SELECT COUNT(*) as count, SUM(total_due) as total_amount FROM invoices WHERE tenant_id = ${tenantId} AND payment_status IN ('unpaid', 'pending', 'partially paid')`,
+      sql`SELECT COUNT(*) as count, SUM(COALESCE(total_due, total)) as total_amount FROM invoices WHERE tenant_id = ${tenantId} AND LOWER(payment_status) IN ('unpaid', 'pending', 'partially paid')`,
     sql`
       SELECT 
-        payment_status as status,
-        SUM(total) as amount_sum,
+        LOWER(payment_status) as status,
+        SUM(COALESCE(total_due, total)) as amount_sum,
         COUNT(*) as count
       FROM invoices
       WHERE tenant_id = ${tenantId}
-      GROUP BY payment_status
+      GROUP BY LOWER(payment_status)
     `,
     sql`
       SELECT 
@@ -1784,10 +1784,13 @@ export async function getQuotationById(quotationId: string) {
 
 // -- BANK ACCOUNTS --
 export async function getBankAccounts() {
+  const tenantId = await getTenantId();
+  if (!tenantId) return [];
+  
   const rows = await sql`
     SELECT id, name, account_number as number, bank_name as bank, branch, 0 as is_default
     FROM accounts
-    WHERE type = 'Bank Account'
+    WHERE type = 'Bank Account' AND tenant_id = ${tenantId}
     ORDER BY id ASC
   `;
   return rows.map(r => ({
