@@ -115,7 +115,7 @@ export default function OnboardingPage() {
 
     const result = await completeOnboarding(formData);
     if (result.success) {
-      await user?.reload();
+      await update();
       if (selectedPlan !== "Free") {
         router.push("/user/settings?tab=billing");
       } else {
@@ -234,7 +234,7 @@ export default function OnboardingPage() {
                 >
                   <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">
                     <span className="bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent">
-                      Welcome, {user?.firstName || "there"}!
+                      Welcome, {(user as any)?.firstName || user?.name?.split(' ')[0] || "there"}!
                     </span>
                   </h1>
                   <p className="text-slate-500 text-sm mb-8 leading-relaxed">

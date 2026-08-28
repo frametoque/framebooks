@@ -86,8 +86,10 @@ export async function currentUser() {
   return {
     id: session.user.id,
     emailAddresses: [{ emailAddress: session.user.email }],
+    primaryEmailAddress: { emailAddress: session.user.email },
     firstName: session.user.name?.split(' ')[0] || "",
     lastName: session.user.name?.split(' ').slice(1).join(' ') || "",
+    fullName: session.user.name || "",
     publicMetadata: {
       tenant_id: (session.user as any).tenantId,
       role: (session.user as any).role,
@@ -102,9 +104,11 @@ export async function currentUser() {
 export const clerkClient = async () => {
   return {
     users: {
-      getUser: async () => null,
-      updateUser: async () => null,
-      deleteUser: async () => null,
+      getUser: async (...args: any[]) => null,
+      updateUser: async (...args: any[]) => null,
+      deleteUser: async (...args: any[]) => null,
+      getUserList: async (...args: any[]) => ({ data: [] }),
+      updateUserMetadata: async (...args: any[]) => null,
     }
   };
 };

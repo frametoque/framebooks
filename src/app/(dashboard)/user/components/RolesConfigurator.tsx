@@ -87,9 +87,9 @@ export default function RolesConfigurator({ currentUserRole }: { currentUserRole
   const handleAddNew = async () => {
     if (!newRoleName.trim()) return;
     try {
-      const defaultPerms = {};
-      RESOURCES.forEach(r => defaultPerms[r.key as keyof typeof defaultPerms] = { read: false, insert: false, update: false, delete: false });
-      GLOBAL_PERMS.forEach(g => defaultPerms[g.key as keyof typeof defaultPerms] = { [g.action]: false });
+      const defaultPerms: Record<string, any> = {};
+      RESOURCES.forEach(r => defaultPerms[r.key] = { read: false, insert: false, update: false, delete: false });
+      GLOBAL_PERMS.forEach(g => defaultPerms[g.key] = { [g.action]: false });
 
       await saveRole({
         role: newRoleName.trim(),

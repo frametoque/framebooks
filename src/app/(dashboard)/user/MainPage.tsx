@@ -69,7 +69,7 @@ export default function DashboardHome() {
     Welcome back,&nbsp;
   </span>
   <span className="bg-gradient-to-r from-brand-400 to-brand-500 bg-clip-text text-transparent">
-    {user?.firstName || user?.fullName || "there"}!
+    {(user as any)?.firstName || (user as any)?.fullName || user?.name?.split(' ')[0] || "there"}!
   </span>
 </h1>
 <p className="text-gray-300 text-lg mb-6 max-w-2xl">
