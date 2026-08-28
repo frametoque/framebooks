@@ -12,9 +12,11 @@ import AnimatedNumber from "../components/AnimatedNumber";
 import { useAdminDateRange } from "../context/AdminDateRangeContext";
 
 const formatLKR = (amount: number) => {
-  const num = new Intl.NumberFormat('en-LK', {
+  const isLarge = Math.abs(amount) >= 10000;
+  const num = new Intl.NumberFormat(isLarge ? 'en-US' : 'en-LK', {
+    notation: isLarge ? 'compact' : 'standard',
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 3,
   }).format(amount || 0);
   return `${num} LKR`;
 };
@@ -510,9 +512,9 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-4">
                   <div className="text-foreground flex shrink-0">
                     {tx.type === 'income' ? (
-                      <MdCallMade className="w-5 h-5 text-brand-500" />
+                      <MdCallReceived className="w-5 h-5 text-brand-500" />
                     ) : (
-                      <MdCallReceived className="w-5 h-5 text-foreground" />
+                      <MdCallMade className="w-5 h-5 text-red-500" />
                     )}
                   </div>
                   <div>

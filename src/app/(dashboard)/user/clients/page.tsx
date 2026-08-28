@@ -288,11 +288,7 @@ export default function ClientsPage() {
                   <tr key={client.id} className="hover:bg-card transition-colors group">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <ClientAvatar
-                          imageUrl={client.imageUrl}
-                          email={client.email}
-                          name={client.name}
-                        />
+                        {/* Client avatar removed for cleaner UI */}
                         <div>
                           <p className="font-semibold text-foreground text-sm">{client.name}</p>
                           <p className="text-xs text-gray-400">{client.email}</p>

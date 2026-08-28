@@ -141,7 +141,7 @@ export default function CategoryPicker({
     <div
       ref={dropdownRef}
       style={{ ...dropdownStyle, position: "absolute", zIndex: 9999 }}
-      className="bg-[#0d0d12] border border-white/15 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[400px]"
+      className="bg-[#082830] border border-white/15 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[400px]"
     >
       <div className="p-2 border-b border-border flex gap-2 shrink-0">
         <input

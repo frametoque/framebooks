@@ -71,13 +71,7 @@ export default function ClientProfilePage() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
         <div className="flex flex-col md:flex-row gap-8 items-start md:items-center relative z-10">
-          <ClientAvatar
-            imageUrl={client.imageUrl}
-            email={client.email}
-            name={client.name}
-            className="w-24 h-24 rounded-full object-cover border-4 border-border flex-shrink-0"
-            fallbackClassName="w-24 h-24 rounded-full bg-gradient-to-br from-brand-600 to-brand-800 flex items-center justify-center text-foreground font-bold text-3xl border-4 border-border flex-shrink-0"
-          />
+          {/* Client avatar removed */}
 
           <div className="flex-1 space-y-2">
             <div className="flex items-center gap-3">

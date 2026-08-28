@@ -2,8 +2,8 @@
 import { Loader } from "@/components/ui/Loader";
 
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { MdLockOutline } from "react-icons/md";
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
+import { MdLockOutline, MdLockOpen } from "react-icons/md";
 import { Loader2 } from "lucide-react";
 
 type AppLockContextType = {
@@ -36,6 +36,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
   const [lastActivity, setLastActivity] = useState<number>(Date.now());
   const [isChecking, setIsChecking] = useState(true);
   const [authCallback, setAuthCallback] = useState<(() => void | Promise<void>) | null>(null);
+  const lastSavedActivity = useRef<number>(Date.now());
 
   // Sync highSecurityMode to localStorage
   const updateHighSecurityMode = (enabled: boolean) => {
@@ -47,10 +48,12 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const init = async () => {
       // Load duration from localStorage
+      let duration = 300000;
       const savedDuration = localStorage.getItem("app-lock-duration");
       if (savedDuration) {
         const parsed = parseInt(savedDuration, 10);
-        setAutoLockDuration(parsed === 0 ? 300000 : parsed);
+        duration = parsed === 0 ? 300000 : parsed;
+        setAutoLockDuration(duration);
       }
       
       const savedHsm = localStorage.getItem("app-lock-hsm");
@@ -64,8 +67,19 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
         const data = await checkRes.json();
         if (data.hasPasskeys) {
           setHasAppLock(true);
-          // Auto-lock immediately on first load if they have passkeys
-          setIsLocked(true);
+          
+          // Check previous session state
+          const savedUnlocked = localStorage.getItem("app-lock-unlocked") === "true";
+          const savedActivityStr = localStorage.getItem("app-lock-last-activity");
+          const savedActivity = savedActivityStr ? parseInt(savedActivityStr, 10) : 0;
+          
+          // Only lock if we were previously locked, or if the auto-lock duration has expired since last activity
+          if (!savedUnlocked || (Date.now() - savedActivity > duration)) {
+            setIsLocked(true);
+            localStorage.setItem("app-lock-unlocked", "false");
+          } else {
+            setIsLocked(false);
+          }
         }
       } catch (e) {
         console.error("Failed to check app lock status", e);
@@ -88,6 +102,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     const interval = setInterval(() => {
       if (Date.now() - lastActivity > autoLockDuration) {
         setIsLocked(true);
+        localStorage.setItem("app-lock-unlocked", "false");
       }
     }, 1000);
 
@@ -96,16 +111,32 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
 
   // Track activity
   useEffect(() => {
-    const updateActivity = () => setLastActivity(Date.now());
+    const updateActivity = () => {
+      const now = Date.now();
+      setLastActivity(now);
+      
+      // Throttle localStorage writes to once every 2 seconds
+      if (now - lastSavedActivity.current > 2000) {
+        localStorage.setItem("app-lock-last-activity", now.toString());
+        lastSavedActivity.current = now;
+      }
+    };
     const events = ["mousedown", "mousemove", "keypress", "scroll", "touchstart"];
-    events.forEach(e => document.addEventListener(e, updateActivity));
+    events.forEach(e => document.addEventListener(e, updateActivity, { passive: true }));
     return () => events.forEach(e => document.removeEventListener(e, updateActivity));
   }, []);
 
-  const lock = () => setIsLocked(true);
+  const lock = () => {
+    setIsLocked(true);
+    localStorage.setItem("app-lock-unlocked", "false");
+  };
   const unlock = () => {
     setIsLocked(false);
-    setLastActivity(Date.now());
+    const now = Date.now();
+    setLastActivity(now);
+    lastSavedActivity.current = now;
+    localStorage.setItem("app-lock-unlocked", "true");
+    localStorage.setItem("app-lock-last-activity", now.toString());
   };
 
   const requireAuth = (callback: () => void | Promise<void>, isMajor = false) => {
@@ -230,11 +261,12 @@ function PasskeyAuthModal({ onSuccess, onCancel }: { onSuccess: () => void, onCa
   );
 }
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function LockScreen() {
   const { unlock } = useAppLock();
   const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
   const handleUnlock = async () => {
@@ -259,7 +291,10 @@ export function LockScreen() {
 
       const verification = await verifyRes.json();
       if (verification.verified) {
-        unlock();
+        setSuccess(true);
+        setTimeout(() => {
+          unlock();
+        }, 800);
       } else {
         setError(verification.error || "Failed to verify passkey.");
       }
@@ -282,15 +317,27 @@ export function LockScreen() {
       className="flex-1 flex flex-col items-center justify-center min-h-[60vh]"
     >
       <motion.div 
-        animate={submitting ? { rotateY: 360 } : { y: [0, -10, 0] }}
-        transition={
-          submitting 
-          ? { duration: 1, repeat: Infinity, ease: "linear" } 
-          : { duration: 4, repeat: Infinity, ease: "easeInOut" }
-        }
-        className="w-24 h-24 bg-brand-500/10 rounded-full flex items-center justify-center mb-8 border border-brand-500/20 shadow-[0_0_40px_rgba(159,232,112,0.1)] relative"
+        className="w-24 h-24 bg-brand-500/10 rounded-full flex items-center justify-center mb-8 border border-brand-500/20 shadow-[0_0_40px_rgba(0,227,91,0.1)] relative"
       >
-        <MdLockOutline className="w-10 h-10 text-brand-500" />
+        <AnimatePresence mode="wait">
+          {success ? (
+            <motion.div
+              key="unlocked"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            >
+              <MdLockOpen className="w-10 h-10 text-brand-500" />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="locked"
+              exit={{ scale: 0, opacity: 0 }}
+            >
+              <MdLockOutline className="w-10 h-10 text-brand-500" />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
       
       <h2 className="text-3xl font-bold text-foreground mb-3 text-center">Dashboard Locked</h2>

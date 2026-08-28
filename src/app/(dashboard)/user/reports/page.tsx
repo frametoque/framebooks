@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Percent, Link as LinkIcon } from "lucide-react";
-import { MdTrendingUp, MdTrendingDown, MdAttachMoney, MdDownload, MdInsertDriveFile, MdCalendarToday, MdGroup, MdMenuBook, MdSearch, MdCallMade, MdCallReceived } from "react-icons/md";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { MdTrendingUp, MdTrendingDown, MdAttachMoney, MdDownload, MdInsertDriveFile, MdCalendarToday, MdGroup, MdMenuBook, MdSearch, MdCallMade, MdCallReceived, MdShowChart } from "react-icons/md";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { getReports, getClients } from "../actions/actions";
 import AnimatedNumber from "../components/AnimatedNumber";
 import { useAdminDateRange } from "../context/AdminDateRangeContext";
@@ -20,12 +20,15 @@ const formatLKR = (amount: number) => {
   return `${num} LKR`;
 };
 
+const GREEN_PALETTE = ['#00E35B', '#00C853', '#00AD45', '#009238', '#00782C', '#005D21'];
+const RED_PALETTE = ['#EF4444', '#E03C3C', '#D13535', '#C22D2D', '#B32525', '#A41D1D'];
+
 export default function ReportsPage() {
   const [data, setData] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { dateRange, startDate, endDate, setStartDate, setEndDate, setDateRange } = useAdminDateRange();
-  const [activeTab, setActiveTab] = useState<"overview" | "profit_loss" | "trial_balance" | "general_ledger" | "account_ledger">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "profit_loss" | "trial_balance" | "general_ledger" | "account_ledger" | "cash_flow" | "balance_sheet" | "tax_summary">("overview");
   const [plan, setPlan] = useState<PlanType>('Free');
 
   // Ledger specific state
@@ -261,51 +264,51 @@ export default function ReportsPage() {
 
       {/* Tabs Row - Pill styled like expenses page categories */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 print:hidden">
-        <div className="flex flex-wrap gap-2">
+        {/* Main Tabs */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-border pb-4">
           {[
-            { id: "overview", label: "Overview Dashboard" },
-            { id: "profit_loss", label: "Profit & Loss" },
-            { id: "general_ledger", label: "General Ledger" },
-            { id: "account_ledger", label: "Account Ledgers" },
-            { id: "trial_balance", label: "Trial Balance" }
-          ].map((tab) => (
+            { id: "overview", label: "Overview", icon: <MdShowChart className="w-4 h-4" /> },
+            { id: "profit_loss", label: "Profit & Loss", icon: <MdTrendingUp className="w-4 h-4" /> },
+            { id: "cash_flow", label: "Cash Flow", icon: <MdAttachMoney className="w-4 h-4" /> },
+            { id: "balance_sheet", label: "Balance Sheet", icon: <MdMenuBook className="w-4 h-4" /> },
+            { id: "tax_summary", label: "Tax Summary", icon: <Percent className="w-4 h-4" /> },
+            { id: "trial_balance", label: "Trial Balance", icon: <MdInsertDriveFile className="w-4 h-4" /> },
+            { id: "general_ledger", label: "General Ledger", icon: <MdMenuBook className="w-4 h-4" /> },
+            { id: "account_ledger", label: "Account Ledger", icon: <MdGroup className="w-4 h-4" /> }
+          ].map(t => (
             <button
-              key={tab.id}
+              key={t.id}
               onClick={() => {
-                setActiveTab(tab.id as any);
-                if (tab.id === 'account_ledger' && accounts.length > 0 && !selectedAccountId) {
+                setActiveTab(t.id as any);
+                if (t.id === 'account_ledger' && accounts.length > 0 && !selectedAccountId) {
                   setSelectedAccountId(accounts[0].id);
                 }
-                if (tab.id === 'general_ledger') {
+                if (t.id === 'general_ledger') {
                   setSelectedAccountId(null);
                 }
               }}
               className={`px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
-                activeTab === tab.id
+                activeTab === t.id
                   ? "bg-brand-500 text-brand-900 border-brand-500 font-bold"
                   : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 transition-opacity"
               }`}
             >
-              {tab.label}
+              {t.label}
             </button>
           ))}
         </div>
 
         {/* Datepicker dropdown for trial balance (anchored here) */}
         {activePicker === "trial_date" && (
-          <div className="relative">
-            <div className="absolute right-0 top-2 z-50 w-[310px]">
-              <WheelDatePicker
-                value={endDate}
-                onChange={(date) => {
-                  setEndDate(date);
-                  setStartDate("1970-01-01");
-                }}
-                onClose={() => setActivePicker(null)}
-                label="As of Date"
-              />
-            </div>
-          </div>
+          <WheelDatePicker
+            value={endDate}
+            onChange={(date) => {
+              setEndDate(date);
+              setStartDate("1970-01-01");
+            }}
+            onClose={() => setActivePicker(null)}
+            label="As of Date"
+          />
         )}
       </div>
 
@@ -339,7 +342,11 @@ export default function ReportsPage() {
                       itemStyle={{ color: '#fff' }}
                       formatter={(value: any) => [formatLKR(value), 'Income']}
                     />
-                    <Bar dataKey="value" fill="#00E35B" radius={[0, 4, 4, 0]} barSize={20} />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
+                      {data.incomeByService?.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={GREEN_PALETTE[index % GREEN_PALETTE.length]} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -360,7 +367,11 @@ export default function ReportsPage() {
                       itemStyle={{ color: '#fff' }}
                       formatter={(value: any) => [formatLKR(value), 'Expense']}
                     />
-                    <Bar dataKey="value" fill="#EF4444" radius={[0, 4, 4, 0]} barSize={20} />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
+                      {data.expensesBreakdown?.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={RED_PALETTE[index % RED_PALETTE.length]} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -400,7 +411,11 @@ export default function ReportsPage() {
                       itemStyle={{ color: '#fff' }}
                       formatter={(value: any) => [formatLKR(value), 'Revenue']}
                     />
-                    <Bar dataKey="revenue" fill="#C7F6B8" radius={[0, 4, 4, 0]} barSize={24} />
+                    <Bar dataKey="revenue" radius={[0, 4, 4, 0]} barSize={24}>
+                      {topClientsChart.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={GREEN_PALETTE[index % GREEN_PALETTE.length]} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -495,7 +510,7 @@ export default function ReportsPage() {
                             {activeTab === 'general_ledger' && <td className="p-4 text-gray-300 text-xs">{displayAccount}</td>}
                             <td className="p-4">{t.description || "-"}</td>
                             <td className="p-4">
-                              <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${t.referenceType === 'Income' ? 'bg-white/10 text-foreground' : t.referenceType === 'Expense' ? 'bg-white/10 text-foreground' : 'bg-purple-500/10 text-purple-400'}`}>
+                              <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${t.referenceType === 'Income' ? 'bg-brand-500/20 text-brand-500' : t.referenceType === 'Expense' ? 'bg-red-500/20 text-red-500' : 'bg-purple-500/20 text-purple-400'}`}>
                                 {t.referenceType.toUpperCase()}
                               </span>
                             </td>
@@ -746,6 +761,125 @@ export default function ReportsPage() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {activeTab === "cash_flow" && data?.advanced && (
+        <div className="bg-transparent border border-border rounded-3xl p-8 overflow-x-auto print:p-0 print:border-none">
+          <h2 className="text-2xl font-bold mb-6">Statement of Cash Flows</h2>
+          <table className="w-full text-sm text-left">
+            <thead className="border-b border-border text-gray-400">
+              <tr>
+                <th className="py-4 px-4 font-semibold uppercase tracking-wider">Description</th>
+                <th className="py-4 px-4 font-semibold uppercase tracking-wider text-right">Amount (LKR)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              <tr className="hover:bg-black/10 transition-colors group">
+                <td className="py-4 px-4 font-medium text-foreground">Cash Inflow (Operating Activities)</td>
+                <td className="py-4 px-4 text-right text-green-400 font-semibold">{formatLKR(data.totalIncome)}</td>
+              </tr>
+              <tr className="hover:bg-black/10 transition-colors group">
+                <td className="py-4 px-4 font-medium text-foreground pl-8">Customer Payments & Sales</td>
+                <td className="py-4 px-4 text-right text-gray-300">{formatLKR(data.totalIncome)}</td>
+              </tr>
+              <tr className="hover:bg-black/10 transition-colors group">
+                <td className="py-4 px-4 font-medium text-foreground">Cash Outflow (Operating Activities)</td>
+                <td className="py-4 px-4 text-right text-red-400 font-semibold">({formatLKR(data.totalExpenses)})</td>
+              </tr>
+              <tr className="hover:bg-black/10 transition-colors group">
+                <td className="py-4 px-4 font-medium text-foreground pl-8">Operating Expenses & Purchases</td>
+                <td className="py-4 px-4 text-right text-gray-300">({formatLKR(data.totalExpenses)})</td>
+              </tr>
+              <tr className="bg-white/10 font-bold border-t-2 border-black/20 dark:border-white/20">
+                <td className="py-4 px-4 text-foreground uppercase tracking-wider">Net Cash Flow from Operations</td>
+                <td className={`py-4 px-4 text-right text-base ${data.totalIncome - data.totalExpenses >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {formatLKR(data.totalIncome - data.totalExpenses)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {activeTab === "balance_sheet" && data?.advanced && (
+        <div className="bg-transparent border border-border rounded-3xl p-8 overflow-x-auto print:p-0 print:border-none">
+          <h2 className="text-2xl font-bold mb-6">Balance Sheet (Statement of Financial Position)</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h3 className="text-lg font-bold border-b border-border pb-2 mb-4 text-brand-400">Assets</h3>
+              <table className="w-full text-sm text-left">
+                <tbody className="divide-y divide-white/5">
+                  <tr className="hover:bg-black/10 transition-colors">
+                    <td className="py-3 px-2 font-medium">Cash and Cash Equivalents (Bank)</td>
+                    <td className="py-3 px-2 text-right">{formatLKR(data.advanced.assets.bankBalance)}</td>
+                  </tr>
+                  <tr className="hover:bg-black/10 transition-colors">
+                    <td className="py-3 px-2 font-medium">Accounts Receivable (Unpaid Invoices)</td>
+                    <td className="py-3 px-2 text-right">{formatLKR(data.advanced.assets.accountsReceivable)}</td>
+                  </tr>
+                  <tr className="font-bold border-t border-white/20 bg-white/5">
+                    <td className="py-3 px-2">Total Assets</td>
+                    <td className="py-3 px-2 text-right">{formatLKR(data.advanced.assets.total)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold border-b border-border pb-2 mb-4 text-red-400">Liabilities & Equity</h3>
+              <table className="w-full text-sm text-left">
+                <tbody className="divide-y divide-white/5">
+                  <tr className="hover:bg-black/10 transition-colors">
+                    <td className="py-3 px-2 font-medium text-gray-400">Accounts Payable</td>
+                    <td className="py-3 px-2 text-right text-gray-400">{formatLKR(data.advanced.liabilities.accountsPayable)}</td>
+                  </tr>
+                  <tr className="font-bold border-t border-white/10 text-gray-400">
+                    <td className="py-3 px-2">Total Liabilities</td>
+                    <td className="py-3 px-2 text-right">{formatLKR(data.advanced.liabilities.total)}</td>
+                  </tr>
+                  <tr className="hover:bg-black/10 transition-colors mt-4">
+                    <td className="py-3 px-2 font-medium text-brand-400">Owner's Equity / Retained Earnings</td>
+                    <td className="py-3 px-2 text-right text-brand-400">{formatLKR(data.advanced.equity)}</td>
+                  </tr>
+                  <tr className="font-bold border-t border-white/20 bg-white/5">
+                    <td className="py-3 px-2">Total Liabilities & Equity</td>
+                    <td className="py-3 px-2 text-right">{formatLKR(data.advanced.liabilities.total + data.advanced.equity)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "tax_summary" && data?.advanced && (
+        <div className="bg-transparent border border-border rounded-3xl p-8 overflow-x-auto print:p-0 print:border-none max-w-2xl">
+          <h2 className="text-2xl font-bold mb-6">Tax Summary</h2>
+          <table className="w-full text-sm text-left">
+            <thead className="border-b border-border text-gray-400">
+              <tr>
+                <th className="py-4 px-4 font-semibold uppercase tracking-wider">Tax Type</th>
+                <th className="py-4 px-4 font-semibold uppercase tracking-wider text-right">Amount (LKR)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              <tr className="hover:bg-black/10 transition-colors group">
+                <td className="py-4 px-4 font-medium text-foreground">Tax Collected (Sales/Invoices)</td>
+                <td className="py-4 px-4 text-right text-gray-300">{formatLKR(data.advanced.taxCollected)}</td>
+              </tr>
+              <tr className="hover:bg-black/10 transition-colors group text-gray-500">
+                <td className="py-4 px-4 font-medium">Tax Paid (Expenses/Purchases)</td>
+                <td className="py-4 px-4 text-right">-</td>
+              </tr>
+              <tr className="bg-white/10 font-bold border-t-2 border-black/20 dark:border-white/20">
+                <td className="py-4 px-4 text-foreground uppercase tracking-wider">Net Tax Liability</td>
+                <td className="py-4 px-4 text-right text-base text-amber-400">
+                  {formatLKR(data.advanced.taxCollected)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="mt-4 text-xs text-gray-500">* Note: Net Tax Liability is the estimated tax you owe based on recorded invoices. Please consult a professional accountant for official filings.</p>
         </div>
       )}
         </>

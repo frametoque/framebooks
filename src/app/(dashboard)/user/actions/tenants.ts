@@ -393,3 +393,29 @@ export async function transferOwnership(newOwnerId: string) {
     return { success: false, error: "Failed to transfer ownership." };
   }
 }
+
+export async function deleteTeamInvitation(invitationId: number) {
+  const { error: rbacError } = await requirePermission('settings', 'manage');
+  if (rbacError) return { success: false, error: rbacError };
+
+  try {
+    const { userId } = await auth();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const userRows = await sql`SELECT tenant_id FROM admin_users WHERE clerk_id = ${userId}`;
+    if (!userRows || userRows.length === 0) return { success: false, error: "User not found" };
+    const tenantId = userRows[0].tenant_id;
+
+    await sql`
+      DELETE FROM team_invitations 
+      WHERE id = ${invitationId} AND tenant_id = ${tenantId} AND status = 'pending'
+    `;
+    
+    await logSystemAction(`Deleted a pending team invitation`);
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error("Failed to delete invitation:", error);
+    return { success: false, error: "Failed to delete invitation" };
+  }
+}

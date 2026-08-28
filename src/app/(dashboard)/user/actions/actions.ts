@@ -1342,7 +1342,7 @@ export async function getReports(startDate?: string, endDate?: string) {
   const end = endDate || '2099-12-31';
   const tenantId = await getTenantId();
 
-  const [incomeStats, expenseStats, rawIncome, expensesBreakdown, journalEntriesRaw] = await Promise.all([
+  const [incomeStats, expenseStats, rawIncome, expensesBreakdown, journalEntriesRaw, taxRes, unpaidRes] = await Promise.all([
     sql`SELECT SUM(amount) as total FROM admin_incomes WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp`,
     sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp`,
     sql`
@@ -1362,8 +1362,14 @@ export async function getReports(startDate?: string, endDate?: string) {
       UNION ALL
       SELECT id, 'expense' as type, description, date, created_at, amount, category, payment_method, NULL as invoice_id FROM admin_expenses WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp
       ORDER BY date DESC, created_at DESC
-    `
+    `,
+    sql`SELECT SUM(subtotal * (tax_rate / 100)) as tax_collected FROM invoices WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp`,
+    sql`SELECT SUM(total_due) as unpaid_invoices FROM invoices WHERE tenant_id = ${tenantId} AND payment_status != 'paid'`
   ]);
+
+  const { getAccounts } = await import('./accounts');
+  const allAccounts = await getAccounts(start, end);
+  const bankBalance = allAccounts.reduce((sum: number, acc: any) => sum + acc.currentBalance, 0);
 
   const totalIncome = parseFloat(incomeStats[0]?.total || 0);
   const totalExpenses = parseFloat(expenseStats[0]?.total || 0);
@@ -1394,6 +1400,9 @@ export async function getReports(startDate?: string, endDate?: string) {
     invoiceId: r.invoice_id || null
   }));
 
+  const taxCollected = parseFloat(taxRes[0]?.tax_collected || 0);
+  const unpaidInvoices = parseFloat(unpaidRes[0]?.unpaid_invoices || 0);
+
   return {
     totalIncome,
     totalExpenses,
@@ -1401,7 +1410,20 @@ export async function getReports(startDate?: string, endDate?: string) {
     profitMargin,
     incomeByService,
     expensesBreakdown: expensesBreakdown.map(r => ({ name: r.name || 'Other', value: parseFloat(r.value) })),
-    journalEntries
+    journalEntries,
+    advanced: {
+      taxCollected,
+      assets: {
+        bankBalance,
+        accountsReceivable: unpaidInvoices,
+        total: bankBalance + unpaidInvoices
+      },
+      liabilities: {
+        accountsPayable: 0,
+        total: 0
+      },
+      equity: bankBalance + unpaidInvoices
+    }
   };
 }
 

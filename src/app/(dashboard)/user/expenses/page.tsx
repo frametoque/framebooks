@@ -562,18 +562,21 @@ export default function ExpensesPage() {
                 <label className="text-sm text-gray-400">Description</label>
                 <input type="text" placeholder="What was this expense for?" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors" />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm text-gray-400">Category</label>
-                  <CategoryPicker 
-                    categories={dynamicCategories} 
-                    value={selectedCategories} 
-                    onChange={setSelectedCategories} 
-                  />
-                </div>
+
+              <div className="space-y-1">
+                <label className="text-sm text-gray-400">Categories</label>
+                <CategoryPicker 
+                  categories={dynamicCategories} 
+                  value={selectedCategories} 
+                  onChange={setSelectedCategories} 
+                  placeholder="Select categories..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-sm text-gray-400">Payment Method</label>
-                  <select value={formData.paymentMethod} onChange={e => setFormData({...formData, paymentMethod: e.target.value})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none">
+                  <select value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none">
                     <option className="bg-black">Corporate Card</option>
                     <option className="bg-black">Bank Transfer</option>
                     <option className="bg-black">Personal Card</option>

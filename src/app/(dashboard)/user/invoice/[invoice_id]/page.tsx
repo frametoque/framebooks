@@ -63,7 +63,6 @@ const formatMoney = (value: any, currency = "LKR") => {
 };
 
 export const hexToRgb = (hex: string) => {
-  const { confirm } = useConfirm();
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? rgb(
     parseInt(result[1], 16) / 255,
@@ -334,6 +333,7 @@ export async function generateInvoicePDF(invoice: any): Promise<Uint8Array> {
 }
 
 export default function AdminInvoicePage() {
+  const { confirm } = useConfirm();
   const { invoice_id } = useParams();
   const searchParams = useSearchParams();
   const [invoice, setInvoice] = useState<any>(null);

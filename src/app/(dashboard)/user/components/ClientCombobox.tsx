@@ -63,7 +63,7 @@ export default function ClientCombobox({ name, value, onChange, clients, loading
       </button>
 
       {open && (
-        <div className="absolute z-50 top-full left-0 w-full mt-2 bg-[#0d0d12] border border-white/15 rounded-xl shadow-2xl overflow-hidden flex flex-col">
+        <div className="absolute z-50 top-full left-0 w-full mt-2 bg-[#082830] border border-white/15 rounded-xl shadow-2xl overflow-hidden flex flex-col">
           <div className="p-2 border-b border-border flex items-center gap-2 px-3">
             <MdSearch className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <input

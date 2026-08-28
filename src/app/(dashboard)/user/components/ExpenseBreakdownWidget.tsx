@@ -10,9 +10,11 @@ import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
 const MODES = ["This Month", "Last Month", "This Year", "Last Year", "Lifetime"];
 
 const formatLKR = (amount: number) => {
-  const num = new Intl.NumberFormat('en-LK', {
+  const isLarge = Math.abs(amount) >= 10000;
+  const num = new Intl.NumberFormat(isLarge ? 'en-US' : 'en-LK', {
+    notation: isLarge ? 'compact' : 'standard',
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 3,
   }).format(amount || 0);
   return `${num} LKR`;
 };

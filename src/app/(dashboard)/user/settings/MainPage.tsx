@@ -7,10 +7,12 @@ import { useState, useEffect } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 import { useSession, signOut } from 'next-auth/react';
 import { IdCard, Globe, Save, Building, Copy, Terminal, Sliders } from "lucide-react";
-import { MdPerson, MdMailOutline, MdKeyboardArrowRight, MdKeyboardArrowLeft, MdLocationOn, MdPhone, MdUpload, MdDownload, MdCheck, MdShowChart, MdCreditCard, MdGroup, MdBusiness, MdHistory, MdLogout, MdWarning, MdSecurity } from "react-icons/md";
+import { MdPerson, MdMailOutline, MdKeyboardArrowRight, MdKeyboardArrowLeft, MdLocationOn, MdPhone, MdUpload, MdDownload, MdCheck, MdShowChart, MdCreditCard, MdGroup, MdBusiness, MdHistory, MdLogout, MdWarning, MdSecurity, MdDelete } from "react-icons/md";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { updateTenantInfo, getTeamMembers, updateTeamMemberRole, removeTeamMember, leaveTeam, getCurrentUserRole, resetWorkspace, deleteWorkspace, deletePersonalAccount } from "../actions/tenants";
+import { updateTenantInfo, getTeamMembers, updateTeamMemberRole, removeTeamMember, leaveTeam, getCurrentUserRole, resetWorkspace, deleteWorkspace, deletePersonalAccount, deleteTeamInvitation } from "../actions/tenants";
+import { exportData, exportReport } from "../actions/export";
+import DateRangeSelector from "../components/DateRangeSelector";
 import { getRoles } from "../actions/roles";
 import { useAppLock } from "../components/AppLockProvider";
 import AuditLogsTab from "./AuditLogsTab";
@@ -95,6 +97,25 @@ export default function SettingsPage() {
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [availableRoles, setAvailableRoles] = useState<any[]>([]);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+
+  const [reportType, setReportType] = useState<"profit_loss" | "cash_flow" | "balance_sheet" | "">("");
+  const [reportDateRange, setReportDateRange] = useState("this year");
+  const [reportStartDate, setReportStartDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0]);
+  const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const handleDeleteInvitation = async (id: number, email: string) => {
+    if (!await confirm(`Are you sure you want to cancel the invitation sent to ${email}?`)) return;
+    try {
+      const res = await deleteTeamInvitation(id);
+      if (res.success) {
+        setSentInvitations(prev => prev.filter(inv => inv.id !== id));
+      } else {
+        alert(res.error || "Failed to delete invitation");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchTeamData = async () => {
     try {
@@ -535,6 +556,7 @@ export default function SettingsPage() {
                   { name: "Roles & Permissions", sub: "Configure custom roles.", icon: MdSecurity, id: "roles", allowed: currentUserRole === 'owner' },
                   { name: "System Status", sub: "View active sessions and platform health.", icon: MdShowChart, id: "system", allowed: true },
                   { name: "Audit Logs", sub: "View system and user activity.", icon: MdHistory, id: "audit_logs", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
+                  { name: "Data Export", sub: "Export your workspace data to CSV.", icon: MdDownload, id: "export", allowed: currentUserRole === 'owner' },
                   { name: "Danger Zone", sub: "Destructive account and workspace actions.", icon: MdWarning, id: "danger", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' }
                 ]
                 .filter(item => item.allowed)
@@ -563,11 +585,175 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* Data Export Tab */}
+      {activeTab === "export" && (
+        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center gap-4 mb-6 relative z-50">
+            <button 
+              type="button"
+              onClick={(e) => { 
+                e.preventDefault();
+                setActiveTab("profile"); 
+                setActiveView("hub"); 
+                router.replace("/user/settings"); 
+              }} 
+              className="p-2 hover:bg-card rounded-full transition-colors cursor-pointer relative z-50"
+            >
+              <MdKeyboardArrowLeft className="w-6 h-6" />
+            </button>
+            <h2 className="text-xl font-bold">Data Export</h2>
+          </div>
+
+          <div className="bg-transparent border border-border rounded-3xl p-7">
+            <p className="text-gray-400 text-sm mb-6">Export your workspace data into CSV format for your own records or to share with your accountant.</p>
+            
+            {tenantInfo.plan === "Free" ? (
+              <UpgradeOverlay
+                title="Data Export"
+                description="Exporting your financial data to CSV is only available on Pro and Pro Plus plans."
+                requiredPlan="Pro"
+              >
+                <div className="h-[200px]" />
+              </UpgradeOverlay>
+            ) : (
+              <div className="space-y-8">
+                {/* Export All Section */}
+                <div className="bg-card/50 rounded-2xl p-6 border border-brand-500/20 shadow-[0_0_20px_rgba(0,227,91,0.05)]">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                        <MdDownload className="w-5 h-5 text-brand-500" /> Bulk Export
+                      </h3>
+                      <p className="text-sm text-gray-400 mt-1">Download all your lists sequentially to backup your workspace.</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const items: ("invoices"|"incomes"|"expenses"|"clients")[] = ["invoices", "incomes", "expenses", "clients"];
+                        for (const item of items) {
+                          const res = await exportData(item);
+                          if (res.success && res.csv) {
+                            const blob = new Blob([res.csv], { type: 'text/csv' });
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `framebooks_${item}_${new Date().toISOString().split('T')[0]}.csv`;
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                          }
+                          await new Promise(r => setTimeout(r, 800)); // stagger downloads
+                        }
+                      }}
+                      className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-brand-950 font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(0,227,91,0.2)]"
+                    >
+                      Export All Data
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { id: "invoices", label: "Invoices" },
+                      { id: "incomes", label: "Incomes" },
+                      { id: "expenses", label: "Expenses" },
+                      { id: "clients", label: "Clients" }
+                    ].map(item => (
+                      <button
+                        key={item.id}
+                        onClick={async () => {
+                          const res = await exportData(item.id as any);
+                          if (res.success && res.csv) {
+                            const blob = new Blob([res.csv], { type: 'text/csv' });
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `framebooks_${item.id}_${new Date().toISOString().split('T')[0]}.csv`;
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                          } else {
+                            alert(res.error || "Failed to export data");
+                          }
+                        }}
+                        className="flex items-center justify-between p-3 border border-border rounded-xl bg-background hover:border-brand-500 transition-colors group"
+                      >
+                        <span className="font-medium text-sm text-foreground">{item.label}</span>
+                        <MdDownload className="w-4 h-4 text-gray-500 group-hover:text-brand-500" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Export Reports Section */}
+                <div>
+                  <h3 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4">
+                    <MdShowChart className="w-5 h-5 text-gray-400" /> Financial Reports
+                  </h3>
+                  <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
+                    <div className="w-full md:w-auto">
+                      <label className="block text-sm font-medium text-gray-400 mb-1">Select Report</label>
+                      <select 
+                        value={reportType} 
+                        onChange={(e: any) => setReportType(e.target.value)}
+                        className="w-full md:w-[250px] bg-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:border-brand-500 outline-none transition-colors cursor-pointer"
+                      >
+                        <option value="" disabled>Select a report...</option>
+                        <option value="profit_loss">Profit & Loss</option>
+                        <option value="cash_flow">Cash Flow Statement</option>
+                        <option value="balance_sheet">Balance Sheet</option>
+                      </select>
+                    </div>
+
+                    {reportType && (
+                      <div className="w-full md:w-auto animate-in fade-in duration-300">
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Date Range</label>
+                        <DateRangeSelector
+                          dateRange={reportDateRange}
+                          startDate={reportStartDate}
+                          endDate={reportEndDate}
+                          onRangeChange={setReportDateRange}
+                          onStartDateChange={setReportStartDate}
+                          onEndDateChange={setReportEndDate}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {reportType && (
+                    <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <button
+                        onClick={async () => {
+                          const res = await exportReport(reportType as any, reportStartDate, reportEndDate);
+                          if (res.success && res.csv) {
+                            const blob = new Blob([res.csv], { type: 'text/csv' });
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `framebooks_${reportType}_${reportStartDate}_to_${reportEndDate}.csv`;
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                          } else {
+                            alert(res.error || "Failed to export report");
+                          }
+                        }}
+                        className="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-xl transition-all font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(0,227,91,0.2)]"
+                      >
+                        <MdDownload className="w-5 h-5" /> Export Report
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Form Views */}
-      {activeView === "form" && (
+      {activeView === "form" && activeTab !== "export" && (
         <div className="w-full">
           <button 
-            onClick={() => setActiveView("hub")} 
+            onClick={() => {
+              setActiveView("hub");
+              router.push("/user/settings");
+            }}
             className="flex items-center gap-2 text-gray-400 hover:text-foreground font-semibold mb-8 transition-colors"
           >
             <MdKeyboardArrowLeft className="w-5 h-5" /> Settings
@@ -942,7 +1128,7 @@ export default function SettingsPage() {
                             <p className="font-medium text-foreground">{inv.email}</p>
                             <p className="text-xs text-gray-400 mt-1">Sent on {new Date(inv.created_at).toLocaleDateString()}</p>
                           </div>
-                          <div>
+                          <div className="flex items-center gap-3">
                             <span className={`inline-block px-3 py-1 text-xs font-bold uppercase rounded-full ${
                               inv.status === 'pending' ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' :
                               inv.status === 'accepted' ? 'bg-green-400/10 text-green-400 border border-green-400/20' :
@@ -950,6 +1136,15 @@ export default function SettingsPage() {
                             }`}>
                               {inv.status}
                             </span>
+                            {inv.status === 'pending' && currentUserRole === 'owner' && (
+                              <button
+                                onClick={() => handleDeleteInvitation(inv.id, inv.email)}
+                                className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-colors"
+                                title="Cancel Invitation"
+                              >
+                                <MdDelete className="w-5 h-5" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
