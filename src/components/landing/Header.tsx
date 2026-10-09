@@ -34,10 +34,10 @@ export default function Header() {
     <>
       {/* NAVBAR */}
       <header
-        className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+        className={`fixed top-0 w-full z-50 transition-all duration-300 h-20 flex items-center ${
           isSolid
-            ? 'bg-white/90 backdrop-blur-md border-b border-[#E5E7EB] py-3 shadow-sm'
-            : 'bg-transparent py-5'
+            ? 'bg-white/90 backdrop-blur-md border-b border-[#E5E7EB] shadow-sm'
+            : 'bg-transparent'
         }`}
       >
         <div className="container mx-auto px-6 md:px-12 flex justify-between items-center">

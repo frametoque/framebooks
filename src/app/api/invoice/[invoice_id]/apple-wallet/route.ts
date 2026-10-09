@@ -197,12 +197,12 @@ export async function POST(
         passTypeIdentifier: PASS_TYPE_ID,
         serialNumber:       invoice_id,
         teamIdentifier:     TEAM_ID,
-        organizationName:   "FrameBookss",
+        organizationName:   "Framebooks",
         description:        `Invoice ${invoice_id} – ${invoice.project_name ?? ""}`,
         backgroundColor:    "rgb(0, 0, 0)",
         foregroundColor:    "rgb(255, 255, 255)",
         labelColor:         "rgb(110, 197, 244)",
-        logoText:           "FrameBookss",
+        logoText:           "Framebooks",
       }
     );
 

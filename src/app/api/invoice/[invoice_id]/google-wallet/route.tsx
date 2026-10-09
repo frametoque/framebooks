@@ -58,7 +58,7 @@ async function ensureClass(authClient: GoogleAuth) {
         },
         body: JSON.stringify({
           id: CLASS_ID,
-          issuerName: "FrameBookss",
+          issuerName: "Framebooks",
           reviewStatus: "UNDER_REVIEW",
 
           logo: {
@@ -66,7 +66,7 @@ async function ensureClass(authClient: GoogleAuth) {
               uri: `${ASSET_URL}/logos/ft/logo-main.png`,
             },
             contentDescription: {
-              defaultValue: { language: "en-US", value: "FrameBookss Logo" },
+              defaultValue: { language: "en-US", value: "Framebooks Logo" },
             },
           },
 
@@ -146,7 +146,7 @@ function buildPassObject(invoice: Record<string, any>) {
     state: "ACTIVE",
 
     cardTitle: {
-      defaultValue: { language: "en-US", value: "FrameBookss" },
+      defaultValue: { language: "en-US", value: "Framebooks" },
     },
     subheader: {
       defaultValue: { language: "en-US", value: invoice.project_name ?? "Invoice" },
@@ -163,7 +163,7 @@ function buildPassObject(invoice: Record<string, any>) {
         uri: `${ASSET_URL}/og-image.png`,
       },
       contentDescription: {
-        defaultValue: { language: "en-US", value: "FrameBookss" },
+        defaultValue: { language: "en-US", value: "Framebooks" },
       },
     },
 

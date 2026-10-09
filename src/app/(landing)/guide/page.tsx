@@ -2,7 +2,7 @@ import { guideGroups } from '@/lib/guide-content';
 import ArticleView from './[slug]/ArticleView';
 
 export const metadata = {
-  title: 'User Guide | Framebooks',
+  title: 'User Guide',
   description: 'Learn how to use Framebooks for your business accounting.',
 };
 

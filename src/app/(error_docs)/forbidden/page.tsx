@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "403 Access Denied | Framebooks",
-  description: "You do not have permission to access this resource. Return to Framebooks.",
+  title: "403 Access Denied",
+  description: "You do not have permission to access this resource.",
   robots: "noindex, follow",
 };
 

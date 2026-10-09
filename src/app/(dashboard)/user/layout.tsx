@@ -394,7 +394,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
 
   useEffect(() => {
     const pageTitle = getPageTitle(pathname);
-    document.title = `${pageTitle} | FrameBookss`;
+    document.title = pageTitle;
   }, [pathname]);
 
   useEffect(() => {

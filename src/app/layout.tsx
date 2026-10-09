@@ -1,5 +1,5 @@
 import Providers from "@/components/Providers";
-import { Analytics } from "@vercel/analytics/react";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import type { Metadata } from 'next'
 import { DM_Mono } from "next/font/google";
@@ -13,8 +13,8 @@ const dmMono = DM_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "FrameBookss | All-in-One Business SaaS",
-    template: "%s | FrameBookss"
+    default: "Framebooks",
+    template: "%s"
   },
   description: "Run your entire business in one place. Track money, manage clients, and grow faster.",
 };

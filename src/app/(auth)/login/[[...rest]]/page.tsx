@@ -1,27 +1,27 @@
 export const metadata = {
-  title: "Login | FrameBookss",
-  description: "Log in to your FrameBookss account to manage your dashboard, track services, and access your projects securely.",
+  title: "Login",
+  description: "Log in to your Framebooks account to manage your dashboard, track services, and access your projects securely.",
   openGraph: {
-    title: "Login | FrameBookss Digital Media",
-    description: "Log in to your FrameBookss account to manage your dashboard, track services, and access your projects securely.",
-    url: "https://framebookss.com/login", 
-    siteName: "FrameBookss",
+    title: "Login",
+    description: "Log in to your Framebooks account to manage your dashboard, track services, and access your projects securely.",
+    url: "https://framebooks.com/login", 
+    siteName: "Framebooks",
     images: [
       {
-        url: "https://framebookss.com/og-image.png",
+        url: "https://framebooks.com/og-image.png",
         width: 1200,
         height: 630,
-        alt: "FrameBookss",
+        alt: "Framebooks",
       },
     ],
     type: "website",
   },
 
-    twitter: {
+  twitter: {
     card: "summary_large_image",
-    title: "Login | FrameBookss Digital Media",
-    description: "Explore our range of services...",
-    images: ["https://framebookss.com/og-image.png"],
+    title: "Login",
+    description: "Log in to your Framebooks account to manage your dashboard, track services, and access your projects securely.",
+    images: ["https://framebooks.com/og-image.png"],
   },
 };
 

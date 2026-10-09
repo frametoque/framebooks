@@ -4,7 +4,7 @@ import AdminLoginClient from "./AdminLoginClient";
 import { Loader2 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Admin Portal Sign In | Framebooks",
+  title: "Admin Portal Sign In",
   robots: {
     index: false,
     follow: false,

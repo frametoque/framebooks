@@ -45,7 +45,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
         </AnimatePresence>
       </div>
 
-      <nav className="px-4 space-y-8">
+      <nav className="px-4 space-y-8 pb-16">
         {guideGroups.map(group => (
           <div key={group.id}>
             <h4 className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">{group.title}</h4>
@@ -78,7 +78,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-white text-[#082830] font-sans selection:bg-[#00E35B] selection:text-white pt-20">
       
       {/* MOBILE TOGGLE */}
-      <div className="lg:hidden border-b border-[#E5E7EB] bg-[#F9FAFB] p-4 flex justify-between items-center sticky top-[73px] z-30">
+      <div className="lg:hidden border-b border-[#E5E7EB] bg-[#F9FAFB] p-4 flex justify-between items-center sticky top-20 z-30">
         <span className="font-bold">Guide Menu</span>
         <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 bg-white rounded-lg border border-gray-200">
           {mobileMenuOpen ? <MdClose /> : <MdMenu />}
@@ -88,7 +88,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
       <div className="container mx-auto max-w-7xl flex relative">
         
         {/* DESKTOP SIDEBAR */}
-        <aside className="hidden lg:block w-72 shrink-0 border-r border-[#E5E7EB] h-[calc(100vh-73px)] sticky top-[73px] overflow-y-auto custom-scrollbar">
+        <aside className="hidden lg:block w-72 shrink-0 border-r border-[#E5E7EB] h-[calc(100vh-5rem)] sticky top-20 overflow-y-auto custom-scrollbar">
           <SidebarContent />
         </aside>
 

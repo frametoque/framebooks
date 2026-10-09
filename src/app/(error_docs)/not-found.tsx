@@ -2,8 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 
 export const metadata = {
-  title: "404 Not Found | Framebooks",
-  description: "Oops! The page you're looking for doesn't exist. Return to Framebooks.",
+  title: "404 Not Found",
+  description: "Oops! The page you're looking for doesn't exist.",
   robots: "noindex, follow",
 };
 

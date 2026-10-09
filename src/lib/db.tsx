@@ -10,8 +10,8 @@ const sql =
   globalThis._sql ||
   postgres(process.env.DATABASE_URL!, {
     prepare: false,
-    max: 20,
-    connect_timeout: 10,
+    max: 10,
+    connect_timeout: 15,
     idle_timeout: 20,
   });
 

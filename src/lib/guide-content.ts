@@ -138,8 +138,7 @@ export const guideGroups: GuideGroup[] = [
             bullets: [
               'Client Name & Company Name',
               'Primary billing email & secondary contacts',
-              'Phone number & billing address',
-              'Optional Tax Identification Number (TIN / VAT number)'
+              'Phone number & billing address'
             ]
           },
           {

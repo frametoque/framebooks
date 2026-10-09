@@ -16,10 +16,10 @@ export async function generateMetadata({
 }) {
   const { slug } = await params;
   const article = guideGroups.flatMap((g) => g.articles).find((a) => a.slug === slug);
-  if (!article) return { title: 'Not Found | Framebooks' };
+  if (!article) return { title: 'Not Found' };
 
   return {
-    title: `${article.title} | User Guide | Framebooks`,
+    title: `${article.title} - User Guide`,
     description: article.intro,
   };
 }
