@@ -207,7 +207,7 @@ export default function NewInvoicePage() {
         <div className="space-y-8">
 
           {/* Client Details */}
-          <div className="relative z-50 bg-transparent border border-border rounded-3xl p-6 space-y-4">
+          <div className="relative z-50 bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
             <h2 className="text-xl font-semibold mb-4">Client Details</h2>
 
             <div className="space-y-1">
@@ -291,7 +291,7 @@ export default function NewInvoicePage() {
           </div>
 
           {/* Invoice Details */}
-          <div className="bg-transparent border border-border rounded-3xl p-6 space-y-4">
+          <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
             <h2 className="text-xl font-semibold mb-4">Invoice Details</h2>
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-1">
@@ -309,41 +309,41 @@ export default function NewInvoicePage() {
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1">
-                <label className="text-sm text-gray-400">Currency</label>
+                <label className="text-sm text-gray-500 dark:text-gray-400">Currency</label>
                 <select name="currency" value={formData.currency} onChange={handleFormChange}
-                  className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none">
-                  <option value="LKR" className="bg-black">LKR (₨)</option>
-                  <option value="USD" className="bg-black">USD ($)</option>
+                  className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none shadow-2xs">
+                  <option value="LKR" className="bg-card text-foreground">LKR (₨)</option>
+                  <option value="USD" className="bg-card text-foreground">USD ($)</option>
                 </select>
               </div>
               
               <div className="space-y-1">
-                <label className="text-sm text-gray-400">Payment Status</label>
+                <label className="text-sm text-gray-500 dark:text-gray-400">Payment Status</label>
                 <select name="paymentStatus" value={formData.paymentStatus} onChange={handleFormChange}
-                  className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none">
-                  <option value="unpaid" className="bg-black">Unpaid</option>
-                  <option value="partially paid" className="bg-black">Partially Paid</option>
-                  <option value="advance-paid" className="bg-black">Advance Paid</option>
-                  <option value="overdue" className="bg-black">Overdue</option>
-                  <option value="fully paid" className="bg-black">Fully Paid</option>
+                  className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none shadow-2xs">
+                  <option value="unpaid" className="bg-card text-foreground">Unpaid</option>
+                  <option value="partially paid" className="bg-card text-foreground">Partially Paid</option>
+                  <option value="advance-paid" className="bg-card text-foreground">Advance Paid</option>
+                  <option value="overdue" className="bg-card text-foreground">Overdue</option>
+                  <option value="fully paid" className="bg-card text-foreground">Fully Paid</option>
                 </select>
               </div>
             </div>
 
             {/* Payment Bank Account — PDF only */}
             <div className="space-y-1">
-              <label className="text-sm text-gray-400">
+              <label className="text-sm text-gray-500 dark:text-gray-400">
                 Payment Bank Account
               </label>
               <select
                 name="bankAccountId"
                 value={formData.bankAccountId}
                 onChange={handleFormChange}
-                className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none"
+                className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none shadow-2xs"
               >
-                <option value="" className="bg-black">— No bank account —</option>
+                <option value="" className="bg-card text-gray-400">— No bank account —</option>
                 {bankAccounts.map(acc => (
-                  <option key={acc.id} value={acc.id} className="bg-black">
+                  <option key={acc.id} value={acc.id} className="bg-card text-foreground">
                     {acc.name} · {acc.bank} · {acc.number}
                   </option>
                 ))}
@@ -354,7 +354,7 @@ export default function NewInvoicePage() {
 
         {/* Right Column: Line Items & Actions */}
         <div className="space-y-8">
-          <div className="bg-transparent border border-border rounded-3xl p-6 space-y-4">
+          <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
             <h2 className="text-xl font-semibold mb-4">Line Items</h2>
 
             <div className="space-y-3">

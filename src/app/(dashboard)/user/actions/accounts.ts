@@ -1,5 +1,5 @@
 "use server";
-import { checkLimit } from "@/lib/plans";
+import { checkLimit, incrementLifetimeUsage } from "@/lib/plans";
 import { requirePermission } from "./rbac";
 
 import sql from "@/lib/db";
@@ -107,6 +107,7 @@ export async function createAccount(data: { name: string; type: string; bankName
     INSERT INTO accounts (name, type, bank_name, account_number, branch, initial_balance, tenant_id)
     VALUES (${data.name}, ${data.type}, ${data.bankName || null}, ${data.accountNumber || null}, ${data.branch || null}, ${data.initialBalance || 0}, ${tenantId})
   `;
+  await incrementLifetimeUsage(Number(tenantId), 'accounts');
   await logSystemAction(`Created account "${data.name}"`);
 }
 

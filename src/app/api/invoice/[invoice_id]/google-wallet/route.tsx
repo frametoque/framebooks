@@ -47,11 +47,7 @@ async function ensureClass(authClient: GoogleAuth) {
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
 
-  console.log("[google-wallet] Class check status:", checkRes.status);
-
   if (checkRes.status === 404) {
-    console.log("[google-wallet] Class not found — creating...");
-
     const createRes = await fetch(
       "https://walletobjects.googleapis.com/walletobjects/v1/genericClass",
       {
@@ -113,7 +109,6 @@ async function ensureClass(authClient: GoogleAuth) {
     );
 
     const createBody = await createRes.json();
-    console.log("[google-wallet] Class create response:", JSON.stringify(createBody, null, 2));
 
     if (!createRes.ok) {
       throw new Error(`Class creation failed: ${JSON.stringify(createBody)}`);
@@ -210,7 +205,6 @@ export async function POST(
 ) {
   try {
     const { invoice_id } = await params;
-    console.log("[google-wallet] Generating pass for invoice:", invoice_id);
 
     /* 1. Authenticate via Clerk (direct — no cookie forwarding needed) */
     const { userId } = await auth();
@@ -237,7 +231,6 @@ export async function POST(
       return NextResponse.json({ error: "Invoice not found or access denied" }, { status: 404 });
     }
     const invoice = result[0] as any;
-    console.log("[google-wallet] Invoice fetched from DB:", invoice.invoice_id);
 
     /* 2. Auth + ensure class */
     const authClient = getAuthClient();
@@ -260,7 +253,6 @@ export async function POST(
     const token   = signJwt(claims);
     const saveUrl = `https://pay.google.com/gp/v/save/${token}`;
 
-    console.log("[google-wallet] Save URL generated successfully");
     return NextResponse.json({ saveUrl });
 
   } catch (err: any) {

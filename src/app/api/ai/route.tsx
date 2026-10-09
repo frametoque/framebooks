@@ -287,8 +287,6 @@ const GROQ_MODELS = [
 // Function to crawl web
 async function crawlWebsite() {
   try {
-    console.log('🕷️ Starting website crawl...');
-
     const crawlResults: typeof websiteContent = {
       services: [],
       portfolio: [],
@@ -300,7 +298,7 @@ async function crawlWebsite() {
       try {
         const response = await fetch(url, {
           headers: {
-            'User-Agent': 'FrameBookss-AI-Crawler/1.0 (+https://framebookss.com)',
+            'User-Agent': 'Framebooks-AI-Crawler/1.0 (+https://framebooks.com)',
           },
         });
 
@@ -322,21 +320,18 @@ async function crawlWebsite() {
             content,
             crawled: new Date().toISOString(),
           };
-
-          console.log(`✅ Crawled: ${pageName} - ${title} (Content length: ${content.length} chars)`);
         }
       } catch (error: any) {
-        console.log(`⚠️ Failed to crawl ${pageName}:`, error.message);
+        // Silently skip uncontactable pages during crawl
       }
 
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
     websiteContent = crawlResults;
-    console.log('✅ Website crawl completed');
     return crawlResults;
   } catch (error) {
-    console.error('❌ Crawl error:', error);
+    console.error('Crawl error:', error);
     return null;
   }
 }
@@ -413,8 +408,6 @@ export async function POST(req: Request) {
       });
     }
 
-    console.log(`📩 Client message: "${message}"`);
-
     const shouldCrawl =
       !websiteContent.lastCrawled ||
       Date.now() - new Date(websiteContent.lastCrawled).getTime() > 3600000;
@@ -424,7 +417,6 @@ export async function POST(req: Request) {
     }
 
     if (!process.env.GROQ_API_KEY) {
-      console.log('⚠️ No Groq API key - using trained fallback');
       await new Promise((resolve) => setTimeout(resolve, 600));
 
       const baseResponse = getClientFocusedResponse(message);
@@ -434,7 +426,7 @@ export async function POST(req: Request) {
         reply: format === 'plain' ? stripMarkdown(enhancedResponse) : enhancedResponse,
         replyRaw: enhancedResponse,
         mode: 'trained-fallback',
-        model: 'FrameBookss Training',
+        model: 'Framebooks Training',
         crawled: websiteContent.lastCrawled,
         format,
       });
@@ -450,8 +442,6 @@ export async function POST(req: Request) {
 
     for (const modelName of GROQ_MODELS) {
       try {
-        console.log(`🔄 Trying Groq model: ${modelName}`);
-
         const completion = await getGroqClient().chat.completions.create({
           model: modelName,
           messages: [
@@ -472,14 +462,12 @@ export async function POST(req: Request) {
 
         let cleanReply = rawText
           .replace(
-            /^(As (FrameBookss AI Assistant|the AI assistant),?|Response:|Here(?:'s| is) (?:my |the )?response:)/i,
+            /^(As (Framebooks AI Assistant|the AI assistant),?|Response:|Here(?:'s| is) (?:my |the )?response:)/i,
             ''
           )
           .trim();
 
         cleanReply = enhanceResponseWithLinks(cleanReply, message);
-
-        console.log(`✅ Success with Groq model: ${modelName}`);
 
         return Response.json({
           reply: format === 'plain' ? stripMarkdown(cleanReply) : cleanReply,
@@ -492,13 +480,12 @@ export async function POST(req: Request) {
         });
       } catch (modelError: any) {
         lastError = modelError;
-        console.log(`❌ Groq model ${modelName} failed:`, modelError.message);
         await new Promise((resolve) => setTimeout(resolve, 300));
         continue;
       }
     }
 
-    console.error('❌ All Groq models failed:', lastError?.message);
+    console.error('All Groq models failed:', lastError?.message);
     throw new Error(`All Groq models failed: ${lastError?.message}`);
   } catch (error: any) {
     console.error('🔥 API Error:', error.message);

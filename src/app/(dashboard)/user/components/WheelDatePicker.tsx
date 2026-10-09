@@ -72,21 +72,21 @@ export default function WheelDatePicker({
       <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
       <div
-        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-[#082830] border border-border rounded-2xl shadow-2xl p-4 w-[310px] animate-in zoom-in-95 duration-200 overscroll-contain"
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white dark:bg-[#082830] border border-border dark:border-white/15 rounded-2xl shadow-2xl p-4 w-[310px] animate-in zoom-in-95 duration-200 overscroll-contain"
         onWheel={(e) => e.stopPropagation()}
         onTouchMove={(e) => e.stopPropagation()}
       >
-        <div className="text-xs uppercase tracking-wider font-semibold text-gray-400 mb-3 text-center">
+        <div className="text-xs uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400 mb-3 text-center">
           {label}
         </div>
 
-      <div className="relative flex justify-center items-center gap-1 h-[200px] overflow-hidden rounded-xl border border-border bg-black/40">
+      <div className="relative flex justify-center items-center gap-1 h-[200px] overflow-hidden rounded-xl border border-border bg-black/5 dark:bg-black/40">
         {/* Highlight selection bar in the center */}
-        <div className="absolute left-0 right-0 h-10 border-y border-border bg-card pointer-events-none z-10" />
+        <div className="absolute left-0 right-0 h-10 border-y border-border bg-black/5 dark:bg-white/10 pointer-events-none z-10" />
 
         {/* Top and bottom gradient fade-out masks */}
-        <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-[#082830] to-transparent pointer-events-none z-20" />
-        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#082830] to-transparent pointer-events-none z-20" />
+        <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-white dark:from-[#082830] to-transparent pointer-events-none z-20" />
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white dark:from-[#082830] to-transparent pointer-events-none z-20" />
 
         {/* Month Wheel */}
         <ScrollWheel
@@ -227,13 +227,13 @@ function ScrollWheel<T>({
         const diff = Math.abs(i - activeIndex);
 
         // Styling scaling & fading based on distance to center
-        let itemStyle = "text-gray-500 scale-90 opacity-20";
+        let itemStyle = "text-gray-400 dark:text-gray-500 scale-90 opacity-40";
         if (isActive) {
           itemStyle = "text-foreground scale-110 font-bold opacity-100";
         } else if (diff === 1) {
-          itemStyle = "text-gray-300 scale-95 opacity-50";
+          itemStyle = "text-gray-700 dark:text-gray-300 scale-95 opacity-70";
         } else if (diff === 2) {
-          itemStyle = "text-gray-400 scale-90 opacity-30";
+          itemStyle = "text-gray-500 dark:text-gray-400 scale-90 opacity-40";
         }
 
         return (

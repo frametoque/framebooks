@@ -57,14 +57,14 @@ export default function ExpenseBreakdownWidget({ initialData }: { initialData: a
   };
 
   return (
-    <div className="bg-transparent border border-border rounded-3xl p-7 flex flex-col h-full">
+    <div className="bg-card border border-border rounded-3xl p-7 flex flex-col h-full shadow-xs">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">Expense Breakdown</h2>
-        <div className="flex items-center gap-2 text-gray-400 bg-transparent border border-border px-2 py-1.5 rounded-xl">
+        <h2 className="text-xl font-semibold text-foreground">Expense Breakdown</h2>
+        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 bg-black/5 dark:bg-card border border-border px-2 py-1.5 rounded-xl shadow-2xs">
           <button onClick={handlePrev} disabled={mode === MODES[0]} className="hover:text-foreground transition-colors p-1 disabled:opacity-30">
             <MdKeyboardArrowLeft className="w-4 h-4" />
           </button>
-          <span className="text-foreground font-medium text-sm w-[90px] text-center">{mode}</span>
+          <span className="text-foreground font-semibold text-sm w-[90px] text-center">{mode}</span>
           <button onClick={handleNext} disabled={mode === MODES[MODES.length - 1]} className="hover:text-foreground transition-colors p-1 disabled:opacity-30">
             <MdKeyboardArrowRight className="w-4 h-4" />
           </button>
@@ -111,14 +111,14 @@ export default function ExpenseBreakdownWidget({ initialData }: { initialData: a
                   })}
                 </Pie>
                 <Tooltip
-                  contentStyle={{ backgroundColor: 'rgba(10,10,15,0.9)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '16px' }}
-                  itemStyle={{ color: '#fff', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: 'var(--popover-bg, #0b2f38)', borderColor: 'var(--border-color, #e2e8f0)', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}
+                  itemStyle={{ color: 'var(--text-primary, #000)', fontSize: '12px' }}
                   formatter={(value: any) => formatLKR(value)}
                 />
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Total</span>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-gray-500 dark:text-gray-400">Total</span>
               <span className="text-sm font-bold text-foreground">
                 {formatLKR(total)}
               </span>
@@ -142,11 +142,10 @@ export default function ExpenseBreakdownWidget({ initialData }: { initialData: a
                 <div key={index} className="flex items-center justify-between text-xs gap-3">
                   <div className="flex items-center gap-2 truncate">
                     <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ backgroundColor: color }} />
-                    <span className="text-gray-500 dark:text-gray-300 font-medium truncate">{entry.name}</span>
+                    <span className="text-gray-700 dark:text-gray-300 font-medium truncate">{entry.name}</span>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-gray-500 text-[10px] w-8 text-right">{entry.percentage}%</span>
-                    <span className="text-foreground font-semibold w-[85px] text-right">{formatLKR(entry.value)}</span>
+                  <div className="shrink-0 text-right">
+                    <span className="text-foreground font-semibold whitespace-nowrap">{formatLKR(entry.value)}</span>
                   </div>
                 </div>
               );

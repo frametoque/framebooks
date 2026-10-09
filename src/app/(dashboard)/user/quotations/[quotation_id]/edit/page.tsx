@@ -242,7 +242,7 @@ export default function EditQuotationPage() {
         <div className="space-y-8">
           
           {/* Client Details */}
-          <div className="bg-transparent border border-border rounded-3xl p-6 space-y-4">
+          <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
             <h2 className="text-xl font-semibold mb-4">Client Details</h2>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
@@ -292,7 +292,7 @@ export default function EditQuotationPage() {
           </div>
 
           {/* Quotation Details */}
-          <div className="bg-transparent border border-border rounded-3xl p-6 space-y-4">
+          <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
             <h2 className="text-xl font-semibold mb-4">Quotation Details</h2>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
@@ -324,10 +324,10 @@ export default function EditQuotationPage() {
                 <select name="paymentMethod" value={formData.paymentMethod} onChange={handleFormChange}
                   className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none disabled:opacity-50"
                   disabled={isConfirmed}>
-                  <option className="bg-black">Bank Transfer</option>
-                  <option className="bg-black">Stripe</option>
-                  <option className="bg-black">PayPal</option>
-                  <option className="bg-black">Cash</option>
+                  <option className="bg-card text-foreground">Bank Transfer</option>
+                  <option className="bg-card text-foreground">Stripe</option>
+                  <option className="bg-card text-foreground">PayPal</option>
+                  <option className="bg-card text-foreground">Cash</option>
                 </select>
               </div>
             </div>
@@ -335,19 +335,19 @@ export default function EditQuotationPage() {
             
             {/* Payment Bank Account — PDF only */}
             <div className="space-y-1">
-              <label className="text-sm text-gray-400">
+              <label className="text-sm text-gray-500 dark:text-gray-400">
                 Payment Bank Account
               </label>
               <select
                 name="bankAccountId"
                 value={formData.bankAccountId}
                 onChange={handleFormChange}
-                className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none disabled:opacity-50"
+                className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none disabled:opacity-50 shadow-2xs"
                 disabled={isConfirmed}
               >
-                <option value="" className="bg-black">— No bank account —</option>
+                <option value="" className="bg-card text-gray-400">— No bank account —</option>
                 {bankAccounts.map(acc => (
-                  <option key={acc.id} value={String(acc.id)} className="bg-black">
+                  <option key={acc.id} value={String(acc.id)} className="bg-card text-foreground">
                     {acc.name} · {acc.bank} · {acc.number}
                   </option>
                 ))}
@@ -356,7 +356,7 @@ export default function EditQuotationPage() {
           </div>
 
           {/* Notes */}
-          <div className="bg-transparent border border-border rounded-3xl p-6 space-y-4">
+          <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
             <h2 className="text-xl font-semibold mb-4">Notes</h2>
             <textarea name="notes" value={formData.notes} onChange={handleFormChange}
               className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors resize-none disabled:opacity-50"
@@ -366,7 +366,7 @@ export default function EditQuotationPage() {
 
         {/* Right Column */}
         <div className="space-y-8">
-          <div className="bg-transparent border border-border rounded-3xl p-6 space-y-4">
+          <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
             <h2 className="text-xl font-semibold mb-4">Services/Line Items</h2>
             
             <div className="space-y-3">
@@ -440,7 +440,7 @@ export default function EditQuotationPage() {
           </div>
 
           {/* Advance Payment */}
-          <div className="bg-transparent border border-border rounded-3xl p-6 space-y-4">
+          <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
             <h2 className="text-xl font-semibold mb-1">Advance Payment</h2>
             <p className="text-sm text-gray-400 mb-4">Specify any upfront payment required before work begins.</p>
             <div className="flex justify-between items-center text-sm">

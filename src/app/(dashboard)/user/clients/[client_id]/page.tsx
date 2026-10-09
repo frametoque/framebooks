@@ -67,23 +67,21 @@ export default function ClientProfilePage() {
       </Link>
 
       {/* Client Profile Banner */}
-      <div className="bg-transparent border border-border rounded-3xl p-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+      <div className="bg-card border border-border rounded-3xl p-8 relative overflow-hidden shadow-xs">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-black/[0.02] dark:bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
         <div className="flex flex-col md:flex-row gap-8 items-start md:items-center relative z-10">
-          {/* Client avatar removed */}
-
           <div className="flex-1 space-y-2">
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold text-foreground">{client.name}</h1>
               {client.active ? (
-                <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-semibold rounded-full border border-green-500/30">Active</span>
+                <span className="px-3 py-1 bg-emerald-100/70 text-emerald-700 text-xs font-semibold rounded-full border border-emerald-200/60 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/30">Active</span>
               ) : (
-                <span className="px-3 py-1 bg-gray-500/20 text-gray-400 text-xs font-semibold rounded-full border border-gray-500/30">Inactive</span>
+                <span className="px-3 py-1 bg-slate-100 text-slate-700 text-xs font-semibold rounded-full border border-slate-200/80 dark:bg-gray-500/20 dark:text-gray-400 dark:border-gray-500/30">Inactive</span>
               )}
             </div>
 
-            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-400 mt-2">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500 dark:text-gray-400 mt-2">
               <div className="flex items-center gap-2">
                 <MdMailOutline className="w-4 h-4 text-foreground" />
                 <a href={`mailto:${client.email}`} className="hover:text-foreground transition-colors">{client.email}</a>
@@ -108,7 +106,7 @@ export default function ClientProfilePage() {
               )}
             </div>
             {client.address && (
-              <div className="flex items-center gap-2 text-sm text-gray-400 mt-2">
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-2">
                 <MdLocationOn className="w-4 h-4 text-foreground flex-shrink-0" />
                 <span>{client.address}</span>
               </div>
@@ -118,19 +116,19 @@ export default function ClientProfilePage() {
       </div>
 
       {/* Orders / Invoices Table */}
-      <div className="bg-transparent border border-border rounded-3xl overflow-hidden">
+      <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-xs">
         <div className="p-6 border-b border-border flex items-center gap-3">
           <div className="p-2 text-foreground flex shrink-0">
             <Receipt className="w-5 h-5 text-foreground" />
           </div>
-          <h2 className="text-xl font-semibold">Order History</h2>
-          <span className="ml-auto text-sm text-gray-400">{orders.length} record{orders.length !== 1 ? 's' : ''}</span>
+          <h2 className="text-xl font-semibold text-foreground">Order History</h2>
+          <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">{orders.length} record{orders.length !== 1 ? 's' : ''}</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-border text-gray-400 text-sm">
+              <tr className="bg-black/[0.02] dark:bg-white/[0.02] border-b border-border text-gray-600 dark:text-gray-400 text-sm">
                 <th className="p-4 font-medium">ID</th>
                 <th className="p-4 font-medium">Type</th>
                 <th className="p-4 font-medium">Project / Service</th>
@@ -140,42 +138,42 @@ export default function ClientProfilePage() {
                 <th className="p-4 font-medium text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border">
               {orders.map((order: any) => (
-                <tr key={order.id} className="hover:bg-card transition-colors">
+                <tr key={order.id} className="hover:bg-black/[0.02] dark:hover:bg-card transition-colors">
                   <td className="p-4 font-medium text-foreground">
                     <div className="flex items-center gap-2">
                       {order.type === 'invoice' ? (
                         <MdInsertDriveFile className="w-4 h-4 text-foreground flex-shrink-0" />
                       ) : (
-                        <Banknote className="w-4 h-4 text-green-400 flex-shrink-0" />
+                        <Banknote className="w-4 h-4 text-emerald-600 dark:text-green-400 flex-shrink-0" />
                       )}
                       <span className="text-sm">{order.id}</span>
                     </div>
                   </td>
                   <td className="p-4">
                     {order.type === 'invoice' ? (
-                      <span className="px-2.5 py-1 text-[10px] uppercase font-bold rounded-full border text-brand-400 bg-brand-400/10 border-brand-400/20">
+                      <span className="px-2.5 py-1 text-[10px] uppercase font-bold rounded-full border text-emerald-700 bg-emerald-100/70 border-emerald-200/60 dark:text-brand-400 dark:bg-brand-400/10 dark:border-brand-400/20">
                         Invoice
                       </span>
                     ) : (
-                      <span className="px-2.5 py-1 text-[10px] uppercase font-bold rounded-full border text-green-400 bg-green-400/10 border-green-400/20">
+                      <span className="px-2.5 py-1 text-[10px] uppercase font-bold rounded-full border text-emerald-700 bg-emerald-100/70 border-emerald-200/60 dark:text-green-400 dark:bg-green-400/10 dark:border-green-400/20">
                         Income
                       </span>
                     )}
                   </td>
-                  <td className="p-4 text-sm text-gray-300">{order.service}</td>
+                  <td className="p-4 text-sm text-gray-600 dark:text-gray-300">{order.service}</td>
                   <td className="p-4 font-semibold text-foreground">{formatLKR(order.amount)}</td>
-                  <td className="p-4 text-sm text-gray-300">{order.date}</td>
+                  <td className="p-4 text-sm text-gray-600 dark:text-gray-300">{order.date}</td>
                   <td className="p-4">
                     {order.status === 'paid' && (
-                      <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-green-500/20 text-green-400 border border-green-500/30">Paid</span>
+                      <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-100/70 text-emerald-700 border border-emerald-200/60 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/30">Paid</span>
                     )}
                     {order.status === 'unpaid' && (
-                      <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">Pending</span>
+                      <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-amber-100/70 text-amber-700 border border-amber-200/60 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30">Pending</span>
                     )}
                     {order.status === 'overdue' && (
-                      <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-red-500/20 text-red-400 border border-red-500/30">Overdue</span>
+                      <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-red-100/70 text-red-700 border border-red-200/60 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30">Overdue</span>
                     )}
                   </td>
                   <td className="p-4 text-right">

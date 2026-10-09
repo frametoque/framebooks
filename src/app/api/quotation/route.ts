@@ -59,7 +59,6 @@ export async function POST(req: NextRequest) {
     `;
     if (existing.length > 0) {
       clientId = existing[0].id;
-      console.log("[quotation] found existing client:", clientId);
 
       // Duplicate check (skip if forceInsert is true or if it's a domain order)
       const isDomainOrder = cartItems.some((item) => item.categorySlug === "domain" || item.id?.startsWith("domain-") || item.serviceId === "domain-reg");
@@ -95,7 +94,6 @@ export async function POST(req: NextRequest) {
         }
 
         if (isDuplicate) {
-          console.log("[quotation] duplicate quotation detected for client:", clientId);
           return NextResponse.json({
             duplicate: true,
             message: "You have similar request already? Do you want to put new request?"
@@ -116,7 +114,6 @@ export async function POST(req: NextRequest) {
           true
         )
       `;
-      console.log("[quotation] created new client:", clientId);
     }
   } catch (err) {
     console.error("[quotation] client lookup/creation failed:", err);
@@ -205,7 +202,6 @@ export async function POST(req: NextRequest) {
             ${regRetail - cheapest.regCost}, ${cheapest.renewCost}, ${renewRetail}, ${cheapest.registrar}, null, 'pending'
           )
         `;
-        console.log("[quotation] inserted domain order only:", domainName);
       }
       return NextResponse.json({ success: true, isDomainOrderOnly: true });
     } catch (domErr) {
@@ -269,7 +265,6 @@ export async function POST(req: NextRequest) {
       RETURNING id
     `;
     quotationId = rows[0].id;
-    console.log("[quotation] inserted admin_quotations id:", quotationId);
   } catch (err) {
     console.error("[quotation] admin_quotations INSERT failed:", err);
     return NextResponse.json(
@@ -300,10 +295,7 @@ export async function POST(req: NextRequest) {
           ${lineTotal}
         )
       `;
-
-
     }
-    console.log("[quotation] inserted", cartItems.length, "quotation_items");
   } catch (err) {
     console.error("[quotation] quotation_items INSERT failed:", err);
     return NextResponse.json(

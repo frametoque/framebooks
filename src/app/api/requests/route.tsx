@@ -4,13 +4,9 @@ import sql from "@/lib/db";
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
-  console.log('API Route: /api/requests called');
-  
   try {
     const { searchParams } = new URL(request.url);
     const user_email = searchParams.get('user_email');
-    
-    console.log('Query param user_email:', user_email);
     
     if (!user_email) {
       return NextResponse.json(
@@ -93,7 +89,6 @@ export async function GET(request) {
     }
     
     if (error.message.includes('column "user_email" does not exist')) {
-      console.log('user_email column does not exist in projects table');
       return NextResponse.json(
         { error: 'Database schema missing user_email column. Please run migrations.' },
         { status: 500 }

@@ -1,5 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  turbopack: {
+    root: process.cwd(),
+  },
+  serverExternalPackages: [
+    'puppeteer',
+    'puppeteer-core',
+    '@sparticuz/chromium',
+    'puppeteer-extra',
+    'puppeteer-extra-plugin-stealth',
+  ],
   experimental: {
     serverActions: {
       bodySizeLimit: '100mb',
@@ -8,19 +18,25 @@ const nextConfig = {
   async redirects() {
     return [
       {
-        source: '/work',
-        destination: '/projects',
-        permanent: true,
+        source: '/user/onboarding',
+        destination: '/onboarding',
+        permanent: false,
       },
+    ];
+  },
+
+  async headers() {
+    return [
       {
-        source: "/projects",
-        destination: "/projects/photography",
-        permanent: true,
-      },
-      {
-        source: "/services",
-        destination: "/services/photo-video",
-        permanent: true,
+        source: '/admin/:path*',
+        headers: [
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
+        ],
       },
     ];
   },

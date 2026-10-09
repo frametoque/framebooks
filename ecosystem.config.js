@@ -1,9 +1,9 @@
 module.exports = {
   apps: [{
-    name: 'frametoque',
+    name: 'framebooks',
     script: 'node_modules/next/dist/bin/next',
     args: 'start',
-    cwd: '/home/ec2-user/frametoque',
+    cwd: '/home/ec2-user/framebooks',
     instances: 1,
     autorestart: true,
     watch: false,

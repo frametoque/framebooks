@@ -87,7 +87,7 @@ export default function AuditLogsTab() {
         </div>
       </div>
 
-      <div className="bg-transparent border border-border rounded-3xl p-7 sm:p-9">
+      <div className="bg-card border border-border rounded-3xl p-7 sm:p-9 shadow-xs">
         {loading ? (
           <div className="flex justify-center items-center py-12">
             <Loader />
@@ -97,24 +97,24 @@ export default function AuditLogsTab() {
             {error}
           </div>
         ) : logs.length === 0 ? (
-          <div className="p-8 text-center text-gray-400 bg-card rounded-3xl">
+          <div className="p-8 text-center text-gray-500 dark:text-gray-400 bg-card rounded-3xl">
             No system logs available yet.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="border-b border-border text-gray-400 font-semibold">
+                <tr className="border-b border-border bg-slate-50/75 dark:bg-white/[0.02] text-gray-700 dark:text-gray-400 font-semibold text-xs uppercase tracking-wider">
                   <th className="py-3 px-4">Timestamp</th>
                   <th className="py-3 px-4">User</th>
                   <th className="py-3 px-4">Task / Action</th>
                   <th className="py-3 px-4">OS & Client</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-border">
                 {logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-card transition-colors">
-                    <td className="py-3.5 px-4 text-gray-300 whitespace-nowrap">
+                  <tr key={log.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                    <td className="py-3.5 px-4 text-gray-700 dark:text-gray-300 whitespace-nowrap font-medium">
                       {(() => {
                         let dateStr = log.timestamp;
                         if (typeof dateStr === "string" && !dateStr.endsWith("Z") && !dateStr.includes("+")) {
@@ -125,16 +125,16 @@ export default function AuditLogsTab() {
                     </td>
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <p className="text-foreground font-medium">{log.user_email}</p>
-                      <p className="text-xs text-gray-400 font-mono mt-0.5">{log.device_ip}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">{log.device_ip}</p>
                     </td>
-                    <td className="py-3.5 px-4 text-gray-200 min-w-[200px]">
+                    <td className="py-3.5 px-4 text-foreground min-w-[200px]">
                       {log.task}
                     </td>
-                    <td className="py-3.5 px-4 text-gray-400 text-xs whitespace-nowrap">
-                      <span className="px-2 py-1 bg-card rounded border border-border mr-1.5 text-[10px]">
+                    <td className="py-3.5 px-4 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
+                      <span className="px-2 py-0.5 bg-slate-100 text-slate-800 rounded border border-slate-200/80 dark:bg-card dark:text-gray-300 dark:border-border mr-1.5 text-[10px] font-medium">
                         {log.device_os}
                       </span>
-                      <span className="px-2 py-1 bg-card rounded border border-border text-[10px]">
+                      <span className="px-2 py-0.5 bg-slate-100 text-slate-800 rounded border border-slate-200/80 dark:bg-card dark:text-gray-300 dark:border-border text-[10px] font-medium">
                         {log.device_type}
                       </span>
                     </td>

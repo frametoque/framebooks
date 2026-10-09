@@ -23,7 +23,10 @@ import { ThemeToggle } from "./components/ThemeToggle";
 import { UpgradeModal } from "./components/UpgradeModal";
 import ClientAvatar from "@/components/ClientAvatar";
 import { PlanLockProvider } from "./components/PlanLockProvider";
+import { GracePeriodBanner } from "./components/GracePeriodBanner";
 import { LimitBanner } from "./components/LimitBanner";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import { NotificationBell } from "@/components/NotificationBell";
 import { getAllLimits } from "./actions/actions";
 
 // Framer Motion spring config for sidebar width
@@ -104,7 +107,20 @@ function LayoutContent({ children }) {
   const isLoaded = status !== "loading";
   const router = useRouter();
 
-  const [tenantInfo, setTenantInfo] = useState<{plan: string, name: string, logo_url: string | null, industry: string | null, userRole?: string, teamMembersCount?: number, plan_expires_at?: string | null}>({ plan: "Loading...", name: "My Business", logo_url: null, industry: null });
+  const [tenantInfo, setTenantInfo] = useState<{
+    plan: string;
+    name: string;
+    logo_url: string | null;
+    industry: string | null;
+    userRole?: string | null;
+    teamMembersCount?: number;
+    plan_expires_at?: string | null;
+    is_grace_period?: boolean;
+    is_read_only?: boolean;
+    grace_days_remaining?: number | null;
+    grace_end_date?: string | null;
+    grace_period_days?: number;
+  }>({ plan: "Loading...", name: "My Business", logo_url: null, industry: null });
   const [exceededLimits, setExceededLimits] = useState<string[]>([]);
 
   useEffect(() => {
@@ -122,26 +138,35 @@ function LayoutContent({ children }) {
   const showOwnerWarning = tenantInfo.plan !== 'Loading...' && tenantInfo.plan !== 'Pro Plus' && (tenantInfo.userRole === 'owner' || tenantInfo.userRole === 'Super Admin') && (tenantInfo.teamMembersCount || 0) > 1;
 
   return (
-    <PlanLockProvider planExpiresAt={tenantInfo.plan_expires_at || null}>
     <AdminDateRangeProvider>
-      <div className="min-h-screen bg-background text-foreground">
-        {!isLocked && (
-          <Sidebar
-            mobileMenuOpen={mobileMenuOpen}
-            setMobileMenuOpen={setMobileMenuOpen}
-            tenantInfo={tenantInfo}
-          />
-        )}
+      <RoleProvider
+        role={tenantInfo.is_read_only ? 'Viewer' : (tenantInfo.userRole || null)}
+        actualRole={tenantInfo.userRole || null}
+        isReadOnly={Boolean(tenantInfo.is_read_only)}
+        isGracePeriod={Boolean(tenantInfo.is_grace_period)}
+        graceDaysRemaining={tenantInfo.grace_days_remaining ?? null}
+        graceEndDate={tenantInfo.grace_end_date ?? null}
+        planExpiresAt={tenantInfo.plan_expires_at ?? null}
+        planName={tenantInfo.plan || "Free"}
+      >
+        <PlanLockProvider>
+          <div className="min-h-screen bg-background text-foreground font-sans antialiased">
+            {!isLocked && (
+              <Sidebar
+                mobileMenuOpen={mobileMenuOpen}
+                setMobileMenuOpen={setMobileMenuOpen}
+                tenantInfo={tenantInfo}
+              />
+            )}
 
-        {/* Main Content Area */}
-        <motion.div
-          animate={{ paddingLeft: isLocked ? 0 : 220 }}
-          className="min-h-screen lg:flex flex-col hidden"
-        >
-          <LimitBanner exceededLimits={exceededLimits} />
-          <Header user={user} isLoaded={isLoaded} setMobileMenuOpen={setMobileMenuOpen} tenantInfo={tenantInfo} />
-          <main className="px-4 sm:px-6 lg:px-8 pt-4 pb-8 flex-1 flex flex-col">
-            <RoleProvider role={tenantInfo.userRole || null}>
+            {/* Main Content Area */}
+            <motion.div
+              animate={{ paddingLeft: isLocked ? 0 : 220 }}
+              className="min-h-screen lg:flex flex-col hidden"
+            >
+              <LimitBanner exceededLimits={exceededLimits} />
+              <Header user={user} isLoaded={isLoaded} setMobileMenuOpen={setMobileMenuOpen} tenantInfo={tenantInfo} />
+              <main className="px-4 sm:px-6 lg:px-8 pt-4 pb-8 flex-1 flex flex-col">
               {isLocked ? <LockScreen /> : isTeamLocked ? (
                 <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
                   <div className="w-20 h-20 bg-brand-500/10 text-brand-500 rounded-3xl flex items-center justify-center mb-6">
@@ -201,10 +226,11 @@ function LayoutContent({ children }) {
                       </Link>
                     </div>
                   )}
+                  <GracePeriodBanner />
+                  <AnnouncementBanner userPlan={tenantInfo.plan} />
                   {children}
                 </>
               )}
-            </RoleProvider>
           </main>
         </motion.div>
 
@@ -213,7 +239,6 @@ function LayoutContent({ children }) {
           <LimitBanner exceededLimits={exceededLimits} />
           <Header user={user} isLoaded={isLoaded} setMobileMenuOpen={setMobileMenuOpen} tenantInfo={tenantInfo} />
           <main className="px-4 sm:px-6 pt-4 pb-8 flex-1 flex flex-col">
-            <RoleProvider role={tenantInfo.userRole || null}>
               {isLocked ? <LockScreen /> : isTeamLocked ? (
                 <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
                   <div className="w-20 h-20 bg-brand-500/10 text-brand-500 rounded-3xl flex items-center justify-center mb-6">
@@ -273,16 +298,18 @@ function LayoutContent({ children }) {
                       </Link>
                     </div>
                   )}
+                  <GracePeriodBanner />
+                  <AnnouncementBanner userPlan={tenantInfo.plan} />
                   {children}
                 </>
               )}
-            </RoleProvider>
           </main>
         </div>
       </div>
       <IdleTimer />
+        </PlanLockProvider>
+      </RoleProvider>
     </AdminDateRangeProvider>
-    </PlanLockProvider>
   );
 }
 
@@ -409,7 +436,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
           {/* Top bar context action buttons */}
           {hideSelector && (isInvoiceDetail || isAccounts || pathname === "/user/social-media/new") && (
             <>
-              <span className="hidden sm:block w-[1px] h-5 bg-white/15" />
+              <span className="hidden sm:block w-[1px] h-5 bg-border" />
 
               {pathname === "/user/social-media/new" && (
                 <div className="flex items-center gap-2 text-gray-400">
@@ -446,7 +473,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => window.dispatchEvent(new CustomEvent("accounts:open-transfer"))}
-                    className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-foreground rounded-xl font-medium transition-colors cursor-pointer text-sm"
+                    className="flex items-center gap-2 px-4 py-2 bg-card hover:bg-black/5 dark:hover:bg-white/10 text-foreground border border-border rounded-xl font-medium transition-colors cursor-pointer text-sm shadow-2xs"
                   >
                     <RefreshCw className="w-4 h-4" />
                     <span>Transfer Cash</span>
@@ -466,24 +493,24 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
           {!hideSelector && (
             <>
               {/* Divider */}
-              <span className="hidden sm:block w-[1px] h-5 bg-white/15" />
+              <span className="hidden sm:block w-[1px] h-5 bg-border" />
 
               {/* Range Selector */}
               <div className="flex items-center">
                 {(isClients || isInventory) ? (
                   <div className="flex items-center gap-3">
                     <div className="relative w-32 sm:w-64">
-                      <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
                       <input
                         type="text"
-                        placeholder="MdSearch..."
+                        placeholder="Search..."
                         value={headerSearchTerm}
                         onChange={(e) => {
                           const val = e.target.value;
                           setHeaderSearchTerm(val);
                           window.dispatchEvent(new CustomEvent(isInventory ? "inventory:search" : "clients:search", { detail: val }));
                         }}
-                        className="w-full bg-transparent border border-border rounded-full pl-10 pr-4 py-2 outline-none focus:border-brand-500 transition-colors text-sm text-foreground"
+                        className="w-full bg-card border border-border rounded-full pl-10 pr-4 py-2 outline-none focus:border-brand-500 transition-colors text-sm text-foreground placeholder:text-gray-500 dark:placeholder:text-gray-400 shadow-2xs"
                       />
                     </div>
                     {tenantInfo.userRole !== 'Viewer' && (
@@ -500,10 +527,10 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
                   <button
                     type="button"
                     onClick={() => window.dispatchEvent(new CustomEvent("reports:toggle-datepicker"))}
-                    className="bg-transparent border border-border hover:border-black/20 dark:border-white/20 active:bg-white/10 rounded-xl px-4 py-2 text-xs text-foreground flex items-center gap-2 transition-all cursor-pointer shadow-sm select-none"
+                    className="bg-card border border-border hover:border-black/20 dark:border-white/20 active:bg-black/5 dark:active:bg-white/10 rounded-xl px-4 py-2 text-xs text-foreground flex items-center gap-2 transition-all cursor-pointer shadow-2xs select-none"
                   >
-                    <MdCalendarToday className="w-4 h-4 text-foreground" />
-                    <span className="font-semibold text-gray-400">As of:</span>
+                    <MdCalendarToday className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                    <span className="font-semibold text-gray-500 dark:text-gray-400">As of:</span>
                     <span className="font-bold">{reportsFormattedDate || "Select Date"}</span>
                   </button>
                 ) : (
@@ -522,37 +549,36 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
         </div>
 
         {/* Right Side: System Stats */}
-        <div className="hidden xl:flex items-center gap-5 text-sm text-gray-400">
+        <div className="hidden xl:flex items-center gap-5 text-sm text-gray-600 dark:text-gray-400">
           {/* Live Visitors Status - Show only if > 0 */}
           {activeVisitors > 0 && (
             <>
-              <div className="flex items-center gap-2 text-gray-300">
+              <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400/70 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
                 <span className="font-medium flex items-center gap-1">
-                  <span className="text-gray-400">Live:</span>
-                  <span className="font-semibold text-foreground/90">{activeVisitors} {activeVisitors === 1 ? "visitor" : "visitors"}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Live:</span>
+                  <span className="font-semibold text-foreground">{activeVisitors} {activeVisitors === 1 ? "visitor" : "visitors"}</span>
                 </span>
               </div>
-              <span className="w-1 h-1 rounded-full bg-white/20" />
+              <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
             </>
           )}
 
           {/* Current Time */}
           <AnimatedClock />
 
-          <span className="w-1 h-1 rounded-full bg-white/20" />
+          <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
 
           {/* Current Date (showing Day Name e.g. Fri, Sat, Sun) */}
-          <div className="flex items-center gap-1.5 text-gray-300">
-            <MdCalendarToday className="w-4 h-4 text-gray-400" />
+          <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+            <MdCalendarToday className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             <span className="font-medium text-sm">{currentDate || "Loading..."}</span>
           </div>
 
-
-
+          <NotificationBell />
           <ThemeToggle />
 
           {/* Business Info on Top Bar */}
@@ -683,12 +709,12 @@ const Sidebar = ({
                     alt="FrameBooks"
                     width={125}
                     height={25}
-                    className="h-[25px] w-[125px] flex-shrink-0 animate-fade-in"
+                    className="h-[25px] w-[125px] flex-shrink-0 animate-fade-in [filter:brightness(0)] dark:[filter:none]"
                   />
                   {tenantInfo.plan && tenantInfo.plan !== "Loading..." && (
-                    <span className="text-foreground/30 text-[11px] font-medium tracking-widest ml-3 flex-shrink-0 flex items-center gap-2">
+                    <span className="text-gray-400 dark:text-foreground/30 text-[11px] font-medium tracking-widest ml-3 flex-shrink-0 flex items-center gap-2">
                       |
-                      <span className="text-brand-500 font-bold uppercase">
+                      <span className="text-emerald-700 dark:text-brand-500 font-bold uppercase">
                         {tenantInfo.plan.toLowerCase() === "pro plus" ? "PRO +" : tenantInfo.plan}
                       </span>
                     </span>
@@ -716,7 +742,7 @@ const Sidebar = ({
                   {active && (
                     <motion.div
                       layoutId="active-sidebar-tab"
-                      className="absolute inset-0 bg-white/10 rounded-full"
+                      className="absolute inset-0 bg-brand-500/15 border border-brand-500/20 dark:bg-white/10 dark:border-transparent rounded-full"
                       initial={false}
                       transition={{ type: "spring", stiffness: 350, damping: 30 }}
                     />
@@ -727,8 +753,8 @@ const Sidebar = ({
                     target={item.newtab ? "_blank" : "_self"}
                     className={`relative z-10 flex items-center gap-3 pl-[14px] pr-3 py-2.5 rounded-full transition-colors duration-150 overflow-hidden w-full justify-start
                       ${active
-                        ? "text-brand-500 font-semibold"
-                        : "text-foreground font-medium hover:text-brand-500 bg-transparent"
+                        ? "text-brand-700 dark:text-brand-500 font-semibold"
+                        : "text-foreground font-medium hover:text-brand-600 dark:hover:text-brand-500 bg-transparent"
                       }`}
                   >
                     <span className="flex-shrink-0">
@@ -745,12 +771,12 @@ const Sidebar = ({
           </nav>
 
           {/* User Settings Link */}
-          <div className="p-4 flex flex-col mt-auto space-y-2">
+          <div className="p-4 flex flex-col mt-auto space-y-2 shrink-0">
             <div className="flex items-center gap-2">
               <Link 
                 href="/user/settings?tab=profile"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex-1 flex items-center gap-3 p-2 hover:bg-card rounded-2xl transition-colors min-w-0"
+                className="flex-1 flex items-center gap-3 p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-2xl transition-colors min-w-0"
               >
                 <ClientAvatar 
                   imageUrl={user?.image} 
@@ -761,17 +787,17 @@ const Sidebar = ({
                 />
                 <div className="overflow-hidden flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">{user?.name || "User"}</p>
-                  <p className="text-xs text-gray-400 truncate">{user?.email || "Account & Security"}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || "Account & Security"}</p>
                 </div>
               </Link>
               <LockSidebarButton />
             </div>
             
-            <div className="px-2 pt-3 pb-1 text-[10px] text-gray-500 dark:text-white leading-relaxed text-center border-t border-border/50 flex flex-col items-center justify-center gap-1.5">
+            <div className="px-2 pt-3 pb-1 text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed text-center border-t border-border flex flex-col items-center justify-center gap-1.5">
               <p className="max-w-[250px]">
                 Your data stays secure with<br/>
-                <span className="text-brand-500 font-medium">end-to-end encryption</span>.<br/>
-                &copy; {new Date().getFullYear()}. <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a>.<br/>
+                <span className="text-emerald-700 dark:text-brand-500 font-semibold">end-to-end encryption</span>.<br/>
+                &copy; {new Date().getFullYear()}. <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-600 dark:hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a>.<br/>
                 All rights reserved.
               </p>
             </div>
@@ -789,7 +815,7 @@ function LockSidebarButton() {
     <button
       onClick={lock}
       title="Lock App"
-      className="p-3 bg-card hover:bg-black/10 dark:hover:bg-white/10 text-gray-400 hover:text-foreground rounded-2xl transition-colors shrink-0"
+      className="p-3 bg-card border border-border hover:bg-black/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 hover:text-foreground rounded-2xl transition-colors shrink-0 shadow-2xs"
     >
       <MdLockOutline className="w-5 h-5" />
     </button>

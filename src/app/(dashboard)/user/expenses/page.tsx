@@ -301,25 +301,25 @@ export default function ExpensesPage() {
       <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4 animate-pulse">
-              <div className="p-4 rounded-2xl bg-card w-14 h-14" />
+            <div key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 animate-pulse shadow-xs">
+              <div className="p-3 rounded-2xl bg-black/5 dark:bg-card w-12 h-12" />
               <div className="space-y-2 flex-1">
-                <div className="h-4 bg-card rounded-full w-24" />
-                <div className="h-6 bg-white/10 rounded-full w-32" />
+                <div className="h-4 bg-black/5 dark:bg-card rounded-full w-24" />
+                <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-32" />
               </div>
             </div>
           ))}
         </div>
         
-        <div className="bg-transparent border border-border rounded-3xl p-6 animate-pulse space-y-4">
-          <div className="h-6 bg-white/10 rounded-full w-48 mb-6" />
+        <div className="bg-card border border-border rounded-3xl p-6 animate-pulse space-y-4 shadow-xs">
+          <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-48 mb-6" />
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex justify-between items-center py-4 border-b border-border last:border-0">
               <div className="space-y-2 flex-1">
-                <div className="h-4 bg-white/10 rounded-full w-1/3" />
-                <div className="h-3 bg-card rounded-full w-1/4" />
+                <div className="h-4 bg-black/10 dark:bg-white/10 rounded-full w-1/3" />
+                <div className="h-3 bg-black/5 dark:bg-card rounded-full w-1/4" />
               </div>
-              <div className="h-6 bg-white/10 rounded-full w-20" />
+              <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-20" />
             </div>
           ))}
         </div>
@@ -328,9 +328,9 @@ export default function ExpensesPage() {
   }
 
   const stats = [
-    { label: "This Month", value: formatLKR(data.thisMonth), icon: Receipt, color: "text-red-400", bg: "bg-red-400/10" },
-    { label: "Last Month", value: formatLKR(data.lastMonth), icon: MdCalendarToday, color: "text-blue-400", bg: "bg-blue-400/10" },
-    { label: "Year to Date", value: formatLKR(data.ytd), icon: MdCreditCard, color: "text-brand-400", bg: "bg-brand-400/10" },
+    { label: "This Month", value: formatLKR(data.thisMonth), icon: Receipt, color: "text-red-600 dark:text-red-400", bg: "bg-red-100/70 dark:bg-red-400/10" },
+    { label: "Last Month", value: formatLKR(data.lastMonth), icon: MdCalendarToday, color: "text-blue-700 dark:text-blue-400", bg: "bg-blue-100/70 dark:bg-blue-400/10" },
+    { label: "Year to Date", value: formatLKR(data.ytd), icon: MdCreditCard, color: "text-brand-800 dark:text-brand-400", bg: "bg-brand-500/15 dark:bg-brand-400/10" },
   ];
 
   const dynamicFilters = ["All", ...dynamicCategories];
@@ -346,13 +346,13 @@ export default function ExpensesPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {stats.map((stat, i) => (
-          <div key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4 hover:bg-card transition-colors">
-            <div className={`p-4 rounded-2xl ${stat.bg}`}>
-              <stat.icon className={`w-6 h-6 ${stat.color}`} />
+          <div key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 hover:shadow-md transition-all shadow-xs">
+            <div className={`p-3 rounded-2xl ${stat.bg}`}>
+              <stat.icon className={`w-5 h-5 ${stat.color}`} />
             </div>
             <div>
-              <p className="text-gray-400 text-sm">{stat.label}</p>
-              <p className="text-2xl font-semibold">
+              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">{stat.label}</p>
+              <p className="text-2xl font-bold text-foreground">
                 <AnimatedNumber value={stat.value} />
               </p>
             </div>
@@ -362,25 +362,25 @@ export default function ExpensesPage() {
 
       {/* Active Recurring Schedules Panel */}
       {scheduledExpenses.length > 0 && (
-        <div className="bg-transparent border border-border rounded-3xl p-6 space-y-4">
-          <div className="flex items-center gap-2 text-indigo-400">
+        <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
+          <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
             <RefreshCw className="w-5 h-5 animate-[spin_10s_linear_infinite]" />
             <h2 className="text-lg font-semibold text-foreground">Active Recurring Schedules</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {scheduledExpenses.map((item) => (
-              <div key={item.id} className="bg-transparent border border-border rounded-2xl p-4 flex items-center justify-between gap-4">
+              <div key={item.id} className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-4 flex items-center justify-between gap-4">
                 <div className="space-y-1 min-w-0">
                   <p className="font-semibold text-sm text-foreground truncate">{item.title}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     {formatLKR(item.amount)} • <span className="capitalize">{item.frequency}</span>
                   </p>
-                  <p className="text-[10px] text-indigo-300">Next Auto-Pay: {item.next_due_date}</p>
+                  <p className="text-[10px] text-indigo-600 dark:text-indigo-300 font-medium">Next Auto-Pay: {item.next_due_date}</p>
                 </div>
                 {role !== 'Viewer' && (
                   <button
                     onClick={() => handleDeleteScheduled(item.id)}
-                    className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-xl transition-all cursor-pointer flex-shrink-0"
+                    className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all cursor-pointer flex-shrink-0"
                     title="Remove Schedule"
                   >
                     <MdDelete className="w-4 h-4" />
@@ -401,8 +401,8 @@ export default function ExpensesPage() {
               onClick={() => setActiveFilter(f)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer border ${
                 activeFilter === f 
-                  ? "bg-brand-500 text-brand-900 border-brand-500 font-bold" 
-                  : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 transition-opacity"
+                  ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs" 
+                  : "bg-card text-foreground/80 hover:text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
               }`}
             >
               {f}
@@ -428,7 +428,7 @@ export default function ExpensesPage() {
               setReceiptFile(null);
               setIsModalOpen(true);
             }}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors cursor-pointer w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-950 rounded-3xl font-bold transition-colors cursor-pointer w-full sm:w-auto shadow-xs"
           >
             <MdAdd className="w-5 h-5" />
             Record Expense
@@ -437,47 +437,47 @@ export default function ExpensesPage() {
       </div>
 
       {/* Expenses History Table */}
-      <div className="bg-transparent border border-border rounded-3xl overflow-hidden">
+      <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-border text-gray-400 text-sm">
-                <th className="p-4 font-medium">Date</th>
-                <th className="p-4 font-medium">Amount</th>
-                <th className="p-4 font-medium">Description</th>
-                <th className="p-4 font-medium w-36">Category</th>
-                <th className="p-4 font-medium">Paid via</th>
-                <th className="p-4 font-medium text-right">Actions</th>
+              <tr className="border-b border-border bg-black/[0.02] dark:bg-white/[0.02] text-gray-600 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                <th className="p-4">Date</th>
+                <th className="p-4">Amount</th>
+                <th className="p-4">Description</th>
+                <th className="p-4 w-36">Category</th>
+                <th className="p-4">Paid via</th>
+                <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border">
               {filteredExpenses.map((row: any) => (
-                <tr key={row.id} className="hover:bg-card transition-colors">
-                  <td className="p-4 text-sm">{row.date}</td>
-                  <td className="p-4 font-semibold text-red-400">{formatLKR(row.amount)}</td>
-                  <td className="p-4 text-sm text-gray-300">{row.desc}</td>
+                <tr key={row.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                  <td className="p-4 text-sm text-foreground/90 font-medium">{row.date}</td>
+                  <td className="p-4 font-semibold text-red-600 dark:text-red-400">{formatLKR(row.amount)}</td>
+                  <td className="p-4 text-sm text-gray-600 dark:text-gray-300">{row.desc}</td>
                   <td className="p-4 w-36">
                     <div className="flex flex-wrap gap-1 max-w-[144px]">
                       {parseCategories(row.category).map((cat) => (
-                        <span key={cat} className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-white/10 border border-border whitespace-nowrap">
+                        <span key={cat} className="px-2.5 py-0.5 text-[11px] font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-200/80 dark:bg-white/10 dark:text-gray-200 dark:border-border whitespace-nowrap">
                           {cat}
                         </span>
                       ))}
                     </div>
                   </td>
-                  <td className="p-4 text-sm">{row.paidVia}</td>
+                  <td className="p-4 text-sm text-foreground/90">{row.paidVia}</td>
                   <td className="p-4 flex items-center justify-end gap-2">
                     {row.receiptUrl && (
-                      <button onClick={() => setViewingReceipt(row)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-xl transition-colors text-blue-400 hover:text-blue-300 cursor-pointer">
+                      <button onClick={() => setViewingReceipt(row)} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer">
                         <MdRemoveRedEye className="w-4 h-4" />
                       </button>
                     )}
                     {role !== 'Viewer' && (
                       <>
-                        <button onClick={() => handleEdit(row)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-foreground cursor-pointer">
+                        <button onClick={() => handleEdit(row)} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground cursor-pointer">
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDelete(row.id)} className="p-2 hover:bg-red-400/10 rounded-xl transition-colors text-gray-400 hover:text-red-400 cursor-pointer">
+                        <button onClick={() => handleDelete(row.id)} className="p-2 hover:bg-red-50 dark:hover:bg-red-400/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 cursor-pointer">
                           <MdDelete className="w-4 h-4" />
                         </button>
                       </>
@@ -498,18 +498,18 @@ export default function ExpensesPage() {
       {/* Record Expense Modal Form */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-background border border-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-border">
-              <h2 className="text-xl font-semibold">{editingId ? 'Edit Expense' : 'Record Expense'}</h2>
+          <div className="bg-card border border-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-border bg-card">
+              <h2 className="text-xl font-semibold text-foreground">{editingId ? 'Edit Expense' : 'Record Expense'}</h2>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors cursor-pointer">
-                <MdClose className="w-5 h-5" />
+                <MdClose className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
-             <div className="p-6 space-y-4">
+             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               {/* Recurring / Scheduled Switch Toggle - ONLY show on creating new expense */}
               {!editingId && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-transparent border border-border rounded-2xl">
+                  <div className="flex items-center justify-between p-4 bg-black/5 dark:bg-card border border-border rounded-2xl">
                     <div>
                       <p className="text-sm font-semibold text-foreground">Mark as Scheduled Recurring Expense</p>
                     </div>
@@ -517,7 +517,7 @@ export default function ExpensesPage() {
                       type="button"
                       onClick={() => setFormData({...formData, isScheduled: !formData.isScheduled})}
                       className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        formData.isScheduled ? "bg-brand-500" : "bg-white/10"
+                        formData.isScheduled ? "bg-brand-500" : "bg-black/20 dark:bg-white/10"
                       }`}
                     >
                       <span
@@ -528,20 +528,20 @@ export default function ExpensesPage() {
                     </button>
                   </div>
                   {formData.isScheduled && (
-                    <div className="grid grid-cols-2 gap-4 p-4 bg-transparent border border-border rounded-2xl animate-fade-in">
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-black/5 dark:bg-card border border-border rounded-2xl animate-fade-in">
                       <div className="space-y-1">
-                        <label className="text-xs text-gray-400 font-semibold uppercase">Repeat Interval</label>
+                        <label className="text-xs text-gray-600 dark:text-gray-400 font-semibold uppercase">Repeat Interval</label>
                         <select 
                           value={formData.frequency} 
                           onChange={e => setFormData({...formData, frequency: e.target.value})}
-                          className="w-full bg-transparent border border-border rounded-xl px-3 py-2 text-xs text-foreground outline-none focus:border-brand-500 transition-colors appearance-none cursor-pointer"
+                          className="w-full bg-card border border-border rounded-xl px-3 py-2 text-xs text-foreground outline-none focus:border-brand-500 transition-colors appearance-none cursor-pointer shadow-2xs"
                         >
-                          <option value="weekly" className="bg-black">Every Week</option>
-                          <option value="monthly" className="bg-black">Every Month</option>
-                          <option value="yearly" className="bg-black">Every Year</option>
+                          <option value="weekly" className="bg-card text-foreground">Every Week</option>
+                          <option value="monthly" className="bg-card text-foreground">Every Month</option>
+                          <option value="yearly" className="bg-card text-foreground">Every Year</option>
                         </select>
                       </div>
-                      <div className="flex items-end text-xs text-gray-400 pb-2">
+                      <div className="flex items-end text-xs text-gray-500 dark:text-gray-400 pb-2">
                         Next transaction date will calculate from the selected expense date.
                       </div>
                     </div>
@@ -551,21 +551,21 @@ export default function ExpensesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-sm text-gray-400">Date</label>
-                  <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors" />
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
+                  <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm text-gray-400">Amount (LKR)</label>
-                  <input type="number" placeholder="0.00" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors" />
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Amount (LKR)</label>
+                  <input type="number" placeholder="0.00" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground placeholder:text-gray-400" />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-sm text-gray-400">Description</label>
-                <input type="text" placeholder="What was this expense for?" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors" />
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                <input type="text" placeholder="What was this expense for?" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground placeholder:text-gray-400" />
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm text-gray-400">Categories</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Categories</label>
                 <CategoryPicker 
                   categories={dynamicCategories} 
                   value={selectedCategories} 
@@ -576,29 +576,29 @@ export default function ExpensesPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-sm text-gray-400">Payment Method</label>
-                  <select value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none">
-                    <option className="bg-black">Corporate Card</option>
-                    <option className="bg-black">Bank Transfer</option>
-                    <option className="bg-black">Personal Card</option>
-                    <option className="bg-black">Cash</option>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method</label>
+                  <select value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs">
+                    <option className="bg-card text-foreground">Corporate Card</option>
+                    <option className="bg-card text-foreground">Bank Transfer</option>
+                    <option className="bg-card text-foreground">Personal Card</option>
+                    <option className="bg-card text-foreground">Cash</option>
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm text-gray-400">Source Account</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Source Account</label>
                   <select value={formData.accountId} onChange={e => setFormData({ ...formData, accountId: e.target.value })}
-                    className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none">
-                    <option value="" className="bg-black">No Account (Unlinked)</option>
-                    {accounts.map(a => <option key={a.id} value={a.id} className="bg-black">{a.name} ({formatLKR(a.currentBalance || 0)})</option>)}
+                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs">
+                    <option value="" className="bg-card text-foreground">No Account (Unlinked)</option>
+                    {accounts.map(a => <option key={a.id} value={a.id} className="bg-card text-foreground">{a.name} ({formatLKR(a.currentBalance || 0)})</option>)}
                   </select>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm text-gray-400">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   {convertingPdf ? "Processing PDF..." : "Receipt Image / PDF"}
                   {tenantPlan !== 'Pro Plus' && (
-                    <span className="ml-2 text-[10px] uppercase font-bold tracking-wider text-brand-500 bg-brand-500/10 px-2 py-0.5 rounded-md">Pro Plus</span>
+                    <span className="ml-2 text-[10px] uppercase font-bold tracking-wider text-brand-700 dark:text-brand-500 bg-brand-500/15 px-2 py-0.5 rounded-md">Pro Plus</span>
                   )}
                 </label>
                 <input 
@@ -626,18 +626,18 @@ export default function ExpensesPage() {
                       setReceiptFile(selected);
                     }
                   }}
-                  className="w-full bg-transparent border border-border rounded-xl px-4 py-2 outline-none focus:border-brand-500 transition-colors text-sm disabled:opacity-50" 
+                  className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2 outline-none focus:border-brand-500 transition-colors text-sm text-foreground disabled:opacity-50" 
                 />
                 {convertingPdf && (
-                  <p className="text-xs text-brand-400 animate-pulse px-2">Converting PDF to Image...</p>
+                  <p className="text-xs text-brand-600 dark:text-brand-400 animate-pulse px-2">Converting PDF to Image...</p>
                 )}
                 {formData.receiptUrl && !receiptFile && (
                   <div className="flex items-center gap-3 mt-1 px-2">
-                    <a href={formData.receiptUrl} target="_blank" className="text-xs text-blue-400 underline">View current receipt</a>
+                    <a href={formData.receiptUrl} target="_blank" className="text-xs text-blue-600 dark:text-blue-400 underline font-medium">View current receipt</a>
                     <button 
                       type="button"
                       onClick={() => setFormData({ ...formData, receiptUrl: '' })}
-                      className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
+                      className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-semibold cursor-pointer"
                     >
                       Delete current image
                     </button>
@@ -646,10 +646,10 @@ export default function ExpensesPage() {
               </div>
             </div>
             <div className="p-6 border-t border-border flex justify-end gap-3 bg-card">
-              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-full font-medium hover:bg-card transition-colors cursor-pointer" disabled={saving || convertingPdf}>
+              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-full font-medium hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer text-foreground" disabled={saving || convertingPdf}>
                 Cancel
               </button>
-              <button onClick={handleSave} disabled={saving || convertingPdf} className="flex items-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-full font-bold transition-colors disabled:opacity-50 cursor-pointer">
+              <button onClick={handleSave} disabled={saving || convertingPdf} className="flex items-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-950 rounded-full font-bold transition-colors cursor-pointer disabled:opacity-50 shadow-xs">
                 {saving && <Loader size="sm" />}
                 {saving ? "Saving..." : (editingId ? "Update Expense" : "Save Expense")}
               </button>

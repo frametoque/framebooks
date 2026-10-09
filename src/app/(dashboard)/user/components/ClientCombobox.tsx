@@ -54,33 +54,33 @@ export default function ClientCombobox({ name, value, onChange, clients, loading
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors flex justify-between items-center text-left"
+        className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors flex justify-between items-center text-left shadow-2xs"
       >
-        <span className={value ? "text-foreground" : "text-gray-400"}>
+        <span className={value ? "text-foreground font-medium" : "text-gray-500 dark:text-gray-400"}>
           {loading ? "Loading clients..." : value === "new" ? "+ Create New Client" : selectedClient ? `${selectedClient.name} (${selectedClient.email})` : "Choose a client..."}
         </span>
-        <MdKeyboardArrowDown className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
+        <MdKeyboardArrowDown className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
-        <div className="absolute z-50 top-full left-0 w-full mt-2 bg-[#082830] border border-white/15 rounded-xl shadow-2xl overflow-hidden flex flex-col">
-          <div className="p-2 border-b border-border flex items-center gap-2 px-3">
-            <MdSearch className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        <div className="absolute z-50 top-full left-0 w-full mt-2 bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col">
+          <div className="p-2 border-b border-border flex items-center gap-2 px-3 bg-card">
+            <MdSearch className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
             <input
               type="text"
               autoFocus
-              placeholder="MdSearch by name or email..."
+              placeholder="Search by name or email..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full bg-transparent border-none outline-none text-sm py-2 text-foreground"
+              className="w-full bg-transparent border-none outline-none text-sm py-2 text-foreground placeholder:text-gray-400"
             />
           </div>
           
-          <div className="overflow-y-auto max-h-[240px]">
+          <div className="overflow-y-auto max-h-[240px] bg-card">
             <button
               type="button"
               onClick={() => handleSelect("new")}
-              className="w-full text-left px-4 py-3 text-sm text-brand-400 hover:bg-black/10 dark:hover:bg-white/10 font-medium transition-colors"
+              className="w-full text-left px-4 py-3 text-sm text-brand-700 dark:text-brand-400 hover:bg-black/5 dark:hover:bg-white/10 font-bold transition-colors"
             >
               + Create New Client
             </button>
@@ -90,10 +90,10 @@ export default function ClientCombobox({ name, value, onChange, clients, loading
                 key={c.id}
                 type="button"
                 onClick={() => handleSelect(String(c.id))}
-                className={`w-full text-left px-4 py-3 text-sm hover:bg-card transition-colors ${String(c.id) === String(value) ? 'bg-white/10 text-foreground' : 'text-gray-300'}`}
+                className={`w-full text-left px-4 py-3 text-sm transition-colors ${String(c.id) === String(value) ? 'bg-brand-500/15 text-foreground font-semibold' : 'text-foreground/80 hover:bg-black/5 dark:hover:bg-white/10'}`}
               >
                 <div className="font-medium">{c.name}</div>
-                <div className="text-xs text-gray-500">{c.email}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{c.email}</div>
               </button>
             ))}
             

@@ -293,26 +293,26 @@ export default function InvoicesPage() {
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4 animate-pulse">
-              <div className="p-4 rounded-2xl bg-card w-14 h-14" />
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 animate-pulse shadow-xs">
+              <div className="p-3 rounded-2xl bg-black/5 dark:bg-card w-12 h-12" />
               <div className="space-y-2 flex-1">
-                <div className="h-4 bg-card rounded-full w-24" />
-                <div className="h-6 bg-white/10 rounded-full w-32" />
+                <div className="h-4 bg-black/5 dark:bg-card rounded-full w-24" />
+                <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-32" />
               </div>
             </div>
           ))}
         </div>
         
-        <div className="bg-transparent border border-border rounded-3xl p-6 animate-pulse space-y-4">
-          <div className="h-6 bg-white/10 rounded-full w-48 mb-6" />
+        <div className="bg-card border border-border rounded-3xl p-6 animate-pulse space-y-4 shadow-xs">
+          <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-48 mb-6" />
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex justify-between items-center py-4 border-b border-border last:border-0">
               <div className="space-y-2 flex-1">
-                <div className="h-4 bg-white/10 rounded-full w-1/3" />
-                <div className="h-3 bg-card rounded-full w-1/4" />
+                <div className="h-4 bg-black/10 dark:bg-white/10 rounded-full w-1/3" />
+                <div className="h-3 bg-black/5 dark:bg-card rounded-full w-1/4" />
               </div>
-              <div className="h-6 bg-white/10 rounded-full w-20" />
+              <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-20" />
             </div>
           ))}
         </div>
@@ -320,13 +320,11 @@ export default function InvoicesPage() {
     );
   }
 
-
-
   const stats = [
-    { label: "Total Issued", value: data.totalIssued.toString(), icon: MdInsertDriveFile, color: "text-brand-400", bg: "bg-brand-400/10" },
-    { label: "Paid", value: data.paid.toString(), icon: MdCheckCircle, color: "text-green-400", bg: "bg-green-400/10" },
-    { label: "Unpaid", value: data.pending.toString(), icon: MdAccessTime, color: "text-amber-400", bg: "bg-amber-400/10" },
-    { label: "Total Due", value: formatLKR(data.totalDue), icon: MdErrorOutline, color: "text-red-400", bg: "bg-red-400/10" },
+    { label: "Total Issued", value: data.totalIssued.toString(), icon: MdInsertDriveFile, color: "text-brand-800 dark:text-brand-400", bg: "bg-brand-500/15 dark:bg-brand-400/10" },
+    { label: "Paid", value: data.paid.toString(), icon: MdCheckCircle, color: "text-emerald-700 dark:text-green-400", bg: "bg-emerald-100/70 dark:bg-green-400/10" },
+    { label: "Unpaid", value: data.pending.toString(), icon: MdAccessTime, color: "text-amber-800 dark:text-amber-400", bg: "bg-amber-100/70 dark:bg-amber-400/10" },
+    { label: "Total Due", value: formatLKR(data.totalDue), icon: MdErrorOutline, color: "text-red-700 dark:text-red-400", bg: "bg-red-100/70 dark:bg-red-400/10" },
   ];
 
   return (
@@ -335,13 +333,13 @@ export default function InvoicesPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((stat, i) => (
-          <div key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4 hover:bg-card transition-colors">
-            <div className={`p-4 rounded-2xl ${stat.bg}`}>
-              <stat.icon className={`w-6 h-6 ${stat.color}`} />
+          <div key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 hover:shadow-md transition-all shadow-xs">
+            <div className={`p-3 rounded-2xl ${stat.bg}`}>
+              <stat.icon className={`w-5 h-5 ${stat.color}`} />
             </div>
             <div>
-              <p className="text-gray-400 text-sm">{stat.label}</p>
-              <p className="text-2xl font-semibold">
+              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">{stat.label}</p>
+              <p className="text-2xl font-bold text-foreground">
                 <AnimatedNumber value={stat.value} />
               </p>
             </div>
@@ -350,17 +348,17 @@ export default function InvoicesPage() {
       </div>
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        {/* Left Side: MdSearch & Filters */}
+        {/* Left Side: Search & Filters */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-          {/* MdSearch */}
+          {/* Search */}
           <div className="relative w-full sm:w-64">
-            <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400" />
             <input
               type="text"
-              placeholder="MdSearch invoices..."
+              placeholder="Search invoices..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-transparent border border-border rounded-full pl-11 pr-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm text-foreground"
+              className="w-full bg-card border border-border rounded-full pl-11 pr-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm text-foreground shadow-2xs placeholder:text-gray-400"
             />
           </div>
 
@@ -372,8 +370,8 @@ export default function InvoicesPage() {
                 onClick={() => setActiveFilter(f)}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors border ${
                   activeFilter === f
-                    ? "bg-brand-500 text-brand-900 border-brand-500 font-bold"
-                    : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 transition-opacity"
+                    ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs"
+                    : "bg-card text-foreground/80 hover:text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
                 }`}
               >
                 {f}
@@ -386,7 +384,7 @@ export default function InvoicesPage() {
         {role !== 'Viewer' && (
           <Link
             href="/user/invoices/new"
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors w-full sm:w-auto self-end lg:self-auto"
+            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-950 rounded-3xl font-bold transition-colors w-full sm:w-auto self-end lg:self-auto shadow-xs"
           >
             <MdInsertDriveFile className="w-5 h-5" />
             Create Invoice
@@ -395,46 +393,42 @@ export default function InvoicesPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-transparent border border-border rounded-3xl overflow-hidden">
+      <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-border text-gray-500 dark:text-gray-400 text-sm">
-                <th className="p-4 font-medium">Invoice #</th>
-                <th className="p-4 font-medium">Client</th>
-                <th className="p-4 font-medium">Amount</th>
-                <th className="p-4 font-medium">Date</th>
-
-                <th className="p-4 font-medium">Payment Status</th>
-                <th className="p-4 font-medium text-right">Actions</th>
+              <tr className="border-b border-border bg-black/[0.02] dark:bg-white/[0.02] text-gray-600 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                <th className="p-4">Invoice #</th>
+                <th className="p-4">Client</th>
+                <th className="p-4">Amount</th>
+                <th className="p-4">Date</th>
+                <th className="p-4">Payment Status</th>
+                <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border">
               {filteredInvoices.map((row: any) => {
                 const paymentStatus = row.status?.toLowerCase() || '';
-                
 
-                let paymentColor = "text-gray-600 dark:text-gray-400 bg-gray-500/10 border-gray-500/20";
-                if (paymentStatus === 'fully paid') paymentColor = "text-green-600 dark:text-green-400 bg-green-500/10 border-green-500/20";
-                else if (paymentStatus === 'on review') paymentColor = "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20";
-                else if (paymentStatus === 'advance-paid') paymentColor = "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20";
-                else if (paymentStatus === 'unpaid' || paymentStatus === 'pending') paymentColor = "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20";
-                else if (paymentStatus === 'overdue') paymentColor = "text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/20";
-                else if (paymentStatus === 'partially paid') paymentColor = "text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border-indigo-500/20";
-
-
+                let paymentColor = "text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-500/10 border-gray-200 dark:border-gray-500/20";
+                if (paymentStatus === 'fully paid') paymentColor = "text-emerald-700 bg-emerald-100/70 border-emerald-200/60 dark:text-green-400 dark:bg-green-500/10 dark:border-green-500/20";
+                else if (paymentStatus === 'on review') paymentColor = "text-amber-800 bg-amber-100/70 border-amber-200/60 dark:text-amber-400 dark:bg-amber-500/10 dark:border-amber-500/20";
+                else if (paymentStatus === 'advance-paid') paymentColor = "text-blue-700 bg-blue-100/70 border-blue-200/60 dark:text-blue-400 dark:bg-blue-500/10 dark:border-blue-500/20";
+                else if (paymentStatus === 'unpaid' || paymentStatus === 'pending') paymentColor = "text-amber-800 bg-amber-100/70 border-amber-200/60 dark:text-amber-400 dark:bg-amber-500/10 dark:border-amber-500/20";
+                else if (paymentStatus === 'overdue') paymentColor = "text-red-700 bg-red-100/70 border-red-200/60 dark:text-red-400 dark:bg-red-500/10 dark:border-red-500/20";
+                else if (paymentStatus === 'partially paid') paymentColor = "text-indigo-700 bg-indigo-100/70 border-indigo-200/60 dark:text-indigo-400 dark:bg-indigo-500/10 dark:border-indigo-500/20";
 
                 return (
-                  <tr key={row.id} className="hover:bg-card transition-colors">
+                  <tr key={row.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
                     <td className="p-4">
-                      <Link href={`/user/invoice/${row.id}`} className="font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors">
+                      <Link href={`/user/invoice/${row.id}`} className="font-semibold text-emerald-700 dark:text-brand-400 hover:text-emerald-800 dark:hover:text-brand-300 transition-colors">
                         {row.id}
                       </Link>
                     </td>
                     <td className="p-4">
-                      <div className="text-sm font-medium text-foreground">{row.client}</div>
+                      <div className="text-sm font-semibold text-foreground">{row.client}</div>
                       {row.clientEmail && (
-                        <div className="text-xs text-gray-500 mt-0.5">{row.clientEmail}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{row.clientEmail}</div>
                       )}
                     </td>
                     <td className="p-4">
@@ -449,7 +443,7 @@ export default function InvoicesPage() {
                         </div>
                       )}
                     </td>
-                    <td className={`p-4 text-sm ${row.overdue ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-300'}`}>
+                    <td className={`p-4 text-sm ${row.overdue ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-600 dark:text-gray-300'}`}>
                       {row.due}
                     </td>
                     
@@ -461,28 +455,28 @@ export default function InvoicesPage() {
                     <td className="p-4">
                       <div className="flex items-center justify-end gap-2">
                         {row.status?.toLowerCase() !== 'fully paid' && role !== 'Viewer' && (
-                          <button onClick={() => openRecordPaymentModal(row)} className="p-2 hover:bg-emerald-400/10 rounded-xl transition-colors text-gray-400 hover:text-emerald-400" title="Record Payment">
+                          <button onClick={() => openRecordPaymentModal(row)} className="p-2 hover:bg-emerald-50 dark:hover:bg-emerald-400/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" title="Record Payment">
                             <MdAttachMoney className="w-4 h-4" />
                           </button>
                         )}
-                        <Link href={`/user/invoice/${row.id}`} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-foreground" title="View">
+                        <Link href={`/user/invoice/${row.id}`} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground" title="View">
                           <MdRemoveRedEye className="w-4 h-4" />
                         </Link>
                         {role !== 'Viewer' && (
                           <>
-                            <Link href={`/user/invoices/${row.id}/edit`} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-foreground" title="Edit">
+                            <Link href={`/user/invoices/${row.id}/edit`} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground" title="Edit">
                               <Edit2 className="w-4 h-4" />
                             </Link>
-                            <button onClick={() => handleSend(row.id)} className="p-2 hover:bg-brand-400/10 rounded-xl transition-colors text-gray-400 hover:text-brand-400" title="Copy Link">
+                            <button onClick={() => handleSend(row.id)} className="p-2 hover:bg-brand-500/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-brand-700 dark:hover:text-brand-400" title="Copy Link">
                               <Send className="w-4 h-4" />
                             </button>
                           </>
                         )}
-                        <Link href={`/user/invoice/${row.id}?download=true`} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-foreground" title="MdDownload PDF">
+                        <Link href={`/user/invoice/${row.id}?download=true`} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground" title="Download PDF">
                           <MdDownload className="w-4 h-4" />
                         </Link>
                         {role !== 'Viewer' && (
-                          <button onClick={() => handleDelete(row.id)} className="p-2 hover:bg-red-400/10 rounded-xl transition-colors text-gray-400 hover:text-red-400" title="Delete">
+                          <button onClick={() => handleDelete(row.id)} className="p-2 hover:bg-red-50 dark:hover:bg-red-400/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" title="Delete">
                             <MdDelete className="w-4 h-4" />
                           </button>
                         )}
@@ -503,23 +497,23 @@ export default function InvoicesPage() {
       {/* Payment Modal */}
       {paymentModalOpen && selectedInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-background border border-border rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-6 border-b border-border">
+          <div className="bg-card border border-border rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-border bg-card">
               <h2 className="text-xl font-semibold text-foreground">Create Income from Invoice</h2>
-              <button onClick={() => setPaymentModalOpen(false)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-foreground">
+              <button onClick={() => setPaymentModalOpen(false)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground">
                 <MdClose className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleRecordPayment} className="p-6 space-y-4">
-              <div className="text-sm text-gray-400 space-y-1 bg-card p-4 rounded-2xl border border-border">
-                <p><span className="font-semibold text-gray-300">Invoice:</span> {selectedInvoice.id}</p>
-                <p><span className="font-semibold text-gray-300">Client:</span> {selectedInvoice.client}</p>
-                <p><span className="font-semibold text-gray-300">Service:</span> {selectedInvoice.service}</p>
-                <p><span className="font-semibold text-gray-300">Total Amount:</span> {formatLKR(selectedInvoice.amount)}</p>
+              <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1 bg-black/[0.02] dark:bg-card p-4 rounded-2xl border border-border">
+                <p><span className="font-semibold text-foreground">Invoice:</span> {selectedInvoice.id}</p>
+                <p><span className="font-semibold text-foreground">Client:</span> {selectedInvoice.client}</p>
+                <p><span className="font-semibold text-foreground">Service:</span> {selectedInvoice.service}</p>
+                <p><span className="font-semibold text-foreground">Total Amount:</span> {formatLKR(selectedInvoice.amount)}</p>
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm text-gray-400 block font-medium">Paid Amount (LKR)</label>
+                <label className="text-sm text-gray-700 dark:text-gray-300 block font-medium">Paid Amount (LKR)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -527,32 +521,32 @@ export default function InvoicesPage() {
                   placeholder="0.00"
                   value={paidAmount}
                   onChange={(e) => setPaidAmount(e.target.value)}
-                  className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground"
+                  className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground placeholder:text-gray-400"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm text-gray-400 block font-medium">Payment Date</label>
+                <label className="text-sm text-gray-700 dark:text-gray-300 block font-medium">Payment Date</label>
                 <input
                   type="date"
                   required
                   value={paymentDate}
                   onChange={(e) => setPaymentDate(e.target.value)}
-                  className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground"
+                  className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm text-gray-400 block font-medium">Payment Method</label>
+                <label className="text-sm text-gray-700 dark:text-gray-300 block font-medium">Payment Method</label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground appearance-none"
+                  className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground appearance-none shadow-2xs"
                 >
-                  <option value="Bank Transfer" className="bg-black text-foreground">Bank Transfer</option>
-                  <option value="Stripe" className="bg-black text-foreground">Stripe</option>
-                  <option value="PayPal" className="bg-black text-foreground">PayPal</option>
-                  <option value="Cash" className="bg-black text-foreground">Cash</option>
+                  <option value="Bank Transfer" className="bg-card text-foreground">Bank Transfer</option>
+                  <option value="Stripe" className="bg-card text-foreground">Stripe</option>
+                  <option value="PayPal" className="bg-card text-foreground">PayPal</option>
+                  <option value="Cash" className="bg-card text-foreground">Cash</option>
                 </select>
               </div>
 
@@ -562,25 +556,25 @@ export default function InvoicesPage() {
                   id="isAdvance"
                   checked={isAdvance}
                   onChange={(e) => setIsAdvance(e.target.checked)}
-                  className="w-4 h-4 rounded border-border bg-card text-foreground focus:ring-brand-500 focus:ring-offset-black"
+                  className="w-4 h-4 rounded border-border bg-card text-foreground focus:ring-brand-500"
                 />
-                <label htmlFor="isAdvance" className="text-sm text-gray-300 font-medium select-none cursor-pointer">
+                <label htmlFor="isAdvance" className="text-sm text-foreground/90 font-medium select-none cursor-pointer">
                   Payment is advance
                 </label>
               </div>
 
-              {/* Payment Slip MdUpload Section */}
+              {/* Payment Slip Upload Section */}
               <div className="pt-2 border-t border-border">
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm text-gray-300 font-medium flex items-center gap-2">
+                  <label className="text-sm text-gray-700 dark:text-gray-300 font-medium flex items-center gap-2">
                     <MdUpload className="w-4 h-4" />
-                    MdUpload Payment Slip (Optional)
+                    Upload Payment Slip (Optional)
                   </label>
                   {includeSlip && (
                     <button
                       type="button"
                       onClick={removeSlipFile}
-                      className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                      className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
                     >
                       Remove
                     </button>
@@ -590,14 +584,14 @@ export default function InvoicesPage() {
                 {convertingPdf ? (
                   <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-brand-500/30 rounded-xl bg-brand-500/5">
                     <Loader size="sm" />
-                    <span className="text-sm text-brand-400">Converting PDF to image...</span>
+                    <span className="text-sm text-brand-600 dark:text-brand-400 font-medium">Converting PDF to image...</span>
                   </div>
                 ) : !includeSlip ? (
                   <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-brand-500/50 hover:bg-brand-500/5 transition-all relative">
-                    <MdUpload className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-400">Click to upload slip image or PDF</span>
+                    <MdUpload className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Click to upload slip image or PDF</span>
                     {tenantPlan !== 'Pro Plus' && (
-                      <span className="ml-2 text-[10px] uppercase font-bold tracking-wider text-brand-500 bg-brand-500/10 px-2 py-0.5 rounded-md">Pro Plus</span>
+                      <span className="ml-2 text-[10px] uppercase font-bold tracking-wider text-brand-700 dark:text-brand-500 bg-brand-500/15 px-2 py-0.5 rounded-md">Pro Plus</span>
                     )}
                     <input
                       type="file"
@@ -609,16 +603,16 @@ export default function InvoicesPage() {
                   </label>
                 ) : slipPreview ? (
                   <div className="relative rounded-xl overflow-hidden border border-border">
-                    <Image src={slipPreview} alt="Slip preview" className="w-full h-40 object-cover"  width={800} height={800} unoptimized={true} />
-                    <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 rounded-lg text-xs text-foreground flex items-center gap-1">
+                    <Image src={slipPreview} alt="Slip preview" className="w-full h-40 object-cover" width={800} height={800} unoptimized={true} />
+                    <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 rounded-lg text-xs text-white flex items-center gap-1">
                       <ImageIcon className="w-3 h-3" />
                       {slipFile?.name}
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3 px-4 py-3 bg-transparent border border-border rounded-xl">
+                  <div className="flex items-center gap-3 px-4 py-3 bg-black/5 dark:bg-card border border-border rounded-xl">
                     <FileIcon className="w-5 h-5 text-foreground" />
-                    <span className="text-sm text-gray-300 flex-1 truncate">{slipFile?.name}</span>
+                    <span className="text-sm text-foreground/90 flex-1 truncate">{slipFile?.name}</span>
                     <span className="text-xs text-gray-500">
                       {slipFile ? (slipFile.size / 1024 / 1024).toFixed(2) + ' MB' : ''}
                     </span>
@@ -629,18 +623,18 @@ export default function InvoicesPage() {
                 </p>
               </div>
 
-              <div className="flex gap-3 pt-4 border-t border-border justify-end">
+              <div className="flex gap-3 pt-4 border-t border-border justify-end bg-card">
                 <button
                   type="button"
                   onClick={() => setPaymentModalOpen(false)}
-                  className="px-5 py-2.5 border border-border hover:bg-card text-gray-300 rounded-3xl text-sm font-semibold transition-colors"
+                  className="px-5 py-2.5 border border-border hover:bg-black/5 dark:hover:bg-white/10 text-foreground rounded-3xl text-sm font-semibold transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingPayment}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-brand-500 hover:bg-brand-400 disabled:opacity-50 text-brand-900 rounded-3xl text-sm font-bold transition-colors"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-brand-500 hover:bg-brand-400 disabled:opacity-50 text-brand-950 rounded-3xl text-sm font-bold transition-colors shadow-xs"
                 >
                   {savingPayment && <Loader size="sm" />}
                   Record Payment

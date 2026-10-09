@@ -13,16 +13,13 @@ export async function GET(req: Request) {
   if (email) {
     const client = await clerkClient();
     const users = await client.users.getUserList({ emailAddress: [email] });
-    console.log("Check API - Users found for email", email, ":", users.data.length);
     if (users.data.length === 0) {
       return NextResponse.json({ hasPasskeys: false });
     }
     userId = users.data[0].id;
-    console.log("Check API - Resolved userId:", userId);
   } else {
     const session = await auth();
     userId = session.userId;
-    console.log("Check API - Session userId:", userId);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -42,12 +39,8 @@ export async function GET(req: Request) {
       WHERE user_id = ${userId} AND device_id = ${deviceId}
     `;
     
-    console.log("Check API - DB count for userId", userId, "deviceId", deviceId, ":", count[0].count);
     return NextResponse.json({ 
       hasPasskeys: Number(count[0].count) > 0,
-      debug_userId: userId,
-      debug_count: count[0].count,
-      debug_email: email
     });
   } catch (error) {
     console.error("Failed to check passkeys:", error);

@@ -1,6 +1,6 @@
 "use server";
-import { checkLimit } from "@/lib/plans";
-import { requirePermission } from "./rbac";
+import { checkLimit, incrementLifetimeUsage } from "@/lib/plans";
+import { requirePermission, checkTenantReadOnly } from "./rbac";
 
 import sql from "@/lib/db";
 import {  auth, clerkClient  } from '@/lib/auth';
@@ -21,6 +21,11 @@ export async function getTenantId() {
 }
 
 export async function uploadReceipt(formData: FormData, type: 'income' | 'expenses'): Promise<string> {
+  const tenantId = await getTenantId();
+  if (tenantId && await checkTenantReadOnly(tenantId)) {
+    throw new Error("Your subscription and grace period have expired. Workspace is in read-only mode.");
+  }
+
   const file = formData.get('file') as File;
   if (!file) {
     await logSystemAction(`Upload Error: No file provided for ${type} receipt`);
@@ -52,7 +57,7 @@ export async function getDashboardData(startDate?: string, endDate?: string) {
 
   return unstable_cache(
     async () => _getDashboardData(tenantId, start, end),
-    [`dashboard-data-${tenantId}-${start}-${end}`],
+    [`dashboard-data-v2-${tenantId}-${start}-${end}`],
     { tags: [`dashboard-${tenantId}`], revalidate: 3600 }
   )();
 }
@@ -76,7 +81,8 @@ async function _getDashboardData(tenantId: string, start: string, end: string) {
       thisMonthExpenses,
       lastMonthExpenses,
       clientsCountRows,
-      accounts
+      accounts,
+      unpaidClientsRows
     ] = await Promise.all([
       sql`SELECT SUM(amount) as total FROM admin_incomes WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp`,
       sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp`,
@@ -172,7 +178,17 @@ async function _getDashboardData(tenantId: string, start: string, end: string) {
     sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date_trunc('month', date) = date_trunc('month', current_date)`,
     sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date_trunc('month', date) = date_trunc('month', current_date - interval '1 month')`,
     sql`SELECT COUNT(*) as count FROM admin_clients WHERE tenant_id = ${tenantId}`,
-    import('./accounts').then(m => m.getAccounts(start, end, tenantId))
+    import('./accounts').then(m => m.getAccounts(start, end, tenantId)),
+    sql`
+      SELECT 
+        COALESCE(c.full_name, i.user_email) as client_name,
+        SUM(COALESCE(i.total_due, i.total)) as amount
+      FROM invoices i
+      LEFT JOIN admin_clients c ON LOWER(c.email) = LOWER(i.user_email) AND c.tenant_id = i.tenant_id
+      WHERE i.tenant_id = ${tenantId} AND LOWER(i.payment_status) IN ('unpaid', 'pending', 'partially paid')
+      GROUP BY COALESCE(c.full_name, i.user_email)
+      ORDER BY amount DESC
+    `
   ]);
 
   const totalAssets = accounts.reduce((sum: number, a: any) => sum + (a.currentBalance || 0), 0);
@@ -227,6 +243,10 @@ async function _getDashboardData(tenantId: string, start: string, end: string) {
     totalClients: parseInt(clientsCountRows[0]?.count || 0, 10),
     unpaidCount: unpaid[0]?.count || 0,
     unpaidAmount: parseFloat(unpaid[0]?.total_amount || 0),
+    unpaidClients: unpaidClientsRows.map((r: any) => ({
+      name: r.client_name,
+      amount: parseFloat(r.amount)
+    })),
     currentMonthStats: {
       income: parseFloat(thisMonthIncome[0]?.total || 0),
       expenses: parseFloat(thisMonthExpenses[0]?.total || 0),
@@ -350,6 +370,8 @@ export async function createIncome(data: any) {
     VALUES (${data.date}, ${data.amount}, ${data.description}, ${data.category}, ${data.paymentMethod}, ${data.invoiceId || null}, ${data.clientId || null}, ${data.receiptUrl || null}, ${accountId}, ${tenantId})
   `;
 
+  await incrementLifetimeUsage(Number(tenantId), 'incomes');
+
   if (data.invoiceId) {
     if (data.receiptUrl) {
       try {
@@ -401,6 +423,7 @@ export async function createClient(data: { name: string; email: string; company?
     INSERT INTO admin_clients (id, full_name, email, company, phone, address, active, legal_name, tenant_id)
     VALUES (${clientId}, ${data.name}, ${data.email}, ${data.company || null}, ${data.phone || null}, ${data.address || null}, true, ${data.legal_name || null}, ${tenantId})
   `;
+  await incrementLifetimeUsage(Number(tenantId), 'clients');
   await logSystemAction(`Created client: "${data.name}" (${data.email})`);
   return clientId;
 }
@@ -602,15 +625,17 @@ export async function createExpense(data: any) {
   const limitCheck = await checkLimit('expenses');
   if (!limitCheck.allowed) return { error: limitCheck.error };
 
+  const tenantId = await getTenantId();
   let accountId = data.accountId || null;
   if (!accountId && data.paymentMethod === 'Bank Transfer') {
-    const def = await sql`SELECT id FROM accounts WHERE type = 'Bank Account' LIMIT 1`;
+    const def = await sql`SELECT id FROM accounts WHERE type = 'Bank Account' AND tenant_id = ${tenantId} LIMIT 1`;
     if (def.length > 0) accountId = def[0].id;
   }
   await sql`
-    INSERT INTO admin_expenses (date, amount, description, category, payment_method, receipt_url, account_id)
-    VALUES (${data.date}, ${data.amount}, ${data.description}, ${data.category}, ${data.paymentMethod}, ${data.receiptUrl || null}, ${accountId})
+    INSERT INTO admin_expenses (date, amount, description, category, payment_method, receipt_url, account_id, tenant_id)
+    VALUES (${data.date}, ${data.amount}, ${data.description}, ${data.category}, ${data.paymentMethod}, ${data.receiptUrl || null}, ${accountId}, ${tenantId})
   `;
+  await incrementLifetimeUsage(Number(tenantId), 'expenses');
 
   if (data.isScheduled) {
     let nextDate = new Date(data.date);
@@ -1246,6 +1271,7 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
         ${tenantId}
       )
     `;
+    await incrementLifetimeUsage(Number(tenantId), 'clients');
   } else if (existingClient.length > 0) {
     // Update name/address on existing client whenever new values were entered
     await sql`
@@ -1282,6 +1308,7 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
     }
   }
 
+  await incrementLifetimeUsage(Number(tenantId), 'invoices');
   await logSystemAction(`Created invoice: "${invoiceData.projectName}" (${invoiceId}) for LKR ${invoiceData.total}`);
   return { success: true, invoiceId };
 }
@@ -1619,6 +1646,9 @@ export async function confirmQuotation(quotationId: number, quotationData: any, 
   if (rbacError) throw new Error(rbacError);
 
   const tenantId = await getTenantId();
+  const limitCheck = await checkLimit('invoices');
+  if (!limitCheck.allowed) throw new Error(limitCheck.error);
+
   const quotation = await sql`
     SELECT q.*, c.id as client_id_val, c.email, c.full_name as client_name, c.company, c.address as billing_address
     FROM admin_quotations q
@@ -1663,6 +1693,7 @@ export async function confirmQuotation(quotationId: number, quotationData: any, 
         ${tenantId}
       )
     `;
+    await incrementLifetimeUsage(Number(tenantId), 'clients');
     resolvedClientId = clientId;
   } else {
     resolvedClientId = existingClient[0].id;
@@ -1696,6 +1727,7 @@ export async function confirmQuotation(quotationId: number, quotationData: any, 
         ${tenantId}
       )
     `;
+    await incrementLifetimeUsage(Number(tenantId), 'invoices');
 
     const qItems = await sql`
       SELECT description, quantity, price, total FROM quotation_items WHERE quotation_id = ${quotationId} AND tenant_id = ${tenantId}
@@ -1879,9 +1911,10 @@ export async function recordInvoicePayment(
     }
 
     await sql`
-      INSERT INTO admin_incomes (date, amount, description, category, payment_method, invoice_id, client_id, receipt_url, account_id)
-      VALUES (${paymentDate}, ${paidAmount}, ${description}, ${category}, ${paymentMethod}, ${invoiceId}, ${clientId}, ${receiptUrlToAttach}, ${paymentMethod === 'Bank Transfer' ? invoice.bank_account_id : null})
+      INSERT INTO admin_incomes (date, amount, description, category, payment_method, invoice_id, client_id, receipt_url, account_id, tenant_id)
+      VALUES (${paymentDate}, ${paidAmount}, ${description}, ${category}, ${paymentMethod}, ${invoiceId}, ${clientId}, ${receiptUrlToAttach}, ${paymentMethod === 'Bank Transfer' ? invoice.bank_account_id : null}, ${invoice.tenant_id})
     `;
+    await incrementLifetimeUsage(Number(invoice.tenant_id), 'incomes');
 
     // 5. Update invoice payment fields
     let newAdvance = currentAdvance;
@@ -2113,6 +2146,9 @@ export async function undoApprovedBankSlipPayment(invoiceId: string, slipId: num
 
 export async function adminUploadPaymentSlip(invoiceId: string, slipBase64: string, amount: number) {
   try {
+    const { error: rbacError } = await requirePermission('invoices', 'update');
+    if (rbacError) return { success: false, error: rbacError };
+
     // Validate amount
     if (!Number.isFinite(amount) || amount <= 0) {
       return { success: false, error: "Please enter a valid payment amount" };

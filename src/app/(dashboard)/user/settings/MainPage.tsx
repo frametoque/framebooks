@@ -6,7 +6,7 @@ import RolesConfigurator from "../components/RolesConfigurator";
 import { useState, useEffect } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 import { useSession, signOut } from 'next-auth/react';
-import { IdCard, Globe, Save, Building, Copy, Terminal, Sliders } from "lucide-react";
+import { IdCard, Globe, Save, Building, Copy, Terminal, Sliders, Upload, FileText, CheckCircle2, AlertCircle, X, ExternalLink, ArrowUp } from "lucide-react";
 import { MdPerson, MdMailOutline, MdKeyboardArrowRight, MdKeyboardArrowLeft, MdLocationOn, MdPhone, MdUpload, MdDownload, MdCheck, MdShowChart, MdCreditCard, MdGroup, MdBusiness, MdHistory, MdLogout, MdWarning, MdSecurity, MdDelete, MdLock } from "react-icons/md";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -20,7 +20,80 @@ import { useConfirm } from '@/components/ui/ConfirmProvider';
 import { UpgradeOverlay } from "../components/UpgradeOverlay";
 import Image from "next/image";
 
-const plans = [
+export interface PlanViewItem {
+  name: string;
+  price: string;
+  yearlyPrice: string;
+  description: string;
+  popular: boolean;
+  features: {
+    label: string;
+    value: string;
+    icon: any;
+  }[];
+}
+
+export function formatDBPlanToDashboardPlan(p: any): PlanViewItem {
+  const limits = p.limits || {};
+  const features = p.features || {};
+
+  return {
+    name: p.name,
+    price: p.price_monthly === 0 ? "0" : Number(p.price_monthly).toLocaleString(),
+    yearlyPrice: p.price_yearly === 0 ? "0" : Number(p.price_yearly).toLocaleString(),
+    description: p.description || "",
+    popular: !!p.is_popular,
+    features: [
+      { 
+        label: "Invoices Limit", 
+        value: limits.invoices === -1 ? "Unlimited" : String(limits.invoices ?? 50), 
+        icon: MdUpload 
+      },
+      { 
+        label: "Income Limit", 
+        value: limits.incomes === -1 ? "Unlimited" : String(limits.incomes ?? 100), 
+        icon: MdUpload 
+      },
+      { 
+        label: "Expense Limit", 
+        value: limits.expenses === -1 ? "Unlimited" : String(limits.expenses ?? 100), 
+        icon: MdDownload 
+      },
+      { 
+        label: "Client Limit", 
+        value: limits.clients === -1 ? "Unlimited" : String(limits.clients ?? 50), 
+        icon: MdGroup 
+      },
+      { 
+        label: "Bank Accounts", 
+        value: limits.accounts === -1 ? "Unlimited" : String(limits.accounts ?? 2), 
+        icon: MdBusiness 
+      },
+      { 
+        label: "Team Members", 
+        value: limits.team_members === -1 ? "Unlimited" : (limits.team_members > 0 ? String(limits.team_members) : "No"), 
+        icon: MdGroup 
+      },
+      { 
+        label: "Inventory Management", 
+        value: features.inventory ? "Yes" : "No", 
+        icon: MdCheck 
+      },
+      { 
+        label: "Advanced Reports", 
+        value: features.advanced_reports ? "Yes" : "No", 
+        icon: MdShowChart 
+      },
+      { 
+        label: "Security Level", 
+        value: features.audit_logs ? "High + Audit Logs" : (features.two_factor ? "High + 2FA" : "Standard"), 
+        icon: MdSecurity 
+      },
+    ],
+  };
+}
+
+const defaultPlans: PlanViewItem[] = [
   {
     name: "Free",
     price: "0",
@@ -33,6 +106,7 @@ const plans = [
       { label: "Expense Limit", value: "100", icon: MdDownload },
       { label: "Client Limit", value: "50", icon: MdGroup },
       { label: "Bank Accounts", value: "2", icon: MdBusiness },
+      { label: "Team Members", value: "No", icon: MdGroup },
       { label: "Inventory Management", value: "No", icon: MdCheck },
       { label: "Advanced Reports", value: "No", icon: MdShowChart },
       { label: "Security Level", value: "Standard", icon: MdSecurity },
@@ -50,6 +124,7 @@ const plans = [
       { label: "Expense Limit", value: "Unlimited", icon: MdDownload },
       { label: "Client Limit", value: "Unlimited", icon: MdGroup },
       { label: "Bank Accounts", value: "2", icon: MdBusiness },
+      { label: "Team Members", value: "No", icon: MdGroup },
       { label: "Inventory Management", value: "No", icon: MdCheck },
       { label: "Advanced Reports", value: "Yes", icon: MdShowChart },
       { label: "Security Level", value: "High + 2FA", icon: MdSecurity },
@@ -67,6 +142,7 @@ const plans = [
       { label: "Expense Limit", value: "Unlimited", icon: MdDownload },
       { label: "Client Limit", value: "Unlimited", icon: MdGroup },
       { label: "Bank Accounts", value: "Unlimited", icon: MdBusiness },
+      { label: "Team Members", value: "Unlimited", icon: MdGroup },
       { label: "Inventory Management", value: "Yes", icon: MdCheck },
       { label: "Advanced Reports", value: "Yes", icon: MdShowChart },
       { label: "Security Level", value: "High + Audit Logs", icon: MdSecurity },
@@ -74,7 +150,21 @@ const plans = [
   }
 ];
 
-export default function SettingsPage() {
+export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } = {}) {
+  const [plansList, setPlansList] = useState<PlanViewItem[]>(() => {
+    if (initialPlans && initialPlans.length > 0) {
+      return initialPlans.map(formatDBPlanToDashboardPlan);
+    }
+    return defaultPlans;
+  });
+
+  useEffect(() => {
+    import("../actions/billing").then(m => m.getAvailablePlansAction()).then(res => {
+      if (res?.success && res.plans && res.plans.length > 0) {
+        setPlansList(res.plans.map(formatDBPlanToDashboardPlan));
+      }
+    }).catch(() => {});
+  }, []);
   const { confirm } = useConfirm();
   const { data: session, status } = useSession();
   const user = session?.user;
@@ -980,7 +1070,7 @@ export default function SettingsPage() {
                         <div className="bg-card border border-border rounded-3xl p-8 max-w-md w-full shadow-2xl relative">
                           <button 
                             onClick={() => { setIsInviteModalOpen(false); setInviteMessage(null); }}
-                            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-foreground rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+                            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-gray-500 hover:text-foreground rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
                           >
                             ✕
                           </button>
@@ -988,7 +1078,7 @@ export default function SettingsPage() {
                           <div className="text-center mb-8">
                             <MdGroup className="w-12 h-12 text-brand-500 mx-auto mb-4" />
                             <h3 className="text-xl font-bold text-foreground mb-2">Invite to Team</h3>
-                            <p className="text-sm text-gray-400">Invite team members to collaborate and manage access to your business profile.</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Invite team members to collaborate and manage access to your business profile.</p>
                           </div>
                           
                           <form 
@@ -1022,28 +1112,28 @@ export default function SettingsPage() {
                             className="space-y-4"
                           >
                             <div>
-                              <label className="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
                               <input 
                                 type="email" 
                                 value={inviteEmail}
                                 onChange={(e) => setInviteEmail(e.target.value)}
                                 placeholder="colleague@example.com"
-                                className="w-full bg-black/50 border border-border hover:border-black/20 dark:border-white/20 rounded-2xl px-4 py-3 outline-none focus:border-brand-500 transition-colors text-sm text-foreground mb-4"
+                                className="w-full bg-card border border-border hover:border-black/20 dark:border-white/20 rounded-2xl px-4 py-3 outline-none focus:border-brand-500 transition-colors text-sm text-foreground mb-4 shadow-2xs placeholder:text-gray-500 dark:placeholder:text-gray-400"
                                 required
                               />
-                              <label className="block text-sm font-medium text-gray-300 mb-2">Role</label>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Role</label>
                               <select 
                                 value={inviteRole}
                                 onChange={(e) => setInviteRole(e.target.value)}
-                                className="w-full bg-black/50 border border-border hover:border-black/20 dark:border-white/20 rounded-2xl px-4 py-3 outline-none focus:border-brand-500 transition-colors text-sm text-foreground appearance-none cursor-pointer"
+                                className="w-full bg-card border border-border hover:border-black/20 dark:border-white/20 rounded-2xl px-4 py-3 outline-none focus:border-brand-500 transition-colors text-sm text-foreground appearance-none cursor-pointer shadow-2xs"
                               >
                                 {availableRoles.length > 0 ? availableRoles.filter(r => r.role.toLowerCase() !== 'owner').map((r) => (
-                                  <option key={r.role} value={r.role} className="bg-[#1a1d1a]">{r.role}</option>
+                                  <option key={r.role} value={r.role} className="bg-card text-foreground">{r.role}</option>
                                 )) : (
                                   <>
-                                    <option value="Admin" className="bg-[#1a1d1a]">Admin</option>
-                                    <option value="Editor" className="bg-[#1a1d1a]">Editor</option>
-                                    <option value="Viewer" className="bg-[#1a1d1a]">Viewer</option>
+                                    <option value="Admin" className="bg-card text-foreground">Admin</option>
+                                    <option value="Editor" className="bg-card text-foreground">Editor</option>
+                                    <option value="Viewer" className="bg-card text-foreground">Viewer</option>
                                   </>
                                 )}
                               </select>
@@ -1068,16 +1158,16 @@ export default function SettingsPage() {
                     )}
                 
                 {teamMembers.length > 0 && (
-                  <div className="bg-card border border-border rounded-3xl p-8">
+                  <div className="bg-card border border-border rounded-3xl p-8 shadow-xs">
                     <div className="space-y-3">
                       {teamMembers.map(member => (
-                        <div key={member.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-black/20 rounded-2xl border border-border gap-4">
+                        <div key={member.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50/50 dark:bg-black/20 rounded-2xl border border-border gap-4">
                           <div>
                             <p className="font-medium text-foreground flex items-center gap-2">
                               {member.full_name || 'Unnamed User'}
-                              {member.clerk_id === user.id && <span className="px-2 py-0.5 bg-brand-500/10 text-brand-400 text-[10px] uppercase font-bold rounded-full border border-brand-500/20">You</span>}
+                              {member.clerk_id === user.id && <span className="px-2 py-0.5 bg-emerald-100/80 text-emerald-800 border border-emerald-200/60 dark:bg-brand-500/10 dark:text-brand-400 text-[10px] uppercase font-bold rounded-full dark:border-brand-500/20">You</span>}
                             </p>
-                            <p className="text-xs text-gray-400 mt-1">{member.email}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{member.email}</p>
                           </div>
                           
                           <div className="flex items-center gap-3">
@@ -1085,20 +1175,20 @@ export default function SettingsPage() {
                               <select 
                                 value={member.role}
                                 onChange={(e) => handleRoleChange(member.id, e.target.value)}
-                                className="bg-white/10 border border-border rounded-xl px-3 py-1.5 text-sm text-foreground outline-none cursor-pointer"
+                                className="bg-card border border-border rounded-xl px-3 py-1.5 text-sm text-foreground outline-none cursor-pointer shadow-2xs"
                               >
                                 {availableRoles.length > 0 ? availableRoles.filter(r => r.role.toLowerCase() !== 'owner').map((r) => (
-                                  <option key={r.role} value={r.role} className="bg-[#1a1d1a]">{r.role}</option>
+                                  <option key={r.role} value={r.role} className="bg-card text-foreground">{r.role}</option>
                                 )) : (
                                   <>
-                                    <option value="Admin">Admin</option>
-                                    <option value="Editor">Editor</option>
-                                    <option value="Viewer">Viewer</option>
+                                    <option value="Admin" className="bg-card text-foreground">Admin</option>
+                                    <option value="Editor" className="bg-card text-foreground">Editor</option>
+                                    <option value="Viewer" className="bg-card text-foreground">Viewer</option>
                                   </>
                                 )}
                               </select>
                             ) : (
-                              <span className="px-3 py-1.5 text-xs font-bold uppercase rounded-full bg-card text-gray-300 border border-border">
+                              <span className="px-3 py-1.5 text-xs font-bold uppercase rounded-full bg-slate-100 text-slate-800 border border-slate-200/80 dark:bg-card dark:text-gray-300 dark:border-border">
                                 {member.role}
                               </span>
                             )}
@@ -1106,7 +1196,7 @@ export default function SettingsPage() {
                             {(currentUserRole === 'owner' || currentUserRole === 'Super Admin') && member.role !== 'owner' && member.role !== 'Super Admin' && (
                               <button 
                                 onClick={() => handleRemoveMember(member.id, member.full_name)}
-                                className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-sm font-medium transition-colors border border-red-500/20"
+                                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 rounded-xl text-sm font-medium transition-colors border border-rose-200/60 dark:border-red-500/20"
                               >
                                 Remove
                               </button>
@@ -1115,7 +1205,7 @@ export default function SettingsPage() {
                             {member.clerk_id === user.id && member.role !== 'owner' && member.role !== 'Super Admin' && (
                               <button 
                                 onClick={handleLeaveTeam}
-                                className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-sm font-medium transition-colors border border-red-500/20"
+                                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 rounded-xl text-sm font-medium transition-colors border border-rose-200/60 dark:border-red-500/20"
                               >
                                 Leave Team
                               </button>
@@ -1128,27 +1218,27 @@ export default function SettingsPage() {
                 )}
 
                 {sentInvitations.length > 0 && (
-                  <div className="mt-8 bg-card border border-border rounded-3xl p-8">
+                  <div className="mt-8 bg-card border border-border rounded-3xl p-8 shadow-xs">
                     <h3 className="text-lg font-semibold text-foreground mb-6">Sent Invitations</h3>
                     <div className="space-y-3">
                       {sentInvitations.map(inv => (
-                        <div key={inv.id} className="flex items-center justify-between p-4 bg-black/20 rounded-2xl border border-border">
+                        <div key={inv.id} className="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-black/20 rounded-2xl border border-border">
                           <div>
                             <p className="font-medium text-foreground">{inv.email}</p>
-                            <p className="text-xs text-gray-400 mt-1">Sent on {new Date(inv.created_at).toLocaleDateString()}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Sent on {new Date(inv.created_at).toLocaleDateString()}</p>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className={`inline-block px-3 py-1 text-xs font-bold uppercase rounded-full ${
-                              inv.status === 'pending' ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' :
-                              inv.status === 'accepted' ? 'bg-green-400/10 text-green-400 border border-green-400/20' :
-                              'bg-red-400/10 text-red-400 border border-red-400/20'
+                              inv.status === 'pending' ? 'bg-amber-100/80 text-amber-800 border border-amber-300/60 dark:bg-amber-400/10 dark:text-amber-400 dark:border-amber-400/20' :
+                              inv.status === 'accepted' ? 'bg-emerald-100/80 text-emerald-800 border border-emerald-300/60 dark:bg-green-400/10 dark:text-green-400 dark:border-green-400/20' :
+                              'bg-rose-100/80 text-rose-800 border border-rose-300/60 dark:bg-red-400/10 dark:text-red-400 dark:border-red-400/20'
                             }`}>
                               {inv.status}
                             </span>
                             {inv.status === 'pending' && currentUserRole === 'owner' && (
                               <button
                                 onClick={() => handleDeleteInvitation(inv.id, inv.email)}
-                                className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-colors"
+                                className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-400/10 rounded-md transition-colors"
                                 title="Cancel Invitation"
                               >
                                 <MdDelete className="w-5 h-5" />
@@ -1267,31 +1357,31 @@ export default function SettingsPage() {
 
                   {customPasskeys.length > 0 && (
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Auto-Lock Duration</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Auto-Lock Duration</label>
                       <select
                         value={autoLockDuration}
                         onChange={(e) => setAutoLockDuration(parseInt(e.target.value, 10))}
-                        className="w-full sm:w-64 bg-card border border-border hover:border-black/20 dark:border-white/20 rounded-2xl px-4 py-3 outline-none focus:border-brand-500 transition-colors text-sm text-foreground appearance-none"
+                        className="w-full sm:w-64 bg-card border border-border hover:border-black/20 dark:border-white/20 rounded-2xl px-4 py-3 outline-none focus:border-brand-500 transition-colors text-sm text-foreground appearance-none shadow-2xs"
                       >
-                        <option value={60000} className="bg-[#1a1d1a]">After 1 minute</option>
-                        <option value={300000} className="bg-[#1a1d1a]">After 5 minutes</option>
-                        <option value={600000} className="bg-[#1a1d1a]">After 10 minutes</option>
-                        <option value={900000} className="bg-[#1a1d1a]">After 15 minutes</option>
+                        <option value={60000} className="bg-card text-foreground">After 1 minute</option>
+                        <option value={300000} className="bg-card text-foreground">After 5 minutes</option>
+                        <option value={600000} className="bg-card text-foreground">After 10 minutes</option>
+                        <option value={900000} className="bg-card text-foreground">After 15 minutes</option>
                       </select>
                     </div>
                   )}
 
                   {customPasskeys.length > 0 && (
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-300 mb-2">High Security Mode</label>
-                      <div className="flex items-center justify-between p-4 bg-card border border-border rounded-2xl">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">High Security Mode</label>
+                      <div className="flex items-center justify-between p-4 bg-card border border-border rounded-2xl shadow-2xs">
                         <div>
                           <p className="text-foreground font-medium">Require passkey for all actions</p>
-                          <p className="text-sm text-gray-400">If disabled, passkey is only required for major actions like workspace deletion.</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">If disabled, passkey is only required for major actions like workspace deletion.</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" className="sr-only peer" checked={highSecurityMode} onChange={(e) => setHighSecurityMode(e.target.checked)} />
-                          <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+                          <div className="w-11 h-6 bg-slate-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
                         </label>
                       </div>
                     </div>
@@ -1400,7 +1490,7 @@ export default function SettingsPage() {
             )}
 
             {activeTab === "billing" && (
-              <BillingView tenantInfo={tenantInfo} />
+              <BillingView tenantInfo={tenantInfo} plansList={plansList} />
             )}
           </div>
         </div>
@@ -1409,20 +1499,64 @@ export default function SettingsPage() {
   );
 }
 
-function BillingView({ tenantInfo }: { tenantInfo: { plan: string, name: string, logo_url: string | null, industry: string | null } }) {
+function BillingView({ 
+  tenantInfo, 
+  plansList 
+}: { 
+  tenantInfo: { plan: string, name: string, logo_url: string | null, industry: string | null };
+  plansList?: PlanViewItem[];
+}) {
+  const activePlans = plansList && plansList.length > 0 ? plansList : defaultPlans;
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState(tenantInfo.plan || "Pro");
-  const [billingCycle, setBillingCycle] = useState("monthly");
+  const [selectedPlan, setSelectedPlan] = useState(tenantInfo.plan && tenantInfo.plan !== "Free" ? tenantInfo.plan : "Pro");
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  
+  // Bank Slip Upload form state
+  const [enteredAmount, setEnteredAmount] = useState<string>("2500");
   const [slipFile, setSlipFile] = useState<File | null>(null);
-  const [usage, setUsage] = useState<any>(null);
+  const [slipPreview, setSlipPreview] = useState<string | null>(null);
+  const [customerNotes, setCustomerNotes] = useState<string>("");
+  const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [copiedBank, setCopiedBank] = useState(false);
 
+  const [usage, setUsage] = useState<any>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"slip" | "online">("slip");
+
+  // Keep entered amount aligned when plan or cycle changes, unless custom
   useEffect(() => {
-    if (tenantInfo.plan) {
-      setSelectedPlan(tenantInfo.plan);
+    const planInfo = activePlans.find((p) => p.name.toLowerCase() === selectedPlan.toLowerCase());
+    if (planInfo) {
+      const priceStr = billingCycle === "monthly" ? planInfo.price : planInfo.yearlyPrice;
+      const cleanNum = priceStr.replace(/,/g, "");
+      setEnteredAmount(cleanNum);
     }
-  }, [tenantInfo.plan]);
+  }, [selectedPlan, billingCycle]);
+
+  // Clean up slip object URL
+  useEffect(() => {
+    return () => {
+      if (slipPreview) URL.revokeObjectURL(slipPreview);
+    };
+  }, [slipPreview]);
+
+  const handleSlipChange = (file: File | null) => {
+    if (slipPreview) {
+      URL.revokeObjectURL(slipPreview);
+      setSlipPreview(null);
+    }
+    setSlipFile(file);
+    if (file && file.type.startsWith("image/")) {
+      setSlipPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const copyBankInfo = () => {
+    navigator.clipboard.writeText("1000892451");
+    setCopiedBank(true);
+    setTimeout(() => setCopiedBank(false), 2500);
+  };
 
   const fetchHistoryAndUsage = async () => {
     try {
@@ -1448,41 +1582,57 @@ function BillingView({ tenantInfo }: { tenantInfo: { plan: string, name: string,
     fetchHistoryAndUsage();
   }, [tenantInfo.plan]);
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!slipFile) {
-      alert("Please upload a payment slip.");
+    setStatusMessage(null);
+
+    const amt = parseFloat(enteredAmount);
+    if (isNaN(amt) || amt <= 0) {
+      setStatusMessage({ type: "error", text: "Please enter a valid payment amount." });
       return;
     }
+
+    if (!slipFile) {
+      setStatusMessage({ type: "error", text: "Please select and upload a photo of your payment slip." });
+      return;
+    }
+
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append("planName", selectedPlan);
       formData.append("billingCycle", billingCycle);
-      const planInfo = plans.find(p => p.name === selectedPlan);
-      const amount = planInfo ? (billingCycle === 'monthly' ? planInfo.price.replace(/,/g, '') : planInfo.yearlyPrice.replace(/,/g, '')) : '0';
-      formData.append("amount", amount);
+      formData.append("amount", String(amt));
       formData.append("slip", slipFile);
+      if (customerNotes.trim()) {
+        formData.append("notes", customerNotes.trim());
+      }
       
       const { submitSubscriptionPayment } = await import("../actions/billing");
       const res = await submitSubscriptionPayment(formData);
       
       if (res.success) {
-        alert("Payment slip submitted successfully!");
+        setStatusMessage({
+          type: "success",
+          text: "Payment slip submitted successfully! Our admin team will verify it and activate your subscription.",
+        });
         setSlipFile(null);
+        if (slipPreview) {
+          URL.revokeObjectURL(slipPreview);
+          setSlipPreview(null);
+        }
+        setCustomerNotes("");
         fetchHistoryAndUsage();
       } else {
-        alert("Failed to submit payment slip: " + res.error);
+        setStatusMessage({ type: "error", text: res.error || "Failed to submit payment slip." });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("An error occurred while submitting payment.");
+      setStatusMessage({ type: "error", text: e.message || "An error occurred while submitting payment." });
     } finally {
       setUploading(false);
     }
   };
-
-  const [paymentMethod, setPaymentMethod] = useState<"slip" | "online">("slip");
 
   const limits = {
     invoices: 50,
@@ -1494,19 +1644,38 @@ function BillingView({ tenantInfo }: { tenantInfo: { plan: string, name: string,
 
   const getPercentage = (current: number, max: number) => Math.min(100, (current / max) * 100);
 
+  const handleSelectPackageFromBottom = (planName: string) => {
+    setSelectedPlan(planName);
+    const planInfo = activePlans.find((p) => p.name.toLowerCase() === planName.toLowerCase());
+    if (planInfo) {
+      const priceStr = billingCycle === "monthly" ? planInfo.price : planInfo.yearlyPrice;
+      setEnteredAmount(priceStr.replace(/,/g, ""));
+    }
+    document.getElementById("payment-section")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <div className="space-y-8">
-      {/* Usage View for Free Plan */}
+      {/* 1. TOP: Usage View for Free Plan */}
       {tenantInfo.plan === "Free" && usage && (
-        <div className="bg-transparent border border-border rounded-3xl p-7 mb-8">
-          <h2 className="text-2xl font-bold text-foreground mb-2">Current Plan Usage</h2>
-          <p className="text-gray-400 text-sm mb-8">You are currently on the <span className="font-bold text-foreground">Free</span> plan. Upgrade to unlock unlimited features.</p>
-          
-          <div className="space-y-6">
+        <div className="bg-transparent border border-border rounded-3xl p-7">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
             <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-foreground font-medium">Invoices</span>
-                <span className="text-gray-400">{usage.invoices} / {limits.invoices}</span>
+              <h2 className="text-2xl font-bold text-foreground">Current Plan Usage</h2>
+              <p className="text-muted-foreground text-sm mt-0.5">
+                You are currently on the <span className="font-bold text-foreground">Free</span> plan. Usage is tracked cumulatively as lifetime entries created (deleting older records does not reset quota). Upgrade below to unlock unlimited features.
+              </p>
+            </div>
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-muted text-foreground border border-border self-start sm:self-auto">
+              Lifetime Quota
+            </span>
+          </div>
+          
+          <div className="space-y-5">
+            <div>
+              <div className="flex justify-between text-xs font-medium mb-1.5">
+                <span className="text-foreground">Invoices</span>
+                <span className="text-muted-foreground">{usage.invoices} / {limits.invoices}</span>
               </div>
               <div className="w-full bg-card rounded-full h-2 overflow-hidden border border-border">
                 <div className="bg-brand-500 h-full rounded-full transition-all" style={{ width: `${getPercentage(usage.invoices, limits.invoices)}%` }}></div>
@@ -1514,9 +1683,9 @@ function BillingView({ tenantInfo }: { tenantInfo: { plan: string, name: string,
             </div>
             
             <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-foreground font-medium">Income Records</span>
-                <span className="text-gray-400">{usage.incomes} / {limits.incomes}</span>
+              <div className="flex justify-between text-xs font-medium mb-1.5">
+                <span className="text-foreground">Income Records</span>
+                <span className="text-muted-foreground">{usage.incomes} / {limits.incomes}</span>
               </div>
               <div className="w-full bg-card rounded-full h-2 overflow-hidden border border-border">
                 <div className="bg-blue-500 h-full rounded-full transition-all" style={{ width: `${getPercentage(usage.incomes, limits.incomes)}%` }}></div>
@@ -1524,9 +1693,9 @@ function BillingView({ tenantInfo }: { tenantInfo: { plan: string, name: string,
             </div>
 
             <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-foreground font-medium">Expense Records</span>
-                <span className="text-gray-400">{usage.expenses} / {limits.expenses}</span>
+              <div className="flex justify-between text-xs font-medium mb-1.5">
+                <span className="text-foreground">Expense Records</span>
+                <span className="text-muted-foreground">{usage.expenses} / {limits.expenses}</span>
               </div>
               <div className="w-full bg-card rounded-full h-2 overflow-hidden border border-border">
                 <div className="bg-red-500 h-full rounded-full transition-all" style={{ width: `${getPercentage(usage.expenses, limits.expenses)}%` }}></div>
@@ -1534,9 +1703,9 @@ function BillingView({ tenantInfo }: { tenantInfo: { plan: string, name: string,
             </div>
 
             <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-foreground font-medium">Clients</span>
-                <span className="text-gray-400">{usage.clients} / {limits.clients}</span>
+              <div className="flex justify-between text-xs font-medium mb-1.5">
+                <span className="text-foreground">Clients</span>
+                <span className="text-muted-foreground">{usage.clients} / {limits.clients}</span>
               </div>
               <div className="w-full bg-card rounded-full h-2 overflow-hidden border border-border">
                 <div className="bg-purple-500 h-full rounded-full transition-all" style={{ width: `${getPercentage(usage.clients, limits.clients)}%` }}></div>
@@ -1544,9 +1713,9 @@ function BillingView({ tenantInfo }: { tenantInfo: { plan: string, name: string,
             </div>
 
             <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-foreground font-medium">Bank/Cash Accounts</span>
-                <span className="text-gray-400">{usage.accounts} / {limits.accounts}</span>
+              <div className="flex justify-between text-xs font-medium mb-1.5">
+                <span className="text-foreground">Bank/Cash Accounts</span>
+                <span className="text-muted-foreground">{usage.accounts} / {limits.accounts}</span>
               </div>
               <div className="w-full bg-card rounded-full h-2 overflow-hidden border border-border">
                 <div className="bg-orange-500 h-full rounded-full transition-all" style={{ width: `${getPercentage(usage.accounts, limits.accounts)}%` }}></div>
@@ -1556,34 +1725,401 @@ function BillingView({ tenantInfo }: { tenantInfo: { plan: string, name: string,
         </div>
       )}
 
-      {/* Plan Comparison */}
-      <div>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-foreground mb-4 sm:mb-0">Available Plans</h2>
-          <div className="flex bg-card p-1 rounded-full w-fit">
+      {/* 2. TOP: Payment Section (Placed at TOP) */}
+      <div id="payment-section" className="bg-card border border-border rounded-3xl p-6 sm:p-8 shadow-xs space-y-6 scroll-mt-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-5">
+          <div>
+            <h3 className="text-xl sm:text-2xl font-bold text-foreground">Make Payment & Upgrade</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+              Deposit via bank transfer and upload your receipt, or pay instantly online.
+            </p>
+          </div>
+
+          <div className="flex bg-muted/60 p-1 rounded-full w-fit shrink-0 border border-border">
+            <button
+              type="button"
+              onClick={() => setPaymentMethod("slip")}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                paymentMethod === "slip"
+                  ? "bg-brand-500 text-brand-950 shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Upload Bank Slip
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentMethod("online")}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                paymentMethod === "online"
+                  ? "bg-brand-500 text-brand-950 shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Pay Online
+            </button>
+          </div>
+        </div>
+
+        {statusMessage && (
+          <div
+            className={`p-4 rounded-2xl text-sm font-semibold flex items-center gap-2.5 ${
+              statusMessage.type === "success"
+                ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                : "bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400"
+            }`}
+          >
+            {statusMessage.type === "success" ? (
+              <CheckCircle2 className="w-5 h-5 shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 shrink-0" />
+            )}
+            <span>{statusMessage.text}</span>
+          </div>
+        )}
+
+        {paymentMethod === "slip" ? (
+          <div className="space-y-6">
+            {/* Company Bank Account Details Card */}
+            <div className="p-5 rounded-2xl bg-muted/30 border border-border">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <Building className="w-4 h-4 text-brand-500" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Bank Transfer Details
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={copyBankInfo}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>{copiedBank ? "Copied Account No!" : "Copy Account No"}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">Bank:</span>
+                  <span className="font-semibold text-foreground">Commercial Bank of Ceylon</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">Account Name:</span>
+                  <span className="font-semibold text-foreground">Framebooks (Pvt) Ltd</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">Account Number:</span>
+                  <span className="font-mono font-bold text-foreground">1000 892 451</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">Branch / Currency:</span>
+                  <span className="font-semibold text-foreground">Colombo 03 • LKR</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bank Slip Upload Form */}
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Plan & Cycle Selection */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                    Plan / Package to Activate *
+                  </label>
+                  <select
+                    value={selectedPlan}
+                    onChange={(e) => setSelectedPlan(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm font-semibold outline-none focus:border-brand-500 cursor-pointer"
+                  >
+                    {activePlans.filter(p => p.name !== "Free").map((p) => (
+                      <option key={p.name} value={p.name}>
+                        {p.name} ({billingCycle === "monthly" ? `${p.price} LKR/mo` : `${p.yearlyPrice} LKR/yr`})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                    Billing Cycle *
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setBillingCycle("monthly")}
+                      className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                        billingCycle === "monthly"
+                          ? "bg-brand-500/15 border-brand-500 text-brand-700 dark:text-brand-400 ring-1 ring-brand-500"
+                          : "bg-background border-border text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Monthly
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBillingCycle("yearly")}
+                      className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                        billingCycle === "yearly"
+                          ? "bg-brand-500/15 border-brand-500 text-brand-700 dark:text-brand-400 ring-1 ring-brand-500"
+                          : "bg-background border-border text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Yearly (Save 20%)
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Amount Paid Input (Required) */}
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                  Amount on Payslip (LKR) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
+                    LKR
+                  </span>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    value={enteredAmount}
+                    onChange={(e) => setEnteredAmount(e.target.value)}
+                    placeholder="e.g. 2500"
+                    className="w-full pl-12 pr-4 py-2.5 bg-background border border-border rounded-xl text-base font-bold text-foreground outline-none focus:border-brand-500"
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Please enter the exact transfer amount printed on your deposit slip or bank confirmation.
+                </p>
+              </div>
+
+              {/* Photo of Payslip Upload (Required) */}
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                  Photo of Payslip / Receipt <span className="text-red-500">*</span>
+                </label>
+
+                {!slipFile ? (
+                  <label className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-border hover:border-brand-500 rounded-2xl bg-muted/20 hover:bg-muted/40 transition-all cursor-pointer">
+                    <Upload className="w-8 h-8 text-brand-500 mb-2" />
+                    <span className="text-sm font-semibold text-foreground">Click to upload payslip photo</span>
+                    <span className="text-xs text-muted-foreground mt-0.5">Supports JPG, PNG, WebP or PDF (Max 5MB)</span>
+                    <input 
+                      type="file"
+                      required
+                      accept="image/*,application/pdf"
+                      onChange={(e) => handleSlipChange(e.target.files?.[0] || null)}
+                      className="hidden"
+                    />
+                  </label>
+                ) : (
+                  <div className="p-4 rounded-2xl border border-border bg-background flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {slipPreview ? (
+                        <div className="w-16 h-16 rounded-xl overflow-hidden border border-border shrink-0 bg-muted/40">
+                          <img src={slipPreview} alt="Slip preview" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-brand-500/10 text-brand-600 flex items-center justify-center shrink-0">
+                          <FileText className="w-6 h-6" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-foreground truncate">{slipFile.name}</div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {(slipFile.size / 1024).toFixed(1)} KB • Photo ready for verification
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <label className="px-3 py-1.5 rounded-full text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground cursor-pointer transition-colors">
+                        <span>Change</span>
+                        <input 
+                          type="file"
+                          accept="image/*,application/pdf"
+                          onChange={(e) => handleSlipChange(e.target.files?.[0] || null)}
+                          className="hidden"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleSlipChange(null)}
+                        className="p-1.5 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                        title="Remove photo"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Optional Reference Note */}
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                  Bank Reference Number / Note (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Ref # 20261009-91823"
+                  value={customerNotes}
+                  onChange={(e) => setCustomerNotes(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm outline-none focus:border-brand-500"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={uploading || !slipFile || !enteredAmount}
+                className="w-full py-3.5 bg-brand-500 hover:bg-brand-400 disabled:opacity-50 disabled:cursor-not-allowed text-brand-950 font-bold rounded-2xl transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer text-sm"
+              >
+                {uploading ? (
+                  <>
+                    <Loader />
+                    <span>Uploading & Submitting Slip...</span>
+                  </>
+                ) : (
+                  <span>Submit Payment Slip for Verification</span>
+                )}
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="text-center py-10 bg-muted/20 border border-border rounded-2xl p-6">
+            <MdCreditCard className="w-12 h-12 text-brand-500 mx-auto mb-3" />
+            <h4 className="text-lg font-bold text-foreground mb-1">Instant Online Card Checkout</h4>
+            <p className="text-muted-foreground text-xs sm:text-sm mb-6 max-w-sm mx-auto">
+              Secure online payment via Visa, Mastercard, or local bank card. Your subscription will be activated automatically upon completion.
+            </p>
+            <button
+              type="button"
+              onClick={() => alert("Online payment gateway integration is configured for live checkout.")}
+              className="px-8 py-3 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-full transition-colors shadow-xs cursor-pointer text-sm"
+            >
+              Proceed to Secure Checkout
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Payment History */}
+      <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs">
+        <h3 className="text-xl font-bold text-foreground mb-4">Payment & Slip History</h3>
+        {loading ? (
+          <div className="flex justify-center p-8"><Loader /></div>
+        ) : history.length === 0 ? (
+          <p className="text-muted-foreground text-center py-6 text-sm">No payment slips recorded yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-border bg-muted/30 text-muted-foreground font-semibold text-xs uppercase tracking-wider">
+                  <th className="py-3 px-4">Date</th>
+                  <th className="py-3 px-4">Plan</th>
+                  <th className="py-3 px-4">Amount</th>
+                  <th className="py-3 px-4">Receipt Slip</th>
+                  <th className="py-3 px-4">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {history.map((row) => {
+                  const isApproved = row.status === "approved" || row.status === "paid";
+                  const isRejected = row.status === "rejected" || row.status === "failed";
+                  return (
+                    <tr key={row.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="py-3 px-4 text-muted-foreground font-medium text-xs">
+                        {new Date(row.created_at).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric"
+                        })}
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-foreground text-xs">{row.plan_name}</td>
+                      <td className="py-3 px-4 font-bold text-foreground text-xs">
+                        {row.amount ? `${Number(row.amount).toLocaleString()} LKR` : "—"}
+                      </td>
+                      <td className="py-3 px-4">
+                        {row.slip_url ? (
+                          <a
+                            href={row.slip_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-brand-600 dark:text-brand-400 hover:underline font-semibold text-xs flex items-center gap-1"
+                          >
+                            <span>View Slip</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                          isApproved
+                            ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30"
+                            : isRejected
+                            ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30"
+                            : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30"
+                        }`}>
+                          {isApproved ? "APPROVED" : isRejected ? "DECLINED" : "UNDER REVIEW"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* 4. BOTTOM: Available Plans & Packages (Placed on BOTTOM) */}
+      <div id="packages-section" className="pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Available Plans & Packages</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+              Choose the package that fits your business. Click &quot;Select Package&quot; to pay and upgrade above.
+            </p>
+          </div>
+
+          <div className="flex bg-muted/60 p-1 rounded-full w-fit border border-border">
             <button
               type="button"
               onClick={() => setBillingCycle("monthly")}
-              className={`px-4 py-1.5 text-xs font-bold rounded-full transition-colors ${billingCycle === "monthly" ? "bg-brand-500 text-[#161916]" : "text-gray-400 hover:text-foreground"}`}
+              className={`px-4 py-1.5 text-xs font-bold rounded-full transition-colors cursor-pointer ${
+                billingCycle === "monthly" ? "bg-brand-500 text-brand-950" : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               Monthly
             </button>
             <button
               type="button"
               onClick={() => setBillingCycle("yearly")}
-              className={`px-4 py-1.5 text-xs font-bold rounded-full transition-colors ${billingCycle === "yearly" ? "bg-brand-500 text-[#161916]" : "text-gray-400 hover:text-foreground"}`}
+              className={`px-4 py-1.5 text-xs font-bold rounded-full transition-colors cursor-pointer ${
+                billingCycle === "yearly" ? "bg-brand-500 text-brand-950" : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               Yearly <span className="ml-1 opacity-80 font-normal">- Save 20%</span>
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plans.map((plan) => (
+        <div className={`grid grid-cols-1 ${
+          activePlans.length === 1 ? 'max-w-md' :
+          activePlans.length === 2 ? 'max-w-3xl md:grid-cols-2' :
+          activePlans.length === 4 ? 'max-w-7xl sm:grid-cols-2 lg:grid-cols-4' :
+          'max-w-6xl md:grid-cols-3'
+        } gap-6`}>
+          {activePlans.map((plan) => (
             <div
               key={plan.name}
               className={`relative bg-card rounded-3xl overflow-hidden transition-all flex flex-col ${
-                selectedPlan === plan.name 
+                selectedPlan.toLowerCase() === plan.name.toLowerCase()
                 ? "ring-2 ring-brand-500 shadow-xl shadow-brand-500/10" 
                 : "border border-border"
               }`}
@@ -1591,7 +2127,7 @@ function BillingView({ tenantInfo }: { tenantInfo: { plan: string, name: string,
               {/* Header */}
               <div className="p-6 pb-4">
                 {plan.popular && (
-                  <span className="absolute top-6 right-6 text-[10px] font-bold uppercase bg-brand-500 text-brand-900 px-3 py-1 rounded-full">Popular</span>
+                  <span className="absolute top-6 right-6 text-[10px] font-bold uppercase bg-brand-500 text-brand-950 px-3 py-1 rounded-full">Popular</span>
                 )}
                 <h4 className="text-xl font-bold text-foreground mb-2">{plan.name}</h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 min-h-[40px] pr-8">{plan.description}</p>
@@ -1601,6 +2137,9 @@ function BillingView({ tenantInfo }: { tenantInfo: { plan: string, name: string,
                   <span className="text-4xl font-black text-foreground tracking-tight">
                     {billingCycle === "monthly" ? plan.price : plan.yearlyPrice}
                   </span>
+                  <span className="text-xs text-muted-foreground mb-1.5 font-medium">
+                    /{billingCycle === "monthly" ? "month" : "year"}
+                  </span>
                 </div>
               </div>
 
@@ -1609,138 +2148,36 @@ function BillingView({ tenantInfo }: { tenantInfo: { plan: string, name: string,
 
               {/* Features List */}
               <div className="p-6 flex-1 flex flex-col">
-                <ul className="space-y-6 flex-1 mb-8">
+                <ul className="space-y-4 flex-1 mb-8">
                   {plan.features.map((feature, j) => (
                     <li key={j} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-6 h-6 rounded-full bg-brand-500/20 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
                           <feature.icon className="w-3.5 h-3.5" />
                         </div>
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{feature.label}</span>
+                        <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">{feature.label}</span>
                       </div>
-                      <span className="text-sm font-semibold text-foreground text-right">{feature.value}</span>
+                      <span className="text-xs sm:text-sm font-semibold text-foreground text-right">{feature.value}</span>
                     </li>
                   ))}
                 </ul>
 
                 <button
-                  onClick={() => setSelectedPlan(plan.name)}
-                  className={`w-full py-3.5 rounded-2xl font-bold transition-all text-sm ${
-                    selectedPlan === plan.name
-                      ? "bg-black text-white dark:bg-white dark:text-black hover:opacity-90"
-                      : "bg-[#161916] text-white hover:bg-black/90 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                  type="button"
+                  onClick={() => handleSelectPackageFromBottom(plan.name)}
+                  className={`w-full py-3.5 rounded-2xl font-bold transition-all text-sm cursor-pointer flex items-center justify-center gap-2 ${
+                    selectedPlan.toLowerCase() === plan.name.toLowerCase()
+                      ? "bg-brand-500 text-brand-950 hover:bg-brand-400 shadow-md"
+                      : "bg-[#161916] text-white hover:bg-black dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                   }`}
                 >
-                  Buy Now
+                  <span>Select {plan.name}</span>
+                  <ArrowUp className="w-4 h-4" />
                 </button>
               </div>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Payment Method Toggle */}
-      <div className="bg-transparent border border-border rounded-3xl p-7">
-        <h3 className="text-xl font-bold text-foreground mb-6">Payment</h3>
-        <div className="flex gap-2 mb-6">
-          <button
-            type="button"
-            onClick={() => setPaymentMethod("slip")}
-            className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-colors ${
-              paymentMethod === "slip" ? "bg-brand-500 text-[#161916]" : "bg-card text-gray-300 hover:bg-black/10 dark:hover:bg-white/10"
-            }`}
-          >
-            Upload Bank Slip
-          </button>
-          <button
-            type="button"
-            onClick={() => setPaymentMethod("online")}
-            className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-colors ${
-              paymentMethod === "online" ? "bg-brand-500 text-[#161916]" : "bg-card text-gray-300 hover:bg-black/10 dark:hover:bg-white/10"
-            }`}
-          >
-            Pay Online
-          </button>
-        </div>
-
-        {paymentMethod === "slip" ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Upload Bank Slip</label>
-              <div className="w-full flex items-center justify-center p-6 border-2 border-dashed border-border rounded-2xl bg-card">
-                <input 
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={(e) => setSlipFile(e.target.files?.[0] || null)}
-                  className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-500/20 file:text-foreground hover:file:bg-brand-500/30"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={uploading || !slipFile}
-              className="w-full py-3 bg-brand-500 hover:bg-brand-400 disabled:opacity-50 disabled:cursor-not-allowed text-[#161916] font-bold rounded-full transition-colors flex items-center justify-center gap-2"
-            >
-              {uploading ? "Uploading..." : "Submit Payment Slip"}
-            </button>
-          </form>
-        ) : (
-          <div className="text-center py-8">
-            <MdCreditCard className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-            <h4 className="text-lg font-semibold text-foreground mb-2">Online Payment</h4>
-            <p className="text-gray-400 text-sm mb-6 max-w-sm mx-auto">Secure online payment via card or bank transfer. You will be redirected to a secure checkout.</p>
-            <button className="px-8 py-3 bg-brand-500 hover:bg-brand-400 text-[#161916] font-bold rounded-full transition-colors">
-              Proceed to Checkout
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-transparent border border-border rounded-3xl p-6">
-        <h3 className="text-xl font-bold text-foreground mb-6">Payment History</h3>
-        {loading ? (
-          <div className="flex justify-center p-4"><Loader /></div>
-        ) : history.length === 0 ? (
-          <p className="text-gray-400 text-center py-4">No past payments found.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
-              <thead>
-                <tr className="border-b border-border text-gray-400 font-semibold">
-                  <th className="py-3 px-4">Date</th>
-                  <th className="py-3 px-4">Plan</th>
-                  <th className="py-3 px-4">Receipt</th>
-                  <th className="py-3 px-4">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {history.map((row) => (
-                  <tr key={row.id} className="hover:bg-card transition-colors">
-                    <td className="py-3 px-4 text-gray-300">
-                      {new Date(row.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="py-3 px-4 font-medium text-foreground">{row.plan_name}</td>
-                    <td className="py-3 px-4">
-                      <a href={row.slip_url} target="_blank" rel="noreferrer" className="text-brand-400 hover:underline">
-                        View Slip
-                      </a>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        row.status === 'approved' ? 'bg-green-500/20 text-green-400' :
-                        row.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
-                        'bg-yellow-500/20 text-yellow-400'
-                      }`}>
-                        {row.status.toUpperCase()}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -1985,24 +2422,24 @@ function DangerZoneView({ currentUserRole, teamMembers = [] }: { currentUserRole
           </div>
         )}
 
-        <div className="bg-card border border-red-500/20 rounded-3xl p-6">
-          <p className="text-gray-400 mb-6">Are you sure you want to proceed? This action is irreversible.</p>
+        <div className="bg-card border border-red-500/20 rounded-3xl p-6 shadow-xs">
+          <p className="text-gray-600 dark:text-gray-400 mb-6">Are you sure you want to proceed? This action is irreversible.</p>
           
-          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 mb-6">
-            <p className="text-sm text-red-300/80 mb-4">Please type <span className="font-mono font-bold text-red-400">{requiredText}</span> to confirm.</p>
+          <div className="bg-rose-50 dark:bg-red-500/10 border border-rose-200 dark:border-red-500/20 rounded-2xl p-6 mb-6">
+            <p className="text-sm text-rose-800 dark:text-red-300/80 mb-4">Please type <span className="font-mono font-bold text-red-600 dark:text-red-400">{requiredText}</span> to confirm.</p>
             <input 
               type="text"
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
               placeholder={`Type ${requiredText}`}
-              className="w-full sm:w-64 bg-black/50 border border-red-500/20 rounded-xl px-4 py-2 text-red-300 focus:outline-none focus:border-red-500/50"
+              className="w-full sm:w-64 bg-card border border-rose-300 dark:border-red-500/20 rounded-xl px-4 py-2 text-foreground focus:outline-none focus:border-red-500 shadow-2xs placeholder:text-gray-400"
             />
           </div>
 
           <div className="flex gap-4">
             <button 
               onClick={() => { setPendingAction(null); setDeleteConfirmText(""); setErrorMsg(""); }}
-              className="px-6 py-2 bg-white/10 hover:bg-white/20 text-foreground rounded-xl transition-colors font-medium cursor-pointer"
+              className="px-6 py-2 bg-card hover:bg-black/5 dark:hover:bg-white/10 text-foreground border border-border rounded-xl transition-colors font-medium cursor-pointer shadow-2xs"
             >
               Cancel
             </button>
@@ -2014,7 +2451,7 @@ function DangerZoneView({ currentUserRole, teamMembers = [] }: { currentUserRole
                 else if (pendingAction === 'transfer') handleTransferOwnership();
               }}
               disabled={isDeleting || deleteConfirmText !== requiredText}
-              className="px-6 py-2 bg-red-500 hover:bg-red-600 text-foreground font-bold rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+              className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
             >
               {isDeleting ? "Processing..." : "Confirm Action"}
             </button>
@@ -2026,56 +2463,56 @@ function DangerZoneView({ currentUserRole, teamMembers = [] }: { currentUserRole
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 mb-6 text-red-500">
+      <div className="flex items-center gap-2 mb-6 text-red-600 dark:text-red-500">
         <Terminal className="w-5 h-5" />
         <h2 className="text-xl font-bold">Danger Zone</h2>
       </div>
       
       {errorMsg && (
-        <div className="text-red-400 bg-red-400/10 border border-red-400/20 px-4 py-3 rounded-2xl text-sm mb-6">
+        <div className="text-red-600 dark:text-red-400 bg-red-100/80 dark:bg-red-400/10 border border-red-300 dark:border-red-400/20 px-4 py-3 rounded-2xl text-sm mb-6">
           {errorMsg}
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-card border border-red-500/10 hover:border-red-500/30 rounded-3xl p-6 transition-all">
+        <div className="bg-card border border-rose-200/60 dark:border-red-500/10 hover:border-red-500/30 rounded-3xl p-6 transition-all shadow-xs">
           <h3 className="font-bold text-foreground mb-2">Reset Workspace</h3>
-          <p className="text-sm text-gray-400 mb-6">Delete all invoices, clients, inventory, and transactions, but keep the workspace itself and your team members.</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Delete all invoices, clients, inventory, and transactions, but keep the workspace itself and your team members.</p>
           <button 
             onClick={() => { setPendingAction('reset'); setErrorMsg(""); }}
             disabled={isDeleting}
-            className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold rounded-xl text-sm transition-colors cursor-pointer"
+            className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 font-bold rounded-xl text-sm transition-colors border border-rose-200/60 dark:border-red-500/20 cursor-pointer shadow-2xs"
           >
             Reset Data
           </button>
         </div>
 
-        <div className="bg-card border border-red-500/10 hover:border-red-500/30 rounded-3xl p-6 transition-all">
+        <div className="bg-card border border-rose-200/60 dark:border-red-500/10 hover:border-red-500/30 rounded-3xl p-6 transition-all shadow-xs">
           <h3 className="font-bold text-foreground mb-2">Delete Workspace</h3>
-          <p className="text-sm text-gray-400 mb-6">Permanently delete this workspace and all associated data. This action is irreversible.</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Permanently delete this workspace and all associated data. This action is irreversible.</p>
           <button 
             onClick={() => { setPendingAction('delete_workspace'); setErrorMsg(""); }}
             disabled={isDeleting || currentUserRole !== 'owner'}
-            className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold rounded-xl text-sm transition-colors disabled:opacity-50 cursor-pointer"
+            className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 font-bold rounded-xl text-sm transition-colors border border-rose-200/60 dark:border-red-500/20 disabled:opacity-50 cursor-pointer shadow-2xs"
           >
             Delete Workspace
           </button>
         </div>
 
-        <div className="bg-card border border-red-500/10 hover:border-red-500/30 rounded-3xl p-6 transition-all md:col-span-2">
+        <div className="bg-card border border-rose-200/60 dark:border-red-500/10 hover:border-red-500/30 rounded-3xl p-6 transition-all md:col-span-2 shadow-xs">
           <h3 className="font-bold text-foreground mb-2">Transfer Ownership</h3>
-          <p className="text-sm text-gray-400 mb-6">Transfer your workspace ownership to another team member. You will lose owner privileges and become an Admin.</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Transfer your workspace ownership to another team member. You will lose owner privileges and become an Admin.</p>
           
           {teamMembers.length > 0 ? (
             <div className="flex gap-4 items-center">
               <select 
                 value={transferToUserId} 
                 onChange={(e) => setTransferToUserId(e.target.value)}
-                className="bg-black/50 border border-border rounded-xl px-4 py-2 text-foreground outline-none focus:border-brand-500 text-sm w-full sm:w-auto min-w-[200px]"
+                className="bg-card border border-border rounded-xl px-4 py-2 text-foreground outline-none focus:border-brand-500 text-sm w-full sm:w-auto min-w-[200px] shadow-2xs"
               >
-                <option value="">Select a team member...</option>
+                <option value="" className="bg-card text-foreground">Select a team member...</option>
                 {teamMembers.map(member => (
-                  <option key={member.id} value={member.id}>{member.email}</option>
+                  <option key={member.id} value={member.id} className="bg-card text-foreground">{member.email}</option>
                 ))}
               </select>
               <button 
@@ -2088,7 +2525,7 @@ function DangerZoneView({ currentUserRole, teamMembers = [] }: { currentUserRole
                   setErrorMsg("");
                 }}
                 disabled={isDeleting || !transferToUserId || currentUserRole !== 'owner'}
-                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold rounded-xl text-sm transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 font-bold rounded-xl text-sm transition-colors border border-rose-200/60 dark:border-red-500/20 disabled:opacity-50 cursor-pointer whitespace-nowrap shadow-2xs"
               >
                 Transfer
               </button>

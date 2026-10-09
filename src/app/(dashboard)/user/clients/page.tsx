@@ -157,7 +157,7 @@ export default function ClientsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-pulse">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4">
-              <div className="p-4 rounded-2xl bg-card w-14 h-14" />
+              <div className="p-3 rounded-2xl bg-card w-12 h-12" />
               <div className="space-y-2 flex-1">
                 <div className="h-4 bg-card rounded-full w-24" />
                 <div className="h-6 bg-white/10 rounded-full w-32" />
@@ -197,32 +197,32 @@ export default function ClientsPage() {
       value: data.length.toString(),
       sub: null,
       icon: MdGroup,
-      color: "text-brand-400",
-      bg: "bg-brand-400/10",
+      color: "text-emerald-700 dark:text-brand-400",
+      bg: "bg-emerald-100/70 dark:bg-brand-400/10",
     },
     {
       label: "Top by Revenue",
       value: topClient ? topClient.name : "—",
       sub: topClient ? formatLKR(topClient.revenue) : null,
       icon: Crown,
-      color: "text-amber-400",
-      bg: "bg-amber-400/10",
+      color: "text-amber-700 dark:text-amber-400",
+      bg: "bg-amber-100/70 dark:bg-amber-400/10",
     },
     {
       label: "Highest Value",
       value: topClient ? formatLKR(topClient.revenue) : "—",
       sub: topClient ? topClient.name : null,
       icon: Sparkles,
-      color: "text-green-400",
-      bg: "bg-green-400/10",
+      color: "text-emerald-700 dark:text-green-400",
+      bg: "bg-emerald-100/70 dark:bg-green-400/10",
     },
     {
       label: "Recent Client",
       value: recentClient ? recentClient.name : "—",
       sub: recentClient ? recentClient.email : null,
       icon: MdAccessTime,
-      color: "text-blue-400",
-      bg: "bg-blue-400/10",
+      color: "text-blue-700 dark:text-blue-400",
+      bg: "bg-blue-100/70 dark:bg-blue-400/10",
     },
   ];
 
@@ -242,12 +242,12 @@ export default function ClientsPage() {
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((stat, i) => (
-          <div key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4 hover:bg-card transition-colors min-w-0">
+          <div key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 shadow-xs hover:shadow-md transition-all min-w-0">
             <div className={`p-4 rounded-2xl flex-shrink-0 ${stat.bg}`}>
-              <stat.icon className={`w-6 h-6 ${stat.color}`} />
+              <stat.icon className={`w-5 h-5 ${stat.color}`} />
             </div>
             <div className="min-w-0">
-              <p className="text-gray-400 text-sm">{stat.label}</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">{stat.label}</p>
               <p className="text-xl font-semibold truncate" title={stat.value}>
                 <AnimatedNumber value={stat.value} />
               </p>
@@ -262,11 +262,11 @@ export default function ClientsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-transparent border border-border rounded-3xl overflow-hidden">
+      <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-border text-gray-400 text-sm">
+              <tr className="bg-black/[0.02] dark:bg-white/[0.02] border-b border-border text-gray-600 dark:text-gray-400 text-sm">
                 <th className="p-4 font-medium">Client</th>
                 <th className="p-4 font-medium hidden md:table-cell">Company</th>
                 <th className="p-4 font-medium hidden sm:table-cell">Phone</th>
@@ -276,7 +276,7 @@ export default function ClientsPage() {
                 <th className="p-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border">
               {filteredClients.map((client: any) => {
                 const linked = isLinked(client);
                 const isDeleting = deletingId === client.id;
@@ -285,33 +285,32 @@ export default function ClientsPage() {
                   : `Delete ${client.name}`;
 
                 return (
-                  <tr key={client.id} className="hover:bg-card transition-colors group">
+                  <tr key={client.id} className="hover:bg-black/[0.02] dark:hover:bg-card transition-colors group">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        {/* Client avatar removed for cleaner UI */}
                         <div>
                           <p className="font-semibold text-foreground text-sm">{client.name}</p>
-                          <p className="text-xs text-gray-400">{client.email}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{client.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 text-sm text-gray-300 hidden md:table-cell">
+                    <td className="p-4 text-sm text-gray-700 dark:text-gray-300 hidden md:table-cell">
                       {client.company
-                        ? <span className="text-brand-400">{client.company}</span>
-                        : <span className="text-gray-600">—</span>}
+                        ? <span className="text-emerald-700 dark:text-brand-400 font-medium">{client.company}</span>
+                        : <span className="text-gray-400 dark:text-gray-600">—</span>}
                     </td>
-                    <td className="p-4 text-sm text-gray-300 hidden sm:table-cell">
-                      {client.phone || <span className="text-gray-600">—</span>}
+                    <td className="p-4 text-sm text-gray-700 dark:text-gray-300 hidden sm:table-cell">
+                      {client.phone || <span className="text-gray-400 dark:text-gray-600">—</span>}
                     </td>
                     <td className="p-4 hidden lg:table-cell">
                       {client.active
-                        ? <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-green-500/20 text-green-400 border border-green-500/30">Active</span>
-                        : <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-500/20 text-gray-400 border border-gray-500/30">Inactive</span>}
+                        ? <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100/70 text-emerald-700 border border-emerald-200/60 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/30">Active</span>
+                        : <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700 border border-slate-200/80 dark:bg-gray-500/20 dark:text-gray-400 dark:border-gray-500/30">Inactive</span>}
                     </td>
-                    <td className="p-4 text-sm text-gray-300 hidden sm:table-cell">
+                    <td className="p-4 text-sm text-gray-700 dark:text-gray-300 hidden sm:table-cell">
                       {client.invoices}
                     </td>
-                    <td className="p-4 font-semibold text-brand-400 text-sm">
+                    <td className="p-4 font-semibold text-emerald-700 dark:text-brand-400 text-sm">
                       {formatLKR(client.revenue)}
                     </td>
                     <td className="p-4">
@@ -334,10 +333,10 @@ export default function ClientsPage() {
                               disabled={linked || isDeleting}
                               className={`p-2 rounded-xl transition-colors ${
                                 linked
-                                  ? "text-gray-700 cursor-not-allowed"
+                                  ? "text-gray-400 dark:text-gray-700 cursor-not-allowed"
                                   : isDeleting
                                   ? "text-red-400 opacity-50 cursor-wait"
-                                  : "text-gray-400 hover:text-red-400 hover:bg-red-400/10"
+                                  : "text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10"
                               }`}
                             >
                               {isDeleting
@@ -351,7 +350,7 @@ export default function ClientsPage() {
                         <Link
                           href={`/user/clients/${client.id}`}
                           title="View client profile & history"
-                          className="p-2 hover:bg-brand-400/10 rounded-xl transition-colors text-gray-400 hover:text-brand-400"
+                          className="p-2 hover:bg-emerald-500/10 rounded-xl transition-colors text-gray-400 hover:text-emerald-700 dark:hover:text-brand-400"
                         >
                           <MdKeyboardArrowRight className="w-4 h-4" />
                         </Link>
@@ -375,18 +374,18 @@ export default function ClientsPage() {
       {/* Add / Edit Client Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-background border border-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
+          <div className="bg-card border border-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-border">
               <div className="flex items-center gap-3">
                 <div className="p-2 text-foreground flex shrink-0">
                   <MdGroup className="w-5 h-5 text-foreground" />
                 </div>
-                <h2 className="text-xl font-semibold">
+                <h2 className="text-xl font-semibold text-foreground">
                   {editingId ? 'Edit Client' : 'Add New Client'}
                 </h2>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors">
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-foreground">
                 <MdClose className="w-5 h-5" />
               </button>
             </div>
@@ -395,9 +394,9 @@ export default function ClientsPage() {
             <div className="p-6 space-y-4">
               {/* Email change cascade warning — only shown in edit mode */}
               {editingId && (
-                <div className="flex items-start gap-3 px-4 py-3 bg-amber-400/10 border border-amber-400/20 rounded-2xl">
-                  <span className="text-amber-400 text-lg leading-none mt-0.5">⚠</span>
-                  <p className="text-xs text-amber-300 leading-relaxed">
+                <div className="flex items-start gap-3 px-4 py-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+                  <span className="text-amber-600 dark:text-amber-400 text-lg leading-none mt-0.5">⚠</span>
+                  <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
                     Changing the email will automatically update all linked <strong>invoices</strong> to use the new address.
                   </p>
                 </div>
@@ -405,59 +404,59 @@ export default function ClientsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1 col-span-2 sm:col-span-1">
-                  <label className="text-sm text-gray-400">Full Name</label>
+                  <label className="text-sm text-gray-700 dark:text-gray-300">Full Name</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm"
+                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm text-foreground shadow-2xs placeholder-gray-400"
                   />
                 </div>
                 <div className="space-y-1 col-span-2 sm:col-span-1">
-                  <label className="text-sm text-gray-400">
+                  <label className="text-sm text-gray-700 dark:text-gray-300">
                     Email
-                    {editingId && <span className="text-amber-400/70 text-xs ml-1">(cascades to all records)</span>}
+                    {editingId && <span className="text-amber-600 dark:text-amber-400/70 text-xs ml-1">(cascades to all records)</span>}
                   </label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={e => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm"
+                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm text-foreground shadow-2xs placeholder-gray-400"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-sm text-gray-400">Company</label>
+                  <label className="text-sm text-gray-700 dark:text-gray-300">Company</label>
                   <input
                     type="text"
                     placeholder="(optional)"
                     value={formData.company}
                     onChange={e => setFormData({ ...formData, company: e.target.value })}
-                    className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm"
+                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm text-foreground shadow-2xs placeholder-gray-400"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm text-gray-400">Phone</label>
+                  <label className="text-sm text-gray-700 dark:text-gray-300">Phone</label>
                   <input
                     type="tel"
                     placeholder="(optional)"
                     value={formData.phone}
                     onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm"
+                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm text-foreground shadow-2xs placeholder-gray-400"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm text-gray-400">Address</label>
+                <label className="text-sm text-gray-700 dark:text-gray-300">Address</label>
                 <input
                   type="text"
                   placeholder="(optional)"
                   value={formData.address}
                   onChange={e => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm"
+                  className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm text-foreground shadow-2xs placeholder-gray-400"
                 />
               </div>
             </div>
@@ -466,7 +465,7 @@ export default function ClientsPage() {
             <div className="p-6 border-t border-border flex justify-end gap-3 bg-card">
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="px-6 py-2.5 rounded-full font-medium hover:bg-card transition-colors text-sm"
+                className="px-6 py-2.5 rounded-full font-medium border border-border text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-card transition-colors text-sm"
                 disabled={saving}
               >
                 Cancel
@@ -474,7 +473,7 @@ export default function ClientsPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-full font-bold transition-colors disabled:opacity-50 text-sm"
+                className="flex items-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-950 rounded-full font-bold transition-colors disabled:opacity-50 text-sm shadow-xs"
               >
                 {saving && <Loader size="sm" />}
                 {saving ? 'Saving...' : (editingId ? 'Update Client' : 'Add Client')}

@@ -34,9 +34,9 @@ export default function TopClientsWidget() {
   }, []);
 
   return (
-    <div className="bg-transparent border border-border rounded-3xl p-7 flex flex-col justify-between h-full min-h-[420px]">
+    <div className="bg-card border border-border rounded-3xl p-7 flex flex-col justify-between h-full min-h-[420px] shadow-xs">
       <div>
-        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-foreground">
           Top Clients
         </h2>
         
@@ -49,9 +49,9 @@ export default function TopClientsWidget() {
         ) : (
           <div className="space-y-4">
             {data.map((client, i) => (
-              <div key={i} className="flex items-center justify-between p-4 bg-transparent border border-border rounded-2xl hover:bg-card transition-colors">
+              <div key={i} className="flex items-center justify-between p-4 bg-black/[0.02] dark:bg-card border border-border rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="text-foreground flex items-center justify-center font-bold text-xs shrink-0">
+                  <div className="text-gray-500 dark:text-gray-400 flex items-center justify-center font-bold text-xs shrink-0">
                     #{i + 1}
                   </div>
                   <p className="font-semibold text-sm text-foreground truncate max-w-[150px]">
@@ -59,7 +59,7 @@ export default function TopClientsWidget() {
                   </p>
                 </div>
                 <div className="text-right shrink-0 pl-2">
-                  <p className="font-semibold text-sm text-green-400">
+                  <p className="font-semibold text-sm text-emerald-600 dark:text-green-400">
                     {formatLKR(client.value)}
                   </p>
                 </div>

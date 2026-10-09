@@ -7,41 +7,140 @@ import { logSystemAction } from "@/lib/logger";
 
 import { requirePermission } from "./rbac";
 
+async function resolveGraceAndReadOnly(plan: string, planExpiresAt: any, tenantId?: number | null) {
+  let is_grace_period = false;
+  let is_read_only = false;
+  let grace_days_remaining: number | null = null;
+  let grace_end_date: string | null = null;
+  let grace_period_days = 7;
+
+  try {
+    const settingsRows = await sql`SELECT value FROM platform_settings WHERE key = 'grace_period_days' LIMIT 1`;
+    if (settingsRows.length > 0 && settingsRows[0].value != null) {
+      grace_period_days = Number(settingsRows[0].value) || 7;
+    }
+  } catch (err) {
+    // default 7
+  }
+
+  let expires = planExpiresAt;
+  if (!expires && tenantId) {
+    try {
+      const subRows = await sql`
+        SELECT current_period_end 
+        FROM subscriptions 
+        WHERE tenant_id = ${tenantId} AND current_period_end IS NOT NULL
+        ORDER BY id DESC LIMIT 1
+      `;
+      if (subRows.length > 0 && subRows[0].current_period_end) {
+        expires = subRows[0].current_period_end;
+      }
+    } catch (err) {}
+  }
+
+  if (plan && plan.toLowerCase() !== "free" && expires) {
+    const expiresAt = new Date(expires);
+    const now = new Date();
+    const graceEnd = new Date(expiresAt.getTime() + grace_period_days * 24 * 60 * 60 * 1000);
+    grace_end_date = graceEnd.toISOString();
+
+    if (now > expiresAt && now <= graceEnd) {
+      is_grace_period = true;
+      is_read_only = false;
+      const msLeft = graceEnd.getTime() - now.getTime();
+      grace_days_remaining = Math.max(1, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
+    } else if (now > graceEnd) {
+      is_grace_period = false;
+      is_read_only = true;
+      grace_days_remaining = 0;
+    }
+  }
+
+  return {
+    grace_period_days,
+    is_grace_period,
+    is_read_only,
+    grace_days_remaining,
+    grace_end_date,
+    plan_expires_at: expires ? new Date(expires).toISOString() : null,
+  };
+}
+
 export async function getTenantInfo() {
   try {
     const { userId } = await auth();
-    if (!userId) return { plan: "Free", name: "My Business", logo_url: null, industry: null, phone: null, email: null, website: null, address: null, teamMembersCount: 1 };
+    if (!userId) {
+      return {
+        plan: "Free",
+        plan_expires_at: null,
+        grace_period_days: 7,
+        is_grace_period: false,
+        is_read_only: false,
+        grace_days_remaining: null,
+        grace_end_date: null,
+        name: "My Business",
+        logo_url: null,
+        industry: null,
+        phone: null,
+        email: null,
+        website: null,
+        address: null,
+        userRole: null,
+        teamMembersCount: 1,
+      };
+    }
     
     const userRows = await sql`SELECT tenant_id, role FROM admin_users WHERE clerk_id = ${userId}`;
     if (!userRows || userRows.length === 0) {
       const defaultTenant = await sql`SELECT id, name, plan, plan_expires_at, logo_url, industry, phone, email, website, address FROM tenants ORDER BY created_at ASC LIMIT 1`;
-      if (defaultTenant.length > 0) return { 
-        plan: defaultTenant[0].plan || "Free",
-        plan_expires_at: defaultTenant[0].plan_expires_at || null,
-        name: defaultTenant[0].name || "My Business",
-        logo_url: defaultTenant[0].logo_url || null,
-        industry: defaultTenant[0].industry || null,
-        phone: defaultTenant[0].phone || null,
-        email: defaultTenant[0].email || null,
-        website: defaultTenant[0].website || null,
-        address: defaultTenant[0].address || null,
+      if (defaultTenant.length > 0) {
+        const grace = await resolveGraceAndReadOnly(defaultTenant[0].plan || "Free", defaultTenant[0].plan_expires_at, defaultTenant[0].id);
+        return { 
+          plan: defaultTenant[0].plan || "Free",
+          ...grace,
+          name: defaultTenant[0].name || "My Business",
+          logo_url: defaultTenant[0].logo_url || null,
+          industry: defaultTenant[0].industry || null,
+          phone: defaultTenant[0].phone || null,
+          email: defaultTenant[0].email || null,
+          website: defaultTenant[0].website || null,
+          address: defaultTenant[0].address || null,
+          userRole: null,
+          teamMembersCount: 1
+        };
+      }
+      return {
+        plan: "Free",
+        plan_expires_at: null,
+        grace_period_days: 7,
+        is_grace_period: false,
+        is_read_only: false,
+        grace_days_remaining: null,
+        grace_end_date: null,
+        name: "My Business",
+        logo_url: null,
+        industry: null,
+        phone: null,
+        email: null,
+        website: null,
+        address: null,
         userRole: null,
         teamMembersCount: 1
       };
-      return { plan: "Free", plan_expires_at: null, name: "My Business", logo_url: null, industry: null, phone: null, email: null, website: null, address: null, userRole: null, teamMembersCount: 1 };
     }
     
     const tenantId = userRows[0].tenant_id;
     const userRole = userRows[0].role;
-    const tenants = await sql`SELECT name, plan, plan_expires_at, logo_url, industry, phone, email, website, address FROM tenants WHERE id = ${tenantId}`;
+    const tenants = await sql`SELECT id, name, plan, plan_expires_at, logo_url, industry, phone, email, website, address FROM tenants WHERE id = ${tenantId}`;
     
     const teamMembersCountRows = await sql`SELECT count(*) FROM admin_users WHERE tenant_id = ${tenantId}`;
     const teamMembersCount = parseInt(teamMembersCountRows[0]?.count || '1');
 
     if (tenants.length > 0) {
+      const grace = await resolveGraceAndReadOnly(tenants[0].plan || "Free", tenants[0].plan_expires_at, tenants[0].id);
       return { 
         plan: tenants[0].plan || "Free",
-        plan_expires_at: tenants[0].plan_expires_at || null,
+        ...grace,
         name: tenants[0].name || "My Business",
         logo_url: tenants[0].logo_url || null,
         industry: tenants[0].industry || null,
@@ -53,10 +152,44 @@ export async function getTenantInfo() {
         teamMembersCount,
       };
     }
-    return { plan: "Free", plan_expires_at: null, name: "My Business", logo_url: null, industry: null, phone: null, email: null, website: null, address: null, userRole: null, teamMembersCount: 1 };
+    return {
+      plan: "Free",
+      plan_expires_at: null,
+      grace_period_days: 7,
+      is_grace_period: false,
+      is_read_only: false,
+      grace_days_remaining: null,
+      grace_end_date: null,
+      name: "My Business",
+      logo_url: null,
+      industry: null,
+      phone: null,
+      email: null,
+      website: null,
+      address: null,
+      userRole: null,
+      teamMembersCount: 1
+    };
   } catch (e) {
     console.error("Failed to fetch tenant info:", e);
-    return { plan: "Free", plan_expires_at: null, name: "My Business", logo_url: null, industry: null, phone: null, email: null, website: null, address: null, userRole: null, teamMembersCount: 1 };
+    return {
+      plan: "Free",
+      plan_expires_at: null,
+      grace_period_days: 7,
+      is_grace_period: false,
+      is_read_only: false,
+      grace_days_remaining: null,
+      grace_end_date: null,
+      name: "My Business",
+      logo_url: null,
+      industry: null,
+      phone: null,
+      email: null,
+      website: null,
+      address: null,
+      userRole: null,
+      teamMembersCount: 1
+    };
   }
 }
 
@@ -109,20 +242,42 @@ export async function getTenantUsage() {
     
     const tenantId = userRows[0].tenant_id;
     
-    const [invoices, incomes, expenses, clients, accounts] = await Promise.all([
+    const [invoices, incomes, expenses, clients, accounts, tenantRows] = await Promise.all([
       sql`SELECT count(*) FROM invoices WHERE tenant_id = ${tenantId}`,
       sql`SELECT count(*) FROM admin_incomes WHERE tenant_id = ${tenantId}`,
       sql`SELECT count(*) FROM admin_expenses WHERE tenant_id = ${tenantId}`,
       sql`SELECT count(*) FROM admin_clients WHERE tenant_id = ${tenantId}`,
       sql`SELECT count(*) FROM accounts WHERE tenant_id = ${tenantId}`,
+      sql`SELECT lifetime_invoices, lifetime_incomes, lifetime_expenses, lifetime_clients, lifetime_accounts FROM tenants WHERE id = ${tenantId}`,
     ]);
     
+    const t = tenantRows[0] || {};
+    const invCount = parseInt(invoices[0].count) || 0;
+    const incCount = parseInt(incomes[0].count) || 0;
+    const expCount = parseInt(expenses[0].count) || 0;
+    const clientCount = parseInt(clients[0].count) || 0;
+    const accCount = parseInt(accounts[0].count) || 0;
+
     return {
-      invoices: parseInt(invoices[0].count),
-      incomes: parseInt(incomes[0].count),
-      expenses: parseInt(expenses[0].count),
-      clients: parseInt(clients[0].count),
-      accounts: parseInt(accounts[0].count),
+      invoices: Math.max(t.lifetime_invoices ?? 0, invCount),
+      incomes: Math.max(t.lifetime_incomes ?? 0, incCount),
+      expenses: Math.max(t.lifetime_expenses ?? 0, expCount),
+      clients: Math.max(t.lifetime_clients ?? 0, clientCount),
+      accounts: Math.max(t.lifetime_accounts ?? 0, accCount),
+      active: {
+        invoices: invCount,
+        incomes: incCount,
+        expenses: expCount,
+        clients: clientCount,
+        accounts: accCount,
+      },
+      lifetime: {
+        invoices: t.lifetime_invoices ?? 0,
+        incomes: t.lifetime_incomes ?? 0,
+        expenses: t.lifetime_expenses ?? 0,
+        clients: t.lifetime_clients ?? 0,
+        accounts: t.lifetime_accounts ?? 0,
+      }
     };
   } catch (e) {
     console.error("Failed to fetch tenant usage:", e);

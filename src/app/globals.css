@@ -1,8 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Product+Sans:wght@400;500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,700&family=Google+Sans+Text:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=Product+Sans:wght@400;500;700;900&display=swap');
 @import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 
 @theme {
+  --font-sans: 'Google Sans', 'Google Sans Text', 'Product Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Google Sans', 'Product Sans', sans-serif;
+  --font-body: 'Google Sans Text', 'Google Sans', sans-serif;
+
   --color-brand-50: #E6FDF0;
   --color-brand-100: #BFFCDF;
   --color-brand-200: #99FACF;
@@ -18,20 +24,26 @@
   --color-background: var(--bg-primary);
   --color-foreground: var(--text-primary);
   --color-card: var(--card-bg);
+  --color-popover: var(--popover-bg);
   --color-border: var(--border-color);
 }
 
 :root {
-  --bg-primary: #F9FAFB;
+  --font-sans: 'Google Sans', 'Google Sans Text', 'Product Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Google Sans', 'Product Sans', sans-serif;
+  --font-body: 'Google Sans Text', 'Google Sans', sans-serif;
+  --bg-primary: #F3F4F6;
   --text-primary: #082830;
   --card-bg: #FFFFFF;
-  --border-color: #E5E7EB;
+  --popover-bg: #FFFFFF;
+  --border-color: #E2E8F0;
 }
 
 .dark {
   --bg-primary: #082830;
   --text-primary: #FFFFFF;
   --card-bg: rgba(255, 255, 255, 0.05);
+  --popover-bg: #0b2f38;
   --border-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -52,8 +64,14 @@ textarea,
   user-select: text;
 }
 
-body {
-  font-family: "Product Sans", "Google Sans", sans-serif;
+html,
+body,
+button,
+input,
+optgroup,
+select,
+textarea {
+  font-family: var(--font-sans), 'Google Sans', 'Google Sans Text', 'Product Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 code,

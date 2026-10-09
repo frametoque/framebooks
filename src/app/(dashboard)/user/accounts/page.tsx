@@ -156,7 +156,7 @@ export default function AccountsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="bg-transparent border border-border p-6 rounded-3xl flex items-center gap-4 animate-pulse">
-              <div className="w-14 h-14 rounded-2xl bg-card flex-shrink-0" />
+              <div className="w-12 h-12 rounded-2xl bg-card flex-shrink-0" />
               <div className="space-y-2 flex-1">
                 <div className="h-4 bg-card rounded-full w-24" />
                 <div className="h-6 bg-white/10 rounded-full w-32" />
@@ -196,40 +196,55 @@ export default function AccountsPage() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-transparent border border-border p-6 rounded-3xl flex items-center gap-4">
-          <div className="p-4 text-foreground flex shrink-0"><MdAccountBalanceWallet className="w-6 h-6"/></div>
-          <div><p className="text-sm text-gray-400">Total Assets Balance</p><p className="text-2xl font-semibold">{formatLKR(totalAssets)}</p></div>
+        <div className="bg-card border border-border p-6 rounded-3xl flex items-center gap-4 shadow-xs">
+          <div className="p-3.5 rounded-2xl bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-foreground flex shrink-0">
+            <MdAccountBalanceWallet className="w-6 h-6"/>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Total Assets Balance</p>
+            <p className="text-2xl font-semibold">{formatLKR(totalAssets)}</p>
+          </div>
         </div>
-        <div className="bg-transparent border border-border p-6 rounded-3xl flex items-center gap-4">
-          <div className="p-4 text-foreground flex shrink-0"><MdAccountBalance className="w-6 h-6"/></div>
-          <div><p className="text-sm text-gray-400">Bank Accounts Balance</p><p className="text-2xl font-semibold text-green-400">{formatLKR(totalBank)}</p></div>
+        <div className="bg-card border border-border p-6 rounded-3xl flex items-center gap-4 shadow-xs">
+          <div className="p-3.5 rounded-2xl bg-emerald-100/70 text-emerald-700 dark:bg-green-500/10 dark:text-green-400 flex shrink-0">
+            <MdAccountBalance className="w-6 h-6"/>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Bank Accounts Balance</p>
+            <p className="text-2xl font-semibold text-emerald-600 dark:text-green-400">{formatLKR(totalBank)}</p>
+          </div>
         </div>
-        <div className="bg-transparent border border-border p-6 rounded-3xl flex items-center gap-4">
-          <div className="p-4 text-foreground flex shrink-0"><MdAccountBalanceWallet className="w-6 h-6"/></div>
-          <div><p className="text-sm text-gray-400">Cash Accounts Balance</p><p className="text-2xl font-semibold text-blue-400">{formatLKR(totalCash)}</p></div>
+        <div className="bg-card border border-border p-6 rounded-3xl flex items-center gap-4 shadow-xs">
+          <div className="p-3.5 rounded-2xl bg-blue-100/70 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 flex shrink-0">
+            <MdAccountBalanceWallet className="w-6 h-6"/>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Cash Accounts Balance</p>
+            <p className="text-2xl font-semibold text-blue-600 dark:text-blue-400">{formatLKR(totalCash)}</p>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {accounts.map(acc => (
-          <div key={acc.id} className="bg-transparent border border-border p-6 rounded-3xl flex flex-col justify-between hover:bg-card transition-colors">
+          <div key={acc.id} className="bg-card border border-border p-6 rounded-3xl flex flex-col justify-between shadow-xs hover:shadow-md transition-all">
             <div className="flex justify-between items-start mb-6">
               <div className="flex gap-4">
                 <div className={`p-3 rounded-2xl ${
                   acc.type === 'Bank Account' 
-                    ? 'bg-white/10 text-foreground' 
-                    : 'bg-white/10 text-foreground'
+                    ? 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-foreground' 
+                    : 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-foreground'
                 }`}>
                   {acc.type === 'Bank Account' ? <MdAccountBalance className="w-5 h-5"/> : <MdAccountBalanceWallet className="w-5 h-5"/>}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">
+                  <h3 className="font-semibold text-lg text-foreground">
                     {acc.name}
                   </h3>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <p className="text-xs text-gray-400">{acc.type}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{acc.type}</p>
                     {false && (
-                      <span className="px-1.5 py-0.5 text-[10px] uppercase font-bold bg-white/10 text-gray-300 rounded-md">
+                      <span className="px-1.5 py-0.5 text-[10px] uppercase font-bold bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-gray-300 rounded-md">
                         {acc.currentBalance < 0 ? "Capital" : "Debt"}
                       </span>
                     )}
@@ -239,18 +254,18 @@ export default function AccountsPage() {
               <div className="flex gap-2">
                 {role !== 'Viewer' && (
                   <>
-                    <button onClick={() => handleSetDefault(acc.id)} className={`transition-colors ${acc.isDefault ? "text-yellow-400" : "text-gray-400 hover:text-yellow-400"}`} title="Set as Default">
+                    <button onClick={() => handleSetDefault(acc.id)} className={`transition-colors ${acc.isDefault ? "text-amber-500 dark:text-yellow-400" : "text-gray-400 hover:text-amber-500 dark:hover:text-yellow-400"}`} title="Set as Default">
                       <Star className="w-4 h-4" fill={acc.isDefault ? "currentColor" : "none"} />
                     </button>
                     <button onClick={() => handleEdit(acc)} className="text-gray-400 hover:text-foreground transition-colors"><Edit2 className="w-4 h-4" /></button>
-                    <button onClick={() => handleDelete(acc.id)} className="text-gray-400 hover:text-red-400 transition-colors"><MdDelete className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(acc.id)} className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"><MdDelete className="w-4 h-4" /></button>
                   </>
                 )}
               </div>
             </div>
             
             {acc.type === 'Bank Account' && (
-              <div className="text-xs text-gray-400 mb-6 space-y-1">
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-6 space-y-1">
                 <p>Bank: {acc.bankName}</p>
                 <p>A/C: {acc.accountNumber}</p>
                 <p>Branch: {acc.branch}</p>
@@ -259,12 +274,12 @@ export default function AccountsPage() {
 
             <div className="flex justify-between items-end mt-auto">
               <div className="space-y-1">
-                <p className="text-xs text-green-400 flex items-center gap-1"><MdCallMade className="w-3 h-3"/> Inflow: {formatLKR(acc.periodInflow)}</p>
-                <p className="text-xs text-red-400 flex items-center gap-1"><MdCallReceived className="w-3 h-3"/> Outflow: {formatLKR(acc.periodOutflow)}</p>
+                <p className="text-xs text-emerald-600 dark:text-green-400 flex items-center gap-1"><MdCallMade className="w-3 h-3"/> Inflow: {formatLKR(acc.periodInflow)}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1"><MdCallReceived className="w-3 h-3"/> Outflow: {formatLKR(acc.periodOutflow)}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-400 mb-1">Current Balance</p>
-                <p className={`text-xl font-semibold ${(acc.currentBalance < 0 ? 'text-red-400' : 'text-green-400')}`}>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Current Balance</p>
+                <p className={`text-xl font-semibold ${(acc.currentBalance < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-green-400')}`}>
                   {formatLKR(acc.currentBalance)}
                 </p>
               </div>
@@ -273,14 +288,14 @@ export default function AccountsPage() {
         ))}
       </div>
 
-      <div className="bg-transparent border border-border rounded-3xl p-6">
-        <h2 className="text-lg font-semibold mb-6">Cash Transfer History</h2>
+      <div className="bg-card border border-border rounded-3xl p-6 shadow-xs">
+        <h2 className="text-lg font-semibold mb-6 text-foreground">Cash Transfer History</h2>
         {transfers.length === 0 ? (
           <p className="text-sm text-gray-500">No transfers recorded yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-xs text-gray-400 uppercase bg-transparent border-b border-border">
+              <thead className="text-xs text-gray-600 dark:text-gray-400 uppercase bg-black/[0.02] dark:bg-white/[0.02] border-b border-border">
                 <tr>
                   <th className="px-4 py-3 font-medium rounded-tl-xl">Date</th>
                   <th className="px-4 py-3 font-medium">Source Account</th>
@@ -290,13 +305,13 @@ export default function AccountsPage() {
                   <th className="px-4 py-3 font-medium text-right rounded-tr-xl">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/10">
+              <tbody className="divide-y divide-border">
                 {transfers.map((tr) => (
-                  <tr key={tr.id} className="hover:bg-card transition-colors">
+                  <tr key={tr.id} className="hover:bg-black/[0.02] dark:hover:bg-card transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap">{tr.date}</td>
-                    <td className="px-4 py-3 text-red-400">{tr.sourceAccountName}</td>
-                    <td className="px-4 py-3 text-green-400">{tr.destinationAccountName}</td>
-                    <td className="px-4 py-3 text-gray-400">{tr.description || "-"}</td>
+                    <td className="px-4 py-3 text-red-600 dark:text-red-400">{tr.sourceAccountName}</td>
+                    <td className="px-4 py-3 text-emerald-600 dark:text-green-400">{tr.destinationAccountName}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{tr.description || "-"}</td>
                     <td className="px-4 py-3 text-right font-medium">{formatLKR(tr.amount)}</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-3">
@@ -305,7 +320,7 @@ export default function AccountsPage() {
                             <button onClick={() => handleEditTransfer(tr)} className="text-gray-400 hover:text-foreground transition-colors" title="Edit Transfer">
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            <button onClick={() => handleDeleteTransfer(tr.id)} className="text-gray-400 hover:text-red-400 transition-colors" title="Undo Transfer">
+                            <button onClick={() => handleDeleteTransfer(tr.id)} className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Undo Transfer">
                               <Undo2 className="w-4 h-4" />
                             </button>
                           </>
@@ -322,47 +337,47 @@ export default function AccountsPage() {
 
       {showCreate && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1a1a1a] border border-border rounded-3xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-semibold mb-6">{editingId ? "Edit Account" : "Create Account"}</h2>
+          <div className="bg-card border border-border rounded-3xl p-6 w-full max-w-md shadow-2xl">
+            <h2 className="text-xl font-semibold mb-6 text-foreground">{editingId ? "Edit Account" : "Create Account"}</h2>
             <div className="space-y-4">
               <div>
-                <label className="text-sm text-gray-400 mb-1 block">Account Name</label>
-                <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5" />
+                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Account Name</label>
+                <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
               </div>
               <div>
-                <label className="text-sm text-gray-400 mb-1 block">Account Type</label>
-                <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5">
-                  <option>Cash Account</option>
-                  <option>Bank Account</option>
+                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Account Type</label>
+                <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs">
+                  <option className="bg-card text-foreground">Cash Account</option>
+                  <option className="bg-card text-foreground">Bank Account</option>
                 </select>
               </div>
 
               {formData.type === 'Bank Account' && (
                 <>
                   <div>
-                    <label className="text-sm text-gray-400 mb-1 block">Bank Name</label>
-                    <input type="text" value={formData.bankName} onChange={e => setFormData({...formData, bankName: e.target.value})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5" />
+                    <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Bank Name</label>
+                    <input type="text" value={formData.bankName} onChange={e => setFormData({...formData, bankName: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm text-gray-400 mb-1 block">Account Number</label>
-                      <input type="text" value={formData.accountNumber} onChange={e => setFormData({...formData, accountNumber: e.target.value})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5" />
+                      <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Account Number</label>
+                      <input type="text" value={formData.accountNumber} onChange={e => setFormData({...formData, accountNumber: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
                     </div>
                     <div>
-                      <label className="text-sm text-gray-400 mb-1 block">Branch</label>
-                      <input type="text" value={formData.branch} onChange={e => setFormData({...formData, branch: e.target.value})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5" />
+                      <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Branch</label>
+                      <input type="text" value={formData.branch} onChange={e => setFormData({...formData, branch: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
                     </div>
                   </div>
                 </>
               )}
               <div>
-                <label className="text-sm text-gray-400 mb-1 block">Initial Balance (LKR)</label>
-                <input type="number" value={Number.isNaN(Number(formData.initialBalance)) ? formData.initialBalance : formData.initialBalance} onChange={e => setFormData({...formData, initialBalance: e.target.value === "" ? "" : e.target.value as any})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5" />
+                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Initial Balance (LKR)</label>
+                <input type="number" value={Number.isNaN(Number(formData.initialBalance)) ? formData.initialBalance : formData.initialBalance} onChange={e => setFormData({...formData, initialBalance: e.target.value === "" ? "" : e.target.value as any})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
               </div>
             </div>
             <div className="flex gap-4 mt-8">
-              <button onClick={() => { setShowCreate(false); setEditingId(null); setFormData({ name: "", type: "Cash Account", bankName: "", accountNumber: "", branch: "", initialBalance: 0 }); }} className="flex-1 px-4 py-2.5 rounded-xl border border-border hover:bg-card transition-colors">Cancel</button>
-              <button onClick={handleSave} className="flex-1 px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-900 transition-colors">Save Account</button>
+              <button onClick={() => { setShowCreate(false); setEditingId(null); setFormData({ name: "", type: "Cash Account", bankName: "", accountNumber: "", branch: "", initialBalance: 0 }); }} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-card transition-colors">Cancel</button>
+              <button onClick={handleSave} className="flex-1 px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold transition-colors shadow-xs">Save Account</button>
             </div>
           </div>
         </div>
@@ -370,39 +385,39 @@ export default function AccountsPage() {
 
       {showTransfer && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1a1a1a] border border-border rounded-3xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-semibold mb-6">Transfer Cash</h2>
+          <div className="bg-card border border-border rounded-3xl p-6 w-full max-w-md shadow-2xl">
+            <h2 className="text-xl font-semibold mb-6 text-foreground">Transfer Cash</h2>
             <div className="space-y-4">
               <div>
-                <label className="text-sm text-gray-400 mb-1 block">Date</label>
-                <input type="date" value={transferData.date} onChange={e => setTransferData({...transferData, date: e.target.value})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5" />
+                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Date</label>
+                <input type="date" value={transferData.date} onChange={e => setTransferData({...transferData, date: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
               </div>
               <div>
-                <label className="text-sm text-gray-400 mb-1 block">Source Account (From)</label>
-                <select value={transferData.sourceAccountId} onChange={e => setTransferData({...transferData, sourceAccountId: parseInt(e.target.value)})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5">
-                  <option value={0}>Select Source Account</option>
-                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({formatLKR(a.currentBalance)})</option>)}
+                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Source Account (From)</label>
+                <select value={transferData.sourceAccountId} onChange={e => setTransferData({...transferData, sourceAccountId: parseInt(e.target.value)})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs">
+                  <option value={0} className="bg-card text-foreground">Select Source Account</option>
+                  {accounts.map(a => <option key={a.id} value={a.id} className="bg-card text-foreground">{a.name} ({formatLKR(a.currentBalance)})</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-sm text-gray-400 mb-1 block">Destination Account (To)</label>
-                <select value={transferData.destinationAccountId} onChange={e => setTransferData({...transferData, destinationAccountId: parseInt(e.target.value)})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5">
-                  <option value={0}>Select Destination Account</option>
-                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({formatLKR(a.currentBalance)})</option>)}
+                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Destination Account (To)</label>
+                <select value={transferData.destinationAccountId} onChange={e => setTransferData({...transferData, destinationAccountId: parseInt(e.target.value)})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs">
+                  <option value={0} className="bg-card text-foreground">Select Destination Account</option>
+                  {accounts.map(a => <option key={a.id} value={a.id} className="bg-card text-foreground">{a.name} ({formatLKR(a.currentBalance)})</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-sm text-gray-400 mb-1 block">Amount (LKR)</label>
-                <input type="number" value={Number.isNaN(Number(transferData.amount)) ? transferData.amount : transferData.amount} onChange={e => setTransferData({...transferData, amount: e.target.value === "" ? "" : e.target.value as any})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5" />
+                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Amount (LKR)</label>
+                <input type="number" value={Number.isNaN(Number(transferData.amount)) ? transferData.amount : transferData.amount} onChange={e => setTransferData({...transferData, amount: e.target.value === "" ? "" : e.target.value as any})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
               </div>
               <div>
-                <label className="text-sm text-gray-400 mb-1 block">Description</label>
-                <input type="text" value={transferData.description} onChange={e => setTransferData({...transferData, description: e.target.value})} className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5" />
+                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Description</label>
+                <input type="text" value={transferData.description} onChange={e => setTransferData({...transferData, description: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
               </div>
             </div>
             <div className="flex gap-4 mt-8">
-              <button onClick={() => { setShowTransfer(false); setEditingTransferId(null); setTransferData({ date: new Date().toISOString().split("T")[0], sourceAccountId: 0, destinationAccountId: 0, amount: 0, description: "" }); }} className="flex-1 px-4 py-2.5 rounded-xl border border-border hover:bg-card transition-colors">Cancel</button>
-              <button onClick={handleTransfer} className="flex-1 px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-900 transition-colors">{editingTransferId ? "Save Changes" : "Transfer Funds"}</button>
+              <button onClick={() => { setShowTransfer(false); setEditingTransferId(null); setTransferData({ date: new Date().toISOString().split("T")[0], sourceAccountId: 0, destinationAccountId: 0, amount: 0, description: "" }); }} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-card transition-colors">Cancel</button>
+              <button onClick={handleTransfer} className="flex-1 px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold transition-colors shadow-xs">{editingTransferId ? "Save Changes" : "Transfer Funds"}</button>
             </div>
           </div>
         </div>

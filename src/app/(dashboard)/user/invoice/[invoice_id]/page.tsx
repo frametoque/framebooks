@@ -1187,7 +1187,7 @@ export default function AdminInvoicePage() {
       {/* Income Modal */}
       {incomeModalOpen && invoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-background border border-border rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-6 border-b border-border">
               <h2 className="text-xl font-semibold text-foreground">Create Income from Invoice</h2>
               <button onClick={() => setIncomeModalOpen(false)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-foreground">
@@ -1195,14 +1195,14 @@ export default function AdminInvoicePage() {
               </button>
             </div>
             <form onSubmit={handleCreateIncomeSubmit} className="p-6 space-y-4">
-              <div className="text-sm text-gray-400 space-y-1 bg-card p-4 rounded-2xl border border-border">
-                <p><span className="font-semibold text-gray-300">Invoice ID:</span> {invoice.invoice_id}</p>
-                <p><span className="font-semibold text-gray-300">Client:</span> {invoice.user_email}</p>
-                <p><span className="font-semibold text-gray-300">Due Amount:</span> {formatMoney(totalDue, invoice.currency)}</p>
+              <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1 bg-black/[0.02] dark:bg-card p-4 rounded-2xl border border-border">
+                <p><span className="font-semibold text-gray-700 dark:text-gray-300">Invoice ID:</span> {invoice.invoice_id}</p>
+                <p><span className="font-semibold text-gray-700 dark:text-gray-300">Client:</span> {invoice.user_email}</p>
+                <p><span className="font-semibold text-gray-700 dark:text-gray-300">Due Amount:</span> {formatMoney(totalDue, invoice.currency)}</p>
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm text-gray-400 block font-medium">Income Amount ({invoice.currency || 'LKR'})</label>
+                <label className="text-sm text-gray-500 dark:text-gray-400 block font-medium">Income Amount ({invoice.currency || 'LKR'})</label>
                 <input
                   type="number"
                   step="0.01"
@@ -1210,32 +1210,32 @@ export default function AdminInvoicePage() {
                   placeholder="0.00"
                   value={paidAmount}
                   onChange={(e) => setPaidAmount(e.target.value)}
-                  className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground"
+                  className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground shadow-2xs"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm text-gray-400 block font-medium">Date Received</label>
+                <label className="text-sm text-gray-500 dark:text-gray-400 block font-medium">Date Received</label>
                 <input
                   type="date"
                   required
                   value={paymentDate}
                   onChange={(e) => setPaymentDate(e.target.value)}
-                  className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground"
+                  className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground shadow-2xs"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm text-gray-400 block font-medium">Payment Method</label>
+                <label className="text-sm text-gray-500 dark:text-gray-400 block font-medium">Payment Method</label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground appearance-none"
+                  className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground appearance-none shadow-2xs"
                 >
-                  <option value="Bank Transfer" className="bg-black text-foreground">Bank Transfer</option>
-                  <option value="Stripe" className="bg-black text-foreground">Stripe</option>
-                  <option value="PayPal" className="bg-black text-foreground">PayPal</option>
-                  <option value="Cash" className="bg-black text-foreground">Cash</option>
+                  <option value="Bank Transfer" className="bg-card text-foreground">Bank Transfer</option>
+                  <option value="Stripe" className="bg-card text-foreground">Stripe</option>
+                  <option value="PayPal" className="bg-card text-foreground">PayPal</option>
+                  <option value="Cash" className="bg-card text-foreground">Cash</option>
                 </select>
               </div>
 
@@ -1245,9 +1245,9 @@ export default function AdminInvoicePage() {
                   id="isAdvance"
                   checked={isAdvance}
                   onChange={(e) => setIsAdvance(e.target.checked)}
-                  className="w-4 h-4 rounded border-border bg-card text-foreground focus:ring-brand-500 focus:ring-offset-black"
+                  className="w-4 h-4 rounded border-border bg-card text-foreground focus:ring-brand-500 focus:ring-offset-card"
                 />
-                <label htmlFor="isAdvance" className="text-sm text-gray-300 font-medium select-none cursor-pointer">
+                <label htmlFor="isAdvance" className="text-sm text-gray-700 dark:text-gray-300 font-medium select-none cursor-pointer">
                   Payment is advance
                 </label>
               </div>

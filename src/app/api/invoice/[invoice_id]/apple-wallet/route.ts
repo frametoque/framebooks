@@ -159,7 +159,6 @@ export async function POST(
     /* 4. Parse P12 → extract PEM cert + PEM key */
     const p12Buffer           = Buffer.from(CERT_B64, "base64");
     const { certPem, keyPem } = extractFromP12(p12Buffer, CERT_PASS);
-    console.log("[apple-wallet] P12 parsed successfully");
 
     /* 5. Load logo images + Apple WWDR cert from local filesystem */
     const logoPath = path.join(process.cwd(), "public/logos/ft/logo-main.png");
@@ -167,7 +166,7 @@ export async function POST(
     const wwdrPath = path.join(process.cwd(), "public/certs/AppleWWDRCAG4.cer");
 
     if (!fs.existsSync(logoPath) || !fs.existsSync(iconPath)) {
-      throw new Error("Failed to find FrameBookss logo assets on local filesystem");
+      throw new Error("Failed to find Framebooks logo assets on local filesystem");
     }
     if (!fs.existsSync(wwdrPath)) {
       throw new Error("Failed to find Apple WWDR certificate on local filesystem");
@@ -273,14 +272,13 @@ export async function POST(
         key:             "view_online",
         label:           "View Invoice Online",
         value:           `${APP_URL}/dashboard/invoice/${invoice_id}`,
-        attributedValue: `<a href='${APP_URL}/dashboard/invoice/${invoice_id}'>Open in FrameBookss</a>`,
+        attributedValue: `<a href='${APP_URL}/dashboard/invoice/${invoice_id}'>Open in Framebooks</a>`,
       },
-      { key: "powered_by", label: "", value: "Powered by FrameBookss" }
+      { key: "powered_by", label: "", value: "Powered by Framebooks" }
     );
 
     /* 9. Export */
     const passBuffer = pass.getAsBuffer();
-    console.log("[apple-wallet] Pass generated, size:", passBuffer.length, "bytes");
 
     return new NextResponse(passBuffer as unknown as BodyInit, {
       status: 200,

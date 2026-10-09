@@ -228,12 +228,12 @@ function PasskeyAuthModal({ onSuccess, onCancel }: { onSuccess: () => void, onCa
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#111] border border-border rounded-3xl p-6 max-w-sm w-full shadow-2xl relative">
+      <div className="bg-card border border-border rounded-3xl p-6 max-w-sm w-full shadow-2xl relative">
         <div className="w-12 h-12 rounded-2xl mb-4 flex items-center justify-center bg-brand-500/10 border border-brand-500/20">
           <MdLockOutline className="w-6 h-6 text-brand-500" />
         </div>
         <h3 className="text-xl font-bold text-foreground mb-2">Authentication Required</h3>
-        <p className="text-gray-400 text-sm mb-6">This action requires you to verify your identity using your passkey.</p>
+        <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">This action requires you to verify your identity using your passkey.</p>
 
         {error && (
           <div className="text-red-400 bg-red-400/10 border border-red-400/20 px-4 py-3 rounded-2xl text-sm mb-6 text-center w-full">
@@ -244,7 +244,7 @@ function PasskeyAuthModal({ onSuccess, onCancel }: { onSuccess: () => void, onCa
         <div className="flex gap-2">
           <button
             onClick={onCancel}
-            className="flex-1 py-3 px-4 bg-white/10 hover:bg-white/20 text-foreground rounded-xl font-semibold transition-colors"
+            className="flex-1 py-3 px-4 bg-card border border-border hover:bg-black/5 dark:hover:bg-white/10 text-foreground rounded-xl font-semibold transition-colors shadow-2xs"
           >
             Cancel
           </button>
@@ -341,7 +341,7 @@ export function LockScreen() {
       </motion.div>
       
       <h2 className="text-3xl font-bold text-foreground mb-3 text-center">Dashboard Locked</h2>
-      <p className="text-gray-400 mb-10 max-w-sm text-center leading-relaxed">
+      <p className="text-gray-600 dark:text-gray-400 mb-10 max-w-sm text-center leading-relaxed">
         App Lock is enabled. Please authenticate using your passkey to continue your session securely.
       </p>
 

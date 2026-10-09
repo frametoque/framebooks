@@ -245,7 +245,7 @@ const handleDelete = async (id: number) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4 animate-pulse">
-              <div className="p-4 rounded-2xl bg-card w-14 h-14" />
+              <div className="p-3 rounded-2xl bg-card w-12 h-12" />
               <div className="space-y-2 flex-1">
                 <div className="h-4 bg-card rounded-full w-24" />
                 <div className="h-6 bg-white/10 rounded-full w-32" />
@@ -271,9 +271,9 @@ const handleDelete = async (id: number) => {
   }
 
   const stats = [
-    { label: "Total Quotations", value: data.items.length.toString(), icon: MdAccountBalanceWallet, color: "text-blue-400", bg: "bg-blue-400/10" },
-    { label: "Confirmed", value: data.confirmedCount.toString(), icon: CheckCircle2, color: "text-green-400", bg: "bg-green-400/10" },
-    { label: "Total Value", value: formatLKR(data.totalValue), icon: MdTrendingUp, color: "text-brand-400", bg: "bg-brand-400/10" },
+    { label: "Total Quotations", value: data.items.length.toString(), icon: MdAccountBalanceWallet, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100/70 dark:bg-blue-400/10" },
+    { label: "Confirmed", value: data.confirmedCount.toString(), icon: CheckCircle2, color: "text-emerald-700 dark:text-green-400", bg: "bg-emerald-100/70 dark:bg-green-400/10" },
+    { label: "Total Value", value: formatLKR(data.totalValue), icon: MdTrendingUp, color: "text-emerald-700 dark:text-brand-400", bg: "bg-emerald-100/70 dark:bg-brand-400/10" },
   ];
 
   const filteredQuotations = data.items.filter((row: any) => 
@@ -282,10 +282,10 @@ const handleDelete = async (id: number) => {
 
   const getStatusColor = (status: string) => {
     switch(status) {
-      case 'confirmed': return 'bg-green-500/10 border-green-500/30 text-green-400';
-      case 'sent': return 'bg-blue-500/10 border-blue-500/30 text-blue-400';
-      case 'draft': return 'bg-gray-500/10 border-gray-500/30 text-gray-400';
-      default: return 'bg-gray-500/10 border-gray-500/30 text-gray-400';
+      case 'confirmed': return 'bg-emerald-100/70 border-emerald-200/60 text-emerald-700 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-400';
+      case 'sent': return 'bg-blue-100/70 border-blue-200/60 text-blue-700 dark:bg-blue-500/10 dark:border-blue-500/30 dark:text-blue-400';
+      case 'draft': return 'bg-slate-100 border-slate-200/80 text-slate-700 dark:bg-gray-500/10 dark:border-gray-500/30 dark:text-gray-400';
+      default: return 'bg-slate-100 border-slate-200/80 text-slate-700 dark:bg-gray-500/10 dark:border-gray-500/30 dark:text-gray-400';
     }
   };
 
@@ -295,12 +295,12 @@ const handleDelete = async (id: number) => {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {stats.map((stat, i) => (
-          <div key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4 hover:bg-card transition-colors">
-            <div className={`p-4 rounded-2xl ${stat.bg}`}>
-              <stat.icon className={`w-6 h-6 ${stat.color}`} />
+          <div key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 shadow-xs hover:shadow-md transition-all">
+            <div className={`p-3 rounded-2xl ${stat.bg}`}>
+              <stat.icon className={`w-5 h-5 ${stat.color}`} />
             </div>
             <div>
-              <p className="text-gray-400 text-sm">{stat.label}</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">{stat.label}</p>
               <p className="text-2xl font-semibold">
                 <AnimatedNumber value={stat.value} />
               </p>
@@ -316,10 +316,10 @@ const handleDelete = async (id: number) => {
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors border ${
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all border ${
                 activeFilter === f 
-                  ? "bg-brand-500 text-brand-900 border-brand-500 font-bold" 
-                  : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 transition-opacity"
+                  ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs" 
+                  : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
               }`}
             >
               {f}
@@ -330,7 +330,7 @@ const handleDelete = async (id: number) => {
         {role !== 'Viewer' && (
           <Link
             href="/user/quotations/new"
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors w-full sm:w-auto shadow-xs"
           >
             <MdAdd className="w-5 h-5" />
             New Quotation
@@ -339,11 +339,11 @@ const handleDelete = async (id: number) => {
       </div>
 
       {/* Table */}
-      <div className="bg-transparent border border-border rounded-3xl overflow-hidden">
+      <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-border text-gray-400 text-sm">
+              <tr className="bg-black/[0.02] dark:bg-white/[0.02] border-b border-border text-gray-600 dark:text-gray-400 text-sm">
                 <th className="p-4 font-medium">Date</th>
                 <th className="p-4 font-medium">Amount</th>
                 <th className="p-4 font-medium">Client</th>
@@ -353,20 +353,20 @@ const handleDelete = async (id: number) => {
                 <th className="p-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border">
               {filteredQuotations.map((row: any) => (
-                <tr key={row.id} className="hover:bg-card transition-colors">
+                <tr key={row.id} className="hover:bg-black/[0.02] dark:hover:bg-card transition-colors">
                   <td className="p-4 text-sm">{row.date}</td>
-                  <td className="p-4 font-semibold text-blue-400">{formatLKR(row.amount)}</td>
+                  <td className="p-4 font-semibold text-blue-600 dark:text-blue-400">{formatLKR(row.amount)}</td>
                   <td className="p-4">
                     <div className="text-sm font-medium text-foreground">{row.client || '-'}</div>
                     {row.clientEmail && (
                       <div className="text-xs text-gray-500 mt-0.5">{row.clientEmail}</div>
                     )}
                   </td>
-                  <td className="p-4 text-sm text-gray-300">{row.desc}</td>
+                  <td className="p-4 text-sm text-gray-600 dark:text-gray-300">{row.desc}</td>
                   <td className="p-4">
-                    <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-white/10 border border-border">
+                    <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-200/80 dark:bg-white/10 dark:text-gray-200 dark:border-border">
                       {row.category}
                     </span>
                   </td>
@@ -379,7 +379,7 @@ const handleDelete = async (id: number) => {
                     {role !== 'Viewer' && row.status !== 'confirmed' && (
                       <button 
                         onClick={() => handleConfirmProject(row.id, row)}
-                        className="p-2 hover:bg-green-400/10 rounded-xl transition-colors text-gray-400 hover:text-green-400 disabled:opacity-50"
+                        className="p-2 hover:bg-emerald-500/10 rounded-xl transition-colors text-gray-400 hover:text-emerald-600 dark:hover:text-green-400 disabled:opacity-50"
                         title="Confirm project & create invoice"
                       >
                         {confirmingLoading && confirmingId === row.id ? (
@@ -390,12 +390,12 @@ const handleDelete = async (id: number) => {
                       </button>
                     )}
                     {row.status === 'confirmed' && (
-                      <span className="p-2 text-green-400">
+                      <span className="p-2 text-emerald-600 dark:text-green-400">
                         <CheckCircle2 className="w-4 h-4" />
                       </span>
                     )}
                     {row.receiptUrl && (
-                      <button onClick={() => setViewingReceipt(row)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-xl transition-colors text-blue-400 hover:text-blue-300">
+                      <button onClick={() => setViewingReceipt(row)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-xl transition-colors text-blue-600 dark:text-blue-400 hover:text-blue-500">
                         <MdRemoveRedEye className="w-4 h-4" />
                       </button>
                     )}
@@ -423,7 +423,7 @@ const handleDelete = async (id: number) => {
                         </button>
                         <button 
                           onClick={() => handleDelete(row.id)} 
-                          className="p-2 hover:bg-red-400/10 rounded-xl transition-colors text-gray-400 hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed" 
+                          className="p-2 hover:bg-red-500/10 rounded-xl transition-colors text-gray-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed" 
                           disabled={row.status === 'confirmed'}
                           title={row.status === 'confirmed' ? 'Confirmed quotations cannot be deleted' : 'Delete quotation'}
                         >
@@ -447,21 +447,21 @@ const handleDelete = async (id: number) => {
       {/* Receipt Viewer Modal */}
       {viewingReceipt && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setViewingReceipt(null)}>
-          <div className="relative flex flex-col md:flex-row bg-transparent border border-border rounded-3xl overflow-hidden max-w-5xl w-full max-h-[90vh] shadow-2xl" onClick={e => e.stopPropagation()}>
-            <button className="absolute top-4 right-4 z-10 p-2 bg-black/50 hover:bg-white/20 rounded-full text-foreground transition-colors backdrop-blur-md" onClick={() => setViewingReceipt(null)}>
+          <div className="relative flex flex-col md:flex-row bg-card border border-border rounded-3xl overflow-hidden max-w-5xl w-full max-h-[90vh] shadow-2xl" onClick={e => e.stopPropagation()}>
+            <button className="absolute top-4 right-4 z-10 p-2 bg-black/10 dark:bg-black/50 hover:bg-black/20 dark:hover:bg-white/20 rounded-full text-foreground transition-colors backdrop-blur-md" onClick={() => setViewingReceipt(null)}>
               ✕
             </button>
             
             <div className="w-full md:w-1/3 bg-card p-6 sm:p-8 flex flex-col gap-6 border-b md:border-b-0 md:border-r border-border overflow-y-auto">
               <div>
                 <h3 className="text-xl font-bold text-foreground mb-1">Quotation Details</h3>
-                <p className="text-sm text-gray-400">Quote Information</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Quote Information</p>
               </div>
               
               <div className="space-y-5">
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Amount</p>
-                  <p className="text-3xl font-bold text-blue-400">{formatLKR(viewingReceipt.amount)}</p>
+                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{formatLKR(viewingReceipt.amount)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Date</p>
@@ -475,7 +475,7 @@ const handleDelete = async (id: number) => {
                 )}
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Category</p>
-                  <span className="px-3 py-1 text-xs font-medium rounded-full bg-white/10 border border-border inline-block">
+                  <span className="px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-200/80 dark:bg-white/10 dark:text-gray-200 dark:border-border inline-block">
                     {viewingReceipt.category}
                   </span>
                 </div>
@@ -488,13 +488,13 @@ const handleDelete = async (id: number) => {
                 {viewingReceipt.desc && (
                   <div>
                     <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Description</p>
-                    <p className="text-sm font-medium text-gray-300">{viewingReceipt.desc}</p>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{viewingReceipt.desc}</p>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="w-full md:w-2/3 bg-black/50 flex items-center justify-center p-6 min-h-[300px] overflow-hidden">
+            <div className="w-full md:w-2/3 bg-black/5 dark:bg-black/50 flex items-center justify-center p-6 min-h-[300px] overflow-hidden">
               <Image 
                 src={viewingReceipt.receiptUrl} 
                 alt="Quotation Attachment" 
@@ -512,7 +512,7 @@ const handleDelete = async (id: number) => {
           onClick={() => setShowProjectModal(false)}
         >
           <div
-            className="relative bg-transparent border border-border rounded-3xl p-8 w-full max-w-md shadow-2xl"
+            className="relative bg-card border border-border rounded-3xl p-8 w-full max-w-md shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close */}
@@ -530,30 +530,30 @@ const handleDelete = async (id: number) => {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-foreground">Confirm Quotation</h2>
-                <p className="text-sm text-gray-400 mt-0.5">Enter a project name to proceed</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Enter a project name to proceed</p>
               </div>
             </div>
 
             {/* Quotation summary */}
-            <div className="mb-6 p-4 rounded-2xl bg-transparent border border-border space-y-2">
+            <div className="mb-6 p-4 rounded-2xl bg-black/[0.03] dark:bg-card border border-border space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Client</span>
+                <span className="text-gray-500 dark:text-gray-400">Client</span>
                 <span className="text-foreground font-medium">{pendingConfirmRow.client || '—'}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Quotation</span>
+                <span className="text-gray-500 dark:text-gray-400">Quotation</span>
                 <span className="text-foreground font-medium">{pendingConfirmRow.desc || '—'}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Amount</span>
-                <span className="text-blue-400 font-semibold">{formatLKR(pendingConfirmRow.amount)}</span>
+                <span className="text-gray-500 dark:text-gray-400">Amount</span>
+                <span className="text-blue-600 dark:text-blue-400 font-semibold">{formatLKR(pendingConfirmRow.amount)}</span>
               </div>
             </div>
 
             {/* Project name input */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Project Name <span className="text-red-400">*</span>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Project Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -561,25 +561,23 @@ const handleDelete = async (id: number) => {
                 onChange={(e) => setProjectNameInput(e.target.value)}
                 placeholder="e.g. Company Website Redesign"
                 autoFocus
-                className="w-full bg-transparent border border-border rounded-xl px-4 py-3 text-foreground placeholder-gray-500 outline-none focus:border-brand-500 focus:bg-white/8 transition-colors text-sm"
+                className="w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground placeholder-gray-400 outline-none focus:border-brand-500 transition-colors text-sm shadow-2xs"
               />
             </div>
 
-
-
             {/* Bank account select */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Bank Account
               </label>
               <select
                 value={selectedBankAccountId}
                 onChange={(e) => setSelectedBankAccountId(e.target.value)}
-                className="w-full bg-[#0d0d0d] border border-border rounded-xl px-4 py-3 text-foreground outline-none focus:border-brand-500 transition-colors text-sm"
+                className="w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground outline-none focus:border-brand-500 transition-colors text-sm shadow-2xs"
               >
-                <option value="" className="bg-[#0d0d0d] text-gray-400">Select Bank Account</option>
+                <option value="" className="bg-card text-gray-400">Select Bank Account</option>
                 {bankAccounts.map((acc) => (
-                  <option key={acc.id} value={acc.id} className="bg-[#0d0d0d] text-foreground">
+                  <option key={acc.id} value={acc.id} className="bg-card text-foreground">
                     {acc.name} - {acc.number} ({acc.bank})
                   </option>
                 ))}
@@ -590,14 +588,14 @@ const handleDelete = async (id: number) => {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowProjectModal(false)}
-                className="flex-1 py-3 rounded-xl border border-border text-gray-300 hover:bg-card transition-colors text-sm font-medium"
+                className="flex-1 py-3 rounded-xl border border-border text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-card transition-colors text-sm font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmSubmit}
                 disabled={!projectNameInput.trim()}
-                className="flex-1 py-3 rounded-xl bg-brand-500 hover:bg-brand-400 disabled:opacity-50 disabled:cursor-not-allowed text-brand-900 transition-colors text-sm font-bold flex items-center justify-center gap-2"
+                className="flex-1 py-3 rounded-xl bg-brand-500 hover:bg-brand-400 disabled:opacity-50 disabled:cursor-not-allowed text-brand-950 transition-colors text-sm font-bold flex items-center justify-center gap-2 shadow-xs"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 Confirm & Create

@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning
-        className={`${dmMono.variable} antialiased tracking-tight`}
+        className={`${dmMono.variable} font-sans antialiased tracking-tight`}
       >
         <Providers>
           <ConfirmProvider>

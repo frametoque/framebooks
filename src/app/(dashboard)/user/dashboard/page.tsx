@@ -94,11 +94,11 @@ export default function DashboardPage() {
         {/* Skeleton Stats Cards (Row 1) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4 animate-pulse">
-              <div className="p-4 rounded-2xl bg-card w-14 h-14" />
+            <div key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 animate-pulse shadow-xs">
+              <div className="p-3 rounded-2xl bg-black/5 dark:bg-card w-12 h-12" />
               <div className="space-y-2 flex-1">
-                <div className="h-4 bg-card rounded-full w-24" />
-                <div className="h-6 bg-white/10 rounded-full w-32" />
+                <div className="h-4 bg-black/5 dark:bg-card rounded-full w-24" />
+                <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-32" />
               </div>
             </div>
           ))}
@@ -107,10 +107,10 @@ export default function DashboardPage() {
         {/* Skeleton Stats Cards (Row 2) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4 animate-pulse">
+            <div key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 animate-pulse shadow-xs">
               <div className="space-y-2 flex-1">
-                <div className="h-4 bg-card rounded-full w-32" />
-                <div className="h-8 bg-white/10 rounded-full w-40" />
+                <div className="h-4 bg-black/5 dark:bg-card rounded-full w-32" />
+                <div className="h-8 bg-black/10 dark:bg-white/10 rounded-full w-40" />
               </div>
             </div>
           ))}
@@ -119,11 +119,11 @@ export default function DashboardPage() {
         {/* Skeleton Analytics Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[...Array(2)].map((_, i) => (
-            <div key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4 animate-pulse">
-              <div className="p-4 rounded-2xl bg-card w-14 h-14" />
+            <div key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 animate-pulse shadow-xs">
+              <div className="p-3 rounded-2xl bg-black/5 dark:bg-card w-12 h-12" />
               <div className="space-y-2 flex-1">
-                <div className="h-4 bg-card rounded-full w-24" />
-                <div className="h-6 bg-white/10 rounded-full w-32" />
+                <div className="h-4 bg-black/5 dark:bg-card rounded-full w-24" />
+                <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-32" />
               </div>
             </div>
           ))}
@@ -132,15 +132,15 @@ export default function DashboardPage() {
         {/* Skeleton Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           {/* Skeleton Chart */}
-          <div className="lg:col-span-2 bg-transparent border border-border rounded-3xl p-6 animate-pulse space-y-6">
-            <div className="h-6 bg-white/10 rounded-full w-40" />
-            <div className="h-[280px] bg-card rounded-2xl" />
+          <div className="lg:col-span-2 bg-card border border-border rounded-3xl p-6 animate-pulse space-y-6 shadow-xs">
+            <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-40" />
+            <div className="h-[280px] bg-black/5 dark:bg-card rounded-2xl" />
           </div>
-          <div className="bg-transparent border border-border rounded-3xl p-6 animate-pulse space-y-6">
-            <div className="h-6 bg-white/10 rounded-full w-40" />
+          <div className="bg-card border border-border rounded-3xl p-6 animate-pulse space-y-6 shadow-xs">
+            <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-40" />
             <div className="space-y-3">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-16 bg-card rounded-2xl border border-border" />
+                <div key={i} className="h-16 bg-black/5 dark:bg-card rounded-2xl border border-border" />
               ))}
             </div>
           </div>
@@ -150,16 +150,16 @@ export default function DashboardPage() {
   }
 
   const stats = [
-    { label: "Available Funds", value: formatLKR(data.totalAssets || 0), subtext: (data.totalAfterDebts !== undefined && data.totalAfterDebts > data.totalAssets) ? `After Debts: ${formatLKR(data.totalAfterDebts)}` : (data.totalCapital > 0 ? `Total Capital: ${formatLKR(data.totalCapital)}` : undefined), icon: MdAccountBalance, color: "text-blue-400", bg: "bg-blue-400/10" },
-    { label: "Total Income", value: formatLKR(data.totalIncome), icon: MdAccountBalanceWallet, color: "text-green-400", bg: "bg-green-400/10" },
-    { label: "Total Expenses", value: formatLKR(data.totalExpenses), icon: Receipt, color: "text-red-400", bg: "bg-red-400/10" },
-    { label: "Net Profit", value: formatLKR(data.netProfit), icon: MdTrendingUp, color: "text-brand-400", bg: "bg-brand-400/10" },
+    { label: "Available Funds", value: formatLKR(data.totalAssets || 0), subtext: (data.totalAfterDebts !== undefined && data.totalAfterDebts > data.totalAssets) ? `After Debts: ${formatLKR(data.totalAfterDebts)}` : (data.totalCapital > 0 ? `Total Capital: ${formatLKR(data.totalCapital)}` : undefined), icon: MdAccountBalance, color: "text-blue-700 dark:text-blue-400", bg: "bg-blue-100/70 dark:bg-blue-400/10" },
+    { label: "Total Income", value: formatLKR(data.totalIncome), icon: MdAccountBalanceWallet, color: "text-emerald-700 dark:text-green-400", bg: "bg-emerald-100/70 dark:bg-green-400/10" },
+    { label: "Total Expenses", value: formatLKR(data.totalExpenses), icon: Receipt, color: "text-red-700 dark:text-red-400", bg: "bg-red-100/70 dark:bg-red-400/10" },
+    { label: "Net Profit", value: formatLKR(data.netProfit), icon: MdTrendingUp, color: "text-brand-800 dark:text-brand-400", bg: "bg-brand-500/15 dark:bg-brand-400/10" },
   ];
 
   const analyticsStats = analytics
     ? [
-        { label: "Visitors (All Time)", value: (analytics.totalVisitors ?? 0).toLocaleString(), icon: MdGroup, color: "text-indigo-400", bg: "bg-indigo-400/10" },
-        { label: "Pageviews (All Time)", value: (analytics.totalPageviews ?? 0).toLocaleString(), icon: MdRemoveRedEye, color: "text-brand-400", bg: "bg-brand-400/10" },
+        { label: "Visitors (All Time)", value: (analytics.totalVisitors ?? 0).toLocaleString(), icon: MdGroup, color: "text-indigo-700 dark:text-indigo-400", bg: "bg-indigo-100/70 dark:bg-indigo-400/10" },
+        { label: "Pageviews (All Time)", value: (analytics.totalPageviews ?? 0).toLocaleString(), icon: MdRemoveRedEye, color: "text-brand-800 dark:text-brand-400", bg: "bg-brand-500/15 dark:bg-brand-400/10" },
       ]
     : [];
 
@@ -259,31 +259,50 @@ export default function DashboardPage() {
       
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         {stats.map((stat, i) => (
-          <motion.div variants={itemVariants} key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4 hover:bg-card transition-colors">
-            <div className={`p-4 rounded-2xl ${stat.bg}`}>
-              <stat.icon className={`w-6 h-6 ${stat.color}`} />
+          <motion.div variants={itemVariants} key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 hover:shadow-md transition-all shadow-xs">
+            <div className={`p-3 rounded-2xl ${stat.bg}`}>
+              <stat.icon className={`w-5 h-5 ${stat.color}`} />
             </div>
             <div>
-              <p className="text-gray-400 text-sm">{stat.label}</p>
-              <p className="text-3xl font-bold">
+              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">{stat.label}</p>
+              <p className="text-3xl font-bold text-foreground">
                 <AnimatedNumber value={stat.value} />
               </p>
-              {stat.subtext && <p className="text-xs text-gray-500 mt-1">{stat.subtext}</p>}
+              {stat.subtext && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{stat.subtext}</p>}
             </div>
           </motion.div>
         ))}
-        <motion.div variants={itemVariants} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4 hover:bg-card transition-colors">
-          <div className="w-14 h-14 rounded-2xl bg-amber-400/10 flex items-center justify-center flex-shrink-0">
-            <span className="text-xl font-bold text-amber-400">
+        <motion.div variants={itemVariants} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 hover:shadow-md transition-all shadow-xs relative group">
+          <div className="w-12 h-12 rounded-2xl bg-amber-100/80 dark:bg-amber-400/10 flex items-center justify-center flex-shrink-0">
+            <span className="text-lg font-bold text-amber-700 dark:text-amber-400">
               <AnimatedNumber value={data.unpaidCount || 0} />
             </span>
           </div>
           <div>
-            <p className="text-gray-400 text-sm">Unpaid Invoices</p>
-            <p className="text-3xl font-bold text-amber-400">
+            <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Unpaid Invoices</p>
+            <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
               <AnimatedNumber value={formatLKR(data.unpaidAmount || 0)} />
             </p>
           </div>
+
+          {data.unpaidClients && data.unpaidClients.length > 0 && (
+            <div className="absolute top-[calc(100%+10px)] right-0 w-72 bg-white dark:bg-[#082830] border border-border dark:border-white/15 rounded-2xl p-5 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] backdrop-blur-xl">
+              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">Due by Client</p>
+              <div className="space-y-3.5">
+                {data.unpaidClients.slice(0, 6).map((client: any, idx: number) => (
+                  <div key={idx} className="flex justify-between items-center text-sm border-b border-border/50 dark:border-white/10 pb-3 last:border-0 last:pb-0">
+                    <span className="text-foreground/90 truncate pr-3">{client.name}</span>
+                    <span className="text-amber-700 dark:text-amber-400 font-bold whitespace-nowrap text-right">{formatLKR(client.amount)}</span>
+                  </div>
+                ))}
+                {data.unpaidClients.length > 6 && (
+                  <div className="text-center text-xs text-gray-500 pt-2 font-medium">
+                    + {data.unpaidClients.length - 6} more
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </motion.div>
       </div>
 
@@ -299,18 +318,18 @@ export default function DashboardPage() {
           else pct = ((stat.value - stat.prevValue) / Math.abs(stat.prevValue)) * 100;
           const isPositive = pct >= 0;
           const displayPct = Math.abs(pct).toFixed(1);
-          let pctColor = "text-gray-400";
-          if (pct > 0) pctColor = stat.invertColors ? "text-red-400" : "text-green-400";
-          else if (pct < 0) pctColor = stat.invertColors ? "text-green-400" : "text-red-400";
+          let pctColor = "text-gray-500 dark:text-gray-400";
+          if (pct > 0) pctColor = stat.invertColors ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-green-400";
+          else if (pct < 0) pctColor = stat.invertColors ? "text-emerald-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
 
           return (
-            <motion.div variants={itemVariants} key={i} className="bg-transparent border border-border rounded-3xl p-7 hover:bg-card transition-colors flex flex-col justify-between">
-              <p className="text-gray-400 text-sm mb-2">{stat.label}</p>
+            <motion.div variants={itemVariants} key={i} className="bg-card border border-border rounded-3xl p-7 hover:shadow-md transition-all shadow-xs flex flex-col justify-between">
+              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">{stat.label}</p>
               <div className="flex items-end justify-between">
-                <p className="text-3xl font-bold">
+                <p className="text-3xl font-bold text-foreground">
                   <AnimatedNumber value={stat.isCurrency ? formatLKR(stat.value) : stat.value} />
                 </p>
-                <div className={`flex items-center gap-1 text-sm font-medium ${pctColor}`}>
+                <div className={`flex items-center gap-1 text-sm font-semibold ${pctColor}`}>
                   {isPositive ? <MdCallMade className="w-4 h-4" /> : <MdCallReceived className="w-4 h-4" />}
                   <span><AnimatedNumber value={displayPct + "%"} /></span>
                 </div>
@@ -323,13 +342,13 @@ export default function DashboardPage() {
       {analyticsStats.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {analyticsStats.map((stat, i) => (
-            <motion.div variants={itemVariants} key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4 hover:bg-card transition-colors">
-              <div className={`p-4 rounded-2xl ${stat.bg}`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
+            <motion.div variants={itemVariants} key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 hover:shadow-md transition-all shadow-xs">
+              <div className={`p-3 rounded-2xl ${stat.bg}`}>
+                <stat.icon className={`w-5 h-5 ${stat.color}`} />
               </div>
               <div>
-                <p className="text-gray-400 text-sm">{stat.label}</p>
-                <p className="text-2xl font-semibold">
+                <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">{stat.label}</p>
+                <p className="text-2xl font-bold text-foreground">
                   <AnimatedNumber value={stat.value} />
                 </p>
               </div>
@@ -339,25 +358,35 @@ export default function DashboardPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <motion.div variants={itemVariants} className="lg:col-span-2 bg-transparent border border-border rounded-3xl p-6">
+        <motion.div variants={itemVariants} className="lg:col-span-2 bg-card border border-border rounded-3xl p-6 shadow-xs">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">Income vs Expenses</h2>
-            <div className="flex items-center gap-4 text-gray-400 bg-transparent border border-border px-3 py-1.5 rounded-xl">
+            <h2 className="text-xl font-semibold text-foreground">Income vs Expenses</h2>
+            <div className="flex items-center gap-4 text-gray-500 dark:text-gray-400 bg-black/5 dark:bg-card border border-border px-3 py-1.5 rounded-xl shadow-2xs">
               <button onClick={() => setChartYear(y => y - 1)} className="hover:text-foreground transition-colors p-1"><MdKeyboardArrowLeft className="w-4 h-4" /></button>
-              <span className="text-foreground font-medium text-sm">{chartYear}</span>
+              <span className="text-foreground font-semibold text-sm">{chartYear}</span>
               <button onClick={() => setChartYear(y => y + 1)} className="hover:text-foreground transition-colors p-1"><MdKeyboardArrowRight className="w-4 h-4" /></button>
             </div>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.chartData.filter((d: any) => d.year === chartYear)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <BarChart data={data.chartData.filter((d: any) => d.year === chartYear)} margin={{ top: 10, right: 10, left: 15, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" vertical={false} />
                 <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `LKR ${value/1000}k`} />
+                <YAxis 
+                  stroke="#9ca3af" 
+                  fontSize={12} 
+                  tickLine={false} 
+                  axisLine={false} 
+                  tickFormatter={(value) => {
+                    if (value >= 1000000) return `LKR ${value / 1000000}M`;
+                    if (value >= 1000) return `LKR ${value / 1000}k`;
+                    return `LKR ${value}`;
+                  }} 
+                />
                 <Tooltip 
-                  cursor={{fill: 'rgba(255,255,255,0.05)'}}
-                  contentStyle={{ backgroundColor: 'rgba(10,10,15,0.9)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '16px' }}
-                  itemStyle={{ color: '#fff' }}
+                  cursor={{fill: 'rgba(150,150,150,0.06)'}}
+                  contentStyle={{ backgroundColor: 'var(--popover-bg, #0b2f38)', borderColor: 'var(--border-color, #e2e8f0)', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}
+                  itemStyle={{ color: 'var(--text-primary, #000)' }}
                   formatter={(value: any) => formatLKR(value)}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}/>
@@ -373,29 +402,29 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <motion.div variants={itemVariants} className="bg-transparent border border-border rounded-3xl p-7 flex flex-col justify-between">
+        <motion.div variants={itemVariants} className="bg-card border border-border rounded-3xl p-7 flex flex-col justify-between shadow-xs">
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">Recent Invoices</h2>
+              <h2 className="text-xl font-semibold text-foreground">Recent Invoices</h2>
             </div>
             <div className="space-y-4">
               {data.recentInvoices.map((invoice: any, i: number) => {
-                let statusColor = "text-gray-400 bg-gray-400/10 border-gray-400/20";
+                let statusColor = "text-gray-600 bg-gray-100 border-gray-200 dark:text-gray-400 dark:bg-gray-400/10 dark:border-gray-400/20";
                 const statusStr = invoice.status?.toLowerCase() || '';
-                if (statusStr === 'paid' || statusStr === 'fully paid') statusColor = "text-green-400 bg-green-400/10 border-green-400/20";
-                else if (statusStr === 'unpaid' || statusStr === 'pending') statusColor = "text-amber-400 bg-amber-400/10 border-amber-400/20";
-                else if (statusStr === 'overdue') statusColor = "text-red-400 bg-red-400/10 border-red-400/20";
-                else if (statusStr.includes('advance')) statusColor = "text-blue-400 bg-blue-400/10 border-blue-400/20";
+                if (statusStr === 'paid' || statusStr === 'fully paid') statusColor = "text-emerald-700 bg-emerald-100/70 border-emerald-200/60 dark:text-green-400 dark:bg-green-400/10 dark:border-green-400/20";
+                else if (statusStr === 'unpaid' || statusStr === 'pending') statusColor = "text-amber-800 bg-amber-100/70 border-amber-200/60 dark:text-amber-400 dark:bg-amber-400/10 dark:border-amber-400/20";
+                else if (statusStr === 'overdue') statusColor = "text-red-700 bg-red-100/70 border-red-200/60 dark:text-red-400 dark:bg-red-400/10 dark:border-red-400/20";
+                else if (statusStr.includes('advance')) statusColor = "text-blue-700 bg-blue-100/70 border-blue-200/60 dark:text-blue-400 dark:bg-blue-400/10 dark:border-blue-400/20";
                 return (
-                  <div key={i} className="flex items-center justify-between p-4 bg-transparent border border-border rounded-2xl hover:bg-card transition-colors">
+                  <div key={i} className="flex items-center justify-between p-4 bg-black/[0.02] dark:bg-card border border-border rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                     <div className="flex items-center gap-3">
                       <div>
-                        <p className="font-semibold text-sm">{invoice.service || 'Service'}</p>
-                        <p className="text-xs text-gray-400">{invoice.client || 'Unknown'}</p>
+                        <p className="font-semibold text-sm text-foreground">{invoice.service || 'Service'}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{invoice.client || 'Unknown'}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-sm">{formatLKR(invoice.amount)}</p>
+                      <p className="font-semibold text-sm text-foreground">{formatLKR(invoice.amount)}</p>
                       <span className={`inline-block mt-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${statusColor}`}>
                         {invoice.status}
                       </span>
@@ -408,39 +437,39 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="bg-transparent border border-border rounded-3xl p-7 flex flex-col justify-between">
+        <motion.div variants={itemVariants} className="bg-card border border-border rounded-3xl p-7 flex flex-col justify-between shadow-xs">
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">Recent Quotations</h2>
+              <h2 className="text-xl font-semibold text-foreground">Recent Quotations</h2>
             </div>
             <div className="space-y-4">
               {data.recentQuotations && data.recentQuotations.map((quotation: any, i: number) => {
-                let statusColor = "text-gray-400 bg-gray-400/10 border-gray-400/20";
+                let statusColor = "text-gray-600 bg-gray-100 border-gray-200 dark:text-gray-400 dark:bg-gray-400/10 dark:border-gray-400/20";
                 const statusStr = quotation.status?.toLowerCase() || '';
                 if (statusStr === 'accepted' || statusStr === 'approved') {
-                  statusColor = "text-green-400 bg-green-400/10 border-green-400/20";
+                  statusColor = "text-emerald-700 bg-emerald-100/70 border-emerald-200/60 dark:text-green-400 dark:bg-green-400/10 dark:border-green-400/20";
                 } else if (statusStr === 'pending' || statusStr === 'sent') {
-                  statusColor = "text-amber-400 bg-amber-400/10 border-amber-400/20";
+                  statusColor = "text-amber-800 bg-amber-100/70 border-amber-200/60 dark:text-amber-400 dark:bg-amber-400/10 dark:border-amber-400/20";
                 } else if (statusStr === 'rejected' || statusStr === 'declined') {
-                  statusColor = "text-red-400 bg-red-400/10 border-red-400/20";
+                  statusColor = "text-red-700 bg-red-100/70 border-red-200/60 dark:text-red-400 dark:bg-red-400/10 dark:border-red-400/20";
                 } else if (statusStr === 'expired') {
-                  statusColor = "text-gray-400 bg-gray-400/10 border-gray-400/20";
+                  statusColor = "text-gray-600 bg-gray-100 border-gray-200 dark:text-gray-400 dark:bg-gray-400/10 dark:border-gray-400/20";
                 }
 
                 return (
-                  <div key={i} className="flex items-center justify-between p-4 bg-transparent border border-border rounded-2xl hover:bg-card transition-colors">
+                  <div key={i} className="flex items-center justify-between p-4 bg-black/[0.02] dark:bg-card border border-border rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                   <div className="flex items-center gap-3">
                       <div>
-                        <p className="font-semibold text-sm">
+                        <p className="font-semibold text-sm text-foreground">
                           {quotation.project && quotation.project.length > 26 
                             ? quotation.project.substring(0, 26) + '...' 
                             : quotation.project || 'Untitled'}
                         </p>
-                        <p className="text-xs text-gray-400">{quotation.client || 'Unknown'}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{quotation.client || 'Unknown'}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-sm">{formatLKR(quotation.amount)}</p>
+                      <p className="font-semibold text-sm text-foreground">{formatLKR(quotation.amount)}</p>
                       <span className={`inline-block mt-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${statusColor}`}>
                         {quotation.status}
                       </span>
@@ -454,43 +483,43 @@ export default function DashboardPage() {
         </motion.div>
 
         {/* Net Income comparison table */}
-        <motion.div variants={itemVariants} className="bg-transparent border border-border rounded-3xl p-7 flex flex-col justify-between">
+        <motion.div variants={itemVariants} className="bg-card border border-border rounded-3xl p-7 flex flex-col justify-between shadow-xs">
           <div>
-            <h2 className="text-xl font-semibold mb-6">Net Income</h2>
+            <h2 className="text-xl font-semibold mb-6 text-foreground">Net Income</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-border text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                  <tr className="border-b border-border bg-black/[0.02] dark:bg-white/[0.02] text-gray-600 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">
                     <th className="py-3 px-4">Fiscal Year</th>
                     <th className="py-3 px-4 text-right">Previous (2025)</th>
                     <th className="py-3 px-4 text-right">Current (2026)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5 text-sm">
-                  <tr className="hover:bg-card transition-colors">
-                    <td className="py-4 px-4 text-gray-300 font-medium">Income</td>
-                    <td className="py-4 px-4 text-right font-semibold text-green-400">
+                <tbody className="divide-y divide-border text-sm">
+                  <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                    <td className="py-4 px-4 text-foreground/90 font-medium">Income</td>
+                    <td className="py-4 px-4 text-right font-semibold text-emerald-600 dark:text-green-400">
                       {formatLKR(data.netIncomeComparison.previousIncome)}
                     </td>
-                    <td className="py-4 px-4 text-right font-semibold text-green-400">
+                    <td className="py-4 px-4 text-right font-semibold text-emerald-600 dark:text-green-400">
                       {formatLKR(data.netIncomeComparison.currentIncome)}
                     </td>
                   </tr>
-                  <tr className="hover:bg-card transition-colors">
-                    <td className="py-4 px-4 text-gray-300 font-medium">Expense</td>
-                    <td className="py-4 px-4 text-right font-semibold text-red-400">
+                  <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                    <td className="py-4 px-4 text-foreground/90 font-medium">Expense</td>
+                    <td className="py-4 px-4 text-right font-semibold text-red-600 dark:text-red-400">
                       {formatLKR(data.netIncomeComparison.previousExpense)}
                     </td>
-                    <td className="py-4 px-4 text-right font-semibold text-red-400">
+                    <td className="py-4 px-4 text-right font-semibold text-red-600 dark:text-red-400">
                       {formatLKR(data.netIncomeComparison.currentExpense)}
                     </td>
                   </tr>
-                  <tr className="hover:bg-card transition-colors font-semibold">
+                  <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors font-semibold">
                     <td className="py-4 px-4 text-foreground font-bold">Net Income</td>
-                    <td className={`py-4 px-4 text-right font-bold ${data.netIncomeComparison.previousNet >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    <td className={`py-4 px-4 text-right font-bold ${data.netIncomeComparison.previousNet >= 0 ? "text-emerald-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
                       {data.netIncomeComparison.previousNet < 0 ? "-" : ""}{formatLKR(Math.abs(data.netIncomeComparison.previousNet))}
                     </td>
-                    <td className={`py-4 px-4 text-right font-bold ${data.netIncomeComparison.currentNet >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    <td className={`py-4 px-4 text-right font-bold ${data.netIncomeComparison.currentNet >= 0 ? "text-emerald-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
                       {data.netIncomeComparison.currentNet < 0 ? "-" : ""}{formatLKR(Math.abs(data.netIncomeComparison.currentNet))}
                     </td>
                   </tr>
@@ -504,25 +533,25 @@ export default function DashboardPage() {
       {/* Bottom Grid: Recent Transactions & Expense Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Recent Transactions */}
-        <motion.div variants={itemVariants} className="lg:col-span-2 bg-transparent border border-border rounded-3xl p-6">
-          <h2 className="text-xl font-semibold mb-6">Recent Transactions</h2>
+        <motion.div variants={itemVariants} className="lg:col-span-2 bg-card border border-border rounded-3xl p-6 shadow-xs">
+          <h2 className="text-xl font-semibold mb-6 text-foreground">Recent Transactions</h2>
           <div className="space-y-3">
             {data.recentTransactions.map((tx: any) => (
-              <div key={tx.id} className="flex items-center justify-between p-4 bg-transparent border border-border rounded-2xl hover:bg-card transition-colors">
+              <div key={tx.id} className="flex items-center justify-between p-4 bg-black/[0.02] dark:bg-card border border-border rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="text-foreground flex shrink-0">
                     {tx.type === 'income' ? (
-                      <MdCallReceived className="w-5 h-5 text-brand-500" />
+                      <MdCallReceived className="w-5 h-5 text-emerald-600 dark:text-brand-500" />
                     ) : (
-                      <MdCallMade className="w-5 h-5 text-red-500" />
+                      <MdCallMade className="w-5 h-5 text-red-600 dark:text-red-500" />
                     )}
                   </div>
                   <div>
                     <p className="font-semibold text-foreground">{tx.name}</p>
-                    <p className="text-sm text-gray-400">{tx.date}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{tx.date}</p>
                   </div>
                 </div>
-                <p className={`font-semibold ${tx.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
+                <p className={`font-semibold ${tx.type === 'income' ? 'text-emerald-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                   {tx.type === 'income' ? '+' : '-'}{formatLKR(tx.amount)}
                 </p>
               </div>
@@ -541,20 +570,20 @@ export default function DashboardPage() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#111] border border-border rounded-3xl p-6 max-w-sm w-full shadow-2xl"
+            className="bg-white dark:bg-[#082830] border border-border dark:border-white/15 rounded-3xl p-6 max-w-sm w-full shadow-2xl"
           >
-            <div className={`w-12 h-12 rounded-2xl mb-4 flex items-center justify-center ${modalMessage.type === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+            <div className={`w-12 h-12 rounded-2xl mb-4 flex items-center justify-center ${modalMessage.type === 'success' ? 'bg-emerald-100/70 dark:bg-green-500/10 text-emerald-700 dark:text-green-400' : 'bg-red-100/70 dark:bg-red-500/10 text-red-700 dark:text-red-400'}`}>
               {modalMessage.type === 'success' ? <MdCheck className="w-6 h-6" /> : <MdErrorOutline className="w-6 h-6" />}
             </div>
             <h3 className="text-xl font-bold text-foreground mb-2">{modalMessage.title}</h3>
-            <p className="text-gray-400 text-sm mb-6">{modalMessage.message}</p>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">{modalMessage.message}</p>
             <button
               onClick={() => {
                 const cb = modalMessage.onDismiss;
                 setModalMessage(null);
                 if (cb) cb();
               }}
-              className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 text-foreground rounded-xl font-semibold transition-colors"
+              className="w-full py-3 px-4 bg-card hover:bg-black/5 dark:hover:bg-white/20 border border-border text-foreground rounded-xl font-semibold transition-colors shadow-2xs"
             >
               Close
             </button>

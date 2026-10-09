@@ -141,14 +141,14 @@ export default function CategoryPicker({
     <div
       ref={dropdownRef}
       style={{ ...dropdownStyle, position: "absolute", zIndex: 9999 }}
-      className="bg-[#082830] border border-white/15 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[400px]"
+      className="bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[400px]"
     >
-      <div className="p-2 border-b border-border flex gap-2 shrink-0">
+      <div className="p-2 border-b border-border flex gap-2 shrink-0 bg-card">
         <input
           type="text"
           placeholder="New category..."
           disabled={adding}
-          className="w-full bg-transparent border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500 text-foreground disabled:opacity-50"
+          className="w-full bg-black/5 dark:bg-transparent border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500 text-foreground disabled:opacity-50 placeholder:text-gray-400"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -178,7 +178,7 @@ export default function CategoryPicker({
         </button>
       </div>
       
-      <div className="overflow-y-auto flex-1 py-1">
+      <div className="overflow-y-auto flex-1 py-1 bg-card">
         {loading ? (
           <div className="p-4 flex justify-center"><Loader size="sm" /></div>
         ) : serverCategories.length === 0 ? (
@@ -189,15 +189,15 @@ export default function CategoryPicker({
             return (
               <div
                 key={cat}
-                className={`group w-full px-4 py-2 text-sm flex items-center justify-between transition-colors hover:bg-black/10 dark:hover:bg-white/10 cursor-pointer ${
-                  selected ? "text-brand-300" : "text-gray-300"
+                className={`group w-full px-4 py-2 text-sm flex items-center justify-between transition-colors hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer ${
+                  selected ? "text-brand-700 dark:text-brand-300 font-semibold" : "text-foreground/80 hover:text-foreground"
                 }`}
                 onClick={() => toggle(cat)}
               >
                 <div className="flex items-center gap-3">
                   <span
                     className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
-                      selected ? "bg-brand-500 border-brand-500" : "border-white/25 bg-card"
+                      selected ? "bg-brand-500 border-brand-500" : "border-border bg-card"
                     }`}
                   >
                     {selected && (
@@ -211,7 +211,7 @@ export default function CategoryPicker({
                 <button
                   type="button"
                   onClick={(e) => handleDeleteCategory(cat, e)}
-                  className="p-1.5 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity rounded-md hover:bg-red-400/10"
+                  className="p-1.5 text-gray-500 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity rounded-md hover:bg-red-50 dark:hover:bg-red-400/10"
                 >
                   <MdDelete className="w-3.5 h-3.5" />
                 </button>
@@ -230,7 +230,7 @@ export default function CategoryPicker({
         type="button"
         onClick={handleOpen}
         disabled={disabled}
-        className="w-full h-[42px] bg-transparent border border-border rounded-xl px-3 py-2 outline-none focus:border-brand-500 transition-colors disabled:opacity-50 flex items-center gap-2 text-left overflow-hidden"
+        className="w-full h-[42px] bg-card border border-border rounded-xl px-3 py-2 outline-none focus:border-brand-500 transition-colors disabled:opacity-50 flex items-center gap-2 text-left overflow-hidden shadow-2xs"
       >
         {value.length === 0 ? (
           <span className="text-gray-500 text-sm flex-1 truncate">{placeholder}</span>
@@ -239,7 +239,7 @@ export default function CategoryPicker({
             {value.slice(0, 2).map((cat) => (
               <span
                 key={cat}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-500/20 border border-brand-500/30 text-brand-300 text-xs font-medium whitespace-nowrap"
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-brand-500/15 border border-brand-500/25 text-brand-700 dark:text-brand-300 text-xs font-semibold whitespace-nowrap"
               >
                 {cat}
                 {!disabled && (
@@ -248,12 +248,12 @@ export default function CategoryPicker({
               </span>
             ))}
             {value.length > 2 && (
-              <span className="text-xs text-gray-400 whitespace-nowrap">+{value.length - 2} more</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">+{value.length - 2} more</span>
             )}
           </span>
         )}
         <MdKeyboardArrowDown
-          className={`w-4 h-4 text-gray-400 ml-auto flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={`w-4 h-4 text-gray-500 dark:text-gray-400 ml-auto flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />
       </button>
 
