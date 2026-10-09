@@ -67,7 +67,7 @@ export async function submitSubscriptionPayment(formData: FormData) {
     const { userId } = await auth();
     let dbUserId: number | null = null;
     if (userId) {
-      const u = await sql`SELECT id FROM admin_users WHERE clerk_id = ${userId} LIMIT 1`;
+      const u = await sql`SELECT id FROM admin_users WHERE id = ${Number(userId) || 0} LIMIT 1`;
       if (u.length > 0) dbUserId = u[0].id;
     }
 

@@ -5,16 +5,19 @@ const neon = postgres;
 
 export async function GET() {
   try {
-    const { userId } = await auth();
-    if (!userId) return new NextResponse("Unauthorized", { status: 401 });
+    const { userId, session } = await auth();
+    if (!userId && !session?.user) return new NextResponse("Unauthorized", { status: 401 });
 
-    const user = await currentUser();
-    const email = user?.emailAddresses?.[0]?.emailAddress || "";
+    const email = session?.user?.email?.trim().toLowerCase() || "";
 
     const sql = neon(process.env.DATABASE_URL!);
 
     // Check if user is already in admin_users
-    const existingUser = await sql`SELECT id, tenant_id FROM admin_users WHERE clerk_id = ${userId}`;
+    const existingUser = await sql`
+      SELECT id, tenant_id FROM admin_users 
+      WHERE id = ${Number(userId) || 0} OR (email IS NOT NULL AND LOWER(email) = ${email})
+      LIMIT 1
+    `;
     if (existingUser.length > 0 && existingUser[0].tenant_id) {
       return NextResponse.json({ hasInvitation: false, redirect: '/user/dashboard' });
     }

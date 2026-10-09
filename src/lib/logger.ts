@@ -1,6 +1,6 @@
 import sql from "@/lib/db";
 import { headers } from "next/headers";
-import {  auth, clerkClient  } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 
 let isTableEnsured = false;
 

@@ -1,7 +1,7 @@
 "use server";
 
 import sql from "@/lib/db";
-import {  auth, clerkClient  } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
 import { logSystemAction } from "@/lib/logger";
 
@@ -90,7 +90,7 @@ export async function getTenantInfo() {
       };
     }
     
-    const userRows = await sql`SELECT tenant_id, role FROM admin_users WHERE clerk_id = ${userId}`;
+    const userRows = await sql`SELECT tenant_id, role FROM admin_users WHERE id = ${Number(userId) || 0}`;
     if (!userRows || userRows.length === 0) {
       const defaultTenant = await sql`SELECT id, name, plan, plan_expires_at, logo_url, industry, phone, email, website, address FROM tenants ORDER BY created_at ASC LIMIT 1`;
       if (defaultTenant.length > 0) {
@@ -237,7 +237,7 @@ export async function getTenantUsage() {
     const { userId } = await auth();
     if (!userId) return null;
     
-    const userRows = await sql`SELECT tenant_id FROM admin_users WHERE clerk_id = ${userId}`;
+    const userRows = await sql`SELECT tenant_id FROM admin_users WHERE id = ${Number(userId) || 0}`;
     if (!userRows || userRows.length === 0) return null;
     
     const tenantId = userRows[0].tenant_id;
@@ -290,7 +290,7 @@ export async function getAuditLogs() {
     const { userId } = await auth();
     if (!userId) return { success: false, logs: [] };
     
-    const userRows = await sql`SELECT tenant_id FROM admin_users WHERE clerk_id = ${userId}`;
+    const userRows = await sql`SELECT tenant_id FROM admin_users WHERE id = ${Number(userId) || 0}`;
     if (!userRows || userRows.length === 0) return { success: false, logs: [] };
     
     const tenantId = userRows[0].tenant_id;
@@ -314,7 +314,7 @@ export async function getCurrentUserRole() {
   try {
     const { userId } = await auth();
     if (!userId) return null;
-    const rows = await sql`SELECT role FROM admin_users WHERE clerk_id = ${userId} LIMIT 1`;
+    const rows = await sql`SELECT role FROM admin_users WHERE id = ${Number(userId) || 0} LIMIT 1`;
     if (rows.length > 0) return rows[0].role;
     return null;
   } catch (e) {
@@ -327,13 +327,13 @@ export async function getTeamMembers() {
     const { userId } = await auth();
     if (!userId) return { success: false, members: [] };
     
-    const userRows = await sql`SELECT tenant_id FROM admin_users WHERE clerk_id = ${userId}`;
+    const userRows = await sql`SELECT tenant_id FROM admin_users WHERE id = ${Number(userId) || 0}`;
     if (!userRows || userRows.length === 0) return { success: false, members: [] };
     
     const tenantId = userRows[0].tenant_id;
     
     const members = await sql`
-      SELECT id, clerk_id, email, full_name, role, created_at
+      SELECT id, email, full_name, role, created_at
       FROM admin_users
       WHERE tenant_id = ${tenantId}
       ORDER BY created_at ASC
@@ -403,7 +403,7 @@ export async function leaveTeam() {
     const { userId } = await auth();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const userRows = await sql`SELECT id, tenant_id, role, email FROM admin_users WHERE clerk_id = ${userId}`;
+    const userRows = await sql`SELECT id, tenant_id, role, email FROM admin_users WHERE id = ${Number(userId) || 0}`;
     if (userRows.length === 0) return { success: false, error: "Not found" };
     
     if (userRows[0].role === 'owner' || userRows[0].role === 'Super Admin') {
@@ -422,7 +422,7 @@ export async function leaveTeam() {
     `;
     const newTenantId = newWorkspace[0].id;
 
-    await sql`UPDATE admin_users SET tenant_id = ${newTenantId}, role = 'owner' WHERE clerk_id = ${userId}`;
+    await sql`UPDATE admin_users SET tenant_id = ${newTenantId}, role = 'owner' WHERE id = ${Number(userId) || 0}`;
     
     await logSystemAction(`Team member left: ${email}`);
     
@@ -482,7 +482,7 @@ export async function deleteWorkspace() {
     `;
     const newTenantId = newWorkspace[0].id;
 
-    await sql`UPDATE admin_users SET tenant_id = ${newTenantId}, role = 'owner' WHERE clerk_id = ${userId}`;
+    await sql`UPDATE admin_users SET tenant_id = ${newTenantId}, role = 'owner' WHERE id = ${Number(userId) || 0}`;
     
     await sql`DELETE FROM admin_users WHERE tenant_id = ${tenantId}`;
     await sql`DELETE FROM tenants WHERE id = ${tenantId}`;
@@ -499,17 +499,14 @@ export async function deletePersonalAccount() {
     const { userId } = await auth();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const userRows = await sql`SELECT id, tenant_id, role, email FROM admin_users WHERE clerk_id = ${userId}`;
+    const userRows = await sql`SELECT id, tenant_id, role, email FROM admin_users WHERE id = ${Number(userId) || 0}`;
     if (userRows.length === 0) return { success: false, error: "Not found" };
     
     if (userRows[0].role === 'owner' || userRows[0].role === 'Super Admin') {
       return { success: false, error: "Workspace owner cannot delete their personal account. Transfer ownership or delete the workspace first." };
     }
 
-    await sql`DELETE FROM admin_users WHERE clerk_id = ${userId}`;
-
-    const clerk = await clerkClient();
-    await clerk.users.deleteUser(userId);
+    await sql`DELETE FROM admin_users WHERE id = ${Number(userId) || 0}`;
 
     return { success: true };
   } catch (e) {
@@ -524,7 +521,7 @@ export async function transferOwnership(newOwnerId: string) {
     if (rbacError || !context) return { success: false, error: rbacError };
     const { tenantId, userId, sql } = context;
 
-    const userRows = await sql`SELECT role FROM admin_users WHERE clerk_id = ${userId} AND tenant_id = ${tenantId}`;
+    const userRows = await sql`SELECT role FROM admin_users WHERE id = ${Number(userId) || 0} AND tenant_id = ${tenantId}`;
     if (userRows.length === 0 || (userRows[0].role !== 'owner' && userRows[0].role !== 'Super Admin')) {
       return { success: false, error: "Only the owner can transfer ownership." };
     }
@@ -535,7 +532,7 @@ export async function transferOwnership(newOwnerId: string) {
     }
 
     // Demote current owner to Admin
-    await sql`UPDATE admin_users SET role = 'Admin' WHERE clerk_id = ${userId} AND tenant_id = ${tenantId}`;
+    await sql`UPDATE admin_users SET role = 'Admin' WHERE id = ${Number(userId) || 0} AND tenant_id = ${tenantId}`;
     
     // Promote new user to owner
     await sql`UPDATE admin_users SET role = 'owner' WHERE id = ${newOwnerId} AND tenant_id = ${tenantId}`;
@@ -557,7 +554,7 @@ export async function deleteTeamInvitation(invitationId: number) {
     const { userId } = await auth();
     if (!userId) return { success: false, error: "Unauthorized" };
 
-    const userRows = await sql`SELECT tenant_id FROM admin_users WHERE clerk_id = ${userId}`;
+    const userRows = await sql`SELECT tenant_id FROM admin_users WHERE id = ${Number(userId) || 0}`;
     if (!userRows || userRows.length === 0) return { success: false, error: "User not found" };
     const tenantId = userRows[0].tenant_id;
 

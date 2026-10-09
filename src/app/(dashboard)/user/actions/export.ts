@@ -26,7 +26,7 @@ export async function exportData(type: "invoices" | "incomes" | "expenses" | "cl
   const { userId } = await auth();
   if (!userId) return { success: false, error: "Unauthorized" };
 
-  const userRows = await sql`SELECT tenant_id, role FROM admin_users WHERE clerk_id = ${userId}`;
+  const userRows = await sql`SELECT tenant_id, role FROM admin_users WHERE id = ${Number(userId) || 0}`;
   if (!userRows || userRows.length === 0) return { success: false, error: "User not found" };
   const { tenant_id: tenantId, role } = userRows[0];
 
@@ -69,7 +69,7 @@ export async function exportReport(reportType: "profit_loss" | "cash_flow" | "ba
   const { userId } = await auth();
   if (!userId) return { success: false, error: "Unauthorized" };
 
-  const userRows = await sql`SELECT tenant_id, role FROM admin_users WHERE clerk_id = ${userId}`;
+  const userRows = await sql`SELECT tenant_id, role FROM admin_users WHERE id = ${Number(userId) || 0}`;
   if (!userRows || userRows.length === 0) return { success: false, error: "User not found" };
   const { tenant_id: tenantId, role } = userRows[0];
 

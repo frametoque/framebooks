@@ -8,15 +8,8 @@ export async function POST(request) {
   try {
     const body = await request.json();
 
-    const clerkId = body.clerkId || body.clerk_id;
+    const userId = body.userId || body.id;
     const { email, fullName, phone, company, website, address } = body;
-
-    if (!clerkId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
-      );
-    }
 
     if (!email) {
       return NextResponse.json(
@@ -25,29 +18,38 @@ export async function POST(request) {
       );
     }
 
-    // Check if a row already exists for this clerk_id
-    const existing = await sql`
-      SELECT id FROM admin_clients WHERE clerk_id = ${clerkId}
+    // Update admin_users if user exists
+    await sql`
+      UPDATE admin_users
+      SET
+        full_name  = COALESCE(NULLIF(${fullName || ''}, ''), full_name),
+        phone      = COALESCE(${phone || null}, phone),
+        company    = COALESCE(${company || null}, company),
+        website    = COALESCE(${website || null}, website),
+        address    = COALESCE(${address || null}, address),
+        updated_at = NOW()
+      WHERE id = ${Number(userId) || 0} OR LOWER(email) = LOWER(${email})
+    `;
+
+    // Check if client exists by email
+    const byEmail = await sql`
+      SELECT id FROM admin_clients WHERE LOWER(email) = LOWER(${email})
       LIMIT 1
     `;
 
     let result;
-
-    if (existing.length > 0) {
-      // Update existing admin_clients row
+    if (byEmail.length > 0) {
       result = await sql`
         UPDATE admin_clients
         SET
-          email      = ${email},
-          full_name  = ${fullName || ''},
-          phone      = ${phone    || null},
-          company    = ${company  || null},
-          website    = ${website  || null},
-          address    = ${address  || null},
+          full_name  = COALESCE(NULLIF(${fullName || ''}, ''), full_name),
+          phone      = COALESCE(${phone || null}, phone),
+          company    = COALESCE(${company || null}, company),
+          website    = COALESCE(${website || null}, website),
+          address    = COALESCE(${address || null}, address),
           updated_at = NOW()
-        WHERE clerk_id = ${clerkId}
+        WHERE id = ${byEmail[0].id}
         RETURNING
-          clerk_id,
           email,
           full_name,
           phone,
@@ -56,65 +58,32 @@ export async function POST(request) {
           address
       `;
     } else {
-      // Check if a row already exists for this email (e.g. manually added by admin)
-      const byEmail = await sql`
-        SELECT id FROM admin_clients WHERE LOWER(email) = LOWER(${email})
-        LIMIT 1
+      const clientId = 'C-' + Date.now();
+      result = await sql`
+        INSERT INTO admin_clients (
+          id, email, full_name,
+          phone, company, website, address,
+          active, created_at, updated_at
+        ) VALUES (
+          ${clientId},
+          ${email},
+          ${fullName || email},
+          ${phone   || null},
+          ${company || null},
+          ${website || null},
+          ${address || null},
+          true,
+          NOW(),
+          NOW()
+        )
+        RETURNING
+          email,
+          full_name,
+          phone,
+          company,
+          website,
+          address
       `;
-
-      if (byEmail.length > 0) {
-        // Link the existing row to this clerk_id and update profile data
-        result = await sql`
-          UPDATE admin_clients
-          SET
-            clerk_id   = ${clerkId},
-            full_name  = COALESCE(NULLIF(full_name, ''), ${fullName || ''}),
-            phone      = COALESCE(phone,    ${phone   || null}),
-            company    = COALESCE(company,  ${company || null}),
-            website    = COALESCE(website,  ${website || null}),
-            address    = COALESCE(address,  ${address || null}),
-            updated_at = NOW()
-          WHERE LOWER(email) = LOWER(${email})
-          RETURNING
-            clerk_id,
-            email,
-            full_name,
-            phone,
-            company,
-            website,
-            address
-        `;
-      } else {
-        // Entirely new client — create a row in admin_clients
-        const clientId = 'C-' + Date.now();
-        result = await sql`
-          INSERT INTO admin_clients (
-            id, clerk_id, email, full_name,
-            phone, company, website, address,
-            active, created_at, updated_at
-          ) VALUES (
-            ${clientId},
-            ${clerkId},
-            ${email},
-            ${fullName || email},
-            ${phone   || null},
-            ${company || null},
-            ${website || null},
-            ${address || null},
-            true,
-            NOW(),
-            NOW()
-          )
-          RETURNING
-            clerk_id,
-            email,
-            full_name,
-            phone,
-            company,
-            website,
-            address
-        `;
-      }
     }
 
     const savedUser = result[0];

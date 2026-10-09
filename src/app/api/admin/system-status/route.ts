@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import {  auth, clerkClient  } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import sql from "@/lib/db";
 import { list } from "@vercel/blob";
 
@@ -7,14 +7,13 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const { userId, session } = await auth();
+    if (!userId && !session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const clerk = await clerkClient();
-    const user = await clerk.users.getUser(userId);
-    const isAdmin = user?.publicMetadata?.role === "admin";
+    const user = session?.user as any;
+    const isAdmin = user?.systemRole === "super_admin" || user?.systemRole === "admin" || user?.role === "admin";
     if (!isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

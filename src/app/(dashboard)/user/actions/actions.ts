@@ -3,7 +3,7 @@ import { checkLimit, incrementLifetimeUsage } from "@/lib/plans";
 import { requirePermission, checkTenantReadOnly } from "./rbac";
 
 import sql from "@/lib/db";
-import {  auth, clerkClient  } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import { put, del } from '@vercel/blob';
 import { logSystemAction } from "@/lib/logger";
 import { getGravatarUrl } from "@/lib/gravatar";
@@ -12,7 +12,7 @@ export async function getTenantId() {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
   
-  const userRows = await sql`SELECT tenant_id FROM admin_users WHERE clerk_id = ${userId}`;
+  const userRows = await sql`SELECT tenant_id FROM admin_users WHERE id = ${Number(userId) || 0}`;
   if (!userRows || userRows.length === 0 || !userRows[0].tenant_id) {
     return null;
   }
@@ -1094,7 +1094,6 @@ export async function getInvoiceByIdAdmin(invoiceId: string) {
 
 // -- CLIENTS --
 export async function getClients() {
-  const clerk = await clerkClient();
   const tenantId = await getTenantId();
 
   const rows = await sql`
@@ -1105,7 +1104,6 @@ export async function getClients() {
            c.company,
            c.phone,
            c.address,
-           c.clerk_id,
            c.legal_name,
            (SELECT COUNT(*) FROM invoices i WHERE LOWER(i.user_email) = LOWER(c.email) AND i.tenant_id = ${tenantId}) as invoices,
            COALESCE((SELECT SUM(amount) FROM admin_incomes inc WHERE inc.client_id = c.id AND inc.tenant_id = ${tenantId}), 0) as revenue,
@@ -1127,7 +1125,6 @@ export async function getClients() {
         id: r.id,
         name: r.name || r.email.split('@')[0],
         email: r.email,
-        clerkId: r.clerk_id || null,
         active: r.active,
         company: r.company,
         phone: r.phone,
@@ -1147,8 +1144,6 @@ export async function getClients() {
 
 
 export async function getClientById(clientId: string) {
-  const clerk = await clerkClient();
-
   const rows = await sql`
     SELECT c.id,
            c.full_name as name,
@@ -1157,7 +1152,6 @@ export async function getClientById(clientId: string) {
            c.company,
            c.phone,
            c.address,
-           c.clerk_id,
            c.website,
            c.legal_name
     FROM admin_clients c

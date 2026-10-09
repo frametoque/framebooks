@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import {  auth, currentUser, clerkClient  } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import postgres from "postgres";
 const neon = postgres;
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
-    if (!userId) return new NextResponse("Unauthorized", { status: 401 });
+    const { userId, session } = await auth();
+    if (!userId && !session?.user) return new NextResponse("Unauthorized", { status: 401 });
 
-    const user = await currentUser();
-    const email = user?.emailAddresses?.[0]?.emailAddress || "";
+    const email = session?.user?.email?.trim().toLowerCase() || "";
+    const fullName = session?.user?.name || "";
 
     const { inviteId, action } = await req.json();
     if (!inviteId || !action) return new NextResponse("Bad Request", { status: 400 });
@@ -32,18 +32,21 @@ export async function POST(req: Request) {
 
     if (action === 'accept') {
       // Check existing user mapping
-      const existingUser = await sql`SELECT id FROM admin_users WHERE clerk_id = ${userId}`;
+      const existingUser = await sql`
+        SELECT id FROM admin_users 
+        WHERE id = ${Number(userId) || 0} OR (email IS NOT NULL AND LOWER(email) = ${email})
+        LIMIT 1
+      `;
       
       if (existingUser.length === 0) {
         await sql`
-          INSERT INTO admin_users (email, full_name, role, clerk_id, tenant_id, created_at)
-          VALUES (${email}, ${(user as any)?.firstName + " " + (user as any)?.lastName}, ${assignedRole}, ${userId}, ${tenantId}, NOW())
+          INSERT INTO admin_users (email, full_name, role, tenant_id, created_at)
+          VALUES (${email}, ${fullName}, ${assignedRole}, ${tenantId}, NOW())
+          ON CONFLICT (email) DO UPDATE SET tenant_id = EXCLUDED.tenant_id, role = EXCLUDED.role
         `;
       } else {
-        await sql`UPDATE admin_users SET tenant_id = ${tenantId}, role = ${assignedRole} WHERE clerk_id = ${userId}`;
+        await sql`UPDATE admin_users SET tenant_id = ${tenantId}, role = ${assignedRole} WHERE id = ${existingUser[0].id}`;
       }
-
-      // NextAuth reads tenant_id from the database on next session load, no need to update clerk metadata.
 
       await sql`UPDATE team_invitations SET status = 'accepted' WHERE id = ${invite.id}`;
       return NextResponse.json({ success: true, redirect: '/user/dashboard' });

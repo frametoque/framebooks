@@ -1,23 +1,20 @@
 import { NextResponse } from 'next/server';
-import {  auth, clerkClient  } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
 
 export async function GET() {
-  const { userId } = await auth();
+  const { userId, session } = await auth();
   
-  if (!userId) {
+  if (!userId && !session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const client = await clerkClient();
-    const clerkUser = await client.users.getUser(userId);
-    const primaryEmailObj = clerkUser.emailAddresses.find(e => e.id === clerkUser.primaryEmailAddressId);
+    const userEmail = session?.user?.email;
     
-    if (!primaryEmailObj) {
+    if (!userEmail) {
       return NextResponse.json({ error: "Primary email not found" }, { status: 400 });
     }
-    const userEmail = primaryEmailObj.emailAddress;
 
     const pending = await sql`
       SELECT ti.id, ti.tenant_id, t.name as tenant_name, ti.created_at

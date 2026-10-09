@@ -232,7 +232,7 @@ export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } 
   const [copied, setCopied] = useState(false);
 
   const [formData, setFormData] = useState({
-    clerk_id: "",
+    id: "",
     name: "",
     email: "",
     phone: "",
@@ -256,7 +256,7 @@ export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } 
     }));
   };
 
-   // Load Clerk user + DB data
+   // Load user + DB data
   useEffect(() => {
     if (!isLoaded) return;
 
@@ -419,11 +419,11 @@ export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } 
         const firstName = parts[0] || "";
         const lastName = parts.slice(1).join(" ") || "";
         
-        // Update custom database via API instead of Clerk 
+        // Update custom database via API
 
         const payload = {
-          clerkId: user.id,
-         // email updates via next-auth are read-only from Googlel,
+          userId: user.id,
+         // email updates via next-auth are read-only from Google,
           fullName: formData.name.trim(),
           phone: formData.phone || null,
           company: formData.company || null,
@@ -1165,7 +1165,7 @@ export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } 
                           <div>
                             <p className="font-medium text-foreground flex items-center gap-2">
                               {member.full_name || 'Unnamed User'}
-                              {member.clerk_id === user.id && <span className="px-2 py-0.5 bg-emerald-100/80 text-emerald-800 border border-emerald-200/60 dark:bg-brand-500/10 dark:text-brand-400 text-[10px] uppercase font-bold rounded-full dark:border-brand-500/20">You</span>}
+                              {(String(member.id) === String(user?.id) || String(member.id) === String((user as any)?.dbId)) && <span className="px-2 py-0.5 bg-emerald-100/80 text-emerald-800 border border-emerald-200/60 dark:bg-brand-500/10 dark:text-brand-400 text-[10px] uppercase font-bold rounded-full dark:border-brand-500/20">You</span>}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{member.email}</p>
                           </div>
@@ -1202,7 +1202,7 @@ export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } 
                               </button>
                             )}
 
-                            {member.clerk_id === user.id && member.role !== 'owner' && member.role !== 'Super Admin' && (
+                            {(String(member.id) === String(user?.id) || String(member.id) === String((user as any)?.dbId)) && member.role !== 'owner' && member.role !== 'Super Admin' && (
                               <button 
                                 onClick={handleLeaveTeam}
                                 className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 rounded-xl text-sm font-medium transition-colors border border-rose-200/60 dark:border-red-500/20"

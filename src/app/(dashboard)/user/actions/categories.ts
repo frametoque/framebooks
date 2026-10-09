@@ -9,7 +9,7 @@ async function getTenantId() {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
   
-  const userRows = await sql`SELECT tenant_id FROM admin_users WHERE clerk_id = ${userId}`;
+  const userRows = await sql`SELECT tenant_id FROM admin_users WHERE id = ${Number(userId) || 0}`;
   if (!userRows || userRows.length === 0) {
     const defaultTenant = await sql`SELECT id FROM tenants ORDER BY created_at ASC LIMIT 1`;
     if (defaultTenant.length > 0) return defaultTenant[0].id;

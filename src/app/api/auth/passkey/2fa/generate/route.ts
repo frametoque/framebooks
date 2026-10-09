@@ -1,7 +1,7 @@
 import { generateAuthenticationOptions } from '@simplewebauthn/server';
 import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
-import {  clerkClient, auth  } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
 
 export async function GET(req: Request) {
@@ -9,15 +9,18 @@ export async function GET(req: Request) {
   const rpID = new URL(req.url).hostname;
   const email = searchParams.get('email');
   
-  let userId;
+  let userId: string | null = null;
   
   if (email) {
-    const client = await clerkClient();
-    const users = await client.users.getUserList({ emailAddress: [email] });
-    if (users.data.length === 0) {
+    const userRows = await sql`
+      SELECT id FROM admin_users 
+      WHERE LOWER(email) = LOWER(${email.trim()}) 
+      LIMIT 1
+    `;
+    if (userRows.length === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-    userId = users.data[0].id;
+    userId = String(userRows[0].id);
   } else {
     const session = await auth();
     userId = session.userId;

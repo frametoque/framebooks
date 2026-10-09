@@ -6,36 +6,33 @@ export const dynamic = 'force-dynamic';
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const clerkId = searchParams.get('userId');
+    const userId = searchParams.get('userId');
+    const email = searchParams.get('email');
 
-    if (!clerkId) {
+    if (!userId && !email) {
       return NextResponse.json(
-        { success: false, error: 'User ID is required' },
+        { success: false, error: 'User ID or Email is required' },
         { status: 400 }
       );
     }
 
-    const email = searchParams.get('email');
-
-    // Fetch client profile from admin_clients using clerk_id or matching email
+    // Fetch user profile from admin_users or admin_clients
     let rows = await sql`
       SELECT
-        clerk_id,
         email,
         full_name,
         phone,
         company,
         website,
         address
-      FROM admin_clients
-      WHERE clerk_id = ${clerkId}
+      FROM admin_users
+      WHERE id = ${Number(userId) || 0} OR (email IS NOT NULL AND LOWER(email) = LOWER(${email || ''}))
       LIMIT 1
     `;
 
     if (rows.length === 0 && email) {
       rows = await sql`
         SELECT
-          clerk_id,
           email,
           full_name,
           phone,
@@ -46,15 +43,6 @@ export async function GET(request) {
         WHERE LOWER(email) = LOWER(${email})
         LIMIT 1
       `;
-
-      if (rows.length > 0) {
-        // Auto-link clerk_id to this client record
-        await sql`
-          UPDATE admin_clients
-          SET clerk_id = ${clerkId}, updated_at = NOW()
-          WHERE LOWER(email) = LOWER(${email}) AND (clerk_id IS NULL OR clerk_id = '')
-        `;
-      }
     }
 
     const user = rows?.[0];
@@ -75,7 +63,6 @@ export async function GET(request) {
         address: user.address || '',
         fullName: user.full_name || '',
         email: user.email || '',
-        clerk_id: user.clerk_id || '',
       }
     });
 

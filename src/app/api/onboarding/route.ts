@@ -5,18 +5,22 @@ const neon = postgres;
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
-    if (!userId) return new NextResponse("Unauthorized", { status: 401 });
+    const { userId, session } = await auth();
+    if (!userId && !session?.user) return new NextResponse("Unauthorized", { status: 401 });
 
-    const user = await currentUser();
-    const email = user?.primaryEmailAddress?.emailAddress || "";
+    const email = session?.user?.email?.trim().toLowerCase() || "";
+    const fullName = session?.user?.name || "";
 
     const { businessName, address, plan, accountName, initialBalance, couponCode } = await req.json();
 
     const sql = neon(process.env.DATABASE_URL!);
 
     // Check if user already exists
-    const existingUser = await sql`SELECT id, tenant_id FROM admin_users WHERE clerk_id = ${userId}`;
+    const existingUser = await sql`
+      SELECT id, tenant_id FROM admin_users 
+      WHERE id = ${Number(userId) || 0} OR (email IS NOT NULL AND LOWER(email) = ${email})
+      LIMIT 1
+    `;
 
     if (existingUser.length > 0 && existingUser[0].tenant_id) {
       return NextResponse.json({ message: "User already has a business profile" }, { status: 400 });
@@ -34,13 +38,14 @@ export async function POST(req: Request) {
     let dbUserId: number | null = null;
     if (existingUser.length === 0) {
       const inserted = await sql`
-        INSERT INTO admin_users (email, full_name, role, clerk_id, tenant_id, created_at)
-        VALUES (${email}, ${user?.fullName || ""}, 'owner', ${userId}, ${tenantId}, NOW())
+        INSERT INTO admin_users (email, full_name, role, tenant_id, created_at)
+        VALUES (${email}, ${fullName}, 'owner', ${tenantId}, NOW())
+        ON CONFLICT (email) DO UPDATE SET tenant_id = EXCLUDED.tenant_id, role = 'owner'
         RETURNING id
       `;
       dbUserId = inserted[0]?.id;
     } else {
-      await sql`UPDATE admin_users SET tenant_id = ${tenantId} WHERE clerk_id = ${userId}`;
+      await sql`UPDATE admin_users SET tenant_id = ${tenantId}, role = 'owner' WHERE id = ${existingUser[0].id}`;
       dbUserId = existingUser[0].id;
     }
 

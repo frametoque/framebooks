@@ -14,7 +14,7 @@ export async function getUserContext() {
   if (!userId) return { userId: null, role: null, tenantId: null };
 
   const sql = neon(process.env.DATABASE_URL!);
-  const userRows = await sql`SELECT tenant_id, role FROM admin_users WHERE clerk_id = ${userId}`;
+  const userRows = await sql`SELECT tenant_id, role FROM admin_users WHERE id = ${Number(userId) || 0}`;
   
   if (userRows.length === 0) {
     return { userId, role: null, tenantId: null };

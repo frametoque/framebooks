@@ -24,7 +24,7 @@ export const authOptions: NextAuthOptions = {
 
         const email = credentials.email.trim().toLowerCase();
         const rows = await sql`
-          SELECT id, email, password_hash, full_name, system_role, is_banned, deleted_at, clerk_id
+          SELECT id, email, password_hash, full_name, system_role, is_banned, deleted_at, tenant_id, role
           FROM admin_users 
           WHERE LOWER(email) = ${email} 
           LIMIT 1
@@ -65,7 +65,7 @@ export const authOptions: NextAuthOptions = {
         await sql`UPDATE admin_users SET last_login_at = NOW() WHERE id = ${user.id}`;
 
         return {
-          id: user.clerk_id || String(user.id),
+          id: String(user.id),
           email: user.email,
           name: user.full_name || 'Admin',
           dbId: user.id,
@@ -91,13 +91,13 @@ export const authOptions: NextAuthOptions = {
       const existing = await sql`SELECT id FROM admin_users WHERE LOWER(email) = ${email} LIMIT 1`;
       
       if (existing.length === 0) {
-        // We reuse the clerk_id column to store the Google ID to avoid schema migrations
         await sql`
-          INSERT INTO admin_users (email, full_name, role, clerk_id, created_at)
-          VALUES (${email}, ${user.name}, 'pending', ${user.id}, NOW())
+          INSERT INTO admin_users (email, full_name, role, created_at)
+          VALUES (${email}, ${user.name || ''}, 'pending', NOW())
+          ON CONFLICT (email) DO NOTHING
         `;
       } else {
-        await sql`UPDATE admin_users SET clerk_id = ${user.id}, full_name = ${user.name} WHERE LOWER(email) = ${email}`;
+        await sql`UPDATE admin_users SET full_name = COALESCE(full_name, ${user.name || ''}) WHERE LOWER(email) = ${email}`;
       }
 
       return true;
@@ -116,34 +116,35 @@ export const authOptions: NextAuthOptions = {
         if (token?.picture) session.user.image = token.picture as string;
         if (token?.name) session.user.name = token.name as string;
 
-        // If systemRole not yet in token (e.g. Google OAuth login), query DB once
-        if (!token?.systemRole || token?.systemRole === 'user') {
-          try {
-            const dbUser = await sql`
-              SELECT id, tenant_id, role, clerk_id, system_role, is_banned 
-              FROM admin_users 
-              WHERE LOWER(email) = ${email} 
-              LIMIT 1
-            `;
-            if (dbUser.length > 0) {
-              session.user.id = dbUser[0].clerk_id || String(dbUser[0].id);
-              (session.user as any).tenantId = dbUser[0].tenant_id;
-              (session.user as any).role = dbUser[0].role;
-              (session.user as any).dbId = dbUser[0].id;
-              (session.user as any).systemRole = dbUser[0].system_role || 'user';
-              (session.user as any).isBanned = !!dbUser[0].is_banned;
+        try {
+          const dbUser = await sql`
+            SELECT id, tenant_id, role, system_role, is_banned, full_name 
+            FROM admin_users 
+            WHERE LOWER(email) = ${email} 
+            LIMIT 1
+          `;
+          if (dbUser.length > 0) {
+            session.user.id = String(dbUser[0].id);
+            (session.user as any).dbId = dbUser[0].id;
+            (session.user as any).tenantId = dbUser[0].tenant_id;
+            (session.user as any).role = dbUser[0].role;
+            (session.user as any).systemRole = dbUser[0].system_role || 'user';
+            (session.user as any).isBanned = !!dbUser[0].is_banned;
+            if (dbUser[0].full_name && !session.user.name) {
+              session.user.name = dbUser[0].full_name;
             }
-          } catch (err) {
-            console.error("[Session Callback] DB lookup failed:", err);
           }
+        } catch (err) {
+          console.error("[Session Callback] DB lookup failed:", err);
         }
       }
       return session;
     },
     async jwt({ token, user, account, profile }) {
       if (user) {
-        token.sub = user.id;
-        token.id = user.id;
+        const idVal = String((user as any).dbId || user.id);
+        token.sub = idVal;
+        token.id = idVal;
         if (user.email) token.email = user.email.trim().toLowerCase();
         if (user.image) token.picture = user.image;
         if (user.name) token.name = user.name;
@@ -172,49 +173,36 @@ export const authOptions: NextAuthOptions = {
 };
 
 /**
- * Replaces Clerk's auth() method.
- * Returns { userId } (where userId is the Google ID stored in clerk_id).
+ * Returns current authenticated user and session.
  */
 export async function auth() {
   const session = await getServerSession(authOptions);
   return { 
-    userId: session?.user?.id || null, 
+    userId: session?.user?.id || ((session?.user as any)?.dbId ? String((session?.user as any).dbId) : null),
+    user: session?.user || null,
     session 
   };
 }
 
 /**
- * Replaces Clerk's currentUser() method.
+ * Returns user details from active session.
  */
 export async function currentUser() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return null;
   return {
     id: session.user.id,
+    email: session.user.email,
     emailAddresses: [{ emailAddress: session.user.email }],
     primaryEmailAddress: { emailAddress: session.user.email },
     firstName: session.user.name?.split(' ')[0] || "",
     lastName: session.user.name?.split(' ').slice(1).join(' ') || "",
     fullName: session.user.name || "",
+    tenantId: (session.user as any).tenantId,
+    role: (session.user as any).role,
     publicMetadata: {
       tenant_id: (session.user as any).tenantId,
       role: (session.user as any).role,
     }
   };
 }
-
-/**
- * Mock clerkClient to prevent build errors during migration.
- * Features relying on this must be rewritten to use the DB directly.
- */
-export const clerkClient = async () => {
-  return {
-    users: {
-      getUser: async (...args: any[]) => null,
-      updateUser: async (...args: any[]) => null,
-      deleteUser: async (...args: any[]) => null,
-      getUserList: async (...args: any[]) => ({ data: [] }),
-      updateUserMetadata: async (...args: any[]) => null,
-    }
-  };
-};

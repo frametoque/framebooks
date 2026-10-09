@@ -1,23 +1,21 @@
 import { NextResponse } from "next/server";
 import sql from "@/lib/db";
-import {  auth, clerkClient  } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 
 export async function GET(request, { params }) {
   const { invoice_id } = await params;
 
   try {
-    const { userId } = await auth();
+    const { userId, session } = await auth();
     
-    if (!userId) {
+    if (!userId && !session?.user) {
       return NextResponse.json(
         { error: "Unauthorized - Please sign in" },
         { status: 401 }
       );
     }
 
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const userEmail = user.emailAddresses[0]?.emailAddress;
+    const userEmail = session?.user?.email;
   
     if (!userEmail) {
       return NextResponse.json(

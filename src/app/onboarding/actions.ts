@@ -1,7 +1,7 @@
 "use server";
 
 import sql from "@/lib/db";
-import { auth, clerkClient } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { put } from "@vercel/blob";
 
 export async function validateCouponAction(code: string, planName?: string) {
@@ -65,8 +65,8 @@ export async function validateCouponAction(code: string, planName?: string) {
 
 export async function completeOnboarding(formData: FormData) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const { userId, session } = await auth();
+    if (!userId && !session?.user) {
       return { success: false, error: "Unauthorized" };
     }
 
@@ -86,8 +86,8 @@ export async function completeOnboarding(formData: FormData) {
     const planName = (formData.get("plan") as string) || "Free";
     const couponCode = (formData.get("couponCode") as string)?.trim().toUpperCase();
 
-    const clerk = await clerkClient();
-    const user = await clerk.users.getUser(userId);
+    const email = session?.user?.email?.trim().toLowerCase() || "";
+    const fullName = session?.user?.name || "";
 
     // Validate coupon if provided
     let validatedCoupon: any = null;
@@ -106,23 +106,31 @@ export async function completeOnboarding(formData: FormData) {
     `;
     const tenantId = newTenant[0].id;
 
-    // Update clerk user metadata
-    await clerk.users.updateUserMetadata(userId, {
-      publicMetadata: {
-        ...user.publicMetadata,
-        tenant_id: tenantId,
-      }
-    });
-
-    // Insert user into admin_users table
-    const email = user.emailAddresses[0]?.emailAddress || '';
-    const userInsert = await sql`
-      INSERT INTO admin_users (clerk_id, email, full_name, tenant_id, role)
-      VALUES (${userId}, ${email}, ${user.fullName || ''}, ${tenantId}, 'owner')
-      ON CONFLICT (clerk_id) DO UPDATE SET tenant_id = EXCLUDED.tenant_id
-      RETURNING id
+    // Check if user already exists in admin_users
+    const existing = await sql`
+      SELECT id FROM admin_users 
+      WHERE id = ${Number(userId) || 0} OR (email IS NOT NULL AND LOWER(email) = ${email})
+      LIMIT 1
     `;
-    const dbUserId = userInsert[0]?.id;
+
+    let dbUserId: number;
+    if (existing.length > 0) {
+      const updated = await sql`
+        UPDATE admin_users 
+        SET tenant_id = ${tenantId}, role = 'owner', full_name = COALESCE(full_name, ${fullName})
+        WHERE id = ${existing[0].id}
+        RETURNING id
+      `;
+      dbUserId = updated[0].id;
+    } else {
+      const inserted = await sql`
+        INSERT INTO admin_users (email, full_name, tenant_id, role)
+        VALUES (${email}, ${fullName}, ${tenantId}, 'owner')
+        ON CONFLICT (email) DO UPDATE SET tenant_id = EXCLUDED.tenant_id, role = 'owner'
+        RETURNING id
+      `;
+      dbUserId = inserted[0].id;
+    }
 
     let isComplimentary = false;
 

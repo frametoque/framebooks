@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PKPass } from "passkit-generator";
-import {  auth, clerkClient  } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import sql from "@/lib/db";
 import * as forge from "node-forge";
 import fs from "fs";
@@ -101,14 +101,12 @@ export async function POST(
     );
   }
 
-  /* 1. Authenticate via Clerk (same request context — no cookie forwarding needed) */
-  const { userId } = await auth();
-  if (!userId) {
+  /* 1. Authenticate (session context) */
+  const { userId, session } = await auth();
+  if (!userId && !session?.user) {
     return NextResponse.json({ error: "Unauthorized — please sign in" }, { status: 401 });
   }
-  const clerk    = await clerkClient();
-  const user     = await clerk.users.getUser(userId);
-  const userEmail = user.emailAddresses[0]?.emailAddress;
+  const userEmail = session?.user?.email;
   if (!userEmail) {
     return NextResponse.json({ error: "User email not found" }, { status: 400 });
   }

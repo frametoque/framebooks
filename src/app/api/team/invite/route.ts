@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     }
 
     // 1. Get the current user's tenant_id
-    const userRows = await sql`SELECT tenant_id FROM admin_users WHERE clerk_id = ${userId}`;
+    const userRows = await sql`SELECT tenant_id FROM admin_users WHERE id = ${Number(userId) || 0}`;
     if (!userRows || userRows.length === 0) {
       return NextResponse.json({ error: "User not found or no tenant assigned" }, { status: 403 });
     }

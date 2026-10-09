@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import {  auth, clerkClient  } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
+  const { userId, session } = await auth();
   
-  if (!userId) {
+  if (!userId && !session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -16,15 +16,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Check if invitation belongs to current user
-    const client = await clerkClient();
-    const clerkUser = await client.users.getUser(userId);
-    const primaryEmailObj = clerkUser.emailAddresses.find(e => e.id === clerkUser.primaryEmailAddressId);
+    const userEmail = session?.user?.email;
     
-    if (!primaryEmailObj) {
+    if (!userEmail) {
       return NextResponse.json({ error: "Primary email not found" }, { status: 400 });
     }
-    const userEmail = primaryEmailObj.emailAddress;
 
     const inviteRows = await sql`
       SELECT id, tenant_id FROM team_invitations 
@@ -44,7 +40,7 @@ export async function POST(req: Request) {
       `;
       // 2. Update user's tenant
       await sql`
-        UPDATE admin_users SET tenant_id = ${tenantId} WHERE clerk_id = ${userId}
+        UPDATE admin_users SET tenant_id = ${tenantId} WHERE id = ${Number(userId) || 0} OR LOWER(email) = LOWER(${userEmail})
       `;
       return NextResponse.json({ success: true, message: "Invitation accepted. You are now part of the new team." });
     } else {

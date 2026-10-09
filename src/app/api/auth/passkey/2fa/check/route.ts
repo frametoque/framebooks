@@ -1,22 +1,25 @@
 import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import sql from '@/lib/db';
-import {  clerkClient, auth  } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import { cookies } from 'next/headers';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const email = searchParams.get('email');
   
-  let userId;
+  let userId: string | null = null;
   
   if (email) {
-    const client = await clerkClient();
-    const users = await client.users.getUserList({ emailAddress: [email] });
-    if (users.data.length === 0) {
+    const userRows = await sql`
+      SELECT id FROM admin_users 
+      WHERE LOWER(email) = LOWER(${email.trim()}) 
+      LIMIT 1
+    `;
+    if (userRows.length === 0) {
       return NextResponse.json({ hasPasskeys: false });
     }
-    userId = users.data[0].id;
+    userId = String(userRows[0].id);
   } else {
     const session = await auth();
     userId = session.userId;

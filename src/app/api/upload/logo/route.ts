@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
     // Get tenant ID
     const sql = neon(process.env.DATABASE_URL!);
-    const userRows = await sql`SELECT tenant_id FROM admin_users WHERE clerk_id = ${userId}`;
+    const userRows = await sql`SELECT tenant_id FROM admin_users WHERE id = ${Number(userId) || 0} LIMIT 1`;
     if (!userRows || userRows.length === 0) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
