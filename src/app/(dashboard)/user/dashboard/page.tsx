@@ -122,9 +122,9 @@ export default function DashboardPage() {
 
   const stats = [
     { label: "Available Funds", value: formatLKR(data.totalAssets || 0), subtext: (data.totalAfterDebts !== undefined && data.totalAfterDebts > data.totalAssets) ? `After Debts: ${formatLKR(data.totalAfterDebts)}` : (data.totalCapital > 0 ? `Total Capital: ${formatLKR(data.totalCapital)}` : undefined), icon: MdAccountBalance, color: "text-blue-700 dark:text-blue-400", bg: "bg-blue-100/70 dark:bg-blue-400/10" },
-    { label: "Total Income", value: formatLKR(data.totalIncome), icon: MdAccountBalanceWallet, color: "text-emerald-700 dark:text-green-400", bg: "bg-emerald-100/70 dark:bg-green-400/10" },
-    { label: "Total Expenses", value: formatLKR(data.totalExpenses), icon: Receipt, color: "text-red-700 dark:text-red-400", bg: "bg-red-100/70 dark:bg-red-400/10" },
-    { label: "Net Profit", value: formatLKR(data.netProfit), icon: MdTrendingUp, color: "text-brand-800 dark:text-brand-400", bg: "bg-brand-500/15 dark:bg-brand-400/10" },
+    { label: "Total Income", value: formatLKR(data.totalIncome), subtext: (data.lifetimeIncome && data.lifetimeIncome !== data.totalIncome) ? `Lifetime: ${formatLKR(data.lifetimeIncome)}` : undefined, icon: MdAccountBalanceWallet, color: "text-emerald-700 dark:text-green-400", bg: "bg-emerald-100/70 dark:bg-green-400/10" },
+    { label: "Total Expenses", value: formatLKR(data.totalExpenses), subtext: (data.lifetimeExpenses && data.lifetimeExpenses !== data.totalExpenses) ? `Lifetime: ${formatLKR(data.lifetimeExpenses)}` : undefined, icon: Receipt, color: "text-red-700 dark:text-red-400", bg: "bg-red-100/70 dark:bg-red-400/10" },
+    { label: "Net Profit", value: formatLKR(data.netProfit), subtext: (data.lifetimeNetProfit !== undefined && data.lifetimeNetProfit !== data.netProfit) ? `Lifetime: ${formatLKR(data.lifetimeNetProfit)}` : undefined, icon: MdTrendingUp, color: "text-brand-800 dark:text-brand-400", bg: "bg-brand-500/15 dark:bg-brand-400/10" },
   ];
 
   const analyticsStats: any[] = [];

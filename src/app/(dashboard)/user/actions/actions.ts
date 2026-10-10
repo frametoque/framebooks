@@ -149,7 +149,7 @@ export async function _getDashboardData(tenantId: string, start: string, end: st
     exp_cat AS (
       SELECT category as name, SUM(amount) as value
       FROM admin_expenses
-      WHERE tenant_id = ${tenantId}
+      WHERE tenant_id = ${tenantId} AND EXTRACT(YEAR FROM date) = EXTRACT(YEAR FROM current_date)
       GROUP BY category
       ORDER BY value DESC
     ),
@@ -246,8 +246,13 @@ export async function _getDashboardData(tenantId: string, start: string, end: st
   const incSum = result?.income_summary || {};
   const expSum = result?.expense_summary || {};
 
-  const totalIncome = parseFloat(incSum.total || 0);
-  const totalExpenses = parseFloat(expSum.total || 0);
+  const lifetimeIncome = parseFloat(incSum.total || 0);
+  const lifetimeExpenses = parseFloat(expSum.total || 0);
+  const lifetimeNetProfit = lifetimeIncome - lifetimeExpenses;
+
+  // The primary financial dashboard cards display the Current Fiscal Year (YTD), matching standard P&L
+  const totalIncome = parseFloat(incSum.current_year ?? incSum.total ?? 0);
+  const totalExpenses = parseFloat(expSum.current_year ?? expSum.total ?? 0);
   const netProfit = totalIncome - totalExpenses;
 
   const currentIncome = parseFloat(incSum.current_year || 0);
@@ -360,6 +365,9 @@ export async function _getDashboardData(tenantId: string, start: string, end: st
     totalAfterDebts,
     totalCapital,
     netProfit,
+    lifetimeIncome,
+    lifetimeExpenses,
+    lifetimeNetProfit,
     incomeBreakdown,
     totalClients,
     unpaidCount,

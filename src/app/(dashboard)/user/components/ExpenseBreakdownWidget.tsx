@@ -18,7 +18,7 @@ const formatLKR = (amount: number) => {
 };
 
 export default function ExpenseBreakdownWidget({ initialData }: { initialData?: any[] }) {
-  const [mode, setMode] = useState<string>("Lifetime");
+  const [mode, setMode] = useState<string>("This Year");
   const [data, setData] = useState<any[]>(initialData || []);
   const [loading, setLoading] = useState(false);
   const [initialRender, setInitialRender] = useState(true);
@@ -26,7 +26,7 @@ export default function ExpenseBreakdownWidget({ initialData }: { initialData?: 
   useEffect(() => {
     if (initialRender) {
       setInitialRender(false);
-      if (initialData && initialData.length > 0 && mode === "Lifetime") {
+      if (initialData && initialData.length > 0 && mode === "This Year") {
         setData(initialData);
         return;
       }
