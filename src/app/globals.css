@@ -225,3 +225,42 @@ html {
 @utility animate-hero-zoom {
   animation: hero-zoom 2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+
+/* Custom Scrollbar for sidebars and scroll containers */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(8, 40, 48, 0.25) transparent;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(8, 40, 48, 0.2);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(8, 40, 48, 0.4);
+}
+
+.dark .custom-scrollbar {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}

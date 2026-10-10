@@ -868,7 +868,100 @@ export const guideGroups: GuideGroup[] = [
         ]
       },
       {
-        slug: 'data-export',
+        slug: 'admin-preferences',
+        title: 'Admin Preferences & Default Date Ranges',
+        intro: 'Configure your company\'s default financial analytics range, dashboard overview dates, and regional display preferences.',
+        readTime: '3 min read',
+        steps: [
+          {
+            title: '1. Navigating to Admin Preferences',
+            content: 'From the main dashboard, go to Settings and click "Admin Preferences". Accessible to Owners and Administrators.',
+            bullets: [
+              'Quickly reachable via the Settings menu or sidebar',
+              'Ensures team members see consistent financial reporting intervals'
+            ]
+          },
+          {
+            title: '2. Configuring the Default Dashboard Date Range',
+            content: 'Choose which time window loads automatically whenever anyone in your business visits the Dashboard overview.',
+            bullets: [
+              'Options include: This Year (default), This Month, This Quarter, Last Month, or Custom Financial Year (April 1 to March 31)',
+              'Allows business owners to track annual targets or focus on immediate monthly cashflow'
+            ]
+          },
+          {
+            title: '3. Regional Currency & Formatting Rules',
+            content: 'Verify your default currency formatting (Sri Lankan Rupee - LKR) and number conventions.',
+            bullets: [
+              'Standard Sri Lankan Rupee formatting with thousand and million separators',
+              'Controls print headers and electronic invoice summaries'
+            ]
+          },
+          {
+            title: '4. Saving & Applying Across All User Sessions',
+            content: 'Click "Save Preferences" to persist your changes. The updated date range takes effect immediately across all dashboard widgets and stat cards.',
+            bullets: [
+              'Instant synchronization without requiring team members to re-login',
+              'Individual users can still temporarily toggle date ranges on the fly using the top range picker'
+            ]
+          }
+        ]
+      },
+      {
+        slug: 'multi-business-switcher',
+        title: 'Multi-Business Profiles & Workspace Switching',
+        intro: 'Manage multiple companies under a single account, switch between organizations seamlessly, accept invites, and create owned businesses.',
+        readTime: '4 min read',
+        steps: [
+          {
+            title: '1. Accessing the Workspace Switcher Widget',
+            content: 'In the top header bar, locate your current Business Profile widget showing your business name, role ("You\'re Owner", "You\'re Viewer"), and logo avatar.',
+            bullets: [
+              'Click anywhere on the business widget in the header to open the Workspaces dropdown',
+              'A pulsating notification badge appears automatically if you have pending team invitations'
+            ]
+          },
+          {
+            title: '2. Switching Between Active Business Profiles',
+            content: 'The dropdown displays all workspaces you belong to—whether you are the registered Owner, Admin, or invited Member.',
+            bullets: [
+              'Click any business profile in the list to switch active workspace immediately',
+              'All dashboard views, bank accounts, invoices, and reports immediately reload for that business',
+              'The green checkmark indicates your current active business'
+            ]
+          },
+          {
+            title: '3. Approving & Declining Pending Team Invitations',
+            content: 'When another company invites your email address to collaborate, the invitation appears at the top of the switcher menu.',
+            bullets: [
+              'Review the inviting business name and your proposed role (e.g., Accountant, Viewer, Admin)',
+              'Click "Approve" to accept the invitation and immediately switch into that workspace',
+              'Click "Decline" to reject the invitation if unexpected or no longer relevant'
+            ]
+          },
+          {
+            title: '4. Creating Your Owned Business Profile (1 per Account)',
+            content: 'Framebooks allows each personal user account to create and own at most 1 business profile.',
+            bullets: [
+              'If you have not yet created an owned business, click "+ Create Your Business Profile"',
+              'Enter your Business Name and default currency (e.g. LKR, USD)',
+              'Your new business profile is generated instantly with you assigned as Workspace Owner',
+              'Once created, your account limit is reached; you can still be invited to join unlimited other businesses as a collaborator'
+            ]
+          },
+          {
+            title: '5. Transferring Workspace Ownership',
+            content: 'Workspace Owners can safely transfer primary ownership to another registered team member under Settings > Danger Zone.',
+            bullets: [
+              'Select an eligible team member from your active roster',
+              'Confirm the transfer to reassign primary billing and owner privileges',
+              'Frees your personal ownership slot if you need to create a new profile'
+            ]
+          }
+        ]
+      },
+      {
+        slug: 'settings-data-export',
         title: 'Data Export & Workspace Backups',
         intro: 'Export your complete financial records, client lists, invoices, and accounting ledgers into universal CSV formats anytime.',
         readTime: '3 min read',

@@ -704,6 +704,29 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               </button>
             </div>
 
+            {/* Settings Guide & Steps Shortcut */}
+            <a
+              href="/guide/business-profile"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-card hover:bg-muted/60 border border-border/80 rounded-2xl p-4 flex items-center justify-between transition-colors group text-left block shadow-xs"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-500 shrink-0">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-foreground group-hover:text-brand-500 transition-colors">
+                    Settings Guide & Steps
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Step-by-step documentation for all settings
+                  </p>
+                </div>
+              </div>
+              <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-brand-500 transition-colors shrink-0" />
+            </a>
+
           </div>
 
           {/* Right Column (Navigation Menu) */}
