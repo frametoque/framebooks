@@ -1,5 +1,7 @@
 // src/app/(dashboard)/admin/users/page.tsx
-import { redirect } from "next/navigation";
+import React from "react";
+import { UsersClient } from "./UsersClient";
+import { getUsersList } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +11,17 @@ export default async function AdminUsersPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const queryString = new URLSearchParams(
-    Object.entries(params).filter(([, v]) => v != null) as [string, string][]
-  ).toString();
+  const data = await getUsersList({
+    search: params.search,
+    plan: params.plan,
+    status: params.status,
+    role: params.role,
+    banned: params.banned,
+    page: params.page ? parseInt(params.page, 10) : 1,
+    sortBy: params.sortBy,
+    sortOrder: params.sortOrder as any,
+  });
 
-  redirect(`/admin/subscriptions${queryString ? `?${queryString}` : ""}`);
+  return <UsersClient initialData={data} searchParams={params} />;
 }
+

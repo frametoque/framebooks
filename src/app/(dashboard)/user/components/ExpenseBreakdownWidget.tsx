@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { getExpenseBreakdownByMode } from "../actions/actions";
 import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
+import { useAccentTheme } from "@/lib/theme/useAccentTheme";
 
 const MODES = ["This Month", "Last Month", "This Year", "Last Year", "Lifetime"];
 
@@ -18,9 +19,30 @@ const formatLKR = (amount: number) => {
 };
 
 export default function ExpenseBreakdownWidget({ initialData }: { initialData?: any[] }) {
+  const { chartPalette } = useAccentTheme();
   const [mode, setMode] = useState<string>("This Year");
   const [data, setData] = useState<any[]>(initialData || []);
   const [loading, setLoading] = useState(false);
+
+  const getCategoryColor = (name: string, index: number) => {
+    const categoryIndexMap: Record<string, number> = {
+      "Stock Purchase": 0,
+      "Marketing": 1,
+      "Marketing & Ads": 1,
+      "Equipment": 2,
+      "Software": 3,
+      "Software Subscriptions": 3,
+      "Freelancers": 4,
+      "Payroll": 4,
+      "Office Rent": 5,
+      "Transport": 6,
+      "Travel & Meals": 6,
+      "Other": 7,
+    };
+    const mapped = categoryIndexMap[name];
+    const idx = typeof mapped === "number" ? mapped : index;
+    return chartPalette[idx % chartPalette.length];
+  };
 
   useEffect(() => {
     if (initialData && initialData.length > 0 && mode === "This Year") {
@@ -94,17 +116,7 @@ export default function ExpenseBreakdownWidget({ initialData }: { initialData?: 
                   animationDuration={800}
                 >
                   {data.map((entry: any, index: number) => {
-                    const categoryColors: Record<string, string> = {
-                      "Stock Purchase": "#00A341",
-                      "Marketing": "#00C750",
-                      "Equipment": "#00E35B",
-                      "Software": "#26F29C",
-                      "Freelancers": "#4DF6AE",
-                      "Transport": "#99FACF",
-                      "Other": "#BFFCDF",
-                    };
-                    const defaultColors = ["#00E35B", "#00C750", "#26F29C", "#00A341", "#4DF6AE", "#99FACF"];
-                    const color = categoryColors[entry.name] || defaultColors[index % defaultColors.length];
+                    const color = getCategoryColor(entry.name, index);
                     return <Cell key={`cell-${index}`} fill={color} />;
                   })}
                 </Pie>
@@ -125,17 +137,7 @@ export default function ExpenseBreakdownWidget({ initialData }: { initialData?: 
 
           <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-2 scrollbar-thin shrink-0 min-w-[200px]">
             {data.map((entry: any, index: number) => {
-              const categoryColors: Record<string, string> = {
-                "Stock Purchase": "#00A341",
-                "Marketing": "#00C750",
-                "Equipment": "#00E35B",
-                "Software": "#26F29C",
-                "Freelancers": "#4DF6AE",
-                "Transport": "#99FACF",
-                "Other": "#BFFCDF",
-              };
-              const defaultColors = ["#00E35B", "#00C750", "#26F29C", "#00A341", "#4DF6AE", "#99FACF"];
-              const color = categoryColors[entry.name] || defaultColors[index % defaultColors.length];
+              const color = getCategoryColor(entry.name, index);
               return (
                 <div key={index} className="flex items-center justify-between text-xs gap-3">
                   <div className="flex items-center gap-2 truncate">

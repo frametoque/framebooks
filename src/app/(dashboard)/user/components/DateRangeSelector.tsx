@@ -81,14 +81,14 @@ export default function DateRangeSelector({
         <select
           value={dateRange}
           onChange={(e) => handleRangeChange(e.target.value)}
-          className="bg-card border border-border rounded-xl pl-4 pr-10 py-2 outline-none focus:border-brand-500 transition-colors appearance-none cursor-pointer text-sm font-medium text-foreground shadow-2xs dark:bg-[#0c313a]"
+          className="bg-popover border border-border rounded-xl pl-4 pr-10 py-2 outline-none focus:border-brand-500 transition-colors appearance-none cursor-pointer text-sm font-medium text-foreground shadow-2xs"
         >
-          <option value="lifetime" className="bg-white dark:bg-[#082830] text-foreground">Lifetime</option>
-          <option value="this year" className="bg-white dark:bg-[#082830] text-foreground">This Year</option>
-          <option value="6 months" className="bg-white dark:bg-[#082830] text-foreground">Last 6 Months</option>
-          <option value="three months" className="bg-white dark:bg-[#082830] text-foreground">Last 3 Months</option>
-          <option value="one month" className="bg-white dark:bg-[#082830] text-foreground">Last Month</option>
-          <option value="custom" className="bg-white dark:bg-[#082830] text-foreground">Custom Range</option>
+          <option value="lifetime" className="bg-popover text-foreground">Lifetime</option>
+          <option value="this year" className="bg-popover text-foreground">This Year</option>
+          <option value="6 months" className="bg-popover text-foreground">Last 6 Months</option>
+          <option value="three months" className="bg-popover text-foreground">Last 3 Months</option>
+          <option value="one month" className="bg-popover text-foreground">Last Month</option>
+          <option value="custom" className="bg-popover text-foreground">Custom Range</option>
         </select>
         <span className="absolute right-4 pointer-events-none text-gray-500 dark:text-gray-400">
           <ChevronIcon />

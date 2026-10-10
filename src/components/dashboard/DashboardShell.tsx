@@ -114,7 +114,8 @@ export function DashboardShell({
   const getPageTitle = (path: string): string => {
     if (variant === "admin") {
       if (path === "/admin") return "Overview";
-      if (path.startsWith("/admin/subscriptions") || path.startsWith("/admin/users")) return "Subscriptions";
+      if (path.startsWith("/admin/users")) return "Users";
+      if (path.startsWith("/admin/subscriptions")) return "Subscriptions";
       if (path.startsWith("/admin/payments")) return "Payments";
       if (path.startsWith("/admin/plans")) return "Plans";
       if (path.startsWith("/admin/coupons")) return "Coupons";
@@ -153,6 +154,7 @@ export function DashboardShell({
   // Define sidebar links based on variant
   const adminLinks = [
     { name: "Overview", href: "/admin", icon: MdDashboard },
+    { name: "Users", href: "/admin/users", icon: MdGroup },
     { name: "Subscriptions", href: "/admin/subscriptions", icon: Repeat },
     { name: "Payments", href: "/admin/payments", icon: MdAccountBalanceWallet },
     { name: "Plans", href: "/admin/plans", icon: Layers },

@@ -9,6 +9,10 @@ import ClientCombobox from "../../components/ClientCombobox";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createQuotation, getClients, createClient, getBankAccounts } from "../../actions/actions";
+import { getInvoiceLayouts, getCustomFields } from "../../actions/invoice-layouts";
+import { getTenantInfo } from "../../actions/tenants";
+import { InvoiceLayoutAndCustomFields } from "../../invoices/components/InvoiceLayoutAndCustomFields";
+import { InvoiceLayoutRecord, CustomFieldDefinition } from "@/lib/invoice-layout/types";
 import CategoryPicker from "../../components/CategoryPicker";
 import { useRole } from "../../context/RoleContext";
 
@@ -37,6 +41,11 @@ export default function NewQuotationPage() {
   const [showNewClientForm, setShowNewClientForm] = useState(false);
 
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [layouts, setLayouts] = useState<InvoiceLayoutRecord[]>([]);
+  const [selectedLayoutId, setSelectedLayoutId] = useState<string>("");
+  const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
+  const [tenantPlan, setTenantPlan] = useState<string>("Free");
 
   const [newClientData, setNewClientData] = useState({
     name: "", email: "", company: "", phone: "", address: "", legalName: ""
@@ -71,18 +80,36 @@ export default function NewQuotationPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [cls, accs] = await Promise.all([
+        const [cls, accs, lyts, cFields, tInfo] = await Promise.all([
           getClients(),
-          getBankAccounts()
+          getBankAccounts(),
+          getInvoiceLayouts(),
+          getCustomFields(),
+          getTenantInfo(),
         ]);
         setClients(cls);
         setBankAccounts(accs);
+        setLayouts(lyts);
+        setCustomFields(cFields);
+
+        const plan = tInfo?.plan || "Free";
+        setTenantPlan(plan);
+
+        if (plan === "Pro Plus") {
+          const defLayout = lyts.find(
+            (l) => l.is_default && (l.document_type === "quotation" || l.document_type === "both" || !l.document_type)
+          );
+          if (defLayout) {
+            setSelectedLayoutId(defLayout.id);
+          }
+        }
+
         if (accs.length > 0) {
           const def = accs.find((a: any) => a.is_default === 1) || accs[0];
           setFormData(prev => ({ ...prev, bankAccountId: String(def.id) }));
         }
       } catch (e) {
-        console.error("Failed to load clients or bank accounts", e);
+        console.error("Failed to load clients, layouts or bank accounts", e);
       } finally {
         setLoading(false);
       }
@@ -221,13 +248,14 @@ export default function NewQuotationPage() {
         bankAccountId: formData.bankAccountId ? parseInt(formData.bankAccountId) : null,
         notes: formData.notes || null,
         legalName: formData.legalName || null,
+        layoutId: selectedLayoutId || null,
       }, lineItems);
 
       alert("Quotation created successfully!");
       router.push("/user/quotations");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Failed to create quotation");
+      alert(e?.message || "Failed to create quotation");
       setIsSubmitting(false);
     }
   };
@@ -400,6 +428,20 @@ export default function NewQuotationPage() {
               className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors resize-none"
               rows={3} placeholder="Terms, conditions, or special notes..." />
           </div>
+
+          {/* Quotation Layout & Custom Fields */}
+          <InvoiceLayoutAndCustomFields
+            documentType="quotation"
+            selectedLayoutId={selectedLayoutId}
+            onLayoutChange={setSelectedLayoutId}
+            customFieldValues={customFieldValues}
+            onCustomFieldChange={(key, value) =>
+              setCustomFieldValues((prev) => ({ ...prev, [key]: value }))
+            }
+            layouts={layouts}
+            customFields={customFields}
+            tenantPlan={tenantPlan}
+          />
         </div>
 
         {/* Right Column */}

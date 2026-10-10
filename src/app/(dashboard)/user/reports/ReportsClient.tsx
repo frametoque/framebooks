@@ -12,6 +12,7 @@ import WheelDatePicker from "../components/WheelDatePicker";
 import { PlanType } from "@/lib/plans";
 import { getTenantPlan } from "../actions/plan";
 import { UpgradeOverlay } from "../components/UpgradeOverlay";
+import { useAccentTheme } from "@/lib/theme/useAccentTheme";
 
 export type ReportTab = "overview" | "profit_loss" | "trial_balance" | "general_ledger" | "account_ledger" | "cash_flow" | "balance_sheet" | "tax_summary";
 
@@ -52,22 +53,38 @@ const formatLKR = (amount: number) => {
   return `${num} LKR`;
 };
 
-const GREEN_PALETTE = ['#00E35B', '#00C853', '#00AD45', '#009238', '#00782C', '#005D21'];
 const RED_PALETTE = ['#EF4444', '#E03C3C', '#D13535', '#C22D2D', '#B32525', '#A41D1D'];
 
+export const REPORT_TAB_TITLES: Record<ReportTab, string> = {
+  overview: "Overview",
+  profit_loss: "Profit & Loss",
+  cash_flow: "Cash Flow",
+  balance_sheet: "Balance Sheet",
+  tax_summary: "Tax Summary",
+  trial_balance: "Trial Balance",
+  general_ledger: "General Ledger",
+  account_ledger: "Account Ledger",
+};
+
+// Module-level in-memory caches to prevent redundant DB calls and flicker on tab switches
+const reportsDataCache = new Map<string, { data: any; clients: any[]; accounts: any[]; plan: PlanType }>();
+const ledgerDataCache = new Map<string, any[]>();
+
 export default function ReportsClient({ initialTab = "overview" }: { initialTab?: ReportTab }) {
+  const { chartPalette } = useAccentTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryTab = searchParams.get("tab") ? SLUG_TO_REPORT_TAB[searchParams.get("tab")!] : undefined;
-  const [data, setData] = useState<any>(null);
-  const [clients, setClients] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const { dateRange, startDate, endDate, setStartDate, setEndDate, setDateRange } = useAdminDateRange();
   const [activeTab, setActiveTab] = useState<ReportTab>(initialTab || queryTab || "overview");
-  const [plan, setPlan] = useState<PlanType>('Free');
+
+  const [data, setData] = useState<any>(() => reportsDataCache.get(`${startDate}_${endDate}`)?.data || null);
+  const [clients, setClients] = useState<any[]>(() => reportsDataCache.get(`${startDate}_${endDate}`)?.clients || []);
+  const [accounts, setAccounts] = useState<any[]>(() => reportsDataCache.get(`${startDate}_${endDate}`)?.accounts || []);
+  const [plan, setPlan] = useState<PlanType>(() => reportsDataCache.get(`${startDate}_${endDate}`)?.plan || 'Free');
+  const [loading, setLoading] = useState(() => !reportsDataCache.has(`${startDate}_${endDate}`));
 
   // Ledger specific state
-  const [accounts, setAccounts] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
 
@@ -92,12 +109,24 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
     return `${monthNames[monthIdx]} ${day}, ${year}`;
   };
 
-  const [ledgerLoading, setLedgerLoading] = useState(true);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    const cacheKey = `${startDate}_${endDate}`;
+    const cached = reportsDataCache.get(cacheKey);
+
+    if (cached) {
+      setData(cached.data);
+      setClients(cached.clients);
+      setAccounts(cached.accounts);
+      setPlan(cached.plan);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     async function loadMain() {
-      setLoading(true);
       try {
         const [res, cls, accs, currentPlan] = await Promise.all([
           getReports(startDate, endDate),
@@ -106,6 +135,7 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
           getTenantPlan()
         ]);
         if (!cancelled) {
+          reportsDataCache.set(cacheKey, { data: res, clients: cls, accounts: accs, plan: currentPlan });
           setData(res);
           setClients(cls);
           setAccounts(accs);
@@ -121,17 +151,30 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
     return () => { cancelled = true; };
   }, [startDate, endDate]);
 
+  const isLedgerTab = activeTab === "trial_balance" || activeTab === "general_ledger" || activeTab === "account_ledger";
+
   useEffect(() => {
+    if (!isLedgerTab) return;
+
     let cancelled = false;
+    const ledgerStart = activeTab === "trial_balance" ? trialStart : startDate;
+    const ledgerEnd   = activeTab === "trial_balance" ? trialBalanceDate : endDate;
+    const accountId   = activeTab === "account_ledger" ? selectedAccountId : null;
+    const cacheKey    = `${activeTab}_${accountId ?? 'all'}_${ledgerStart}_${ledgerEnd}`;
+    const cached      = ledgerDataCache.get(cacheKey);
+
+    if (cached) {
+      setTransactions(cached);
+      setLedgerLoading(false);
+      return;
+    }
+
+    setLedgerLoading(true);
     async function loadLedger() {
-      setLedgerLoading(true);
       try {
-        // For trial_balance, use the local trialBalanceDate instead of the shared global range
-        const ledgerStart = activeTab === "trial_balance" ? trialStart : startDate;
-        const ledgerEnd   = activeTab === "trial_balance" ? trialBalanceDate : endDate;
-        const accountId   = activeTab === "account_ledger" ? selectedAccountId : null;
         const txs = await import("../actions/accounts").then(m => m.getLedger(accountId, ledgerStart, ledgerEnd));
         if (!cancelled) {
+          ledgerDataCache.set(cacheKey, txs);
           setTransactions(txs);
         }
       } catch (e) {
@@ -142,11 +185,12 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
     }
     loadLedger();
     return () => { cancelled = true; };
-  }, [startDate, endDate, activeTab, selectedAccountId, trialBalanceDate]);
+  }, [startDate, endDate, activeTab, selectedAccountId, trialBalanceDate, isLedgerTab]);
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("reports:tab-change", { detail: activeTab }));
-    // No longer mutate global date range on tab switch — trial balance uses its own local date
+    const title = REPORT_TAB_TITLES[activeTab] || "Reports";
+    window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
   }, [activeTab]);
 
   useEffect(() => {
@@ -163,6 +207,22 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
       setActiveTab(initialTab);
     }
   }, [initialTab]);
+
+  // Handle native browser back / forward navigation seamlessly
+  useEffect(() => {
+    const handlePopState = () => {
+      const pathname = window.location.pathname;
+      const match = pathname.match(/\/user\/reports\/?([^/]*)/);
+      const slug = match ? match[1] : "";
+      if (slug && SLUG_TO_REPORT_TAB[slug]) {
+        setActiveTab(SLUG_TO_REPORT_TAB[slug]);
+      } else {
+        setActiveTab("overview");
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   useEffect(() => {
     const handleToggle = () => {
@@ -328,7 +388,7 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
                 if (targetTab === 'general_ledger') {
                   setSelectedAccountId(null);
                 }
-                router.push(`/user/reports/${REPORT_TAB_TO_SLUG[targetTab]}`);
+                window.history.pushState(null, '', `/user/reports/${REPORT_TAB_TO_SLUG[targetTab]}`);
               }}
               className={`px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
                 activeTab === t.id
@@ -393,7 +453,7 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
                     />
                     <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
                       {data.incomeByService?.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={GREEN_PALETTE[index % GREEN_PALETTE.length]} />
+                        <Cell key={`cell-${index}`} fill={chartPalette[index % chartPalette.length]} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -474,7 +534,7 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
                     />
                     <Bar dataKey="revenue" radius={[0, 4, 4, 0]} barSize={24}>
                       {topClientsChart.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={GREEN_PALETTE[index % GREEN_PALETTE.length]} />
+                        <Cell key={`cell-${index}`} fill={chartPalette[index % chartPalette.length]} />
                       ))}
                     </Bar>
                   </BarChart>

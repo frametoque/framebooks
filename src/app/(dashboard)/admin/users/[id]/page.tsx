@@ -23,8 +23,8 @@ export default async function UserDetailPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-sm text-gray-500">
-        <Link href="/admin/subscriptions" className="hover:text-foreground flex items-center gap-1 transition-colors">
-          <ChevronLeft className="w-4 h-4" /> Subscriptions
+        <Link href="/admin/users" className="hover:text-foreground flex items-center gap-1 transition-colors">
+          <ChevronLeft className="w-4 h-4" /> Users
         </Link>
         <span>/</span>
         <span className="text-foreground font-medium">{data.user.email}</span>

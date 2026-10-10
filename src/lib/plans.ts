@@ -6,7 +6,7 @@ import { getTenantPlan } from "@/app/(dashboard)/user/actions/plan";
 export type PlanType = 'Free' | 'Pro' | 'Pro Plus';
 
 export async function checkLimit(
-  resource: 'invoices' | 'incomes' | 'expenses' | 'clients' | 'accounts' | 'team_members'
+  resource: 'invoices' | 'quotations' | 'incomes' | 'expenses' | 'clients' | 'accounts' | 'team_members'
 ): Promise<{ allowed: boolean; limit: number; current: number; error?: string }> {
   const plan = await getTenantPlan();
   
@@ -19,6 +19,7 @@ export async function checkLimit(
   let limit = 0;
   switch (resource) {
     case 'invoices': limit = dbLimits.max_invoices; break;
+    case 'quotations': limit = dbLimits.max_quotations ?? (dbLimits.plan?.toLowerCase() === 'free' ? 50 : -1); break;
     case 'incomes': limit = dbLimits.max_incomes; break;
     case 'expenses': limit = dbLimits.max_expenses; break;
     case 'clients': limit = dbLimits.max_clients; break;
@@ -44,6 +45,7 @@ export async function checkLimit(
     const tenantRows = await sql`
       SELECT 
         lifetime_invoices, 
+        lifetime_quotations,
         lifetime_incomes, 
         lifetime_expenses, 
         lifetime_clients, 
@@ -57,6 +59,11 @@ export async function checkLimit(
       case 'invoices': {
         const count = parseInt((await sql`SELECT COUNT(*) FROM invoices WHERE tenant_id = ${tenantId}`)[0]?.count || 0);
         current = Math.max(t.lifetime_invoices ?? 0, count);
+        break;
+      }
+      case 'quotations': {
+        const count = parseInt((await sql`SELECT COUNT(*) FROM admin_quotations WHERE tenant_id = ${tenantId}`)[0]?.count || 0);
+        current = Math.max(t.lifetime_quotations ?? 0, count);
         break;
       }
       case 'incomes': {
@@ -96,7 +103,7 @@ export async function checkLimit(
 
 export async function incrementLifetimeUsage(
   tenantId: number | string,
-  resource: 'invoices' | 'incomes' | 'expenses' | 'clients' | 'accounts'
+  resource: 'invoices' | 'quotations' | 'incomes' | 'expenses' | 'clients' | 'accounts'
 ) {
   const tid = Number(tenantId);
   if (!tid || isNaN(tid)) return;
@@ -105,6 +112,9 @@ export async function incrementLifetimeUsage(
     switch (resource) {
       case 'invoices':
         await sql`UPDATE tenants SET lifetime_invoices = COALESCE(lifetime_invoices, 0) + 1 WHERE id = ${tid}`;
+        break;
+      case 'quotations':
+        await sql`UPDATE tenants SET lifetime_quotations = COALESCE(lifetime_quotations, 0) + 1 WHERE id = ${tid}`;
         break;
       case 'incomes':
         await sql`UPDATE tenants SET lifetime_incomes = COALESCE(lifetime_incomes, 0) + 1 WHERE id = ${tid}`;

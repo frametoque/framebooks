@@ -120,11 +120,101 @@ export async function getUsersList({
 
   const totalCount = parseInt(totalCountResult[0].count);
 
-  return {
-    users: users.map(u => ({
+  // Batch query linked businesses for users on this page
+  const userEmails = users.map(u => (u.email || '').trim().toLowerCase()).filter(Boolean);
+  const activeTenantIds = users.map(u => u.tenant_id).filter(Boolean);
+
+  let ownedRows: any[] = [];
+  let inviteRows: any[] = [];
+  let activeTenantRows: any[] = [];
+
+  if (userEmails.length > 0) {
+    [ownedRows, inviteRows] = await Promise.all([
+      sql`
+        SELECT id, name, plan, logo_url, LOWER(owner_email) as owner_email
+        FROM tenants
+        WHERE LOWER(owner_email) = ANY(${userEmails})
+      `,
+      sql`
+        SELECT t.id, t.name, t.plan, t.logo_url, ti.role, ti.status, LOWER(ti.email) as email
+        FROM team_invitations ti
+        JOIN tenants t ON ti.tenant_id = t.id::text
+        WHERE LOWER(ti.email) = ANY(${userEmails})
+      `
+    ]);
+  }
+
+  if (activeTenantIds.length > 0) {
+    activeTenantRows = await sql`
+      SELECT id, name, plan, logo_url
+      FROM tenants
+      WHERE id = ANY(${activeTenantIds})
+    `;
+  }
+
+  const mappedUsers = users.map(u => {
+    const email = (u.email || '').trim().toLowerCase();
+    const bizMap = new Map<number, any>();
+
+    // 1. Add active workspace if exists
+    if (u.tenant_id) {
+      const activeTenant = activeTenantRows.find(t => t.id === u.tenant_id) || {
+        id: u.tenant_id,
+        name: u.tenant_name || "Workspace",
+        plan: u.current_plan || "Free",
+        logo_url: u.tenant_logo_url || null
+      };
+      bizMap.set(u.tenant_id, {
+        id: u.tenant_id,
+        name: activeTenant.name,
+        plan: activeTenant.plan || "Free",
+        logo_url: activeTenant.logo_url,
+        role: u.workspace_role || "member",
+        isOwner: (u.workspace_role || '').toLowerCase() === 'owner',
+        isActive: true,
+        status: 'active'
+      });
+    }
+
+    // 2. Add owned tenants
+    ownedRows.filter(o => o.owner_email === email).forEach(o => {
+      bizMap.set(o.id, {
+        id: o.id,
+        name: o.name,
+        plan: o.plan || "Free",
+        logo_url: o.logo_url,
+        role: "owner",
+        isOwner: true,
+        isActive: o.id === u.tenant_id,
+        status: 'active'
+      });
+    });
+
+    // 3. Add invited/team memberships
+    inviteRows.filter(i => i.email === email).forEach(i => {
+      if (!bizMap.has(i.id)) {
+        bizMap.set(i.id, {
+          id: i.id,
+          name: i.name,
+          plan: i.plan || "Free",
+          logo_url: i.logo_url,
+          role: i.role || "Viewer",
+          isOwner: false,
+          isActive: i.id === u.tenant_id,
+          status: i.status || 'accepted'
+        });
+      }
+    });
+
+    return {
       ...u,
-      lifetime_paid: parseInt(u.lifetime_paid) || 0
-    })),
+      lifetime_paid: parseInt(u.lifetime_paid) || 0,
+      linked_businesses: Array.from(bizMap.values())
+    };
+  });
+
+  return {
+    users: mappedUsers,
     totalCount,
     totalPages: Math.ceil(totalCount / limit),
     page,
@@ -368,6 +458,75 @@ export async function getUserDetails(userId: number) {
       `
     : [];
 
+  // Linked businesses
+  const userEmail = (user.email || '').trim().toLowerCase();
+  let linkedBusinesses: any[] = [];
+  if (userEmail) {
+    const [ownedRows, memberRows] = await Promise.all([
+      sql`
+        SELECT id, name, plan, logo_url, currency, created_at
+        FROM tenants 
+        WHERE LOWER(owner_email) = ${userEmail}
+        ORDER BY created_at DESC
+      `,
+      sql`
+        SELECT t.id, t.name, t.plan, t.logo_url, t.currency, ti.role, ti.status, ti.created_at
+        FROM team_invitations ti
+        JOIN tenants t ON ti.tenant_id = t.id::text
+        WHERE LOWER(ti.email) = ${userEmail}
+        ORDER BY ti.created_at DESC
+      `
+    ]);
+
+    const bizMap = new Map<number, any>();
+    if (user.tenant_id) {
+      bizMap.set(user.tenant_id, {
+        id: user.tenant_id,
+        name: user.tenant_name || "Workspace",
+        plan: user.tenant_plan || "Free",
+        currency: user.tenant_currency || "LKR",
+        role: user.role || user.workspace_role || "member",
+        isOwner: (user.role || '').toLowerCase() === 'owner',
+        isActive: true,
+        status: 'active',
+      });
+    }
+
+    ownedRows.forEach(o => {
+      bizMap.set(o.id, {
+        id: o.id,
+        name: o.name,
+        plan: o.plan || "Free",
+        currency: o.currency || "LKR",
+        logo_url: o.logo_url,
+        role: "owner",
+        isOwner: true,
+        isActive: o.id === user.tenant_id,
+        status: 'active',
+        created_at: o.created_at
+      });
+    });
+
+    memberRows.forEach(m => {
+      if (!bizMap.has(m.id)) {
+        bizMap.set(m.id, {
+          id: m.id,
+          name: m.name,
+          plan: m.plan || "Free",
+          currency: m.currency || "LKR",
+          logo_url: m.logo_url,
+          role: m.role || "Viewer",
+          isOwner: false,
+          isActive: m.id === user.tenant_id,
+          status: m.status || 'accepted',
+          created_at: m.created_at
+        });
+      }
+    });
+
+    linkedBusinesses = Array.from(bizMap.values());
+  }
+
   return {
     user,
     plan,
@@ -379,7 +538,86 @@ export async function getUserDetails(userId: number) {
     lifetimePaid,
     appliedCoupon: appliedCoupons[0] || null,
     appliedCoupons,
+    linkedBusinesses,
   };
+}
+
+export async function adminUpdateUserEmail(userId: number, newEmail: string) {
+  const actor = await requireAdmin("edit_users");
+
+  if (!newEmail || !newEmail.trim()) {
+    throw new Error("New email address is required.");
+  }
+
+  const cleanEmail = newEmail.trim().toLowerCase();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(cleanEmail)) {
+    throw new Error("Please enter a valid email address.");
+  }
+
+  const existing = await sql`SELECT id, email, full_name FROM admin_users WHERE id = ${userId} LIMIT 1`;
+  if (existing.length === 0) {
+    throw new Error("User not found.");
+  }
+
+  const oldEmail = (existing[0].email || "").trim().toLowerCase();
+  if (oldEmail === cleanEmail) {
+    throw new Error("The new email address is identical to the current email.");
+  }
+
+  // Check if new email is in use
+  const conflict = await sql`
+    SELECT id, email FROM admin_users 
+    WHERE LOWER(email) = ${cleanEmail} AND id != ${userId} AND deleted_at IS NULL
+    LIMIT 1
+  `;
+  if (conflict.length > 0) {
+    throw new Error(`The email address "${cleanEmail}" is already registered to another account.`);
+  }
+
+  // Perform updates
+  await sql`
+    UPDATE admin_users 
+    SET email = ${cleanEmail}, updated_at = NOW() 
+    WHERE id = ${userId}
+  `;
+
+  if (oldEmail) {
+    // Update tenants owned by this email
+    await sql`
+      UPDATE tenants 
+      SET owner_email = ${cleanEmail} 
+      WHERE LOWER(owner_email) = ${oldEmail}
+    `;
+
+    // Update tenant contact email if it matched
+    await sql`
+      UPDATE tenants 
+      SET email = ${cleanEmail} 
+      WHERE LOWER(email) = ${oldEmail}
+    `;
+
+    // Update team invitations
+    await sql`
+      UPDATE team_invitations 
+      SET email = ${cleanEmail} 
+      WHERE LOWER(email) = ${oldEmail}
+    `;
+  }
+
+  await logAdminAction({
+    actor,
+    action: "UPDATE_USER_EMAIL",
+    targetType: "user",
+    targetId: userId,
+    before: { email: oldEmail },
+    after: { email: cleanEmail }
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${userId}`);
+  revalidatePath("/admin/subscriptions");
+  return { success: true, message: `Email updated from ${oldEmail} to ${cleanEmail}` };
 }
 
 export async function getBusinessDetails(tenantId: number) {
@@ -391,14 +629,35 @@ export async function getBusinessDetails(tenantId: number) {
   if (tenantRes.length === 0) return null;
   const tenant = tenantRes[0];
 
-  const members = await sql`
-    SELECT id, email, full_name, role, system_role, is_banned, created_at, last_login_at
-    FROM admin_users 
-    WHERE tenant_id = ${tenantId} AND deleted_at IS NULL
-    ORDER BY 
-      CASE WHEN LOWER(role) = 'owner' THEN 1 WHEN LOWER(role) = 'admin' THEN 2 ELSE 3 END,
-      created_at ASC
-  `;
+  // Fetch both users who have this tenant active and users with accepted team invitations
+  const [activeMembers, invitedMembers] = await Promise.all([
+    sql`
+      SELECT id, email, full_name, role, system_role, is_banned, created_at, last_login_at
+      FROM admin_users 
+      WHERE tenant_id = ${tenantId} AND deleted_at IS NULL
+    `,
+    sql`
+      SELECT u.id, u.email, u.full_name, ti.role, u.system_role, u.is_banned, ti.created_at, u.last_login_at
+      FROM team_invitations ti
+      JOIN admin_users u ON LOWER(ti.email) = LOWER(u.email)
+      WHERE ti.tenant_id = ${tenantId.toString()} AND ti.status = 'accepted' AND u.deleted_at IS NULL
+    `
+  ]);
+
+  const memberMap = new Map<number, any>();
+  activeMembers.forEach(m => memberMap.set(m.id, m));
+  invitedMembers.forEach(m => {
+    if (!memberMap.has(m.id)) {
+      memberMap.set(m.id, m);
+    }
+  });
+
+  const roleOrder: Record<string, number> = { owner: 1, admin: 2, manager: 3, member: 4, viewer: 5 };
+  const members = Array.from(memberMap.values()).sort((a, b) => {
+    const rA = roleOrder[(a.role || '').toLowerCase()] || 99;
+    const rB = roleOrder[(b.role || '').toLowerCase()] || 99;
+    return rA - rB;
+  });
 
   const [invCount, incCount, expCount, clientCount, accCount] = await Promise.all([
     sql`SELECT COUNT(*) FROM invoices WHERE tenant_id = ${tenantId}`,
@@ -548,10 +807,14 @@ export async function adminAddBusinessMember({
   if (existingUser.length > 0) {
     const existing = existingUser[0];
     userId = existing.id;
+    // Only update tenant_id if user doesn't already have an active workspace
+    const newTenantId = existing.tenant_id ? existing.tenant_id : tenantId;
+    const newRole = existing.tenant_id ? existing.role : role;
+
     await sql`
       UPDATE admin_users SET
-        tenant_id = ${tenantId},
-        role = ${role},
+        tenant_id = ${newTenantId},
+        role = ${newRole},
         full_name = COALESCE(NULLIF(${fullName?.trim() || ''}, ''), full_name),
         deleted_at = NULL,
         updated_at = NOW()
@@ -574,6 +837,25 @@ export async function adminAddBusinessMember({
     userId = insertRes[0].id;
   }
 
+  // Ensure an accepted record exists in team_invitations for multi-workspace access
+  const existingInvite = await sql`
+    SELECT id FROM team_invitations 
+    WHERE tenant_id = ${tenantId.toString()} AND LOWER(email) = ${cleanEmail}
+    LIMIT 1
+  `;
+  if (existingInvite.length > 0) {
+    await sql`
+      UPDATE team_invitations 
+      SET role = ${role}, status = 'accepted' 
+      WHERE id = ${existingInvite[0].id}
+    `;
+  } else {
+    await sql`
+      INSERT INTO team_invitations (tenant_id, email, role, status, created_at)
+      VALUES (${tenantId.toString()}, ${cleanEmail}, ${role}, 'accepted', NOW())
+    `;
+  }
+
   await logAdminAction({
     actor,
     action: "ADD_BUSINESS_MEMBER",
@@ -583,6 +865,7 @@ export async function adminAddBusinessMember({
   });
 
   revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${userId}`);
   revalidatePath("/admin/subscriptions");
   return { success: true };
 }
@@ -601,27 +884,41 @@ export async function adminUpdateMemberRole({
   const cleanRole = newRole.trim().toLowerCase();
   if (!cleanRole) throw new Error("Role is required");
 
-  const userRows = await sql`SELECT id, email, full_name, role FROM admin_users WHERE id = ${userId} AND tenant_id = ${tenantId} LIMIT 1`;
-  if (userRows.length === 0) throw new Error("Team member not found in this business");
-  const before = userRows[0];
+  const userRows = await sql`SELECT id, email, full_name, role, tenant_id FROM admin_users WHERE id = ${userId} LIMIT 1`;
+  if (userRows.length === 0) throw new Error("Team member not found");
+  const user = userRows[0];
+  const cleanEmail = (user.email || '').trim().toLowerCase();
 
-  await sql`
-    UPDATE admin_users SET
-      role = ${cleanRole},
-      updated_at = NOW()
-    WHERE id = ${userId} AND tenant_id = ${tenantId}
-  `;
+  // Update team_invitations
+  if (cleanEmail) {
+    await sql`
+      UPDATE team_invitations 
+      SET role = ${cleanRole} 
+      WHERE tenant_id = ${tenantId.toString()} AND LOWER(email) = ${cleanEmail}
+    `;
+  }
+
+  // If this is currently their active workspace, also update admin_users.role
+  if (user.tenant_id === tenantId) {
+    await sql`
+      UPDATE admin_users SET
+        role = ${cleanRole},
+        updated_at = NOW()
+      WHERE id = ${userId}
+    `;
+  }
 
   await logAdminAction({
     actor,
     action: "UPDATE_MEMBER_ROLE",
     targetType: "user",
     targetId: userId,
-    before: { role: before.role },
+    before: { role: user.role },
     after: { role: cleanRole, tenantId }
   });
 
   revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${userId}`);
   revalidatePath("/admin/subscriptions");
   return { success: true };
 }
@@ -635,18 +932,37 @@ export async function adminRemoveBusinessMember({
 }) {
   const actor = await requireAdmin("edit_users");
 
-  const userRows = await sql`SELECT id, email, full_name, role FROM admin_users WHERE id = ${userId} AND tenant_id = ${tenantId} LIMIT 1`;
-  if (userRows.length === 0) throw new Error("Team member not found in this business");
+  const userRows = await sql`SELECT id, email, full_name, role, tenant_id FROM admin_users WHERE id = ${userId} LIMIT 1`;
+  if (userRows.length === 0) throw new Error("Team member not found");
   const user = userRows[0];
+  const cleanEmail = (user.email || '').trim().toLowerCase();
 
-  // Remove business link
-  await sql`
-    UPDATE admin_users SET
-      tenant_id = NULL,
-      role = 'member',
-      updated_at = NOW()
-    WHERE id = ${userId} AND tenant_id = ${tenantId}
-  `;
+  // Remove from team_invitations
+  if (cleanEmail) {
+    await sql`
+      DELETE FROM team_invitations 
+      WHERE tenant_id = ${tenantId.toString()} AND LOWER(email) = ${cleanEmail}
+    `;
+  }
+
+  // If this user was currently active on this tenant, switch them to another tenant or null
+  if (user.tenant_id === tenantId) {
+    const otherTenants = await sql`
+      SELECT id FROM tenants WHERE LOWER(owner_email) = ${cleanEmail}
+      UNION
+      SELECT tenant_id::int AS id FROM team_invitations WHERE LOWER(email) = ${cleanEmail} AND status = 'accepted'
+      LIMIT 1
+    `;
+    const fallbackTenantId = otherTenants[0]?.id || null;
+
+    await sql`
+      UPDATE admin_users SET
+        tenant_id = ${fallbackTenantId},
+        role = ${fallbackTenantId ? 'member' : 'user'},
+        updated_at = NOW()
+      WHERE id = ${userId}
+    `;
+  }
 
   await logAdminAction({
     actor,
@@ -658,6 +974,7 @@ export async function adminRemoveBusinessMember({
   });
 
   revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${userId}`);
   revalidatePath("/admin/subscriptions");
   return { success: true };
 }

@@ -5,6 +5,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
+import sql from "@/lib/db";
+import { generateTenantThemeCss, DEFAULT_ACCENT_HEX } from "@/lib/theme/accent";
+
 export const dynamic = "force-dynamic";
 
 export default async function DashboardRootLayout({
@@ -30,5 +33,33 @@ export default async function DashboardRootLayout({
     }
   }
 
-  return <>{children}</>;
+  // Resolve active workspace accent color for user dashboard (zero flash of unstyled theme)
+  let accentCss = "";
+  if (!pathname.startsWith("/admin") && session?.user?.email) {
+    try {
+      const email = session.user.email.toLowerCase();
+      const userRows = await sql`
+        SELECT t.accent_color
+        FROM admin_users u
+        JOIN tenants t ON u.tenant_id = t.id
+        WHERE LOWER(u.email) = ${email}
+        LIMIT 1
+      `;
+      accentCss = generateTenantThemeCss(userRows[0]?.accent_color || DEFAULT_ACCENT_HEX);
+    } catch {
+      accentCss = generateTenantThemeCss(DEFAULT_ACCENT_HEX);
+    }
+  }
+
+  return (
+    <>
+      {accentCss ? (
+        <style
+          id="tenant-accent-theme-ssr"
+          dangerouslySetInnerHTML={{ __html: accentCss }}
+        />
+      ) : null}
+      {children}
+    </>
+  );
 }

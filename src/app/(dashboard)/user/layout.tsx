@@ -7,6 +7,7 @@ import { AnimatedClock } from "./components/AnimatedClock";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from 'next-auth/react';
 import { getTenantInfo, leaveTeam } from "./actions/tenants";
+import { generateTenantThemeCss, DEFAULT_ACCENT_HEX } from "@/lib/theme/accent";
 import {
   motion,
   AnimatePresence,
@@ -29,6 +30,7 @@ import { GracePeriodBanner } from "./components/GracePeriodBanner";
 import { LimitBanner } from "./components/LimitBanner";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { NotificationBell } from "@/components/NotificationBell";
+import InstallPwaButton from "@/components/pwa/InstallPwaButton";
 import { getAllLimits } from "./actions/actions";
 
 // Framer Motion spring config for sidebar width
@@ -37,6 +39,12 @@ const sidebarSpring = {
   stiffness: 280,
   damping: 28,
   mass: 0.8,
+} as const;
+
+const sidebarTransition = {
+  type: "tween",
+  ease: [0.25, 1, 0.5, 1],
+  duration: 0.28,
 } as const;
 
 // Fade + slide config for labels
@@ -102,7 +110,13 @@ function LayoutContent({ children }) {
     });
   };
 
+  const pathname = usePathname();
   const desktopExpanded = !collapsed || (sidebarHovered && !ignoreHover);
+
+  // Reset sidebar hover expansion whenever the route changes
+  useEffect(() => {
+    setSidebarHovered(false);
+  }, [pathname]);
 
   const { data: session, status } = useSession();
   const user = session?.user;
@@ -121,13 +135,43 @@ function LayoutContent({ children }) {
     is_read_only?: boolean;
     grace_days_remaining?: number | null;
     grace_end_date?: string | null;
-    grace_period_days?: number;
-  }>({ plan: "Loading...", name: "My Business", logo_url: null, industry: null });
+    accent_color?: string | null;
+  }>({ plan: "Loading...", name: "My Business", logo_url: null, industry: null, accent_color: null });
   const [exceededLimits, setExceededLimits] = useState<string[]>([]);
 
   useEffect(() => {
     getTenantInfo().then(info => setTenantInfo(info));
     getAllLimits().then(limits => setExceededLimits(limits));
+  }, []);
+
+  // Synchronize workspace accent color dynamically across client navigations
+  useEffect(() => {
+    try {
+      const cachedColor = localStorage.getItem("framebooks_accent_color");
+      if (cachedColor && /^#[0-9a-fA-F]{6}$/i.test(cachedColor)) {
+        setTenantInfo((prev: any) => ({ ...prev, accent_color: cachedColor.toUpperCase() }));
+        const clientTag = document.getElementById("tenant-accent-theme-client");
+        const ssrTag = document.getElementById("tenant-accent-theme-ssr");
+        const newCss = generateTenantThemeCss(cachedColor.toUpperCase());
+        if (clientTag) clientTag.innerHTML = newCss;
+        if (ssrTag) ssrTag.innerHTML = newCss;
+      }
+    } catch {}
+
+    const handleAccentChange = (e: Event) => {
+      const custom = e as CustomEvent<string>;
+      const newHex = custom.detail || DEFAULT_ACCENT_HEX;
+      setTenantInfo((prev: any) => ({ ...prev, accent_color: newHex }));
+
+      const clientTag = document.getElementById("tenant-accent-theme-client");
+      const ssrTag = document.getElementById("tenant-accent-theme-ssr");
+      const newCss = generateTenantThemeCss(newHex);
+      if (clientTag) clientTag.innerHTML = newCss;
+      if (ssrTag) ssrTag.innerHTML = newCss;
+    };
+
+    window.addEventListener("accent:change", handleAccentChange);
+    return () => window.removeEventListener("accent:change", handleAccentChange);
   }, []);
 
   useEffect(() => {
@@ -141,6 +185,10 @@ function LayoutContent({ children }) {
 
   return (
     <AdminDateRangeProvider>
+      <style
+        id="tenant-accent-theme-client"
+        dangerouslySetInnerHTML={{ __html: generateTenantThemeCss(tenantInfo.accent_color || DEFAULT_ACCENT_HEX) }}
+      />
       <RoleProvider
         role={tenantInfo.is_read_only ? 'Viewer' : (tenantInfo.userRole || null)}
         actualRole={tenantInfo.userRole || null}
@@ -159,6 +207,8 @@ function LayoutContent({ children }) {
                 mobileMenuOpen={mobileMenuOpen}
                 setMobileMenuOpen={setMobileMenuOpen}
                 tenantInfo={tenantInfo}
+                isHovered={sidebarHovered}
+                setIsHovered={setSidebarHovered}
               />
             )}
 
@@ -323,13 +373,14 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
   const isClients = pathname === "/user/clients";
   const isInventory = pathname === "/user/inventory";
   const isInvoiceDetail = pathname.startsWith("/user/invoice/");
+  const isInvoiceNewOrEdit = pathname === "/user/invoices/new" || (pathname.startsWith("/user/invoices/") && pathname.endsWith("/edit"));
   const isDashboard = pathname === "/user/dashboard";
   const isAccounts = pathname.startsWith("/user/accounts");
   const isSettings = pathname.startsWith("/user/settings");
   const isLogs = pathname.startsWith("/user/logs");
   const isReports = pathname.startsWith("/user/reports");
   const [reportsActiveTab, setReportsActiveTab] = useState("overview");
-  const hideSelector = isInvoiceDetail || isAccounts || isSettings || isLogs || (isInventory && tenantInfo.plan !== 'Pro Plus') || (isReports && tenantInfo.plan !== 'Pro Plus' && reportsActiveTab !== 'overview' && reportsActiveTab !== 'profit_loss');
+  const hideSelector = isInvoiceDetail || isInvoiceNewOrEdit || isAccounts || isSettings || isLogs || (isInventory && tenantInfo.plan !== 'Pro Plus') || (isReports && tenantInfo.plan !== 'Pro Plus' && reportsActiveTab !== 'overview' && reportsActiveTab !== 'profit_loss');
   const { dateRange, startDate, endDate, setDateRange, setStartDate, setEndDate } = useAdminDateRange();
   const [currentTime, setCurrentTime] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
@@ -407,6 +458,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
       const sub = parts[3];
       if (sub === "profile") return "Account & Security";
       if (sub === "business") return "Business Profile";
+      if (sub === "appearance") return "Appearance";
       if (sub === "billing") return "Billing & Plans";
       if (sub === "team") return "Team Settings";
       if (sub === "roles") return "Roles & Permissions";
@@ -445,7 +497,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
   // Clock moved to AnimatedClock component
 
   return (
-    <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl h-20 flex-shrink-0 flex items-center">
+    <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl h-20 flex-shrink-0 flex items-center">
       <div className="w-full flex items-center justify-between px-4 sm:px-6 lg:px-8">
 
         {/* Left Side: Title & Date Selector */}
@@ -608,6 +660,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
             <span className="font-medium text-sm">{currentDate || "Loading..."}</span>
           </div>
 
+          <InstallPwaButton />
           <NotificationBell />
           <ThemeToggle />
 
@@ -624,17 +677,24 @@ const Sidebar = ({
   mobileMenuOpen,
   setMobileMenuOpen,
   tenantInfo,
+  isHovered,
+  setIsHovered,
 }: {
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
   tenantInfo: { plan: string, name: string, logo_url: string | null, industry: string | null };
+  isHovered: boolean;
+  setIsHovered: (hovered: boolean) => void;
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const user = session?.user;
   const isLoaded = status !== "loading";
   const isSettingsActive = pathname.startsWith("/user/settings");
+
+  useEffect(() => {
+    setIsHovered(false);
+  }, [pathname, setIsHovered]);
 
   const links: { name: string; href: string; icon: any; divider?: boolean; newtab?: boolean }[] = [
     { name: "Dashboard", href: "/user/dashboard", icon: MdDashboard },
@@ -658,12 +718,6 @@ const Sidebar = ({
   };
 
   const isExpanded = mobileMenuOpen || isHovered;
-
-  const sidebarTransition = {
-    type: "tween",
-    ease: [0.25, 1, 0.5, 1],
-    duration: 0.28,
-  } as const;
 
   return (
     <>
@@ -774,7 +828,10 @@ const Sidebar = ({
                   )}
                   <Link
                     href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setIsHovered(false);
+                    }}
                     target={item.newtab ? "_blank" : "_self"}
                     title={item.name}
                     className={`relative z-10 flex items-center h-11 rounded-2xl w-full px-3 gap-3 overflow-hidden transition-colors duration-150
@@ -812,7 +869,10 @@ const Sidebar = ({
             <div className="flex items-center gap-2 w-full overflow-hidden">
               <Link 
                 href="/user/settings/profile"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setIsHovered(false);
+                }}
                 title={user?.name || "User Profile"}
                 className="flex items-center h-12 px-1 gap-3 rounded-2xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 flex-1 min-w-0 overflow-hidden"
               >

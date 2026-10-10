@@ -3,6 +3,17 @@
 import sql from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { put } from "@vercel/blob";
+import { getLandingPlansFormatted } from "@/lib/plans-db";
+
+export async function getOnboardingPlansAction() {
+  try {
+    const plans = await getLandingPlansFormatted();
+    return { success: true, plans };
+  } catch (err: any) {
+    console.error("Failed to get onboarding plans:", err);
+    return { success: false, plans: [] };
+  }
+}
 
 export async function validateCouponAction(code: string, planName?: string) {
   try {

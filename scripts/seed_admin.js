@@ -52,6 +52,7 @@ async function run() {
       sort_order: 1,
       limits: {
         invoices: 50,
+        quotations: 50,
         incomes: 100,
         expenses: 100,
         clients: 50,
@@ -62,7 +63,8 @@ async function run() {
         inventory: false,
         advanced_reports: false,
         two_factor: false,
-        audit_logs: false
+        audit_logs: false,
+        custom_invoice_layout: false
       }
     },
     {
@@ -77,6 +79,7 @@ async function run() {
       sort_order: 2,
       limits: {
         invoices: -1,
+        quotations: -1,
         incomes: -1,
         expenses: -1,
         clients: -1,
@@ -87,7 +90,8 @@ async function run() {
         inventory: false,
         advanced_reports: true,
         two_factor: true,
-        audit_logs: false
+        audit_logs: false,
+        custom_invoice_layout: false
       }
     },
     {
@@ -102,6 +106,7 @@ async function run() {
       sort_order: 3,
       limits: {
         invoices: -1,
+        quotations: -1,
         incomes: -1,
         expenses: -1,
         clients: -1,
@@ -112,7 +117,8 @@ async function run() {
         inventory: true,
         advanced_reports: true,
         two_factor: true,
-        audit_logs: true
+        audit_logs: true,
+        custom_invoice_layout: true
       }
     }
   ];

@@ -15,39 +15,21 @@ import {
   Crown,
   Eye,
   CheckCircle2,
-  UserPlus,
-  UserMinus,
-  UserCheck,
   X,
   Loader2,
-  FileText,
-  DollarSign,
-  Briefcase,
   AlertCircle,
-  Trash2
+  Trash2,
+  Mail
 } from "lucide-react";
 import { PlanBadge, RoleBadge, StatusPill } from "@/components/Formatters";
 import { AdminStatCard } from "@/app/(dashboard)/admin/_components/AdminStatCard";
-import { BusinessDetailView } from "@/app/(dashboard)/admin/_components/BusinessDetailView";
 import { ConfirmModal } from "@/app/(dashboard)/admin/_components/ConfirmModal";
 import { 
   banUser, 
   unbanUser, 
-  getBusinessDetails, 
-  adminAddBusinessMember, 
-  adminUpdateMemberRole, 
-  adminRemoveBusinessMember,
-  softDeleteUser 
+  softDeleteUser,
+  adminUpdateUserEmail 
 } from "./actions";
-
-const ROLE_OPTIONS = [
-  { value: "owner", label: "Owner", description: "Full workspace control & billing" },
-  { value: "admin", label: "Admin", description: "Manage team, settings & finances" },
-  { value: "accountant", label: "Accountant", description: "Manage ledger, incomes, expenses & reports" },
-  { value: "editor", label: "Editor", description: "Create invoices, clients & quotations" },
-  { value: "viewer", label: "Viewer", description: "Read-only access to business data" },
-  { value: "member", label: "Member", description: "Standard team member" },
-];
 
 export function UsersClient({
   initialData,
@@ -62,38 +44,44 @@ export function UsersClient({
   const [unbanModalUser, setUnbanModalUser] = useState<any | null>(null);
   const [statusToast, setStatusToast] = useState("");
 
-  // Business view modal state
-  const [businessModalOpen, setBusinessModalOpen] = useState(false);
-  const [loadingBusinessModal, setLoadingBusinessModal] = useState(false);
-  const [selectedBusiness, setSelectedBusiness] = useState<any | null>(null);
-
-  // Add member modal state
-  const [addMemberBusiness, setAddMemberBusiness] = useState<{ tenantId: number; name: string } | null>(null);
-  const [addMemberEmail, setAddMemberEmail] = useState("");
-  const [addMemberName, setAddMemberName] = useState("");
-  const [addMemberRole, setAddMemberRole] = useState("member");
-  const [addMemberSubmitting, setAddMemberSubmitting] = useState(false);
-  const [addMemberError, setAddMemberError] = useState("");
-
-  // Change role modal state
-  const [roleModalTarget, setRoleModalTarget] = useState<{ user: any; tenantId: number; businessName: string } | null>(null);
-  const [selectedNewRole, setSelectedNewRole] = useState("member");
-  const [roleSubmitting, setRoleSubmitting] = useState(false);
-  const [roleError, setRoleError] = useState("");
-
-  // Remove member confirmation state
-  const [removeMemberTarget, setRemoveMemberTarget] = useState<{ user: any; tenantId: number; businessName: string } | null>(null);
-  const [removeSubmitting, setRemoveSubmitting] = useState(false);
-
   // Delete user confirmation state
   const [deleteUserTarget, setDeleteUserTarget] = useState<{ id: number; email: string; name?: string } | null>(null);
   const [submittingDeleteUser, setSubmittingDeleteUser] = useState(false);
+
+  // Change email state
+  const [changeEmailTarget, setChangeEmailTarget] = useState<{ id: number; email: string; name?: string } | null>(null);
+  const [newEmailInput, setNewEmailInput] = useState("");
+  const [emailSubmitting, setEmailSubmitting] = useState(false);
+  const [emailError, setEmailError] = useState("");
 
   const { users, totalCount, totalPages, page } = initialData;
 
   const showToast = (msg: string) => {
     setStatusToast(msg);
     setTimeout(() => setStatusToast(""), 3500);
+  };
+
+  const handleOpenChangeEmail = (user: { id: number; email: string; full_name?: string; name?: string }) => {
+    setChangeEmailTarget({ id: user.id, email: user.email, name: user.full_name || user.name });
+    setNewEmailInput(user.email);
+    setEmailError("");
+  };
+
+  const handleChangeEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!changeEmailTarget) return;
+    setEmailSubmitting(true);
+    setEmailError("");
+    try {
+      const res = await adminUpdateUserEmail(changeEmailTarget.id, newEmailInput);
+      showToast(res.message || "User email updated successfully");
+      setChangeEmailTarget(null);
+      router.refresh();
+    } catch (err: any) {
+      setEmailError(err.message || "Failed to update email");
+    } finally {
+      setEmailSubmitting(false);
+    }
   };
 
   const updateFilters = (newParams: Record<string, string | null>) => {
@@ -106,34 +94,13 @@ export function UsersClient({
     router.push(`/admin/users?${params.toString()}`);
   };
 
-  // Group users by business
-  const businessGroups = useMemo(() => {
-    const map = new Map<string, { id: number | null; name: string; plan: string; logoUrl?: string | null; users: any[] }>();
-
-    users.forEach((u: any) => {
-      const key = u.tenant_id ? `tenant-${u.tenant_id}` : `unassigned-${u.id}`;
-      const name = u.tenant_name || "Direct platform account";
-      const plan = u.current_plan || "Free";
-      const logoUrl = u.tenant_logo_url || null;
-
-      if (!map.has(key)) {
-        map.set(key, {
-          id: u.tenant_id || null,
-          name,
-          plan,
-          logoUrl,
-          users: [],
-        });
-      }
-      map.get(key)!.users.push(u);
-    });
-
-    return Array.from(map.values());
-  }, [users]);
-
   // Distinct businesses count
   const businessCount = useMemo(() => {
-    const ids = new Set(users.map((u: any) => u.tenant_id).filter(Boolean));
+    const ids = new Set(
+      users.flatMap((u: any) => 
+        (u.linked_businesses || []).map((b: any) => b.id).concat(u.tenant_id ? [u.tenant_id] : [])
+      )
+    );
     return ids.size;
   }, [users]);
 
@@ -191,115 +158,6 @@ export function UsersClient({
       router.refresh();
     } catch {
       alert("Couldn't save. Try again.");
-    }
-  };
-
-  // View Business Action
-  const handleOpenBusiness = async (tenantId: number) => {
-    setBusinessModalOpen(true);
-    setLoadingBusinessModal(true);
-    try {
-      const details = await getBusinessDetails(tenantId);
-      setSelectedBusiness(details);
-    } catch (err: any) {
-      alert(err.message || "Failed to load business details");
-      setBusinessModalOpen(false);
-    } finally {
-      setLoadingBusinessModal(false);
-    }
-  };
-
-  // Open Add Member
-  const handleOpenAddMember = (tenantId: number, name: string) => {
-    setAddMemberBusiness({ tenantId, name });
-    setAddMemberEmail("");
-    setAddMemberName("");
-    setAddMemberRole("member");
-    setAddMemberError("");
-  };
-
-  // Submit Add Member
-  const handleAddMemberSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!addMemberBusiness) return;
-    setAddMemberSubmitting(true);
-    setAddMemberError("");
-    try {
-      await adminAddBusinessMember({
-        tenantId: addMemberBusiness.tenantId,
-        email: addMemberEmail,
-        fullName: addMemberName,
-        role: addMemberRole,
-      });
-      showToast(`Member added to ${addMemberBusiness.name}`);
-      setAddMemberBusiness(null);
-      router.refresh();
-      if (businessModalOpen && selectedBusiness?.tenant?.id === addMemberBusiness.tenantId) {
-        handleOpenBusiness(addMemberBusiness.tenantId);
-      }
-    } catch (err: any) {
-      setAddMemberError(err.message || "Failed to add member");
-    } finally {
-      setAddMemberSubmitting(false);
-    }
-  };
-
-  // Open Change Role Modal
-  const handleOpenChangeRole = (user: any, tenantId: number, businessName: string) => {
-    setRoleModalTarget({ user, tenantId, businessName });
-    setSelectedNewRole(user.workspace_role || user.role || "member");
-    setRoleError("");
-  };
-
-  // Submit Change Role
-  const handleChangeRoleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!roleModalTarget) return;
-    setRoleSubmitting(true);
-    setRoleError("");
-    try {
-      await adminUpdateMemberRole({
-        userId: roleModalTarget.user.id,
-        tenantId: roleModalTarget.tenantId,
-        newRole: selectedNewRole,
-      });
-      showToast(`Role updated to ${selectedNewRole}`);
-      setRoleModalTarget(null);
-      router.refresh();
-      if (businessModalOpen && selectedBusiness?.tenant?.id === roleModalTarget.tenantId) {
-        handleOpenBusiness(roleModalTarget.tenantId);
-      }
-    } catch (err: any) {
-      setRoleError(err.message || "Failed to update role");
-    } finally {
-      setRoleSubmitting(false);
-    }
-  };
-
-  // Open Remove Member Confirmation
-  const handleOpenRemoveMember = (user: any, tenantId: number, businessName: string) => {
-    setRemoveMemberTarget({ user, tenantId, businessName });
-  };
-
-  // Confirm Remove Member
-  const handleConfirmRemoveMember = async () => {
-    if (!removeMemberTarget) return;
-    setRemoveSubmitting(true);
-    try {
-      await adminRemoveBusinessMember({
-        userId: removeMemberTarget.user.id,
-        tenantId: removeMemberTarget.tenantId,
-      });
-      showToast(`Removed from ${removeMemberTarget.businessName}`);
-      setRemoveMemberTarget(null);
-      router.refresh();
-      if (businessModalOpen && selectedBusiness?.tenant?.id === removeMemberTarget.tenantId) {
-        handleOpenBusiness(removeMemberTarget.tenantId);
-      }
-    } catch (err: any) {
-      alert(err.message || "Failed to remove member");
-    } finally {
-      setRemoveSubmitting(false);
     }
   };
 
@@ -365,7 +223,7 @@ export function UsersClient({
       </div>
 
       {/* Filter Chips & Search Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex flex-wrap items-center gap-2">
           {[
             { key: "all", label: "All plans" },
@@ -416,431 +274,219 @@ export function UsersClient({
         </div>
       </div>
 
-      {/* Users Grouped by Business */}
-      <div className="space-y-6">
-        {businessGroups.length === 0 ? (
-          <div className="bg-card border border-border rounded-3xl p-12 text-center text-muted-foreground text-sm shadow-xs">
-            No users found
+      {/* Main Content: Users List Table */}
+      <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-xs">
+        {users.length === 0 ? (
+          <div className="p-12 text-center text-muted-foreground text-sm">
+            No users found matching your filters.
           </div>
         ) : (
-          businessGroups.map((group) => (
-            <div
-              key={group.id || "unassigned"}
-              className="bg-card border border-border rounded-3xl overflow-hidden shadow-xs"
-            >
-              {/* Business Header with View Action & Member Controls */}
-              <div className="p-5 sm:p-6 bg-muted/40 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-11 h-11 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0 overflow-hidden relative">
-                    {group.logoUrl ? (
-                      <img
-                        src={group.logoUrl}
-                        alt={group.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLElement).style.display = "none";
-                          const fallback = e.currentTarget.parentElement?.querySelector(".fallback-building-icon");
-                          if (fallback) (fallback as HTMLElement).classList.remove("hidden");
-                        }}
-                      />
-                    ) : null}
-                    <Building2 className={`w-5 h-5 fallback-building-icon ${group.logoUrl ? "hidden" : ""}`} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-foreground text-base truncate">
-                        {group.name}
-                      </h3>
-                      <PlanBadge plan={group.plan} />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {group.users.length} {group.users.length === 1 ? "member" : "members"}
-                    </p>
-                  </div>
-                </div>
-
-                {group.id ? (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => handleOpenAddMember(group.id!, group.name)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card hover:bg-muted text-xs font-semibold text-foreground transition-colors cursor-pointer shadow-2xs"
-                      title="Add a team member to this business"
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-border bg-slate-50/75 dark:bg-white/[0.02] text-xs font-semibold text-muted-foreground uppercase tracking-wider select-none">
+                  <th className="p-4">User</th>
+                  <th className="p-4">Linked Businesses</th>
+                  <th className="p-4">Role & Plan</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4">Joined</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {users.map((u: any) => {
+                  const linked = u.linked_businesses || [];
+                  return (
+                    <tr
+                      key={u.id}
+                      className={`hover:bg-muted/30 transition-colors ${
+                        u.is_banned ? "opacity-60 bg-red-500/[0.02]" : ""
+                      }`}
                     >
-                      <UserPlus className="w-3.5 h-3.5 text-brand-500" />
-                      <span>Add member</span>
-                    </button>
-
-                    <Link
-                      href={`/admin/businesses/${group.id}`}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-brand-500/30 bg-brand-500/10 hover:bg-brand-500/20 text-xs font-bold text-brand-700 dark:text-brand-400 transition-colors cursor-pointer shadow-2xs"
-                      title="View full business details and management"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>View business</span>
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 shrink-0">
-                    {group.users[0] && (
-                      <button
-                        type="button"
-                        onClick={() => setDeleteUserTarget({ id: group.users[0].id, email: group.users[0].email, name: group.users[0].full_name || group.users[0].email })}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-red-500/20 bg-card hover:bg-red-500/10 text-xs font-semibold text-red-600 dark:text-red-400 transition-colors cursor-pointer shadow-2xs"
-                        title="Permanently delete direct platform account"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Delete account</span>
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Members Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead>
-                    <tr className="border-b border-border bg-slate-50/75 dark:bg-white/[0.02] text-xs font-semibold text-muted-foreground uppercase tracking-wider select-none">
-                      <th className="p-4">User</th>
-                      <th className="p-4">Role</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4">Joined</th>
-                      <th className="p-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {group.users.map((u: any) => (
-                      <tr
-                        key={u.id}
-                        className={`hover:bg-muted/30 transition-colors ${
-                          u.is_banned ? "opacity-60 bg-red-500/[0.02]" : ""
-                        }`}
-                      >
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-700 dark:text-brand-400 font-bold text-xs flex items-center justify-center shrink-0">
-                              {(u.full_name || u.email).charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <div className="font-semibold text-foreground">
+                      {/* User Info Column */}
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-700 dark:text-brand-400 font-bold text-xs flex items-center justify-center shrink-0">
+                            {(u.full_name || u.email).charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-foreground flex items-center gap-1.5">
+                              <Link
+                                href={`/admin/users/${u.id}`}
+                                className="hover:underline hover:text-brand-600 dark:hover:text-brand-400 truncate max-w-[180px]"
+                              >
                                 {u.full_name || "Unnamed"}
-                              </div>
-                              <div className="text-xs text-muted-foreground">{u.email}</div>
+                              </Link>
+                              <span className="text-[10px] text-muted-foreground font-mono">#{u.id}</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                              <span className="truncate max-w-[200px]">{u.email}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenChangeEmail(u)}
+                                className="text-brand-600 dark:text-brand-400 hover:underline text-[11px] font-semibold cursor-pointer shrink-0"
+                                title="Change user email address"
+                              >
+                                Change
+                              </button>
                             </div>
                           </div>
-                        </td>
+                        </div>
+                      </td>
 
-                        <td className="p-4">
-                          <RoleBadge role={u.workspace_role || u.role || "member"} />
-                        </td>
-
-                        <td className="p-4">
-                          {u.is_banned ? (
-                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-                              Banned
-                            </span>
-                          ) : (
-                            <StatusPill status="active" />
-                          )}
-                        </td>
-
-                        <td className="p-4 text-xs text-muted-foreground">
-                          {new Date(u.created_at).toLocaleDateString(undefined, {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric"
-                          })}
-                        </td>
-
-                        <td className="p-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Link
-                              href={`/admin/users/${u.id}`}
-                              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                              title="View user details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Link>
-
-                            {group.id && (
-                              <>
-                                <button
-                                  onClick={() => handleOpenChangeRole(u, group.id!, group.name)}
-                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-brand-500 hover:bg-brand-500/10 transition-colors cursor-pointer"
-                                  title="Change team member role"
-                                >
-                                  <UserCheck className="w-4 h-4" />
-                                </button>
-
-                                <button
-                                  onClick={() => handleOpenRemoveMember(u, group.id!, group.name)}
-                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                                  title="Remove from this business"
-                                >
-                                  <UserMinus className="w-4 h-4" />
-                                </button>
-                              </>
-                            )}
-
-                            {u.is_banned ? (
-                              <button
-                                onClick={() => setUnbanModalUser(u)}
-                                className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-500/10 transition-colors cursor-pointer"
-                                title="Unban"
+                      {/* Linked Businesses Column */}
+                      <td className="p-4">
+                        {linked.length === 0 ? (
+                          <span className="text-xs text-muted-foreground italic">None (Direct platform user)</span>
+                        ) : (
+                          <div className="flex flex-wrap items-center gap-1.5 max-w-sm">
+                            {linked.map((biz: any) => (
+                              <Link
+                                key={biz.id}
+                                href={`/admin/businesses/${biz.id}`}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs border transition-all cursor-pointer ${
+                                  biz.isActive
+                                    ? "bg-brand-500/10 border-brand-500/30 text-brand-700 dark:text-brand-300 font-semibold hover:bg-brand-500/20"
+                                    : "bg-muted/50 border-border text-foreground/80 hover:bg-muted hover:text-foreground"
+                                }`}
+                                title={`View business: ${biz.name} (${biz.role})`}
                               >
-                                <ShieldCheck className="w-4 h-4" />
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => setBanModalUser(u)}
-                                className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                                title="Ban"
-                              >
-                                <ShieldBan className="w-4 h-4" />
-                              </button>
-                            )}
-
-                            {u.system_role !== 'super_admin' && (
-                              <button
-                                onClick={() => setDeleteUserTarget({ id: u.id, email: u.email, name: u.full_name || u.email })}
-                                className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                                title="Delete user account"
-                              >
-                                <Trash2 className="w-4 h-4 text-rose-500" />
-                              </button>
-                            )}
+                                <Building2 className="w-3 h-3 text-muted-foreground shrink-0" />
+                                <span className="truncate max-w-[120px]">{biz.name}</span>
+                                <span className="text-[10px] px-1 py-0.2 rounded bg-background/80 border border-border/50 text-muted-foreground font-medium">
+                                  {biz.isOwner ? "Owner" : biz.role}
+                                </span>
+                                {biz.isActive && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-brand-500" title="Active workspace" />
+                                )}
+                              </Link>
+                            ))}
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ))
+                        )}
+                      </td>
+
+                      {/* Role & Plan Column */}
+                      <td className="p-4">
+                        <div className="flex flex-col gap-1 items-start">
+                          <div className="flex items-center gap-1.5">
+                            <RoleBadge role={u.workspace_role || u.role || "member"} />
+                            <PlanBadge plan={u.current_plan || "Free"} />
+                          </div>
+                          {u.system_role && u.system_role !== 'user' && (
+                            <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 capitalize">
+                              {u.system_role}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Status Column */}
+                      <td className="p-4">
+                        {u.is_banned ? (
+                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                            Banned
+                          </span>
+                        ) : (
+                          <StatusPill status="active" />
+                        )}
+                      </td>
+
+                      {/* Joined Date Column */}
+                      <td className="p-4 text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(u.created_at).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric"
+                        })}
+                      </td>
+
+                      {/* Actions Column */}
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenChangeEmail(u)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-brand-600 hover:bg-brand-500/10 transition-colors cursor-pointer"
+                            title="Change email address"
+                          >
+                            <Mail className="w-4 h-4" />
+                          </button>
+
+                          <Link
+                            href={`/admin/users/${u.id}`}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                            title="View user details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Link>
+
+                          {u.is_banned ? (
+                            <button
+                              onClick={() => setUnbanModalUser(u)}
+                              className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-500/10 transition-colors cursor-pointer"
+                              title="Unban user"
+                            >
+                              <ShieldCheck className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setBanModalUser(u)}
+                              className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                              title="Ban user"
+                            >
+                              <ShieldBan className="w-4 h-4" />
+                            </button>
+                          )}
+
+                          {u.system_role !== 'super_admin' && (
+                            <button
+                              onClick={() => setDeleteUserTarget({ id: u.id, email: u.email, name: u.full_name || u.email })}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                              title="Delete user account"
+                            >
+                              <Trash2 className="w-4 h-4 text-rose-500" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-
-
-      {/* ADD MEMBER MODAL */}
-      {addMemberBusiness && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <div>
-                <h3 className="text-lg font-bold text-foreground">Add Team Member</h3>
-                <p className="text-xs text-muted-foreground">To {addMemberBusiness.name}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAddMemberBusiness(null)}
-                className="p-1.5 rounded-full text-muted-foreground hover:bg-muted cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {addMemberError && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{addMemberError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleAddMemberSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="member@business.com"
-                  value={addMemberEmail}
-                  onChange={(e) => setAddMemberEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm outline-none focus:border-brand-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                  Full Name (optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. John Doe"
-                  value={addMemberName}
-                  onChange={(e) => setAddMemberName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm outline-none focus:border-brand-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                  Role in Business
-                </label>
-                <select
-                  value={addMemberRole}
-                  onChange={(e) => setAddMemberRole(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm font-semibold outline-none focus:border-brand-500 cursor-pointer"
-                >
-                  {ROLE_OPTIONS.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label} — {r.description}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setAddMemberBusiness(null)}
-                  className="px-4 py-2 rounded-full text-xs font-semibold hover:bg-muted transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={addMemberSubmitting}
-                  className="flex items-center gap-1.5 px-5 py-2 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-full text-xs transition-colors shadow-xs cursor-pointer"
-                >
-                  {addMemberSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>Add member</span>
-                </button>
-              </div>
-            </form>
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-xs text-muted-foreground">
+          <div>
+            Showing page <span className="font-semibold text-foreground">{page}</span> of{" "}
+            <span className="font-semibold text-foreground">{totalPages}</span> ({totalCount} total users)
           </div>
-        </div>
-      )}
-
-      {/* CHANGE ROLE MODAL */}
-      {roleModalTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <div>
-                <h3 className="text-lg font-bold text-foreground">Change Member Role</h3>
-                <p className="text-xs text-muted-foreground">In {roleModalTarget.businessName}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRoleModalTarget(null)}
-                className="p-1.5 rounded-full text-muted-foreground hover:bg-muted cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {roleError && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{roleError}</span>
-              </div>
-            )}
-
-            <div className="p-3 rounded-xl bg-muted/30 border border-border flex items-center justify-between">
-              <div>
-                <div className="font-bold text-foreground text-sm">
-                  {roleModalTarget.user.full_name || "Unnamed"}
-                </div>
-                <div className="text-xs text-muted-foreground">{roleModalTarget.user.email}</div>
-              </div>
-              <RoleBadge role={roleModalTarget.user.workspace_role || roleModalTarget.user.role || "member"} />
-            </div>
-
-            <form onSubmit={handleChangeRoleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
-                  Select New Role
-                </label>
-                <div className="space-y-2">
-                  {ROLE_OPTIONS.map((r) => {
-                    const isSelected = selectedNewRole.toLowerCase() === r.value.toLowerCase();
-                    return (
-                      <button
-                        key={r.value}
-                        type="button"
-                        onClick={() => setSelectedNewRole(r.value)}
-                        className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
-                          isSelected
-                            ? "bg-brand-500/10 border-brand-500 ring-1 ring-brand-500"
-                            : "bg-background border-border hover:bg-muted/50"
-                        }`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <div className="font-bold text-xs text-foreground">{r.label}</div>
-                            <div className="text-[11px] text-muted-foreground">{r.description}</div>
-                          </div>
-                          {isSelected && <CheckCircle2 className="w-4 h-4 text-brand-500" />}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setRoleModalTarget(null)}
-                  className="px-4 py-2 rounded-full text-xs font-semibold hover:bg-muted transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={roleSubmitting}
-                  className="flex items-center gap-1.5 px-5 py-2 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-full text-xs transition-colors shadow-xs cursor-pointer"
-                >
-                  {roleSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>Update role</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* REMOVE MEMBER CONFIRMATION MODAL */}
-      {removeMemberTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-foreground">Remove Team Member</h3>
-            <p className="text-sm text-muted-foreground">
-              Are you sure you want to remove <strong className="text-foreground">{removeMemberTarget.user.full_name || removeMemberTarget.user.email}</strong> from <strong className="text-foreground">{removeMemberTarget.businessName}</strong>?
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Their access to this workspace's invoices, clients, and financial entries will be revoked immediately.
-            </p>
-
-            <div className="flex justify-end gap-2 pt-3 border-t border-border">
-              <button
-                type="button"
-                onClick={() => setRemoveMemberTarget(null)}
-                className="px-4 py-2 rounded-full text-xs font-semibold hover:bg-muted transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmRemoveMember}
-                disabled={removeSubmitting}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer"
-              >
-                {removeSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                <span>Remove member</span>
-              </button>
-            </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => updateFilters({ page: String(Math.max(1, page - 1)) })}
+              disabled={page <= 1}
+              className="px-4 py-2 rounded-full border border-border bg-card hover:bg-muted disabled:opacity-40 transition-colors cursor-pointer font-semibold shadow-2xs"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => updateFilters({ page: String(Math.min(totalPages, page + 1)) })}
+              disabled={page >= totalPages}
+              className="px-4 py-2 rounded-full border border-border bg-card hover:bg-muted disabled:opacity-40 transition-colors cursor-pointer font-semibold shadow-2xs"
+            >
+              Next
+            </button>
           </div>
         </div>
       )}
 
       {/* Ban Confirmation Modal */}
       {banModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-4">
             <h3 className="text-lg font-bold text-foreground">Ban user</h3>
             <p className="text-sm text-muted-foreground">
@@ -875,7 +521,7 @@ export function UsersClient({
 
       {/* Unban Confirmation Modal */}
       {unbanModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-4">
             <h3 className="text-lg font-bold text-foreground">Unban user</h3>
             <p className="text-sm text-muted-foreground">
@@ -912,6 +558,77 @@ export function UsersClient({
           isDestructive={true}
           typeToConfirmText={deleteUserTarget.email}
         />
+      )}
+
+      {/* Change Email Modal */}
+      {changeEmailTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Change User Email</h3>
+                <p className="text-xs text-muted-foreground">
+                  Update login email for {changeEmailTarget.name || changeEmailTarget.email}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setChangeEmailTarget(null)}
+                className="p-1.5 rounded-full text-muted-foreground hover:bg-muted cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {emailError && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{emailError}</span>
+              </div>
+            )}
+
+            <div className="p-3 rounded-xl bg-muted/40 border border-border text-xs space-y-1 text-muted-foreground">
+              <p><strong className="text-foreground">Current Email:</strong> {changeEmailTarget.email}</p>
+              <p className="text-[11px] leading-relaxed">
+                This will update their sign-in credentials and reassign ownership of their workspaces and team memberships to the new email address.
+              </p>
+            </div>
+
+            <form onSubmit={handleChangeEmailSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                  New Email Address *
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="new-email@example.com"
+                  value={newEmailInput}
+                  onChange={(e) => setNewEmailInput(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm outline-none focus:border-brand-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setChangeEmailTarget(null)}
+                  className="px-4 py-2 rounded-full text-xs font-semibold hover:bg-muted transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={emailSubmitting || !newEmailInput.trim() || newEmailInput.trim().toLowerCase() === changeEmailTarget.email.toLowerCase()}
+                  className="flex items-center gap-1.5 px-5 py-2 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-full text-xs transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {emailSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Update Email</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -525,7 +525,8 @@ export function BusinessDetailView({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
-              {renderLimitBar("Invoices Issued", usage.invoices, limits.invoices ?? 50)}
+              {renderLimitBar("Invoices Issued", usage.invoices, (tenant.plan === 'Pro' || tenant.plan === 'Pro Plus') ? -1 : (limits.invoices ?? 50))}
+              {renderLimitBar("Quotations Issued", usage.quotations ?? 0, (tenant.plan === 'Pro' || tenant.plan === 'Pro Plus') ? -1 : (limits.quotations ?? 50))}
               {renderLimitBar("Incomes Logged", usage.incomes, limits.incomes ?? 100)}
               {renderLimitBar("Expenses Logged", usage.expenses, limits.expenses ?? 100)}
               {renderLimitBar("Clients Saved", usage.clients, limits.clients ?? 50)}

@@ -21,13 +21,16 @@ const ACTIONS = [
 
 const GLOBAL_PERMS = [
   { key: 'settings', action: 'manage', label: 'Manage Settings' },
+  { key: 'settings', action: 'appearance', label: 'Appearance & Accent Colour' },
   { key: 'team', action: 'manage', label: 'Manage Team' },
   { key: 'export', action: 'data', label: 'Export Data' }
 ];
 
+let cachedRoles: any[] | null = null;
+
 export default function RolesConfigurator({ currentUserRole }: { currentUserRole: string | null }) {
-  const [roles, setRoles] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [roles, setRoles] = useState<any[]>(() => cachedRoles || []);
+  const [loading, setLoading] = useState(() => !cachedRoles);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
@@ -40,8 +43,9 @@ export default function RolesConfigurator({ currentUserRole }: { currentUserRole
 
   const fetchRoles = async () => {
     try {
-      setLoading(true);
+      if (!cachedRoles) setLoading(true);
       const data = await getRoles();
+      cachedRoles = data;
       setRoles(data);
     } catch (e: any) {
       setErrorMsg(e.message || "Failed to load roles.");
@@ -108,11 +112,7 @@ export default function RolesConfigurator({ currentUserRole }: { currentUserRole
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground tracking-tight">Team Roles Configurator</h2>
-          <p className="text-gray-400 mt-1">Customize granular permissions for your team members.</p>
-        </div>
+      <div className="flex items-center justify-end">
         <button 
           onClick={() => setIsAdding(!isAdding)}
           className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-xl transition-colors text-sm font-bold cursor-pointer"
@@ -230,7 +230,7 @@ export default function RolesConfigurator({ currentUserRole }: { currentUserRole
                     const isOwner = roleObj.role.toLowerCase() === 'owner';
 
                     return (
-                      <label key={global.key} className="flex items-center gap-3 cursor-pointer group">
+                      <label key={`${global.key}-${global.action}`} className="flex items-center gap-3 cursor-pointer group">
                         <div className="relative flex items-center">
                           <input 
                             type="checkbox" 

@@ -86,6 +86,7 @@ export async function createPlan({
 
   const defaultLimits = {
     invoices: limits?.invoices ?? 50,
+    quotations: limits?.quotations ?? 50,
     incomes: limits?.incomes ?? 100,
     expenses: limits?.expenses ?? 100,
     clients: limits?.clients ?? 50,
@@ -129,11 +130,12 @@ export async function createPlan({
   // Sync plan_limits table
   await sql`
     INSERT INTO plan_limits (
-      plan, max_invoices, max_incomes, max_expenses, max_clients, max_accounts,
+      plan, max_invoices, max_quotations, max_incomes, max_expenses, max_clients, max_accounts,
       can_add_team_members, has_inventory, has_advanced_stats
     ) VALUES (
       ${cleanName},
       ${defaultLimits.invoices ?? -1},
+      ${defaultLimits.quotations ?? -1},
       ${defaultLimits.incomes ?? -1},
       ${defaultLimits.expenses ?? -1},
       ${defaultLimits.clients ?? -1},
@@ -144,6 +146,7 @@ export async function createPlan({
     )
     ON CONFLICT (plan) DO UPDATE SET
       max_invoices = EXCLUDED.max_invoices,
+      max_quotations = EXCLUDED.max_quotations,
       max_incomes = EXCLUDED.max_incomes,
       max_expenses = EXCLUDED.max_expenses,
       max_clients = EXCLUDED.max_clients,
@@ -230,11 +233,12 @@ export async function updatePlan({
   // Sync plan_limits table for backward compatibility with checkLimit()
   await sql`
     INSERT INTO plan_limits (
-      plan, max_invoices, max_incomes, max_expenses, max_clients, max_accounts,
+      plan, max_invoices, max_quotations, max_incomes, max_expenses, max_clients, max_accounts,
       can_add_team_members, has_inventory, has_advanced_stats
     ) VALUES (
       ${name},
       ${limits.invoices ?? -1},
+      ${limits.quotations ?? -1},
       ${limits.incomes ?? -1},
       ${limits.expenses ?? -1},
       ${limits.clients ?? -1},
@@ -245,6 +249,7 @@ export async function updatePlan({
     )
     ON CONFLICT (plan) DO UPDATE SET
       max_invoices = EXCLUDED.max_invoices,
+      max_quotations = EXCLUDED.max_quotations,
       max_incomes = EXCLUDED.max_incomes,
       max_expenses = EXCLUDED.max_expenses,
       max_clients = EXCLUDED.max_clients,

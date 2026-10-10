@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import Link from "next/link";
 import { 
   Building2, 
   Check, 
@@ -12,7 +11,6 @@ import {
   UserCheck, 
   Eye, 
   Loader2, 
-  Settings, 
   MailCheck, 
   X, 
   AlertCircle,
@@ -31,6 +29,7 @@ interface TenantInfoProps {
   logo_url?: string | null;
   userRole?: string | null;
   plan?: string | null;
+  accent_color?: string | null;
 }
 
 interface UserBusiness {
@@ -258,23 +257,15 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
 
       {/* Popover Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-84 sm:w-96 rounded-2xl bg-card border border-border/80 shadow-2xl backdrop-blur-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 top-full mt-2 w-84 sm:w-96 rounded-2xl bg-popover border border-border shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
-          <div className="p-3.5 border-b border-border/60 flex items-center justify-between bg-muted/30">
+          <div className="p-3.5 border-b border-border/60 flex items-center justify-between bg-black/[0.02] dark:bg-white/[0.03]">
             <div className="flex items-center gap-2">
               <Briefcase className="w-4 h-4 text-brand-500" />
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Workspaces
               </span>
             </div>
-            <Link
-              href="/user/settings/business"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-medium transition-colors py-0.5 px-2 rounded-lg hover:bg-muted"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span>Settings</span>
-            </Link>
           </div>
 
           {/* General Message Alert */}
@@ -450,7 +441,7 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
           </div>
 
           {/* Create Business Profile Section */}
-          <div className="p-3 border-t border-border/60 bg-muted/20">
+          <div className="p-3 border-t border-border/60 bg-black/[0.02] dark:bg-white/[0.02]">
             {!hasOwnedBusiness ? (
               <div>
                 {!showCreateModal ? (

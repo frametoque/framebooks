@@ -4,7 +4,7 @@ const neon = postgres;
 
 export type Role = string;
 export type ResourceType = 'invoices' | 'incomes' | 'expenses' | 'clients' | 'accounts' | 'inventory' | 'settings' | 'team' | 'export' | 'billing';
-export type ActionType = 'read' | 'insert' | 'update' | 'delete' | 'manage' | 'data';
+export type ActionType = 'read' | 'insert' | 'update' | 'delete' | 'manage' | 'data' | 'appearance';
 
 /**
  * Gets the current user's role and tenant ID.
@@ -74,6 +74,10 @@ export async function hasPermission(role: Role | null, resource: ResourceType, a
 
   const resourcePerms = perms[resource];
   if (!resourcePerms) return false;
+
+  if (resource === 'settings' && action === 'appearance') {
+    if (resourcePerms.manage === true || resourcePerms.appearance === true) return true;
+  }
 
   return resourcePerms[action] === true;
 }

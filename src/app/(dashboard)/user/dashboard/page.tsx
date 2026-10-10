@@ -10,6 +10,7 @@ import { useAdminDateRange } from "../context/AdminDateRangeContext";
 import ExpenseBreakdownWidget from "../components/ExpenseBreakdownWidget";
 import TopClientsWidget from "../components/TopClientsWidget";
 import AnimatedNumber from "../components/AnimatedNumber";
+import { useAccentTheme } from "@/lib/theme/useAccentTheme";
 
 const formatLKR = (amount: number) => {
   const num = new Intl.NumberFormat('en-LK', {
@@ -22,6 +23,7 @@ const formatLKR = (amount: number) => {
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
 export default function DashboardPage() {
+  const { accent } = useAccentTheme();
   const { startDate, endDate } = useAdminDateRange();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -275,7 +277,7 @@ export default function DashboardPage() {
           </div>
 
           {data.unpaidClients && data.unpaidClients.length > 0 && (
-            <div className="absolute top-[calc(100%+10px)] right-0 w-72 bg-white dark:bg-[#082830] border border-border dark:border-white/15 rounded-2xl p-5 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] backdrop-blur-xl">
+            <div className="absolute top-[calc(100%+10px)] right-0 w-72 bg-popover border border-border dark:border-white/15 rounded-2xl p-5 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] backdrop-blur-xl">
               <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">Due by Client</p>
               <div className="space-y-3.5">
                 {data.unpaidClients.slice(0, 6).map((client: any, idx: number) => (
@@ -382,7 +384,7 @@ export default function DashboardPage() {
                   formatter={(value: any) => formatLKR(value)}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}/>
-                <Bar dataKey="income" name="Income" fill="#00E35B" radius={[4, 4, 0, 0]} barSize={20} />
+                <Bar dataKey="income" name="Income" fill={accent} radius={[4, 4, 0, 0]} barSize={20} />
                 <Bar dataKey="expenses" name="Expenses" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
@@ -562,7 +564,7 @@ export default function DashboardPage() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-[#082830] border border-border dark:border-white/15 rounded-3xl p-6 max-w-sm w-full shadow-2xl"
+            className="bg-popover border border-border dark:border-white/15 rounded-3xl p-6 max-w-sm w-full shadow-2xl"
           >
             <div className={`w-12 h-12 rounded-2xl mb-4 flex items-center justify-center ${modalMessage.type === 'success' ? 'bg-emerald-100/70 dark:bg-green-500/10 text-emerald-700 dark:text-green-400' : 'bg-red-100/70 dark:bg-red-500/10 text-red-700 dark:text-red-400'}`}>
               {modalMessage.type === 'success' ? <MdCheck className="w-6 h-6" /> : <MdErrorOutline className="w-6 h-6" />}

@@ -50,9 +50,9 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       // Load duration from localStorage
       let duration = 300000;
       const savedDuration = localStorage.getItem("app-lock-duration");
-      if (savedDuration) {
+      if (savedDuration !== null) {
         const parsed = parseInt(savedDuration, 10);
-        duration = parsed === 0 ? 300000 : parsed;
+        duration = isNaN(parsed) ? 300000 : parsed;
         setAutoLockDuration(duration);
       }
       
@@ -73,8 +73,9 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
           const savedActivityStr = localStorage.getItem("app-lock-last-activity");
           const savedActivity = savedActivityStr ? parseInt(savedActivityStr, 10) : 0;
           
-          // Only lock if we were previously locked, or if the auto-lock duration has expired since last activity
-          if (!savedUnlocked || (Date.now() - savedActivity > duration)) {
+          // Only lock if we were previously locked, or if auto-lock duration has expired since last activity (when auto-lock is enabled)
+          const isExpired = duration > 0 && (Date.now() - savedActivity > duration);
+          if (!savedUnlocked || isExpired) {
             setIsLocked(true);
             localStorage.setItem("app-lock-unlocked", "false");
           } else {

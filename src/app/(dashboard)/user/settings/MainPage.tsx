@@ -3,11 +3,13 @@ import { Loader } from "@/components/ui/Loader";
 import RolesConfigurator from "../components/RolesConfigurator";
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 import { useSession, signOut } from 'next-auth/react';
-import { IdCard, Globe, Save, Building, Copy, Terminal, Sliders, Upload, FileText, CheckCircle2, AlertCircle, X, ExternalLink, ArrowUp } from "lucide-react";
+import { IdCard, Globe, Save, Building, Copy, Terminal, Sliders, Upload, FileText, CheckCircle2, AlertCircle, X, ExternalLink, ArrowUp, Palette, ChevronDown, Clock, ShieldOff, Sparkles, Info, Loader2 } from "lucide-react";
 import { MdPerson, MdMailOutline, MdKeyboardArrowRight, MdKeyboardArrowLeft, MdLocationOn, MdPhone, MdUpload, MdDownload, MdCheck, MdShowChart, MdCreditCard, MdGroup, MdBusiness, MdHistory, MdLogout, MdWarning, MdSecurity, MdDelete, MdLock } from "react-icons/md";
+import AppearanceTab from "./AppearanceTab";
+import InvoiceLayoutTab from "./invoice-layout/InvoiceLayoutTab";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { updateTenantInfo, getTeamMembers, updateTeamMemberRole, removeTeamMember, leaveTeam, getCurrentUserRole, resetWorkspace, deleteWorkspace, deletePersonalAccount, deleteTeamInvitation } from "../actions/tenants";
@@ -47,7 +49,12 @@ export function formatDBPlanToDashboardPlan(p: any): PlanViewItem {
     features: [
       { 
         label: "Invoices Limit", 
-        value: limits.invoices === -1 ? "Unlimited" : String(limits.invoices ?? 50), 
+        value: (p.name === 'Pro' || p.name === 'Pro Plus' || p.key === 'pro' || p.key === 'pro_plus' || limits.invoices === -1) ? "Unlimited" : String(limits.invoices ?? 50), 
+        icon: MdUpload 
+      },
+      { 
+        label: "Quotations Limit", 
+        value: (p.name === 'Pro' || p.name === 'Pro Plus' || p.key === 'pro' || p.key === 'pro_plus' || limits.quotations === -1) ? "Unlimited" : String(limits.quotations ?? 50), 
         icon: MdUpload 
       },
       { 
@@ -76,6 +83,11 @@ export function formatDBPlanToDashboardPlan(p: any): PlanViewItem {
         icon: MdGroup 
       },
       { 
+        label: "Customized Invoices & Quotations", 
+        value: (p.name === 'Pro Plus' || p.key === 'pro_plus' || (features.custom_invoice_layout && p.key !== 'pro' && p.name !== 'Pro')) ? "Yes" : "No", 
+        icon: MdCheck 
+      },
+      { 
         label: "Inventory Management", 
         value: features.inventory ? "Yes" : "No", 
         icon: MdCheck 
@@ -90,6 +102,11 @@ export function formatDBPlanToDashboardPlan(p: any): PlanViewItem {
         value: features.audit_logs ? "High + Audit Logs" : (features.two_factor ? "High + 2FA" : "Standard"), 
         icon: MdSecurity 
       },
+      { 
+        label: "Customize Workspace Appearance", 
+        value: p.name === 'Pro Plus' || p.name === 'Pro' || p.key === 'pro' || p.key === 'pro_plus' || features.appearance ? "Yes" : "No", 
+        icon: Palette 
+      },
     ],
   };
 }
@@ -103,11 +120,14 @@ const defaultPlans: PlanViewItem[] = [
     popular: false,
     features: [
       { label: "Invoices Limit", value: "50", icon: MdUpload },
+      { label: "Quotations Limit", value: "50", icon: MdUpload },
       { label: "Income Limit", value: "100", icon: MdUpload },
       { label: "Expense Limit", value: "100", icon: MdDownload },
       { label: "Client Limit", value: "50", icon: MdGroup },
       { label: "Bank Accounts", value: "2", icon: MdBusiness },
       { label: "Team Members", value: "No", icon: MdGroup },
+      { label: "Customized Invoices & Quotations", value: "No", icon: MdCheck },
+      { label: "Customize Workspace Appearance", value: "No", icon: Palette },
       { label: "Inventory Management", value: "No", icon: MdCheck },
       { label: "Advanced Reports", value: "No", icon: MdShowChart },
       { label: "Security Level", value: "Standard", icon: MdSecurity },
@@ -121,11 +141,14 @@ const defaultPlans: PlanViewItem[] = [
     description: "Advanced tools to manage finances and grow faster.",
     features: [
       { label: "Invoices Limit", value: "Unlimited", icon: MdUpload },
+      { label: "Quotations Limit", value: "Unlimited", icon: MdUpload },
       { label: "Income Limit", value: "Unlimited", icon: MdUpload },
       { label: "Expense Limit", value: "Unlimited", icon: MdDownload },
       { label: "Client Limit", value: "Unlimited", icon: MdGroup },
       { label: "Bank Accounts", value: "2", icon: MdBusiness },
       { label: "Team Members", value: "No", icon: MdGroup },
+      { label: "Customized Invoices & Quotations", value: "No", icon: MdCheck },
+      { label: "Customize Workspace Appearance", value: "Yes", icon: Palette },
       { label: "Inventory Management", value: "No", icon: MdCheck },
       { label: "Advanced Reports", value: "Yes", icon: MdShowChart },
       { label: "Security Level", value: "High + 2FA", icon: MdSecurity },
@@ -139,11 +162,14 @@ const defaultPlans: PlanViewItem[] = [
     popular: false,
     features: [
       { label: "Invoices Limit", value: "Unlimited", icon: MdUpload },
+      { label: "Quotations Limit", value: "Unlimited", icon: MdUpload },
       { label: "Income Limit", value: "Unlimited", icon: MdUpload },
       { label: "Expense Limit", value: "Unlimited", icon: MdDownload },
       { label: "Client Limit", value: "Unlimited", icon: MdGroup },
       { label: "Bank Accounts", value: "Unlimited", icon: MdBusiness },
       { label: "Team Members", value: "Unlimited", icon: MdGroup },
+      { label: "Customized Invoices & Quotations", value: "Yes", icon: MdCheck },
+      { label: "Customize Workspace Appearance", value: "Yes", icon: Palette },
       { label: "Inventory Management", value: "Yes", icon: MdCheck },
       { label: "Advanced Reports", value: "Yes", icon: MdShowChart },
       { label: "Security Level", value: "High + Audit Logs", icon: MdSecurity },
@@ -154,9 +180,12 @@ const defaultPlans: PlanViewItem[] = [
 export const SETTINGS_SLUG_TO_TAB: Record<string, string> = {
   "profile": "profile",
   "business": "business",
+  "appearance": "appearance",
+  "invoice-layout": "appearance",
+  "invoice_layout": "appearance",
   "billing": "billing",
   "team": "team",
-  "roles": "roles",
+  "roles": "team",
   "audit-logs": "audit_logs",
   "audit_logs": "audit_logs",
   "export": "export",
@@ -168,14 +197,153 @@ export const SETTINGS_SLUG_TO_TAB: Record<string, string> = {
 export const SETTINGS_TAB_TO_SLUG: Record<string, string> = {
   "profile": "profile",
   "business": "business",
+  "appearance": "appearance",
   "billing": "billing",
   "team": "team",
-  "roles": "roles",
   "audit_logs": "audit-logs",
   "export": "export",
   "danger": "danger",
   "prefs": "preferences",
 };
+
+export const SETTINGS_TAB_TITLES: Record<string, string> = {
+  profile: "Account & Security",
+  business: "Business Profile",
+  appearance: "Appearance & Layouts",
+  billing: "Billing & Plans",
+  team: "Team & Permissions",
+  audit_logs: "Audit Logs",
+  export: "Data Export",
+  danger: "Danger Zone",
+  prefs: "Admin Preferences",
+};
+
+interface SettingsMemoryCache {
+  profile: any;
+  passkeys: any[];
+  tenantInfo: any;
+  currentUserRole: string | null;
+  teamData?: {
+    sent: any[];
+    members: any[];
+    roles: any[];
+  };
+}
+
+let settingsMemoryCache: SettingsMemoryCache | null = null;
+
+const AUTO_LOCK_OPTIONS = [
+  { value: 60000, label: "After 1 minute" },
+  { value: 300000, label: "After 5 minutes" },
+  { value: 600000, label: "After 10 minutes" },
+  { value: 900000, label: "After 15 minutes" },
+  { value: 1800000, label: "After 30 minutes" },
+  { value: 3600000, label: "After 1 hour" },
+  { value: 0, label: "Auto-lock off" },
+];
+
+function AutoLockDurationSelect({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (val: number) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const selectedOption =
+    AUTO_LOCK_OPTIONS.find((opt) => opt.value === value) ||
+    (value === 0 ? AUTO_LOCK_OPTIONS[6] : AUTO_LOCK_OPTIONS[1]);
+
+  return (
+    <div ref={containerRef} className="relative w-full sm:w-64">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full bg-card border rounded-2xl px-4 py-3 text-sm text-foreground flex items-center justify-between transition-all cursor-pointer shadow-2xs ${
+          isOpen
+            ? "border-brand-500 ring-2 ring-brand-500/20"
+            : "border-border hover:border-black/20 dark:hover:border-white/20"
+        }`}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <div className="flex items-center gap-2.5 truncate">
+          <span className={value === 0 ? "text-amber-500" : "text-brand-500"}>
+            {value === 0 ? <ShieldOff className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+          </span>
+          <span className="font-medium text-foreground truncate">{selectedOption.label}</span>
+        </div>
+        <ChevronDown
+          className={`w-4 h-4 text-muted-foreground transition-transform duration-200 shrink-0 ml-2 ${
+            isOpen ? "rotate-180 text-brand-500" : ""
+          }`}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 top-full mt-2 w-full rounded-2xl bg-popover border border-border/80 dark:border-white/10 shadow-2xl z-50 p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 duration-150">
+          {AUTO_LOCK_OPTIONS.map((option) => {
+            const isSelected = value === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full px-3 py-2.5 rounded-xl text-sm font-medium flex items-center justify-between transition-all cursor-pointer text-left ${
+                  isSelected
+                    ? "bg-brand-500/10 text-brand-500 font-semibold dark:bg-brand-500/15"
+                    : "text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className={
+                      isSelected
+                        ? option.value === 0
+                          ? "text-amber-500"
+                          : "text-brand-500"
+                        : "text-muted-foreground"
+                    }
+                  >
+                    {option.value === 0 ? <ShieldOff className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                  </span>
+                  <span>{option.label}</span>
+                </div>
+                {isSelected && <MdCheck className="w-4 h-4 text-brand-500 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export interface SettingsPageProps {
   initialPlans?: any[];
@@ -210,34 +378,78 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
   const [activeTab, setActiveTab] = useState(targetTabFromSection || targetTabFromQuery || "profile");
   const [activeView, setActiveView] = useState(initialSection || searchParams.get("tab") ? "form" : "hub");
 
+  const [appearanceSubTab, setAppearanceSubTab] = useState<"theme" | "layouts">(() => {
+    if (searchParams.get("sub") === "theme") return "theme";
+    return "layouts";
+  });
+
+  const [teamSubTab, setTeamSubTab] = useState<"members" | "roles">(() => {
+    if (initialSection === "roles") return "roles";
+    if (searchParams.get("sub") === "roles") return "roles";
+    return "members";
+  });
+
   useEffect(() => {
     if (initialSection) {
       const mapped = SETTINGS_SLUG_TO_TAB[initialSection] || "profile";
       setActiveTab(mapped);
       setActiveView("form");
-    } else if (searchParams.get("tab")) {
-      const mapped = SETTINGS_SLUG_TO_TAB[searchParams.get("tab")!] || "profile";
+      if (initialSection === "invoice-layout" || initialSection === "invoice_layout" || initialSection === "appearance") {
+        if (searchParams.get("sub") === "theme") {
+          setAppearanceSubTab("theme");
+        } else {
+          setAppearanceSubTab("layouts");
+        }
+      } else if (initialSection === "roles") {
+        setTeamSubTab("roles");
+      } else if (initialSection === "team") {
+        setTeamSubTab("members");
+      }
+    } else {
+      if (typeof window !== "undefined") {
+        const match = window.location.pathname.match(/\/user\/settings\/?([^/]*)/);
+        const slug = match ? match[1] : "";
+        if (!slug) {
+          setActiveView("hub");
+        }
+      }
+    }
+  }, [initialSection]);
+
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam) {
+      const mapped = SETTINGS_SLUG_TO_TAB[tabParam] || "profile";
       setActiveTab(mapped);
       setActiveView("form");
-    } else {
-      setActiveView("hub");
     }
-  }, [initialSection, searchParams]);
-  const [loading, setLoading] = useState(true);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!initialSection && !searchParams.get("tab") && typeof window !== "undefined") {
+      const match = window.location.pathname.match(/\/user\/settings\/?([^/]*)/);
+      const slug = match ? match[1] : "";
+      if (slug && SETTINGS_SLUG_TO_TAB[slug]) {
+        setActiveTab(SETTINGS_SLUG_TO_TAB[slug]);
+        setActiveView("form");
+      }
+    }
+  }, []);
+  const [loading, setLoading] = useState(() => !settingsMemoryCache);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [customPasskeys, setCustomPasskeys] = useState<any[]>([]);
+  const [customPasskeys, setCustomPasskeys] = useState<any[]>(() => settingsMemoryCache?.passkeys || []);
   const { autoLockDuration, setAutoLockDuration, highSecurityMode, setHighSecurityMode, requireAuth } = useAppLock();
-  const [tenantInfo, setTenantInfo] = useState<{plan: string, name: string, logo_url: string | null, industry: string | null, phone: string | null, email: string | null, website: string | null, address: string | null}>({ plan: "Free", name: "My Business", logo_url: null, industry: null, phone: null, email: null, website: null, address: null });
+  const [tenantInfo, setTenantInfo] = useState<{plan: string, name: string, logo_url: string | null, industry: string | null, phone: string | null, email: string | null, website: string | null, address: string | null, accent_color?: string | null}>(() => settingsMemoryCache?.tenantInfo || { plan: "Free", name: "My Business", logo_url: null, industry: null, phone: null, email: null, website: null, address: null, accent_color: null });
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("Viewer");
   const [isInviting, setIsInviting] = useState(false);
   const [inviteMessage, setInviteMessage] = useState<{type: "success" | "error", text: string} | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [sentInvitations, setSentInvitations] = useState<any[]>([]);
-  const [teamMembers, setTeamMembers] = useState<any[]>([]);
-  const [availableRoles, setAvailableRoles] = useState<any[]>([]);
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [sentInvitations, setSentInvitations] = useState<any[]>(() => settingsMemoryCache?.teamData?.sent || []);
+  const [teamMembers, setTeamMembers] = useState<any[]>(() => settingsMemoryCache?.teamData?.members || []);
+  const [availableRoles, setAvailableRoles] = useState<any[]>(() => settingsMemoryCache?.teamData?.roles || []);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(() => settingsMemoryCache?.currentUserRole || null);
 
   const [reportType, setReportType] = useState<"profit_loss" | "cash_flow" | "balance_sheet" | "">("");
   const [reportDateRange, setReportDateRange] = useState("this year");
@@ -250,6 +462,9 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
       const res = await deleteTeamInvitation(id);
       if (res.success) {
         setSentInvitations(prev => prev.filter(inv => inv.id !== id));
+        if (settingsMemoryCache?.teamData) {
+          settingsMemoryCache.teamData.sent = settingsMemoryCache.teamData.sent.filter(inv => inv.id !== id);
+        }
       } else {
         alert(res.error || "Failed to delete invitation");
       }
@@ -260,14 +475,26 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
 
   const fetchTeamData = async () => {
     try {
+      if (settingsMemoryCache?.teamData) {
+        setSentInvitations(settingsMemoryCache.teamData.sent);
+        setTeamMembers(settingsMemoryCache.teamData.members);
+        setAvailableRoles(settingsMemoryCache.teamData.roles);
+        return;
+      }
       const [invitesRes, membersRes, rolesRes] = await Promise.all([
         fetch('/api/team/invitations/sent').then(r => r.json()),
         getTeamMembers(),
         getRoles()
       ]);
-      if (invitesRes.sent) setSentInvitations(invitesRes.sent);
-      if (membersRes.success) setTeamMembers(membersRes.members);
-      if (rolesRes) setAvailableRoles(rolesRes);
+      const sent = invitesRes.sent || [];
+      const members = membersRes.success ? membersRes.members : [];
+      const roles = rolesRes || [];
+      setSentInvitations(sent);
+      setTeamMembers(members);
+      setAvailableRoles(roles);
+      if (settingsMemoryCache) {
+        settingsMemoryCache.teamData = { sent, members, roles };
+      }
     } catch (e) {
       console.error("Failed to fetch team data", e);
     }
@@ -281,14 +508,28 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
 
   const [copied, setCopied] = useState(false);
 
-  const [formData, setFormData] = useState({
-    id: "",
-    name: "",
-    email: "",
-    phone: "",
-    company: "",
-    website: "",
-    address: "",
+  const [formData, setFormData] = useState(() => {
+    if (settingsMemoryCache?.profile) {
+      const p = settingsMemoryCache.profile;
+      return {
+        id: "",
+        name:    p?.fullName  || user?.name || "",
+        email:   p?.email     || user?.email || "",
+        phone:   p?.phone     || "",
+        company: p?.company   || "",
+        website: p?.website   || "",
+        address: p?.address   || "",
+      };
+    }
+    return {
+      id: "",
+      name: "",
+      email: "",
+      phone: "",
+      company: "",
+      website: "",
+      address: "",
+    };
   });
 
   const connectedAccounts = [];
@@ -313,8 +554,15 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
     if (user) {
       const loadAllData = async () => {
         try {
-          setLoading(true);
+          if (!settingsMemoryCache) {
+            setLoading(true);
+          }
           
+          let fetchedProfile: any = null;
+          let fetchedPasskeys: any[] = [];
+          let fetchedTenant: any = null;
+          let fetchedRole: string | null = null;
+
           const fetchProfileAndPasskeys = async () => {
             const [resProfile, resPasskeys] = await Promise.all([
               fetch(`/api/users/get-profile?userId=${user.id}`),
@@ -323,14 +571,16 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
             
             if (resProfile.ok) {
               const data = await resProfile.json();
-              applyProfile(data.success ? data.profile : null);
+              fetchedProfile = data.success ? data.profile : null;
+              applyProfile(fetchedProfile);
             } else {
               applyProfile(null);
             }
 
             if (resPasskeys.ok) {
               const pkData = await resPasskeys.json();
-              setCustomPasskeys(pkData.passkeys || []);
+              fetchedPasskeys = pkData.passkeys || [];
+              setCustomPasskeys(fetchedPasskeys);
             }
           };
 
@@ -340,11 +590,25 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               getTenantInfo(),
               getCurrentUserRole()
             ]);
-            if (data) setTenantInfo(data);
-            if (role) setCurrentUserRole(role);
+            if (data) {
+              fetchedTenant = data;
+              setTenantInfo(data);
+            }
+            if (role) {
+              fetchedRole = role;
+              setCurrentUserRole(role);
+            }
           };
 
           await Promise.all([fetchProfileAndPasskeys(), fetchTenantAndRole()]);
+
+          settingsMemoryCache = {
+            profile: fetchedProfile || settingsMemoryCache?.profile,
+            passkeys: fetchedPasskeys || settingsMemoryCache?.passkeys || [],
+            tenantInfo: fetchedTenant || settingsMemoryCache?.tenantInfo,
+            currentUserRole: fetchedRole || settingsMemoryCache?.currentUserRole || null,
+            teamData: settingsMemoryCache?.teamData,
+          };
         } catch (err) {
           console.error("Error loading settings:", err);
         } finally {
@@ -357,6 +621,45 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
       setLoading(false);
     }
   }, [isLoaded, user]);
+
+  // Handle browser back and forward button navigation seamlessly
+  useEffect(() => {
+    const handlePopState = () => {
+      const pathname = window.location.pathname;
+      const match = pathname.match(/\/user\/settings\/?([^/]*)/);
+      const slug = match ? match[1] : "";
+      if (!slug) {
+        setActiveView("hub");
+        window.dispatchEvent(new CustomEvent("update-title", { detail: "Settings" }));
+      } else {
+        const mapped = SETTINGS_SLUG_TO_TAB[slug] || "profile";
+        setActiveTab(mapped);
+        if (mapped === "appearance") {
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get("sub") === "theme") {
+            setAppearanceSubTab("theme");
+          } else {
+            setAppearanceSubTab("layouts");
+          }
+        }
+        setActiveView("form");
+        const title = SETTINGS_TAB_TITLES[mapped] || "Settings";
+        window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  // Sync dashboard top-bar title dynamically
+  useEffect(() => {
+    if (activeView === "hub") {
+      window.dispatchEvent(new CustomEvent("update-title", { detail: "Settings" }));
+    } else {
+      const title = SETTINGS_TAB_TITLES[activeTab] || "Settings";
+      window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
+    }
+  }, [activeTab, activeView]);
 
   const [tenantFormData, setTenantFormData] = useState({
     name: "My Business",
@@ -407,6 +710,9 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
 
       if (res.success) {
         setTenantInfo(prev => ({ ...prev, ...tenantFormData }));
+        if (settingsMemoryCache) {
+          settingsMemoryCache.tenantInfo = { ...settingsMemoryCache.tenantInfo, ...tenantFormData };
+        }
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
@@ -417,11 +723,9 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
   };
 
   const [logoUploading, setLogoUploading] = useState(false);
+  const [isDraggingLogo, setIsDraggingLogo] = useState(false);
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processLogoFile = async (file: File) => {
     const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
     if (!validTypes.includes(file.type)) {
       alert("Please upload a JPG, PNG, GIF or WebP image.");
@@ -440,6 +744,9 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
       const data = await res.json();
       if (res.ok && data.url) {
         setTenantInfo(prev => ({ ...prev, logo_url: data.url }));
+        if (settingsMemoryCache) {
+          settingsMemoryCache.tenantInfo = { ...settingsMemoryCache.tenantInfo, logo_url: data.url };
+        }
       } else {
         alert(data.error || "Upload failed");
       }
@@ -448,9 +755,14 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
       alert("Upload failed. Please try again.");
     } finally {
       setLogoUploading(false);
-      // Reset the file input
-      e.target.value = "";
     }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processLogoFile(file);
+    e.target.value = "";
   };
 
   const handleRemoveLogo = async () => {
@@ -468,6 +780,9 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
         });
         if (res.success) {
           setTenantInfo(prev => ({ ...prev, logo_url: null }));
+          if (settingsMemoryCache) {
+            settingsMemoryCache.tenantInfo = { ...settingsMemoryCache.tenantInfo, logo_url: null };
+          }
         } else {
           alert(`Error: ${res.error}`);
         }
@@ -636,7 +951,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
       <div className="flex flex-col justify-center items-center min-h-[400px] space-y-4">
         <p className="text-gray-400">You must be signed in to access settings.</p>
         <Link 
-          href="/sign-in" 
+          href="/login" 
           className="px-6 py-3 bg-gradient-to-r from-brand-600 to-brand-700 text-foreground rounded-3xl font-semibold hover:opacity-90 transition-opacity"
         >
           Sign In
@@ -727,6 +1042,16 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-brand-500 transition-colors shrink-0" />
             </a>
 
+            {/* End-to-end encryption & security info */}
+            <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed pt-2 flex flex-row items-center gap-3 text-left px-1">
+              <div className="p-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 shrink-0">
+                <MdLock className="w-4 h-4 text-brand-500" />
+              </div>
+              <p className="text-[11px] leading-relaxed">
+                Your data stays secure with <span className="text-brand-500 font-medium">end-to-end encryption</span>. &copy; {new Date().getFullYear()}. <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a>. All rights reserved.
+              </p>
+            </div>
+
           </div>
 
           {/* Right Column (Navigation Menu) */}
@@ -738,10 +1063,10 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               <div className="flex flex-col">
                 {[
                   { name: "Business Profile", sub: "Update business name, contact & details.", icon: MdBusiness, id: "business", allowed: currentUserRole !== 'Viewer' && currentUserRole !== 'Editor' },
+                  { name: "Appearance & Layouts", sub: "Customize dashboard accent colour, theme branding, and invoice layouts.", icon: Palette, id: "appearance", allowed: true },
                   { name: "Account & Security", sub: "Manage your profile, connected accounts, and app lock.", icon: MdPerson, id: "profile", allowed: true },
                   { name: "Billing & Plans", sub: "Manage your subscription and payments.", icon: MdCreditCard, id: "billing", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
-                  { name: "Team Settings", sub: "Manage team members and roles.", icon: MdGroup, id: "team", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
-                  { name: "Roles & Permissions", sub: "Configure custom roles.", icon: MdSecurity, id: "roles", allowed: currentUserRole === 'owner' },
+                  { name: "Team & Permissions", sub: "Manage team members, invitations, and custom roles.", icon: MdGroup, id: "team", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
                   { name: "Admin Preferences", sub: "Configure default dashboard date range and display preferences.", icon: Sliders, id: "prefs", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin' },
                   { name: "Audit Logs", sub: "View system and user activity.", icon: MdHistory, id: "audit_logs", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
                   { name: "Data Export", sub: "Export your workspace data to CSV.", icon: MdDownload, id: "export", allowed: currentUserRole === 'owner' },
@@ -754,8 +1079,14 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                     onClick={() => {
                       const slug = SETTINGS_TAB_TO_SLUG[item.id] || item.id;
                       setActiveTab(item.id);
+                      if (item.id === "appearance") {
+                        setAppearanceSubTab("layouts");
+                      }
                       setActiveView("form");
-                      router.push(`/user/settings/${slug}`);
+                      window.history.pushState(null, '', `/user/settings/${slug}`);
+                      const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
+                      window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
+                      window.scrollTo({ top: 0, behavior: "instant" });
                     }}
                     className="flex items-center justify-between py-4 group cursor-pointer text-left hover:bg-card px-2 -mx-2 rounded-xl transition-colors"
                   >
@@ -774,46 +1105,36 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               </div>
             </div>
 
-            <div className="mt-8 text-xs text-gray-500 dark:text-white leading-relaxed pb-4 border-t border-border/50 pt-5 flex flex-row items-center justify-center gap-4 text-left">
-              <div className="p-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 shrink-0">
-                <MdLock className="w-4 h-4 text-brand-500" />
-              </div>
-              <p>
-                Your data stays secure with <span className="text-brand-500 font-medium">end-to-end encryption</span>. &copy; {new Date().getFullYear()}. <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a>. All rights reserved.
-              </p>
-            </div>
-
           </div>
         </div>
       )}
 
       {/* Data Export Tab */}
-      {activeTab === "export" && (
+      {activeView === "form" && activeTab === "export" && (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 relative z-50">
-            <div className="flex items-center gap-4">
-              <button 
-                type="button"
-                onClick={(e) => { 
-                  e.preventDefault();
-                  setActiveTab("profile"); 
-                  setActiveView("hub"); 
-                  router.push("/user/settings"); 
-                }} 
-                className="p-2 hover:bg-card rounded-full transition-colors cursor-pointer relative z-50"
-              >
-                <MdKeyboardArrowLeft className="w-6 h-6" />
-              </button>
-              <h2 className="text-xl font-bold">Data Export</h2>
-            </div>
+            <button 
+              type="button"
+              onClick={(e) => { 
+                e.preventDefault();
+                setActiveTab("profile"); 
+                setActiveView("hub"); 
+                window.history.pushState(null, '', "/user/settings"); 
+                window.dispatchEvent(new CustomEvent("update-title", { detail: "Settings" }));
+                window.scrollTo({ top: 0, behavior: "instant" });
+              }} 
+              className="flex items-center gap-2 text-gray-400 hover:text-foreground font-semibold transition-colors cursor-pointer w-fit"
+            >
+              <MdKeyboardArrowLeft className="w-5 h-5" /> Settings
+            </button>
 
             <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
               {[
                 { name: "Business", id: "business", icon: MdBusiness, allowed: currentUserRole !== 'Viewer' && currentUserRole !== 'Editor' },
+                { name: "Appearance & Layouts", id: "appearance", icon: Palette, allowed: true },
                 { name: "Account", id: "profile", icon: MdPerson, allowed: true },
                 { name: "Billing", id: "billing", icon: MdCreditCard, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
-                { name: "Team", id: "team", icon: MdGroup, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
-                { name: "Roles", id: "roles", icon: MdSecurity, allowed: currentUserRole === 'owner' },
+                { name: "Team & Permissions", id: "team", icon: MdGroup, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
                 { name: "Preferences", id: "prefs", icon: Sliders, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin' },
                 { name: "Audit Logs", id: "audit_logs", icon: MdHistory, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
                 { name: "Export", id: "export", icon: MdDownload, allowed: currentUserRole === 'owner' },
@@ -829,7 +1150,13 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                     type="button"
                     onClick={() => {
                       setActiveTab(item.id);
-                      router.push(`/user/settings/${slug}`);
+                      if (item.id === "appearance") {
+                        setAppearanceSubTab("layouts");
+                      }
+                      window.history.pushState(null, '', `/user/settings/${slug}`);
+                      const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
+                      window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
+                      window.scrollTo({ top: 0, behavior: "instant" });
                     }}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       isCurrent
@@ -994,7 +1321,9 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
             <button 
               onClick={() => {
                 setActiveView("hub");
-                router.push("/user/settings");
+                window.history.pushState(null, '', "/user/settings");
+                window.dispatchEvent(new CustomEvent("update-title", { detail: "Settings" }));
+                window.scrollTo({ top: 0, behavior: "instant" });
               }}
               className="flex items-center gap-2 text-gray-400 hover:text-foreground font-semibold transition-colors cursor-pointer w-fit"
             >
@@ -1004,10 +1333,10 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
             <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
               {[
                 { name: "Business", id: "business", icon: MdBusiness, allowed: currentUserRole !== 'Viewer' && currentUserRole !== 'Editor' },
+                { name: "Appearance & Layouts", id: "appearance", icon: Palette, allowed: true },
                 { name: "Account", id: "profile", icon: MdPerson, allowed: true },
                 { name: "Billing", id: "billing", icon: MdCreditCard, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
-                { name: "Team", id: "team", icon: MdGroup, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
-                { name: "Roles", id: "roles", icon: MdSecurity, allowed: currentUserRole === 'owner' },
+                { name: "Team & Permissions", id: "team", icon: MdGroup, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
                 { name: "Preferences", id: "prefs", icon: Sliders, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin' },
                 { name: "Audit Logs", id: "audit_logs", icon: MdHistory, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
                 { name: "Export", id: "export", icon: MdDownload, allowed: currentUserRole === 'owner' },
@@ -1023,7 +1352,13 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                     type="button"
                     onClick={() => {
                       setActiveTab(item.id);
-                      router.push(`/user/settings/${slug}`);
+                      if (item.id === "appearance") {
+                        setAppearanceSubTab("layouts");
+                      }
+                      window.history.pushState(null, '', `/user/settings/${slug}`);
+                      const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
+                      window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
+                      window.scrollTo({ top: 0, behavior: "instant" });
                     }}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       isCurrent
@@ -1042,210 +1377,384 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
           <div className="bg-transparent">
 
             {activeTab === "business" && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-foreground mb-6">Business Profile</h2>
-                
+              <div className="max-w-4xl space-y-6">
                 {currentUserRole === 'Viewer' || currentUserRole === 'Editor' ? (
                   <div className="p-4 bg-red-500/10 text-red-400 rounded-xl border border-red-500/20">
                     You do not have permission to view or edit the business profile.
                   </div>
                 ) : (
                   <>
-                    {/* Logo Upload */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                  <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-border flex items-center justify-center bg-card">
-                    {logoUploading ? (
-                      <Loader />
-                    ) : (
-                      <TenantLogo
-                        logoUrl={tenantInfo.logo_url}
-                        name={tenantInfo.name}
-                        size={96}
-                        className="w-full h-full object-cover"
-                        fallbackClassName="w-full h-full bg-card flex items-center justify-center"
-                        iconClassName="w-8 h-8 text-gray-500"
-                      />
-                    )}
-                  </div>
-                  <div className="flex-1 flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium text-gray-300">Company Logo</label>
-                      {tenantInfo.logo_url && currentUserRole !== 'Viewer' && (
-                        <button
-                          type="button"
-                          onClick={handleRemoveLogo}
-                          disabled={logoUploading}
-                          className="text-xs text-rose-500 hover:text-rose-400 font-medium transition flex items-center gap-1 cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" /> Remove Logo
-                        </button>
+                    {/* Logo Upload Card */}
+                    <div className="p-6 rounded-2xl border border-border bg-card/40 backdrop-blur-sm">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                        {/* Logo Preview */}
+                        <div className="relative shrink-0">
+                          <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-border/80 bg-muted/40 shadow-sm flex items-center justify-center">
+                            {logoUploading ? (
+                              <Loader />
+                            ) : (
+                              <TenantLogo
+                                logoUrl={tenantInfo.logo_url}
+                                name={tenantInfo.name}
+                                size={96}
+                                className="w-full h-full object-cover"
+                                fallbackClassName="w-full h-full bg-card flex items-center justify-center font-bold text-xl text-foreground"
+                                iconClassName="w-8 h-8 text-muted-foreground"
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Logo Details & Compact Uploader */}
+                        <div className="flex-1 min-w-0 flex flex-col gap-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                              <h4 className="text-sm font-bold text-foreground">Company Logo</h4>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Your logo will appear on all client invoices, receipts, and quotations.
+                              </p>
+                            </div>
+                            {tenantInfo.logo_url && currentUserRole !== 'Viewer' && (
+                              <button
+                                type="button"
+                                onClick={handleRemoveLogo}
+                                disabled={logoUploading}
+                                className="self-start sm:self-auto text-xs text-rose-500 hover:text-rose-400 font-semibold transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-500/20 hover:bg-rose-500/10 cursor-pointer"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                <span>Remove Logo</span>
+                              </button>
+                            )}
+                          </div>
+
+                          <label
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              if (currentUserRole !== 'Viewer') setIsDraggingLogo(true);
+                            }}
+                            onDragLeave={() => setIsDraggingLogo(false)}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              setIsDraggingLogo(false);
+                              if (currentUserRole !== 'Viewer') {
+                                const file = e.dataTransfer.files?.[0];
+                                if (file) processLogoFile(file);
+                              }
+                            }}
+                            className={`flex items-center justify-center gap-2.5 w-full py-3.5 px-4 transition-all border-2 border-dashed rounded-xl ${
+                              isDraggingLogo
+                                ? "border-brand-500 bg-brand-500/10"
+                                : "border-border hover:border-brand-500/70 hover:bg-muted/30"
+                            } ${currentUserRole === 'Viewer' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                          >
+                            <Upload className="w-4 h-4 text-brand-500 shrink-0" />
+                            <span className="text-xs">
+                              <span className="font-semibold text-foreground">
+                                {logoUploading ? "Uploading logo..." : currentUserRole === 'Viewer' ? "Read Only" : "Click to browse logo"}
+                              </span>
+                              <span className="text-muted-foreground hidden sm:inline"> or drag & drop file here</span>
+                            </span>
+                            <input
+                              type="file"
+                              name="file_upload"
+                              className="hidden"
+                              accept="image/png, image/jpeg, image/gif, image/webp"
+                              disabled={logoUploading || currentUserRole === 'Viewer'}
+                              onChange={handleLogoUpload}
+                            />
+                          </label>
+
+                          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                            <span>Supported: JPG, PNG, GIF, WebP</span>
+                            <span>Max size: 2MB</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Business Details Form Card */}
+                    <form onSubmit={handleSaveTenant} className="p-6 sm:p-8 rounded-2xl border border-border bg-card/40 backdrop-blur-sm space-y-6">
+                      <div className="border-b border-border/60 pb-3">
+                        <h4 className="text-sm font-bold text-foreground">Business Information</h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          General company details shown on your invoices and client communications.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        {/* Business Name */}
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground">Business Name *</label>
+                          <div className="relative">
+                            <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                            <input
+                              type="text"
+                              name="name"
+                              value={tenantFormData.name}
+                              onChange={handleTenantChange}
+                              disabled={currentUserRole === 'Viewer'}
+                              placeholder="e.g. FrameToque Digital Media"
+                              className="w-full pl-10 pr-4 py-2.5 bg-card/60 hover:bg-card border border-border focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-foreground text-sm transition-all outline-none disabled:opacity-50"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        {/* Industry */}
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground">Industry / Sector</label>
+                          <div className="relative">
+                            <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                            <input
+                              type="text"
+                              name="industry"
+                              placeholder="e.g. Retail, Tech, Manufacturing"
+                              value={tenantFormData.industry}
+                              onChange={handleTenantChange}
+                              disabled={currentUserRole === 'Viewer'}
+                              className="w-full pl-10 pr-4 py-2.5 bg-card/60 hover:bg-card border border-border focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-foreground text-sm transition-all outline-none disabled:opacity-50"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Business Email */}
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground">Business Email</label>
+                          <div className="relative">
+                            <MdMailOutline className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                            <input
+                              type="email"
+                              name="email"
+                              placeholder="contact@business.com"
+                              value={tenantFormData.email}
+                              onChange={handleTenantChange}
+                              disabled={currentUserRole === 'Viewer'}
+                              className="w-full pl-10 pr-4 py-2.5 bg-card/60 hover:bg-card border border-border focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-foreground text-sm transition-all outline-none disabled:opacity-50"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Phone Number */}
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground">Phone Number</label>
+                          <div className="relative">
+                            <MdPhone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                            <input
+                              type="tel"
+                              name="phone"
+                              placeholder="+94 77 000 0000"
+                              value={tenantFormData.phone}
+                              onChange={handleTenantChange}
+                              disabled={currentUserRole === 'Viewer'}
+                              className="w-full pl-10 pr-4 py-2.5 bg-card/60 hover:bg-card border border-border focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-foreground text-sm transition-all outline-none disabled:opacity-50"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Website */}
+                        <div className="sm:col-span-2 space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground">Website</label>
+                          <div className="relative flex rounded-xl border border-border bg-card/60 hover:bg-card focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 transition-all overflow-hidden">
+                            <span className="flex items-center px-3.5 bg-muted/40 border-r border-border text-xs font-medium text-muted-foreground select-none">
+                              https://
+                            </span>
+                            <input
+                              type="text"
+                              name="website"
+                              placeholder="yourwebsite.com"
+                              value={tenantFormData.website.replace(/^https?:\/\//, '')}
+                              disabled={currentUserRole === 'Viewer'}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setTenantFormData(prev => ({ ...prev, website: v.startsWith('http') ? v : v ? `https://${v}` : '' }));
+                              }}
+                              className="w-full px-3.5 py-2.5 bg-transparent text-foreground text-sm outline-none disabled:opacity-50"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Business Address */}
+                        <div className="sm:col-span-2 space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground">Business Address</label>
+                          <textarea
+                            name="address"
+                            placeholder="123 Business Street, City, Country"
+                            value={tenantFormData.address}
+                            disabled={currentUserRole === 'Viewer'}
+                            onChange={handleTenantChange}
+                            rows={3}
+                            className="w-full px-3.5 py-2.5 bg-card/60 hover:bg-card border border-border focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-foreground text-sm transition-all outline-none resize-y disabled:opacity-50"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Footer Actions */}
+                      <div className="pt-4 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Info className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                          <span>Shown on invoices and client-facing documents.</span>
+                        </div>
+                        {currentUserRole !== 'Viewer' && (
+                          <button 
+                            type="submit" 
+                            disabled={saving}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-xl transition-all shadow-md active:scale-98 cursor-pointer text-xs disabled:opacity-50"
+                          >
+                            {saving ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>Saving...</span>
+                              </>
+                            ) : (
+                              <>
+                                <MdCheck className="w-4 h-4" />
+                                <span>Save Changes</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      {saveSuccess && (
+                        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs font-semibold flex items-center gap-2 mt-4 animate-in fade-in">
+                          <MdCheck className="w-4 h-4" />
+                          <span>Business profile updated successfully.</span>
+                        </div>
                       )}
+                    </form>
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeTab === "appearance" && (
+              <div className="space-y-4">
+                {/* Pro Plus Upgrade Banner for Free and Pro Users */}
+                {tenantInfo.plan !== 'Pro Plus' && (
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-brand-500/10 via-purple-500/10 to-blue-500/10 border border-brand-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-brand-500/20 text-brand-500 flex items-center justify-center shrink-0">
+                        <MdLock className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
+                          <span>Exclusive Pro Plus Features</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-purple-500/20 text-purple-400 border border-purple-500/30">PRO PLUS</span>
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          You are viewing theme branding and invoice layouts in preview mode. Upgrade to Pro Plus to change colours and use customized invoice layouts.
+                        </p>
+                      </div>
                     </div>
-                    <label className={`flex items-center justify-center w-full h-32 px-4 transition bg-transparent border-2 border-border border-dashed rounded-2xl appearance-none focus:outline-none ${currentUserRole === 'Viewer' ? 'opacity-50 cursor-not-allowed' : 'hover:border-brand-500 cursor-pointer'}`}>
-                      <span className="flex items-center space-x-2">
-                        <MdUpload className="w-6 h-6 text-gray-400" />
-                        <span className="font-medium text-gray-400">
-                          {logoUploading ? "Uploading..." : currentUserRole === 'Viewer' ? "Read Only" : "Drop logo here or click to browse"}
-                        </span>
-                      </span>
-                      <input 
-                        type="file" 
-                        name="file_upload" 
-                        className="hidden" 
-                        accept="image/png, image/jpeg, image/gif, image/webp"
-                        disabled={logoUploading || currentUserRole === 'Viewer'}
-                        onChange={handleLogoUpload}
-                      />
-                    </label>
-                    <p className="text-xs text-gray-400">JPG, PNG, GIF or WebP. Max size 2MB</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('upgrade-modal:open', {
+                          detail: "Upgrade to Pro Plus to unlock custom workspace accent colors and customized invoice templates."
+                        }));
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs shrink-0 transition-all shadow-md cursor-pointer flex items-center gap-2"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>Upgrade to Pro Plus</span>
+                    </button>
                   </div>
-                </div>
+                )}
 
-                <form onSubmit={handleSaveTenant} className="space-y-4 pt-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-2">
-                      <label className="text-sm font-medium text-gray-300">Business Name *</label>
-                      <div className="relative">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                          <Building className="w-4 h-4 text-gray-500" />
-                        </div>
-                        <input
-                          type="text"
-                          name="name"
-                          value={tenantFormData.name}
-                          onChange={handleTenantChange}
-                          disabled={currentUserRole === 'Viewer'}
-                          className="w-full pl-11 pr-4 py-3 bg-transparent border border-border focus:border-brand-500 rounded-2xl text-foreground text-sm focus:ring-1 focus:ring-brand-500 transition-colors disabled:opacity-50"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <label className="text-sm font-medium text-gray-300">Industry</label>
-                      <div className="relative">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                          <Globe className="w-4 h-4 text-gray-500" />
-                        </div>
-                        <input
-                          type="text"
-                          name="industry"
-                          placeholder="e.g. Retail, Tech, Manufacturing"
-                          value={tenantFormData.industry}
-                          onChange={handleTenantChange}
-                          disabled={currentUserRole === 'Viewer'}
-                          className="w-full pl-11 pr-4 py-3 bg-transparent border border-border focus:border-brand-500 rounded-2xl text-foreground text-sm focus:ring-1 focus:ring-brand-500 transition-colors disabled:opacity-50"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <label className="text-sm font-medium text-gray-300">Business Email</label>
-                      <div className="relative">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                          <MdMailOutline className="w-4 h-4 text-gray-500" />
-                        </div>
-                        <input
-                          type="email"
-                          name="email"
-                          placeholder="contact@business.com"
-                          value={tenantFormData.email}
-                          onChange={handleTenantChange}
-                          disabled={currentUserRole === 'Viewer'}
-                          className="w-full pl-11 pr-4 py-3 bg-transparent border border-border focus:border-brand-500 rounded-2xl text-foreground text-sm focus:ring-1 focus:ring-brand-500 transition-colors disabled:opacity-50"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <label className="text-sm font-medium text-gray-300">Phone Number</label>
-                      <div className="relative">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                          <MdPhone className="w-4 h-4 text-gray-500" />
-                        </div>
-                        <input
-                          type="tel"
-                          name="phone"
-                          placeholder="+94 77 000 0000"
-                          value={tenantFormData.phone}
-                          onChange={handleTenantChange}
-                          disabled={currentUserRole === 'Viewer'}
-                          className="w-full pl-11 pr-4 py-3 bg-transparent border border-border focus:border-brand-500 rounded-2xl text-foreground text-sm focus:ring-1 focus:ring-brand-500 transition-colors disabled:opacity-50"
-                        />
-                      </div>
-                    </div>
+                <div>
+                  {/* Sub-tabs header for Appearance & Layouts */}
+                  <div className="flex items-center gap-2 border-b border-border pb-3 mb-6">
+                    <button
+                      type="button"
+                      onClick={() => setAppearanceSubTab("layouts")}
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                        appearanceSubTab === "layouts"
+                          ? "bg-brand-500 text-brand-900 font-bold shadow-xs"
+                          : "bg-card text-muted-foreground hover:text-foreground border border-border"
+                      }`}
+                    >
+                      Invoice Layouts & Fields
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAppearanceSubTab("theme")}
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                        appearanceSubTab === "theme"
+                          ? "bg-brand-500 text-brand-900 font-bold shadow-xs"
+                          : "bg-card text-muted-foreground hover:text-foreground border border-border"
+                      }`}
+                    >
+                      Dashboard Theme & Accent
+                    </button>
                   </div>
 
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium text-gray-300">Website</label>
-                    <div className="relative">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">https://</div>
-                      <input
-                        type="text"
-                        name="website"
-                        placeholder="yourwebsite.com"
-                        value={tenantFormData.website.replace(/^https?:\/\//, '')}
-                        disabled={currentUserRole === 'Viewer'}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setTenantFormData(prev => ({ ...prev, website: v.startsWith('http') ? v : v ? `https://${v}` : '' }));
-                        }}
-                        className="w-full pl-20 pr-4 py-3 bg-transparent border border-border focus:border-brand-500 rounded-2xl text-foreground text-sm focus:ring-1 focus:ring-brand-500 transition-colors disabled:opacity-50"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium text-gray-300">Business Address</label>
-                    <textarea
-                      name="address"
-                      placeholder="123 Business Street, City, Country"
-                      value={tenantFormData.address}
-                      disabled={currentUserRole === 'Viewer'}
-                      onChange={handleTenantChange}
-                      rows={3}
-                      className="w-full px-4 py-3 bg-transparent border border-border focus:border-brand-500 rounded-2xl text-foreground text-sm focus:ring-1 focus:ring-brand-500 transition-colors resize-none disabled:opacity-50"
+                  {appearanceSubTab === "theme" ? (
+                    <AppearanceTab 
+                      initialAccent={tenantInfo?.accent_color || null}
+                      canManage={currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin'}
+                      isProPlus={tenantInfo.plan === 'Pro' || tenantInfo.plan === 'Pro Plus'}
+                      onAccentSaved={(hex) => {
+                        setTenantInfo(prev => ({ ...prev, accent_color: hex }));
+                        if (settingsMemoryCache) {
+                          settingsMemoryCache.tenantInfo = { ...settingsMemoryCache.tenantInfo, accent_color: hex };
+                        }
+                      }}
                     />
-                  </div>
-
-                  <div className="pt-4 border-t border-border flex items-center justify-between">
-                    <p className="text-sm text-gray-400">Shown on invoices and client-facing documents.</p>
-                    {currentUserRole !== 'Viewer' && (
-                      <button 
-                        type="submit" 
-                        disabled={saving}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-full transition-colors disabled:opacity-50"
-                      >
-                        <MdCheck className="w-4 h-4" />
-                        {saving ? "Saving..." : "Save Changes"}
-                      </button>
-                    )}
-                  </div>
-                  {saveSuccess && (
-                    <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm font-medium flex items-center gap-2 mt-4">
-                      <MdCheck className="w-4 h-4" /> Business profile updated successfully
-                    </div>
+                  ) : (
+                    <InvoiceLayoutTab 
+                      canManage={currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin'}
+                      isProPlus={tenantInfo.plan === 'Pro Plus'}
+                    />
                   )}
-                </form>
-                </>
-              )}
+                </div>
               </div>
             )}
 
             {activeTab === "team" && (
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-foreground mb-6">Manage Team Members</h2>
                 {tenantInfo.plan !== 'Pro Plus' ? (
                   <UpgradeOverlay 
-                    title="Team Management"
-                    description="Invite and manage team members to collaborate on your workspace. Upgrade to Pro Plus to unlock this feature."
+                    title="Team & Permissions"
+                    description="Invite team members and configure custom roles. Upgrade to Pro Plus to unlock this feature."
                     requiredPlan="Pro Plus"
                   >
                     <div />
                   </UpgradeOverlay>
                 ) : (
-                  <>
-                    <div className="flex items-center justify-between mb-8">
+                  <div>
+                    {/* Sub-tabs header for Team & Permissions */}
+                    <div className="flex items-center gap-2 border-b border-border pb-3 mb-6">
+                      <button
+                        type="button"
+                        onClick={() => setTeamSubTab("members")}
+                        className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                          teamSubTab === "members"
+                            ? "bg-brand-500 text-brand-900 font-bold shadow-xs"
+                            : "bg-card text-muted-foreground hover:text-foreground border border-border"
+                        }`}
+                      >
+                        Team Members ({teamMembers.length})
+                      </button>
+                      {(currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin') && (
+                        <button
+                          type="button"
+                          onClick={() => setTeamSubTab("roles")}
+                          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                            teamSubTab === "roles"
+                              ? "bg-brand-500 text-brand-900 font-bold shadow-xs"
+                              : "bg-card text-muted-foreground hover:text-foreground border border-border"
+                          }`}
+                        >
+                          Roles & Permissions
+                        </button>
+                      )}
+                    </div>
+
+                    {teamSubTab === "roles" ? (
+                      <RolesConfigurator currentUserRole={currentUserRole} />
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between mb-8">
                       <div>
                         <h3 className="text-lg font-semibold text-foreground">Active Team Members</h3>
                         <p className="text-sm text-gray-400 mt-1">Manage current members and roles.</p>
@@ -1448,10 +1957,11 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                 )}
               </div>
             )}
+              </div>
+            )}
 
             {activeTab === "profile" && (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-foreground mb-6">Account & Security</h2>
                 {/* Personal Info - simplified: name, photo, connected accounts */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-6 border-b border-border">
                   <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-border shrink-0">
@@ -1550,18 +2060,12 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                   </div>
 
                   {customPasskeys.length > 0 && (
-                    <div className="mb-4">
+                    <div className="mb-4 relative z-30">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Auto-Lock Duration</label>
-                      <select
+                      <AutoLockDurationSelect
                         value={autoLockDuration}
-                        onChange={(e) => setAutoLockDuration(parseInt(e.target.value, 10))}
-                        className="w-full sm:w-64 bg-card border border-border hover:border-black/20 dark:border-white/20 rounded-2xl px-4 py-3 outline-none focus:border-brand-500 transition-colors text-sm text-foreground appearance-none shadow-2xs"
-                      >
-                        <option value={60000} className="bg-card text-foreground">After 1 minute</option>
-                        <option value={300000} className="bg-card text-foreground">After 5 minutes</option>
-                        <option value={600000} className="bg-card text-foreground">After 10 minutes</option>
-                        <option value={900000} className="bg-card text-foreground">After 15 minutes</option>
-                      </select>
+                        onChange={setAutoLockDuration}
+                      />
                     </div>
                   )}
 
@@ -1665,20 +2169,6 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               <AuditLogsTab />
             )}
 
-            {activeTab === "roles" && (
-              tenantInfo.plan === 'Pro Plus' ? (
-                <RolesConfigurator currentUserRole={currentUserRole} />
-              ) : (
-                <UpgradeOverlay 
-                  title="Granular Team Roles"
-                  description="Configure custom, fine-grained access control permissions for your team members. Upgrade to Pro Plus to unlock this feature."
-                  requiredPlan="Pro Plus"
-                >
-                  <div />
-                </UpgradeOverlay>
-              )
-            )}
-
             {activeTab === "danger" && (
               <DangerZoneView currentUserRole={currentUserRole} teamMembers={teamMembers} />
             )}
@@ -1751,7 +2241,7 @@ function BillingView({
   };
 
   const copyBankInfo = () => {
-    navigator.clipboard.writeText("1000892451");
+    navigator.clipboard.writeText("N/A");
     setCopiedBank(true);
     setTimeout(() => setCopiedBank(false), 2500);
   };
@@ -1834,6 +2324,7 @@ function BillingView({
 
   const limits = {
     invoices: 50,
+    quotations: 50,
     incomes: 100,
     expenses: 100,
     clients: 50,
@@ -1877,6 +2368,16 @@ function BillingView({
               </div>
               <div className="w-full bg-card rounded-full h-2 overflow-hidden border border-border">
                 <div className="bg-brand-500 h-full rounded-full transition-all" style={{ width: `${getPercentage(usage.invoices, limits.invoices)}%` }}></div>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between text-xs font-medium mb-1.5">
+                <span className="text-foreground">Quotations</span>
+                <span className="text-muted-foreground">{usage.quotations ?? 0} / {limits.quotations}</span>
+              </div>
+              <div className="w-full bg-card rounded-full h-2 overflow-hidden border border-border">
+                <div className="bg-emerald-500 h-full rounded-full transition-all" style={{ width: `${getPercentage(usage.quotations ?? 0, limits.quotations)}%` }}></div>
               </div>
             </div>
             
@@ -2000,19 +2501,19 @@ function BillingView({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div>
                   <span className="text-muted-foreground block text-[11px]">Bank:</span>
-                  <span className="font-semibold text-foreground">Commercial Bank of Ceylon</span>
+                  <span className="font-semibold text-foreground">N/A</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[11px]">Account Name:</span>
-                  <span className="font-semibold text-foreground">Framebooks (Pvt) Ltd</span>
+                  <span className="font-semibold text-foreground">N/A</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[11px]">Account Number:</span>
-                  <span className="font-mono font-bold text-foreground">1000 892 451</span>
+                  <span className="font-mono font-bold text-foreground">N/A</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[11px]">Branch / Currency:</span>
-                  <span className="font-semibold text-foreground">Colombo 03 • LKR</span>
+                  <span className="font-semibold text-foreground">N/A</span>
                 </div>
               </div>
             </div>
@@ -2453,7 +2954,6 @@ function AdminPreferencesView() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold text-foreground mb-6">Admin Preferences</h2>
       <form onSubmit={handleSave} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
@@ -2686,10 +3186,6 @@ function DangerZoneView({ currentUserRole, teamMembers = [] }: { currentUserRole
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 mb-6 text-red-600 dark:text-red-500">
-        <Terminal className="w-5 h-5" />
-        <h2 className="text-xl font-bold">Danger Zone</h2>
-      </div>
       
       {errorMsg && (
         <div className="text-red-600 dark:text-red-400 bg-red-100/80 dark:bg-red-400/10 border border-red-300 dark:border-red-400/20 px-4 py-3 rounded-2xl text-sm mb-6">

@@ -9,6 +9,10 @@ import ClientCombobox from "../../../components/ClientCombobox";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { updateInvoice, getInvoiceByIdAdmin, getClients, createClient, getBankAccounts } from "../../../actions/actions";
+import { getInvoiceLayouts, getCustomFields } from "../../../actions/invoice-layouts";
+import { getTenantInfo } from "../../../actions/tenants";
+import { InvoiceLayoutAndCustomFields } from "../../components/InvoiceLayoutAndCustomFields";
+import { InvoiceLayoutRecord, CustomFieldDefinition } from "@/lib/invoice-layout/types";
 import CategoryPicker from "../../../components/CategoryPicker";
 import { useRole } from "../../../context/RoleContext";
 
@@ -64,20 +68,37 @@ export default function EditInvoicePage() {
     { id: 1, description: "", quantity: 1, rate: 0 },
   ]);
 
+  // Invoice Layout & Custom Fields
+  const [layouts, setLayouts] = useState<InvoiceLayoutRecord[]>([]);
+  const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
+  const [selectedLayoutId, setSelectedLayoutId] = useState<string>("");
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
+  const [tenantPlan, setTenantPlan] = useState<string>("Free");
+
   useEffect(() => {
     if (!invoice_id) return;
     const fetchInvoice = async () => {
       try {
-        const [data, allClients, allBankAccounts] = await Promise.all([
+        const [data, allClients, allBankAccounts, lyts, cFields, tInfo] = await Promise.all([
           getInvoiceByIdAdmin(invoice_id as string),
           getClients(),
           getBankAccounts(),
+          getInvoiceLayouts(),
+          getCustomFields(),
+          getTenantInfo(),
         ]);
 
         if (!data) throw new Error("Invoice not found");
 
         setClients(allClients);
         setBankAccounts(allBankAccounts);
+        setLayouts(lyts);
+        setCustomFields(cFields);
+
+        const plan = tInfo?.plan || "Free";
+        setTenantPlan(plan);
+        setSelectedLayoutId(data.layout_id ? String(data.layout_id) : "");
+        setCustomFieldValues(data.custom_field_values || {});
         setClientsLoading(false);
 
         let formattedDate = "";
@@ -242,6 +263,8 @@ export default function EditInvoicePage() {
         ...formData,
         category: selectedCategories.join(", "),
         subtotal, total, totalDue,
+        layoutId: selectedLayoutId || null,
+        customFieldValues,
       }, lineItems);
       router.push("/user/invoices");
     } catch (e) {
@@ -268,7 +291,7 @@ export default function EditInvoicePage() {
         <div className="space-y-8">
 
           {/* Client Details */}
-          <div className="relative z-50 bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
+          <div className="relative z-20 bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
             <h2 className="text-xl font-semibold mb-4">Client Details</h2>
 
             <div className="space-y-1">
@@ -411,6 +434,19 @@ export default function EditInvoicePage() {
               </select>
             </div>
           </div>
+
+          {/* Invoice Layout & Custom Fields */}
+          <InvoiceLayoutAndCustomFields
+            selectedLayoutId={selectedLayoutId}
+            onLayoutChange={setSelectedLayoutId}
+            customFieldValues={customFieldValues}
+            onCustomFieldChange={(key, value) =>
+              setCustomFieldValues((prev) => ({ ...prev, [key]: value }))
+            }
+            layouts={layouts}
+            customFields={customFields}
+            tenantPlan={tenantPlan}
+          />
         </div>
 
         {/* Right Column: Line Items & Actions */}

@@ -72,7 +72,7 @@ export default function WheelDatePicker({
       <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
       <div
-        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white dark:bg-[#082830] border border-border dark:border-white/15 rounded-2xl shadow-2xl p-4 w-[310px] animate-in zoom-in-95 duration-200 overscroll-contain"
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-popover border border-border dark:border-white/15 rounded-2xl shadow-2xl p-4 w-[310px] animate-in zoom-in-95 duration-200 overscroll-contain"
         onWheel={(e) => e.stopPropagation()}
         onTouchMove={(e) => e.stopPropagation()}
       >
@@ -85,8 +85,8 @@ export default function WheelDatePicker({
         <div className="absolute left-0 right-0 h-10 border-y border-border bg-black/5 dark:bg-white/10 pointer-events-none z-10" />
 
         {/* Top and bottom gradient fade-out masks */}
-        <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-white dark:from-[#082830] to-transparent pointer-events-none z-20" />
-        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white dark:from-[#082830] to-transparent pointer-events-none z-20" />
+        <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-popover to-transparent pointer-events-none z-20" />
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-popover to-transparent pointer-events-none z-20" />
 
         {/* Month Wheel */}
         <ScrollWheel

@@ -8,6 +8,10 @@ import { MdAdd, MdDelete, MdArrowBack, MdErrorOutline } from "react-icons/md";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { updateQuotation, getQuotationById, getBankAccounts } from "../../../actions/actions";
+import { getInvoiceLayouts, getCustomFields } from "../../../actions/invoice-layouts";
+import { getTenantInfo } from "../../../actions/tenants";
+import { InvoiceLayoutAndCustomFields } from "../../../invoices/components/InvoiceLayoutAndCustomFields";
+import { InvoiceLayoutRecord, CustomFieldDefinition } from "@/lib/invoice-layout/types";
 import CategoryPicker from "../../../components/CategoryPicker";
 import { useRole } from "../../../context/RoleContext";
 
@@ -48,6 +52,11 @@ export default function EditQuotationPage() {
   const [quotationStatus, setQuotationStatus] = useState<string>("draft");
 
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [layouts, setLayouts] = useState<InvoiceLayoutRecord[]>([]);
+  const [selectedLayoutId, setSelectedLayoutId] = useState<string>("");
+  const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
+  const [tenantPlan, setTenantPlan] = useState<string>("Free");
 
   const [formData, setFormData] = useState({
     clientId: "",
@@ -81,13 +90,21 @@ export default function EditQuotationPage() {
     if (!quotation_id) return;
     const fetchQuotationAndBanks = async () => {
       try {
-        const [data, banks] = await Promise.all([
+        const [data, banks, lyts, cFields, tInfo] = await Promise.all([
           getQuotationById(quotation_id as string),
-          getBankAccounts()
+          getBankAccounts(),
+          getInvoiceLayouts(),
+          getCustomFields(),
+          getTenantInfo(),
         ]);
         if (!data) throw new Error("Quotation not found");
 
         setBankAccounts(banks);
+        setLayouts(lyts);
+        setCustomFields(cFields);
+        const plan = tInfo?.plan || "Free";
+        setTenantPlan(plan);
+        setSelectedLayoutId(data.layout_id ? String(data.layout_id) : "");
         setQuotationStatus(data.status || "draft");
 
         setFormData({
@@ -209,7 +226,8 @@ export default function EditQuotationPage() {
         receiptUrl: null,
         bankAccountId: formData.bankAccountId ? parseInt(formData.bankAccountId) : null,
         notes: formData.notes || null,
-        legalName: formData.legalName || null
+        legalName: formData.legalName || null,
+        layoutId: selectedLayoutId || null,
       }, lineItems);
       
       router.push("/user/quotations");
@@ -371,6 +389,20 @@ export default function EditQuotationPage() {
               className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors resize-none disabled:opacity-50"
               rows={3} placeholder="Terms, conditions, or special notes..." disabled={isConfirmed} />
           </div>
+
+          {/* Quotation Layout & Custom Fields */}
+          <InvoiceLayoutAndCustomFields
+            documentType="quotation"
+            selectedLayoutId={selectedLayoutId}
+            onLayoutChange={setSelectedLayoutId}
+            customFieldValues={customFieldValues}
+            onCustomFieldChange={(key, value) =>
+              setCustomFieldValues((prev) => ({ ...prev, [key]: value }))
+            }
+            layouts={layouts}
+            customFields={customFields}
+            tenantPlan={tenantPlan}
+          />
         </div>
 
         {/* Right Column */}

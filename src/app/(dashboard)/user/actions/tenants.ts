@@ -3,6 +3,7 @@
 import sql from "@/lib/db";
 import { auth } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { logSystemAction } from "@/lib/logger";
 
 import { requirePermission } from "./rbac";
@@ -157,7 +158,7 @@ export async function getTenantInfo() {
     const tenantId = userRows[0].tenant_id;
     const rawRole = userRows[0].role;
     const userRole = rawRole ? (rawRole.toLowerCase() === 'viewer' ? 'Viewer' : rawRole) : null;
-    const tenants = await sql`SELECT id, name, plan, plan_expires_at, payment_status, logo_url, industry, phone, email, website, address FROM tenants WHERE id = ${tenantId}`;
+    const tenants = await sql`SELECT id, name, plan, plan_expires_at, payment_status, logo_url, industry, phone, email, website, address, accent_color FROM tenants WHERE id = ${tenantId}`;
     
     const teamMembersCountRows = await sql`SELECT count(*) FROM admin_users WHERE tenant_id = ${tenantId}`;
     const teamMembersCount = parseInt(teamMembersCountRows[0]?.count || '1');
@@ -175,6 +176,7 @@ export async function getTenantInfo() {
         email: tenants[0].email || null,
         website: tenants[0].website || null,
         address: tenants[0].address || null,
+        accent_color: tenants[0].accent_color || null,
         userRole: userRole || null,
         teamMembersCount,
       };
@@ -194,6 +196,7 @@ export async function getTenantInfo() {
       email: null,
       website: null,
       address: null,
+      accent_color: null,
       userRole: null,
       teamMembersCount: 1
     };
@@ -269,17 +272,19 @@ export async function getTenantUsage() {
     
     const tenantId = userRows[0].tenant_id;
     
-    const [invoices, incomes, expenses, clients, accounts, tenantRows] = await Promise.all([
+    const [invoices, quotations, incomes, expenses, clients, accounts, tenantRows] = await Promise.all([
       sql`SELECT count(*) FROM invoices WHERE tenant_id = ${tenantId}`,
+      sql`SELECT count(*) FROM admin_quotations WHERE tenant_id = ${tenantId}`,
       sql`SELECT count(*) FROM admin_incomes WHERE tenant_id = ${tenantId}`,
       sql`SELECT count(*) FROM admin_expenses WHERE tenant_id = ${tenantId}`,
       sql`SELECT count(*) FROM admin_clients WHERE tenant_id = ${tenantId}`,
       sql`SELECT count(*) FROM accounts WHERE tenant_id = ${tenantId}`,
-      sql`SELECT lifetime_invoices, lifetime_incomes, lifetime_expenses, lifetime_clients, lifetime_accounts FROM tenants WHERE id = ${tenantId}`,
+      sql`SELECT lifetime_invoices, lifetime_quotations, lifetime_incomes, lifetime_expenses, lifetime_clients, lifetime_accounts FROM tenants WHERE id = ${tenantId}`,
     ]);
     
     const t = tenantRows[0] || {};
     const invCount = parseInt(invoices[0].count) || 0;
+    const quotCount = parseInt(quotations[0].count) || 0;
     const incCount = parseInt(incomes[0].count) || 0;
     const expCount = parseInt(expenses[0].count) || 0;
     const clientCount = parseInt(clients[0].count) || 0;
@@ -287,12 +292,14 @@ export async function getTenantUsage() {
 
     return {
       invoices: Math.max(t.lifetime_invoices ?? 0, invCount),
+      quotations: Math.max(t.lifetime_quotations ?? 0, quotCount),
       incomes: Math.max(t.lifetime_incomes ?? 0, incCount),
       expenses: Math.max(t.lifetime_expenses ?? 0, expCount),
       clients: Math.max(t.lifetime_clients ?? 0, clientCount),
       accounts: Math.max(t.lifetime_accounts ?? 0, accCount),
       active: {
         invoices: invCount,
+        quotations: quotCount,
         incomes: incCount,
         expenses: expCount,
         clients: clientCount,
@@ -300,6 +307,7 @@ export async function getTenantUsage() {
       },
       lifetime: {
         invoices: t.lifetime_invoices ?? 0,
+        quotations: t.lifetime_quotations ?? 0,
         incomes: t.lifetime_incomes ?? 0,
         expenses: t.lifetime_expenses ?? 0,
         clients: t.lifetime_clients ?? 0,
@@ -359,14 +367,32 @@ export async function getTeamMembers() {
     
     const tenantId = userRows[0].tenant_id;
     
-    const members = await sql`
-      SELECT id, email, full_name, role, created_at
-      FROM admin_users
-      WHERE tenant_id = ${tenantId}
-      ORDER BY created_at ASC
-    `;
-    
-    return { success: true, members: members.map(m => ({ ...m, created_at: m.created_at.toISOString() })) };
+    const [activeMembers, invitedMembers] = await Promise.all([
+      sql`
+        SELECT id, email, full_name, role, created_at
+        FROM admin_users
+        WHERE tenant_id = ${tenantId} AND deleted_at IS NULL
+        ORDER BY created_at ASC
+      `,
+      sql`
+        SELECT u.id, u.email, u.full_name, ti.role, ti.created_at
+        FROM team_invitations ti
+        JOIN admin_users u ON LOWER(ti.email) = LOWER(u.email)
+        WHERE ti.tenant_id = ${tenantId.toString()} AND ti.status = 'accepted' AND u.deleted_at IS NULL
+        ORDER BY ti.created_at ASC
+      `
+    ]);
+
+    const memberMap = new Map<number, any>();
+    activeMembers.forEach(m => memberMap.set(m.id, m));
+    invitedMembers.forEach(m => {
+      if (!memberMap.has(m.id)) {
+        memberMap.set(m.id, m);
+      }
+    });
+
+    const members = Array.from(memberMap.values());
+    return { success: true, members: members.map(m => ({ ...m, created_at: m.created_at ? new Date(m.created_at).toISOString() : null })) };
   } catch (e) {
     console.error("Failed to fetch team members:", e);
     return { success: false, members: [] };
@@ -692,7 +718,7 @@ export async function getUserBusinesses(): Promise<UserBusinessesResult> {
           logo_url: t.logo_url,
           plan: t.plan || 'Free',
           role: t.role || 'Viewer',
-          isOwner: false,
+          isOwner: (t.role || '').toLowerCase() === 'owner',
           isActive: t.id === activeTenantId,
         });
       }
@@ -879,3 +905,120 @@ export async function createOwnedBusinessProfile(name: string, currency: string 
     return { success: false, error: err?.message || "Failed to create business profile" };
   }
 }
+
+export async function getTenantAccent(): Promise<{ accentColor: string | null; canManage: boolean }> {
+  try {
+    const { userId, session } = await auth();
+    const email = session?.user?.email?.trim().toLowerCase();
+    if (!userId && !email) return { accentColor: null, canManage: false };
+
+    const numId = Number(userId) || 0;
+    const userRows = await sql`
+      SELECT tenant_id, role 
+      FROM admin_users 
+      WHERE (id = ${numId} AND ${numId} > 0)
+         OR (email IS NOT NULL AND LOWER(email) = ${email || ''})
+      LIMIT 1
+    `;
+    if (!userRows || userRows.length === 0 || !userRows[0].tenant_id) {
+      return { accentColor: null, canManage: false };
+    }
+
+    const tenantId = userRows[0].tenant_id;
+    const role = (userRows[0].role || '').toLowerCase();
+    const isOwner = role === 'owner' || role === 'super admin';
+
+    const tenantRows = await sql`SELECT accent_color FROM tenants WHERE id = ${tenantId} LIMIT 1`;
+    const accentColor = tenantRows[0]?.accent_color || null;
+
+    return {
+      accentColor,
+      canManage: isOwner,
+    };
+  } catch (err) {
+    console.error("getTenantAccent error:", err);
+    return { accentColor: null, canManage: false };
+  }
+}
+
+export async function updateTenantAccent(accentColor: string | null): Promise<{ success: boolean; accentColor?: string | null; error?: string }> {
+  try {
+    const { userId, session } = await auth();
+    const email = session?.user?.email?.trim().toLowerCase();
+    if (!userId && !email) return { success: false, error: "Unauthorized" };
+
+    const numId = Number(userId) || 0;
+    const userRows = await sql`
+      SELECT tenant_id, role 
+      FROM admin_users 
+      WHERE (id = ${numId} AND ${numId} > 0)
+         OR (email IS NOT NULL AND LOWER(email) = ${email || ''})
+      LIMIT 1
+    `;
+    if (!userRows || userRows.length === 0 || !userRows[0].tenant_id) {
+      return { success: false, error: "No active workspace assigned" };
+    }
+
+    const tenantId = userRows[0].tenant_id;
+    const userRole = (userRows[0].role || '').toLowerCase();
+    const isOwner = userRole === 'owner' || userRole === 'super admin';
+
+    // Verify permission: owners can always manage, others check settings permission
+    if (!isOwner) {
+      const { error: rbacError } = await requirePermission('settings', 'manage');
+      if (rbacError) {
+        return { success: false, error: "Only the workspace owner or authorized administrators can change the accent colour." };
+      }
+    }
+
+    // Verify plan: Pro or Pro Plus required for custom workspace accent colors
+    const tRows = await sql`SELECT plan FROM tenants WHERE id = ${tenantId} LIMIT 1`;
+    const plan = tRows[0]?.plan || "Free";
+    if (plan !== "Pro" && plan !== "Pro Plus") {
+      return { success: false, error: "Custom workspace accent colors require a Pro or Pro Plus plan. Upgrade to Pro to save custom branding." };
+    }
+
+    // Validate hex format (e.g. #00E35B) or null (default)
+    let cleanHex: string | null = null;
+    if (accentColor && accentColor.trim()) {
+      let raw = accentColor.trim();
+      if (!raw.startsWith("#")) raw = `#${raw}`;
+      if (!/^#[0-9a-fA-F]{6}$/.test(raw)) {
+        return { success: false, error: "Invalid hex color format. Example: #00E35B" };
+      }
+      cleanHex = raw.toUpperCase();
+    }
+
+    const beforeRows = await sql`SELECT plan, accent_color FROM tenants WHERE id = ${tenantId} LIMIT 1`;
+    if (beforeRows[0]?.plan !== 'Pro Plus') {
+      return { success: false, error: "Custom appearance branding is exclusively available on the Pro Plus plan." };
+    }
+    const beforeColor = beforeRows[0]?.accent_color || null;
+
+    await sql`
+      UPDATE tenants 
+      SET accent_color = ${cleanHex}
+      WHERE id = ${tenantId}
+    `;
+
+    await logSystemAction(`Business Accent Updated: changed from ${beforeColor || 'Default'} to ${cleanHex || 'Default'}`);
+
+    try {
+      const cookieStore = await cookies();
+      if (cleanHex) {
+        cookieStore.set("fb_accent_color", cleanHex, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+      } else {
+        cookieStore.delete("fb_accent_color");
+      }
+    } catch {}
+
+    revalidatePath("/", "layout");
+    revalidatePath("/user/settings");
+    revalidatePath("/user/settings/appearance");
+    return { success: true, accentColor: cleanHex };
+  } catch (err: any) {
+    console.error("updateTenantAccent error:", err);
+    return { success: false, error: err?.message || "Failed to update appearance setting." };
+  }
+}
+

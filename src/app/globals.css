@@ -9,17 +9,27 @@
   --font-display: 'Google Sans', 'Product Sans', sans-serif;
   --font-body: 'Google Sans Text', 'Google Sans', sans-serif;
 
-  --color-brand-50: #E6FDF0;
-  --color-brand-100: #BFFCDF;
-  --color-brand-200: #99FACF;
-  --color-brand-300: #4DF6AE;
-  --color-brand-400: #26F29C;
-  --color-brand-500: #00E35B; /* AirAsia MOVE Bright Green */
-  --color-brand-600: #00C750;
-  --color-brand-700: #00A341;
-  --color-brand-800: #007A31;
-  --color-brand-900: #082830; /* AirAsia MOVE Dark Teal */
-  --color-brand-950: #041418;
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-foreground: var(--accent-soft-foreground);
+  --color-accent-border: var(--accent-border);
+  --color-accent-ring: var(--accent-ring);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-text: var(--accent-text);
+
+  --color-brand-50: var(--accent-50);
+  --color-brand-100: var(--accent-100);
+  --color-brand-200: var(--accent-200);
+  --color-brand-300: var(--accent-300);
+  --color-brand-400: var(--accent-400);
+  --color-brand-500: var(--accent);
+  --color-brand-600: var(--accent-hover);
+  --color-brand-700: var(--accent-active);
+  --color-brand-800: var(--accent-800);
+  --color-brand-900: var(--brand-900, var(--accent-900, #082830));
+  --color-brand-950: var(--brand-950, var(--accent-950, #041418));
   
   --color-background: var(--bg-primary);
   --color-foreground: var(--text-primary);
@@ -37,14 +47,41 @@
   --card-bg: #FFFFFF;
   --popover-bg: #FFFFFF;
   --border-color: #E2E8F0;
+
+  /* Default Accent (Framebooks Green) */
+  --accent: #00E35B;
+  --accent-hover: #00C750;
+  --accent-active: #00A341;
+  --accent-soft: rgba(0, 227, 91, 0.12);
+  --accent-soft-foreground: #007A31;
+  --accent-border: rgba(0, 227, 91, 0.3);
+  --accent-ring: rgba(0, 227, 91, 0.45);
+  --accent-foreground: #041418;
+  --accent-text: #007A31;
+
+  --accent-50: #E6FDF0;
+  --accent-100: #BFFCDF;
+  --accent-200: #99FACF;
+  --accent-300: #4DF6AE;
+  --accent-400: #26F29C;
+  --accent-500: #00E35B;
+  --accent-600: #00C750;
+  --accent-700: #00A341;
+  --accent-800: #007A31;
 }
 
 .dark {
-  --bg-primary: #082830;
+  --bg-primary: #0c0f15;
   --text-primary: #FFFFFF;
   --card-bg: rgba(255, 255, 255, 0.05);
-  --popover-bg: #0b2f38;
+  --popover-bg: #131822;
   --border-color: rgba(255, 255, 255, 0.1);
+
+  /* Default Dark Accent */
+  --accent-soft: rgba(0, 227, 91, 0.15);
+  --accent-soft-foreground: #4DF6AE;
+  --accent-border: rgba(0, 227, 91, 0.35);
+  --accent-text: #4DF6AE;
 }
 
 
@@ -72,6 +109,11 @@ optgroup,
 select,
 textarea {
   font-family: var(--font-sans), 'Google Sans', 'Google Sans Text', 'Product Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+select option {
+  background-color: var(--popover-bg);
+  color: var(--text-primary);
 }
 
 code,

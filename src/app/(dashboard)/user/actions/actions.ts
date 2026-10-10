@@ -4,6 +4,7 @@ import { requirePermission, checkTenantReadOnly } from "./rbac";
 
 import sql from "@/lib/db";
 import { auth } from '@/lib/auth';
+import { getTenantPlan } from "./plan";
 import { put, del } from '@vercel/blob';
 import { logSystemAction } from "@/lib/logger";
 import { getGravatarUrl } from "@/lib/gravatar";
@@ -1127,6 +1128,11 @@ export async function getInvoiceByIdAdmin(invoiceId: string) {
       i.tax_rate,
       i.legal_name,
       i.bank_slip,
+      i.layout_id,
+      i.custom_field_values,
+      i.layout_snapshot,
+      il.name as layout_name,
+      il.definition as active_layout_definition,
       COALESCE((SELECT full_name FROM admin_clients ac WHERE LOWER(ac.email) = LOWER(i.user_email) AND ac.tenant_id = ${tenantId} LIMIT 1), i.user_email) as client_name,
       (SELECT address FROM admin_clients ac WHERE LOWER(ac.email) = LOWER(i.user_email) AND ac.tenant_id = ${tenantId} LIMIT 1) as billing_address,
       ba.name as bank_acc_name,
@@ -1135,6 +1141,7 @@ export async function getInvoiceByIdAdmin(invoiceId: string) {
       ba.branch as bank_acc_branch
     FROM invoices i
     LEFT JOIN accounts ba ON COALESCE(i.bank_account_id, (SELECT id FROM accounts WHERE (LOWER(type) = 'bank' OR LOWER(type) = 'bank account') AND tenant_id = ${tenantId} LIMIT 1)) = ba.id
+    LEFT JOIN invoice_layouts il ON i.layout_id = il.id
     WHERE i.invoice_id = ${invoiceId} AND i.tenant_id = ${tenantId}
   `;
 
@@ -1221,6 +1228,34 @@ export async function getInvoiceByIdAdmin(invoiceId: string) {
   const calculatedTotalDue = Math.max(0, totalVal - advanceVal - nonAdvancePayments);
   invoice.total_due = calculatedTotalDue;
   invoice.payments_total = nonAdvancePayments;
+
+  // Normalize JSON fields
+  try {
+    if (typeof invoice.custom_field_values === 'string') {
+      invoice.custom_field_values = JSON.parse(invoice.custom_field_values);
+    }
+    if (!invoice.custom_field_values || typeof invoice.custom_field_values !== 'object') {
+      invoice.custom_field_values = {};
+    }
+  } catch {
+    invoice.custom_field_values = {};
+  }
+
+  try {
+    if (typeof invoice.layout_snapshot === 'string') {
+      invoice.layout_snapshot = JSON.parse(invoice.layout_snapshot);
+    }
+  } catch {
+    invoice.layout_snapshot = null;
+  }
+
+  try {
+    if (typeof invoice.active_layout_definition === 'string') {
+      invoice.active_layout_definition = JSON.parse(invoice.active_layout_definition);
+    }
+  } catch {
+    invoice.active_layout_definition = null;
+  }
 
   return invoice;
 }
@@ -1414,18 +1449,44 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
     `;
   }
 
+  // Resolve plan and layout assignment
+  const plan = await getTenantPlan();
+  let assignedLayoutId: string | null = null;
+  let layoutSnapshot: any = null;
+
+  if (plan === 'Pro Plus' && invoiceData.layoutId) {
+    const layoutRes = await sql`
+      SELECT id, definition FROM invoice_layouts 
+      WHERE id = ${invoiceData.layoutId} AND tenant_id = ${tenantId} AND is_active = true
+      LIMIT 1
+    `;
+    if (layoutRes.length > 0) {
+      assignedLayoutId = layoutRes[0].id;
+      const isIssuedOrPaid = ['issued', 'sent', 'paid', 'advance-paid', 'partially paid', 'fully paid'].includes(String(invoiceData.paymentStatus || '').toLowerCase());
+      if (isIssuedOrPaid) {
+        layoutSnapshot = layoutRes[0].definition;
+      }
+    }
+  }
+
+  const customFieldValues = invoiceData.customFieldValues && typeof invoiceData.customFieldValues === 'object'
+    ? invoiceData.customFieldValues
+    : {};
+
   const invoiceId = await generateUniqueInvoiceId();
   await sql`
   INSERT INTO invoices (
     invoice_id, user_email, project_name, date, 
     subtotal, discount, total, advance, total_due, 
-    work_status, payment_status, currency, category, bank_account_id, tax_rate, legal_name, tenant_id
+    work_status, payment_status, currency, category, bank_account_id, tax_rate, legal_name, tenant_id,
+    layout_id, custom_field_values, layout_snapshot
   ) VALUES (
     ${invoiceId}, ${invoiceData.userEmail},
     ${invoiceData.projectName}, ${invoiceData.date},
     ${invoiceData.subtotal}, ${invoiceData.discount}, ${invoiceData.total}, ${invoiceData.advance}, ${invoiceData.totalDue},
     ${invoiceData.workStatus}, ${invoiceData.paymentStatus}, ${invoiceData.currency}, ${invoiceData.category || null},
-    ${invoiceData.bankAccountId || null}, ${parseFloat(invoiceData.taxRate) || 0}, ${invoiceData.legalName || null}, ${tenantId}
+    ${invoiceData.bankAccountId || null}, ${parseFloat(invoiceData.taxRate) || 0}, ${invoiceData.legalName || null}, ${tenantId},
+    ${assignedLayoutId}, ${sql.json(customFieldValues)}, ${layoutSnapshot ? sql.json(layoutSnapshot) : null}
   )
 `;
 
@@ -1474,6 +1535,29 @@ export async function updateInvoice(invoiceId: string, invoiceData: any, lineIte
   const totalVal    = parseFloat(invoiceData.total || (subtotalVal + taxAmountVal - discountVal));
   const calculatedTotalDue = Math.max(0, totalVal - advanceVal - nonAdvancePayments);
 
+  const plan = await getTenantPlan();
+  let assignedLayoutId: string | null = null;
+  let layoutSnapshotToFreeze: any = null;
+
+  if (plan === 'Pro Plus' && invoiceData.layoutId) {
+    const layoutRes = await sql`
+      SELECT id, definition FROM invoice_layouts 
+      WHERE id = ${invoiceData.layoutId} AND tenant_id = ${tenantId} AND is_active = true
+      LIMIT 1
+    `;
+    if (layoutRes.length > 0) {
+      assignedLayoutId = layoutRes[0].id;
+      const isIssuedOrPaid = ['issued', 'sent', 'paid', 'advance-paid', 'partially paid', 'fully paid'].includes(String(invoiceData.paymentStatus || '').toLowerCase());
+      if (isIssuedOrPaid) {
+        layoutSnapshotToFreeze = layoutRes[0].definition;
+      }
+    }
+  }
+
+  const customFieldValues = invoiceData.customFieldValues && typeof invoiceData.customFieldValues === 'object'
+    ? invoiceData.customFieldValues
+    : {};
+
   await sql`
   UPDATE invoices SET
     user_email = ${invoiceData.userEmail},
@@ -1490,7 +1574,10 @@ export async function updateInvoice(invoiceId: string, invoiceData: any, lineIte
     category = ${invoiceData.category || null},
     bank_account_id = ${invoiceData.bankAccountId || null},
     tax_rate = ${parseFloat(invoiceData.taxRate) || 0},
-    legal_name = ${invoiceData.legalName || null}
+    legal_name = ${invoiceData.legalName || null},
+    layout_id = ${assignedLayoutId},
+    custom_field_values = ${sql.json(customFieldValues)},
+    layout_snapshot = COALESCE(${layoutSnapshotToFreeze ? sql.json(layoutSnapshotToFreeze) : null}, layout_snapshot)
   WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId}
 `;
 
@@ -1648,9 +1735,27 @@ export async function createQuotation(data: any, lineItems: any[] = []) {
   if (rbacError) throw new Error(rbacError);
 
   const tenantId = await getTenantId();
+
+  const limitCheck = await checkLimit('quotations');
+  if (!limitCheck.allowed) throw new Error(limitCheck.error);
+
   const advance = data.advance || 0;
   const discount = data.discount || 0;
   const totalDue = data.totalDue ?? (data.amount - advance);
+
+  let assignedLayoutId: string | null = null;
+  let layoutSnapshot: any = null;
+  if (data.layoutId) {
+    const layoutRes = await sql`
+      SELECT id, definition FROM invoice_layouts
+      WHERE id = ${data.layoutId} AND tenant_id = ${tenantId} AND is_active = true
+      LIMIT 1
+    `;
+    if (layoutRes.length > 0) {
+      assignedLayoutId = layoutRes[0].id;
+      layoutSnapshot = layoutRes[0].definition;
+    }
+  }
 
   if (data.clientId && data.billingAddress) {
     await sql`
@@ -1665,12 +1770,14 @@ export async function createQuotation(data: any, lineItems: any[] = []) {
   const result = await sql`
     INSERT INTO admin_quotations (
       date, amount, advance, total_due, discount,
-      description, category, payment_method, invoice_id, client_id, receipt_url, status, bank_account_id, notes, legal_name, tenant_id
+      description, category, payment_method, invoice_id, client_id, receipt_url, status, bank_account_id, notes, legal_name, tenant_id,
+      layout_id, layout_snapshot
     )
     VALUES (
       ${data.date}, ${data.amount}, ${advance}, ${totalDue}, ${discount},
       ${data.description}, ${data.category}, ${data.paymentMethod},
-      ${data.invoiceId || null}, ${data.clientId || null}, ${data.receiptUrl || null}, 'draft', ${data.bankAccountId || null}, ${data.notes || null}, ${data.legalName || null}, ${tenantId}
+      ${data.invoiceId || null}, ${data.clientId || null}, ${data.receiptUrl || null}, 'draft', ${data.bankAccountId || null}, ${data.notes || null}, ${data.legalName || null}, ${tenantId},
+      ${assignedLayoutId}, ${layoutSnapshot ? sql.json(layoutSnapshot) : null}
     )
     RETURNING id
   `;
@@ -1685,6 +1792,8 @@ export async function createQuotation(data: any, lineItems: any[] = []) {
       `;
     }
   }
+
+  await incrementLifetimeUsage(tenantId, 'quotations');
   await logSystemAction(`Created quotation for "${data.description || 'Quotation'}" (ID: ${quotationId}) for LKR ${data.amount}`);
 }
 
@@ -1698,6 +1807,20 @@ export async function updateQuotation(id: number, data: any, lineItems: any[] = 
     const advance = data.advance || 0;
     const discount = data.discount || 0;
     const totalDue = data.totalDue ?? (data.amount - advance);
+
+    let assignedLayoutId: string | null = null;
+    let layoutSnapshot: any = null;
+    if (data.layoutId) {
+      const layoutRes = await sql`
+        SELECT id, definition FROM invoice_layouts
+        WHERE id = ${data.layoutId} AND tenant_id = ${tenantId} AND is_active = true
+        LIMIT 1
+      `;
+      if (layoutRes.length > 0) {
+        assignedLayoutId = layoutRes[0].id;
+        layoutSnapshot = layoutRes[0].definition;
+      }
+    }
 
     if (data.clientId && data.billingAddress) {
       await sql`
@@ -1724,7 +1847,9 @@ export async function updateQuotation(id: number, data: any, lineItems: any[] = 
         receipt_url   = ${data.receiptUrl || null},
         bank_account_id = ${data.bankAccountId || null},
         notes         = ${data.notes || null},
-        legal_name    = ${data.legalName || null}
+        legal_name    = ${data.legalName || null},
+        layout_id     = ${assignedLayoutId},
+        layout_snapshot = ${layoutSnapshot ? sql.json(layoutSnapshot) : null}
       WHERE id = ${id} AND status != 'confirmed' AND tenant_id = ${tenantId}
     `;
 
@@ -1949,6 +2074,8 @@ export async function getQuotationById(quotationId: string) {
       bank_acc_number: q.bank_acc_number,
       bank_acc_bank: q.bank_acc_bank,
       bank_acc_branch: q.bank_acc_branch,
+      layout_id: q.layout_id || null,
+      layout_snapshot: q.layout_snapshot || null,
       items: itemRows.map((i: any) => ({
         id: i.id,
         description: i.description,
@@ -2068,7 +2195,8 @@ export async function recordInvoicePayment(
       UPDATE invoices
       SET payment_status = ${newStatus},
           advance = ${newAdvance},
-          total_due = ${newTotalDue}
+          total_due = ${newTotalDue},
+          layout_snapshot = COALESCE(layout_snapshot, (SELECT definition FROM invoice_layouts WHERE id = invoices.layout_id))
       WHERE invoice_id = ${invoiceId}
     `;
 
@@ -2487,7 +2615,7 @@ export async function getTopClients() {
 }
 
 export async function getAllLimits() {
-  const resources = ['invoices', 'incomes', 'expenses', 'clients', 'accounts'] as const;
+  const resources = ['invoices', 'quotations', 'incomes', 'expenses', 'clients', 'accounts'] as const;
   const exceeded: string[] = [];
   for (const r of resources) {
     const check = await checkLimit(r);
@@ -2496,7 +2624,7 @@ export async function getAllLimits() {
   return exceeded;
 }
 
-export async function getLimitStatus(resource: 'invoices' | 'incomes' | 'expenses' | 'clients' | 'accounts') {
+export async function getLimitStatus(resource: 'invoices' | 'quotations' | 'incomes' | 'expenses' | 'clients' | 'accounts') {
   const check = await checkLimit(resource);
   return check;
 }

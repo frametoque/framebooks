@@ -40,6 +40,7 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
     isActive: true,
     limits: {
       invoices: 50,
+      quotations: 50,
       incomes: 100,
       expenses: 100,
       clients: 50,
@@ -72,6 +73,7 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
       sortOrder: p.sort_order,
       limits: {
         invoices: p.limits?.invoices ?? 50,
+        quotations: p.limits?.quotations ?? 50,
         incomes: p.limits?.incomes ?? 100,
         expenses: p.limits?.expenses ?? 100,
         clients: p.limits?.clients ?? 50,
@@ -130,6 +132,7 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
         isActive: true,
         limits: {
           invoices: 50,
+          quotations: 50,
           incomes: 100,
           expenses: 100,
           clients: 50,
@@ -285,6 +288,12 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
                   <span className="text-muted-foreground">Invoices</span>
                   <span className="font-semibold text-foreground">
                     {p.limits?.invoices === -1 ? "Unlimited" : p.limits?.invoices}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Quotations</span>
+                  <span className="font-semibold text-foreground">
+                    {(p.key === 'pro' || p.key === 'pro_plus' || p.name === 'Pro' || p.name === 'Pro Plus' || p.limits?.quotations === -1) ? "Unlimited" : (p.limits?.quotations ?? 50)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -542,6 +551,18 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
                       onChange={(e) => setNewPlanData({
                         ...newPlanData,
                         limits: { ...newPlanData.limits, invoices: Number(e.target.value) }
+                      })}
+                      className="w-full px-2.5 py-1.5 bg-background border border-border rounded-xl text-xs font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-muted-foreground mb-0.5">Quotations</label>
+                    <input
+                      type="number"
+                      value={newPlanData.limits.quotations ?? 50}
+                      onChange={(e) => setNewPlanData({
+                        ...newPlanData,
+                        limits: { ...newPlanData.limits, quotations: Number(e.target.value) }
                       })}
                       className="w-full px-2.5 py-1.5 bg-background border border-border rounded-xl text-xs font-semibold"
                     />
@@ -809,6 +830,18 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
                       onChange={(e) => setEditFormData({
                         ...editFormData,
                         limits: { ...editFormData.limits, invoices: Number(e.target.value) }
+                      })}
+                      className="w-full px-2.5 py-1.5 bg-background border border-border rounded-xl text-xs font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-muted-foreground mb-0.5">Quotations</label>
+                    <input
+                      type="number"
+                      value={editFormData.limits.quotations ?? 50}
+                      onChange={(e) => setEditFormData({
+                        ...editFormData,
+                        limits: { ...editFormData.limits, quotations: Number(e.target.value) }
                       })}
                       className="w-full px-2.5 py-1.5 bg-background border border-border rounded-xl text-xs font-semibold"
                     />

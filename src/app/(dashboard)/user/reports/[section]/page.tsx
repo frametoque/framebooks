@@ -1,9 +1,26 @@
 import React, { Suspense } from "react";
-import ReportsClient, { SLUG_TO_REPORT_TAB } from "../ReportsClient";
+import ReportsClient from "../ReportsClient";
 import { Loader } from "@/components/ui/Loader";
-import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
+
+const SLUG_TO_REPORT_TAB: Record<string, string> = {
+  "overview": "overview",
+  "profit-loss": "profit_loss",
+  "profit_loss": "profit_loss",
+  "cash-flow": "cash_flow",
+  "cash_flow": "cash_flow",
+  "balance-sheet": "balance_sheet",
+  "balance_sheet": "balance_sheet",
+  "tax-summary": "tax_summary",
+  "tax_summary": "tax_summary",
+  "trial-balance": "trial_balance",
+  "trial_balance": "trial_balance",
+  "general-ledger": "general_ledger",
+  "general_ledger": "general_ledger",
+  "account-ledger": "account_ledger",
+  "account_ledger": "account_ledger",
+};
 
 const SECTION_METADATA: Record<string, { title: string; description: string }> = {
   "overview": { title: "Financial Overview - Reports", description: "Financial overview and key performance metrics." },
@@ -29,7 +46,7 @@ export async function generateMetadata({
   params: Promise<{ section: string }> | { section: string };
 }) {
   const resolvedParams = await params;
-  const section = resolvedParams.section;
+  const section = resolvedParams?.section || "";
   const meta = SECTION_METADATA[section];
   if (!meta) return { title: "Reports" };
   return {
@@ -44,11 +61,8 @@ export default async function ReportSectionPage({
   params: Promise<{ section: string }> | { section: string };
 }) {
   const resolvedParams = await params;
-  const section = resolvedParams.section;
-  const tab = SLUG_TO_REPORT_TAB[section];
-  if (!tab) {
-    notFound();
-  }
+  const section = resolvedParams?.section || "";
+  const tab = (SLUG_TO_REPORT_TAB[section] || "overview") as any;
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh]"><Loader /></div>}>

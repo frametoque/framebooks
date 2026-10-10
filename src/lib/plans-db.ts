@@ -15,6 +15,7 @@ export interface DBPlan {
   sort_order: number;
   limits: {
     invoices: number;
+    quotations?: number;
     incomes: number;
     expenses: number;
     clients: number;
@@ -26,6 +27,8 @@ export interface DBPlan {
     advanced_reports: boolean;
     two_factor: boolean;
     audit_logs: boolean;
+    custom_invoice_layout?: boolean;
+    remove_invoice_watermark?: boolean;
   };
 }
 
@@ -61,8 +64,8 @@ export async function getActivePlans(): Promise<DBPlan[]> {
         is_active: true,
         is_popular: false,
         sort_order: 1,
-        limits: { invoices: 50, incomes: 100, expenses: 100, clients: 50, accounts: 2, team_members: 0 },
-        features: { inventory: false, advanced_reports: false, two_factor: false, audit_logs: false }
+        limits: { invoices: 50, quotations: 50, incomes: 100, expenses: 100, clients: 50, accounts: 2, team_members: 0 },
+        features: { inventory: false, advanced_reports: false, two_factor: false, audit_logs: false, custom_invoice_layout: false, remove_invoice_watermark: false }
       },
       {
         id: 2,
@@ -75,8 +78,8 @@ export async function getActivePlans(): Promise<DBPlan[]> {
         is_active: true,
         is_popular: true,
         sort_order: 2,
-        limits: { invoices: -1, incomes: -1, expenses: -1, clients: -1, accounts: 2, team_members: 0 },
-        features: { inventory: false, advanced_reports: true, two_factor: true, audit_logs: false }
+        limits: { invoices: -1, quotations: -1, incomes: -1, expenses: -1, clients: -1, accounts: 2, team_members: 0 },
+        features: { inventory: false, advanced_reports: true, two_factor: true, audit_logs: false, custom_invoice_layout: false, remove_invoice_watermark: true }
       },
       {
         id: 3,
@@ -89,8 +92,8 @@ export async function getActivePlans(): Promise<DBPlan[]> {
         is_active: true,
         is_popular: false,
         sort_order: 3,
-        limits: { invoices: -1, incomes: -1, expenses: -1, clients: -1, accounts: -1, team_members: -1 },
-        features: { inventory: true, advanced_reports: true, two_factor: true, audit_logs: true }
+        limits: { invoices: -1, quotations: -1, incomes: -1, expenses: -1, clients: -1, accounts: -1, team_members: -1 },
+        features: { inventory: true, advanced_reports: true, two_factor: true, audit_logs: true, custom_invoice_layout: true, remove_invoice_watermark: true }
       }
     ];
   }
@@ -108,12 +111,15 @@ export async function getLandingPlansFormatted() {
       monthlyPrice: p.price_monthly,
       yearlyPrice: p.price_yearly,
       features: [
-        { label: 'Invoices Limit', value: limits.invoices === -1 ? 'Unlimited' : String(limits.invoices ?? 50), icon: 'MdCallMade' },
+        { label: 'Invoices Limit', value: (p.key === 'pro' || p.key === 'pro_plus' || p.name === 'Pro' || p.name === 'Pro Plus' || limits.invoices === -1) ? 'Unlimited' : String(limits.invoices ?? 50), icon: 'MdCallMade' },
+        { label: 'Quotations Limit', value: (p.key === 'pro' || p.key === 'pro_plus' || p.name === 'Pro' || p.name === 'Pro Plus' || limits.quotations === -1) ? 'Unlimited' : String(limits.quotations ?? 50), icon: 'MdCallMade' },
         { label: 'Income Limit', value: limits.incomes === -1 ? 'Unlimited' : String(limits.incomes ?? 100), icon: 'MdCallMade' },
         { label: 'Expense Limit', value: limits.expenses === -1 ? 'Unlimited' : String(limits.expenses ?? 100), icon: 'MdCallMade' },
         { label: 'Client Limit', value: limits.clients === -1 ? 'Unlimited' : String(limits.clients ?? 50), icon: 'MdGroup' },
         { label: 'Bank Accounts', value: limits.accounts === -1 ? 'Unlimited' : String(limits.accounts ?? 2), icon: 'MdAccountBalance' },
         { label: 'Team Members', value: limits.team_members === -1 ? 'Unlimited' : (limits.team_members > 0 ? String(limits.team_members) : 'No'), icon: 'MdGroup' },
+        { label: 'Customized Invoices & Quotations', value: (p.key === 'pro_plus' || p.name === 'Pro Plus' || (features.custom_invoice_layout && p.key !== 'pro' && p.name !== 'Pro')) ? 'Yes' : 'No', icon: 'MdCheck' },
+        { label: 'Customize Workspace Appearance', value: (p.key === 'pro' || p.key === 'pro_plus' || p.name === 'Pro' || p.name === 'Pro Plus' || features.custom_workspace_appearance) ? 'Yes' : 'No', icon: 'MdCheck' },
         { label: 'Inventory Management', value: features.inventory ? 'Yes' : 'No', icon: 'MdCheck' },
         { label: 'Advanced Reports', value: features.advanced_reports ? 'Yes' : 'No', icon: 'MdCheck' },
         { label: 'Security Level', value: features.audit_logs ? 'Max + Audit Logs' : (features.two_factor ? 'High + 2FA' : 'Standard'), icon: 'MdCheck' },

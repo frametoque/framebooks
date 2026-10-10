@@ -7,6 +7,10 @@ import ClientCombobox from "../../components/ClientCombobox";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createInvoice, getClients, createClient, getBankAccounts, getLimitStatus } from "../../actions/actions";
+import { getInvoiceLayouts, getCustomFields } from "../../actions/invoice-layouts";
+import { getTenantInfo } from "../../actions/tenants";
+import { InvoiceLayoutAndCustomFields } from "../components/InvoiceLayoutAndCustomFields";
+import { InvoiceLayoutRecord, CustomFieldDefinition } from "@/lib/invoice-layout/types";
 import CategoryPicker from "../../components/CategoryPicker";
 import { useRole } from "../../context/RoleContext";
 
@@ -54,13 +58,41 @@ export default function NewInvoicePage() {
     { id: 1, description: "", quantity: 1, rate: 0 },
   ]);
 
+  // Invoice Layout & Custom Fields
+  const [layouts, setLayouts] = useState<InvoiceLayoutRecord[]>([]);
+  const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
+  const [selectedLayoutId, setSelectedLayoutId] = useState<string>("");
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
+  const [tenantPlan, setTenantPlan] = useState<string>("Free");
+
   useEffect(() => {
     async function load() {
-      const cls = await getClients();
-      const accs = await getBankAccounts();
+      const [cls, accs, lyts, cFields, tInfo] = await Promise.all([
+        getClients(),
+        getBankAccounts(),
+        getInvoiceLayouts(),
+        getCustomFields(),
+        getTenantInfo(),
+      ]);
       setClients(cls);
       setClientsLoading(false);
       setBankAccounts(accs);
+      setLayouts(lyts);
+      setCustomFields(cFields);
+
+      const plan = tInfo?.plan || "Free";
+      setTenantPlan(plan);
+
+      // Pre-select default layout if Pro Plus
+      if (plan === "Pro Plus") {
+        const defLayout = lyts.find(
+          (l) => l.is_default && (l.document_type === "invoice" || l.document_type === "both" || !l.document_type)
+        );
+        if (defLayout) {
+          setSelectedLayoutId(defLayout.id);
+        }
+      }
+
       const def = accs.find((a: any) => a.is_default === 1);
       if (def) {
         setFormData(prev => ({ ...prev, bankAccountId: String(def.id) }));
@@ -188,6 +220,8 @@ export default function NewInvoicePage() {
         ...formData,
         category: selectedCategories.join(", "),
         subtotal, total, totalDue,
+        layoutId: selectedLayoutId || null,
+        customFieldValues,
       }, lineItems);
       if (res?.error) throw new Error(res.error);
       router.push("/user/invoices");
@@ -216,7 +250,7 @@ export default function NewInvoicePage() {
         <div className="space-y-8">
 
           {/* Client Details */}
-          <div className="relative z-50 bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
+          <div className="relative z-20 bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
             <h2 className="text-xl font-semibold mb-4">Client Details</h2>
 
             <div className="space-y-1">
@@ -359,6 +393,19 @@ export default function NewInvoicePage() {
               </select>
             </div>
           </div>
+
+          {/* Invoice Layout & Custom Fields */}
+          <InvoiceLayoutAndCustomFields
+            selectedLayoutId={selectedLayoutId}
+            onLayoutChange={setSelectedLayoutId}
+            customFieldValues={customFieldValues}
+            onCustomFieldChange={(key, value) =>
+              setCustomFieldValues((prev) => ({ ...prev, [key]: value }))
+            }
+            layouts={layouts}
+            customFields={customFields}
+            tenantPlan={tenantPlan}
+          />
         </div>
 
         {/* Right Column: Line Items & Actions */}

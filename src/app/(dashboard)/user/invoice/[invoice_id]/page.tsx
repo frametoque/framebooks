@@ -4,7 +4,7 @@ import { Loader } from "@/components/ui/Loader";
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { Loader2, CheckCircle2, ShieldCheck, Image as ImageIcon, FileText as FileIcon } from "lucide-react";
+import { Loader2, CheckCircle2, ShieldCheck, Image as ImageIcon, FileText as FileIcon, Layout, FileText, Sparkles } from "lucide-react";
 import { MdDownload, MdArrowBack, MdInsertDriveFile, MdCalendarToday, MdLocalOffer, MdWorkOutline, MdImage, MdCancel, MdAttachMoney, MdClose, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdDelete, MdUpload } from "react-icons/md";
 import Link from "next/link";
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
@@ -12,6 +12,7 @@ import { getInvoiceByIdAdmin, approveBankSlip, declineBankSlip, undoApprovedBank
 import { getTenantInfo } from "../../actions/tenants";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import Image from "next/image";
+import { InvoiceRenderer } from "@/lib/invoice-layout/renderer";
 
 
 
@@ -90,6 +91,7 @@ export default function AdminInvoicePage() {
   const [convertingPdf, setConvertingPdf] = useState(false);
   const [tenantPlan, setTenantPlan] = useState<string>("Free");
   const [tenantInfo, setTenantInfo] = useState<any>(null);
+  const [activeViewTab, setActiveViewTab] = useState<"details" | "layout">("details");
 
   const convertPdfToImage = async (file: File): Promise<File> => {
     if (file.type !== "application/pdf") return file;
@@ -465,49 +467,119 @@ export default function AdminInvoicePage() {
     }
   };
 
+  const activeLayoutDef = invoice.layout_snapshot || invoice.active_layout_definition;
+
   return (
     <div className="space-y-6 pb-20">
-
-      {/* Main Layout */}
-      <div id="invoice-content" className="flex flex-col lg:flex-row gap-6 items-start">
-        <div className="flex-1 space-y-4 w-full">
-
-
-          {/* Details Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-transparent border border-border rounded-2xl p-5 flex flex-col gap-2">
-              <div className="text-gray-400 text-xs flex items-center gap-2">
-                <MdInsertDriveFile className="w-4 h-4" /> Invoice ID
-              </div>
-              <p className="text-foreground font-semibold text-sm">{invoice.invoice_id}</p>
-            </div>
-
-            <div className="bg-transparent border border-border rounded-2xl p-5 flex flex-col gap-2">
-              <div className="text-gray-400 text-xs flex items-center gap-2">
-                <MdCalendarToday className="w-4 h-4" /> Date
-              </div>
-              <p className="text-foreground font-semibold text-sm">{formatDate(invoice.date)}</p>
-            </div>
-
-            <div className="bg-transparent border border-border rounded-2xl p-5 flex flex-col gap-2">
-              <div className="text-gray-400 text-xs flex items-center gap-2">
-                <MdLocalOffer className="w-4 h-4" /> Payment Status
-              </div>
-              <span className={`w-fit px-3 py-1 text-xs font-medium rounded-full border ${paymentStatusStyles[invoice.payment_status as keyof typeof paymentStatusStyles] || paymentStatusStyles.unpaid}`}>
-                {invoice.payment_status || "unpaid"}
+      {/* View Switcher (If custom layout is assigned to invoice) */}
+      {activeLayoutDef && (
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-card border border-border rounded-2xl p-2.5 px-4 shadow-xs">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveViewTab("details")}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                activeViewTab === "details"
+                  ? "bg-foreground text-background shadow-xs"
+                  : "text-gray-400 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Details & Slips</span>
+            </button>
+            <button
+              onClick={() => setActiveViewTab("layout")}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                activeViewTab === "layout"
+                  ? "bg-brand-500 text-brand-900 shadow-xs font-bold"
+                  : "text-gray-400 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+              }`}
+            >
+              <Layout className="w-3.5 h-3.5" />
+              <span>Document Layout</span>
+            </button>
+          </div>
+          <div className="text-xs text-gray-400 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-brand-400 animate-pulse" />
+            <span className="font-medium text-foreground">
+              {invoice.layout_name || "Custom Template"}
+            </span>
+            {invoice.layout_snapshot && (
+              <span className="text-[10px] text-gray-500 border border-border px-1.5 py-0.5 rounded">
+                Snapshot Frozen
               </span>
-            </div>
+            )}
+          </div>
+        </div>
+      )}
 
-            <div className="bg-transparent border border-border rounded-2xl p-5 flex flex-col gap-2">
-              <div className="text-gray-400 text-xs flex items-center gap-2">
-                <MdWorkOutline className="w-4 h-4" /> Bill To
+      {/* Render Document Layout if activeViewTab === 'layout' */}
+      {activeViewTab === "layout" && activeLayoutDef ? (
+        <div className="flex justify-center p-4 sm:p-8 bg-black/10 dark:bg-black/40 border border-border rounded-3xl overflow-x-auto">
+          <InvoiceRenderer
+            layout={activeLayoutDef}
+            invoice={invoice}
+            tenantInfo={tenantInfo}
+            plan={tenantPlan}
+            className="shadow-2xl"
+          />
+        </div>
+      ) : (
+        /* Main Layout */
+        <div id="invoice-content" className="flex flex-col lg:flex-row gap-6 items-start">
+          <div className="flex-1 space-y-4 w-full">
+
+            {/* Details Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-transparent border border-border rounded-2xl p-5 flex flex-col gap-2">
+                <div className="text-gray-400 text-xs flex items-center gap-2">
+                  <MdInsertDriveFile className="w-4 h-4" /> Invoice ID
+                </div>
+                <p className="text-foreground font-semibold text-sm">{invoice.invoice_id}</p>
               </div>
-              <p className="text-foreground font-semibold text-sm">{invoice.legal_name || invoice.client_name || "Unknown Client"}</p>
-              {invoice.billing_address && (
-                <p className="text-gray-400 text-xs line-clamp-2">{invoice.billing_address}</p>
+
+              <div className="bg-transparent border border-border rounded-2xl p-5 flex flex-col gap-2">
+                <div className="text-gray-400 text-xs flex items-center gap-2">
+                  <MdCalendarToday className="w-4 h-4" /> Date
+                </div>
+                <p className="text-foreground font-semibold text-sm">{formatDate(invoice.date)}</p>
+              </div>
+
+              <div className="bg-transparent border border-border rounded-2xl p-5 flex flex-col gap-2">
+                <div className="text-gray-400 text-xs flex items-center gap-2">
+                  <MdLocalOffer className="w-4 h-4" /> Payment Status
+                </div>
+                <span className={`w-fit px-3 py-1 text-xs font-medium rounded-full border ${paymentStatusStyles[invoice.payment_status as keyof typeof paymentStatusStyles] || paymentStatusStyles.unpaid}`}>
+                  {invoice.payment_status || "unpaid"}
+                </span>
+              </div>
+
+              <div className="bg-transparent border border-border rounded-2xl p-5 flex flex-col gap-2">
+                <div className="text-gray-400 text-xs flex items-center gap-2">
+                  <MdWorkOutline className="w-4 h-4" /> Bill To
+                </div>
+                <p className="text-foreground font-semibold text-sm">{invoice.legal_name || invoice.client_name || "Unknown Client"}</p>
+                {invoice.billing_address && (
+                  <p className="text-gray-400 text-xs line-clamp-2">{invoice.billing_address}</p>
+                )}
+              </div>
+
+              {/* Custom Fields (if defined) */}
+              {invoice.custom_field_values && Object.keys(invoice.custom_field_values).length > 0 && (
+                <div className="bg-transparent border border-border rounded-2xl p-5 flex flex-col gap-2 col-span-1 sm:col-span-2 lg:col-span-4">
+                  <div className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                    Custom Fields
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                    {Object.entries(invoice.custom_field_values).map(([k, v]) => (
+                      <div key={k} className="space-y-0.5">
+                        <span className="text-[11px] text-gray-400 capitalize">{k.replace(/_/g, " ")}</span>
+                        <p className="text-sm font-medium text-foreground">{String(v)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
-          </div>
 
           {/* Line Items & Billing Summary */}
           <div className="bg-transparent border border-border rounded-2xl overflow-hidden mt-4">
@@ -577,6 +649,16 @@ export default function AdminInvoicePage() {
                 <span className="text-foreground font-bold text-lg">{formatMoney(totalDue, invoice.currency)}</span>
               </div>
             </div>
+
+            {/* Free Plan System Footer (Non-removable for Free plan) */}
+            {tenantPlan === "Free" && (
+              <div className="px-5 py-3 bg-black/5 dark:bg-white/[0.02] border-t border-border flex items-center justify-center gap-1.5 text-xs text-gray-500 select-none">
+                <span>Generated by</span>
+                <span className="font-semibold text-gray-700 dark:text-gray-300">Framebooks</span>
+                <span>•</span>
+                <span className="text-brand-500 font-medium">framebooks.com</span>
+              </div>
+            )}
           </div>
 
           {/* Payment History */}
@@ -881,6 +963,7 @@ export default function AdminInvoicePage() {
 
         </div>
       </div>
+      )}
 
       {/* Income Modal */}
       {incomeModalOpen && invoice && (

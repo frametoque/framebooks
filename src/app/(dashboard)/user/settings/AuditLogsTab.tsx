@@ -5,16 +5,18 @@ import { Loader } from "@/components/ui/Loader";
 import { useState, useEffect } from "react";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 
+let cachedLogs: any[] | null = null;
+
 export default function AuditLogsTab() {
   const { confirm } = useConfirm();
-  const [logs, setLogs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [logs, setLogs] = useState<any[]>(() => cachedLogs || []);
+  const [loading, setLoading] = useState(() => !cachedLogs);
   const [error, setError] = useState("");
   const [clearing, setClearing] = useState(false);
 
   const fetchLogs = async () => {
     try {
-      setLoading(true);
+      if (!cachedLogs) setLoading(true);
       setError("");
       const res = await fetch("/api/admin/system-logs");
       if (!res.ok) {
@@ -22,7 +24,8 @@ export default function AuditLogsTab() {
       }
       const data = await res.json();
       if (data.success) {
-        setLogs(data.logs || []);
+        cachedLogs = data.logs || [];
+        setLogs(cachedLogs);
       } else {
         throw new Error(data.error || "Failed to load logs");
       }
@@ -48,6 +51,7 @@ export default function AuditLogsTab() {
       }
       const data = await res.json();
       if (data.success) {
+        cachedLogs = [];
         alert("System logs cleared successfully!");
         fetchLogs();
       } else {

@@ -1,72 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>You are offline</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
-    <style>
-        body {
-            min-height: 100vh;
-            background: linear-gradient(to bottom, #111827, #1f2937);
-            color: white;
-        }
-
-        .offline-card {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 2.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-        }
-
-        .cloud-icon {
-            font-size: 5rem;
-            color: #93c5fd;
-            margin-bottom: 1rem;
-        }
-
-        .error-title {
-            font-size: 4rem;
-            font-weight: 900;
-            background: linear-gradient(to right, #60a5fa, #3b82f6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 1rem;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline | Framebooks</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #0B0F12;
+      color: #F3F4F6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 1.5rem;
+    }
+    .card {
+      background: rgba(18, 24, 30, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 2.5rem 2rem;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+    .icon-wrapper {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 1.5rem;
+      border-radius: 20px;
+      background: rgba(0, 227, 91, 0.1);
+      border: 1px solid rgba(0, 227, 91, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #00E35B;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.02em;
+    }
+    p {
+      color: #9CA3AF;
+      font-size: 0.925rem;
+      line-height: 1.5;
+      margin-bottom: 2rem;
+    }
+    .btn {
+      display: inline-block;
+      width: 100%;
+      padding: 0.85rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border-radius: 14px;
+      border: none;
+      background: #00E35B;
+      color: #042211;
+      cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.1s ease;
+      text-decoration: none;
+    }
+    .btn:hover {
+      opacity: 0.92;
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .footer-note {
+      margin-top: 1.5rem;
+      font-size: 0.775rem;
+      color: #6B7280;
+    }
+  </style>
 </head>
-
-<body class="d-flex flex-column min-vh-100">
-    <div class="container my-auto py-5">
-        <div class="row justify-content-center">
-            <div class="col-md-6 col-lg-5">
-                <div class="offline-card text-center">
-                    <div class="cloud-icon">
-                        <i class="bi bi-cloud-slash"></i>
-                    </div>
-                    <h1 class="error-title">OOPS!</h1>
-                    <p class="fs-5 mb-4">You're offline. Please check your internet connection.</p>
-                    <div class="mt-4 pt-3 border-top border-white border-opacity-25">
-                        <p class="text-white-50 mb-0 small">
-                            <i class="bi bi-wifi-off me-1"></i> No internet connection detected
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
+<body>
+  <div class="card">
+    <div class="icon-wrapper">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="1" y1="1" x2="23" y2="23"></line>
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+        <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+        <line x1="12" y1="20" x2="12.01" y2="20"></line>
+      </svg>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        if (navigator.onLine) {
-            setTimeout(() => {
-                window.location.href = "/";
-            }, 2000);
-        }
-    </script>
+    <h1>You're Offline</h1>
+    <p>Framebooks needs an internet connection to securely access your workspace, calculate invoices, and sync records.</p>
+    <button class="btn" onclick="window.location.reload()">Retry Connection</button>
+    <div class="footer-note">Framebooks PWA • Reconnect to resume</div>
+  </div>
 </body>
-
 </html>

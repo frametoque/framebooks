@@ -17,22 +17,63 @@ import {
   Phone,
   Briefcase,
   KeyRound,
-  Trash2
+  Trash2,
+  Edit2,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Loader2,
+  Crown
 } from "lucide-react";
 import { PlanBadge, RoleBadge } from "@/components/Formatters";
 import { ConfirmModal } from "@/app/(dashboard)/admin/_components/ConfirmModal";
-import { banUser, unbanUser, softDeleteUser, addUserNote } from "../actions";
+import { banUser, unbanUser, softDeleteUser, addUserNote, adminUpdateUserEmail } from "../actions";
 
 export function UserDetailClient({ data }: { data: any }) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"profile" | "security" | "notes" | "danger">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "businesses" | "security" | "notes" | "danger">("profile");
   const [newNote, setNewNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [confirmBan, setConfirmBan] = useState(false);
   const [confirmUnban, setConfirmUnban] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const { user, notes = [] } = data;
+  // Email Change State
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [newEmailInput, setNewEmailInput] = useState("");
+  const [emailSubmitting, setEmailSubmitting] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [statusToast, setStatusToast] = useState("");
+
+  const { user, notes = [], linkedBusinesses = [] } = data;
+
+  const showToast = (msg: string) => {
+    setStatusToast(msg);
+    setTimeout(() => setStatusToast(""), 4000);
+  };
+
+  const handleOpenEmailModal = () => {
+    setNewEmailInput(user.email || "");
+    setEmailError("");
+    setEmailModalOpen(true);
+  };
+
+  const handleEmailChangeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmailSubmitting(true);
+    setEmailError("");
+    try {
+      const res = await adminUpdateUserEmail(user.id, newEmailInput);
+      showToast(res.message || "Email address updated successfully");
+      setEmailModalOpen(false);
+      user.email = newEmailInput.trim().toLowerCase();
+      router.refresh();
+    } catch (err: any) {
+      setEmailError(err.message || "Failed to update email address");
+    } finally {
+      setEmailSubmitting(false);
+    }
+  };
 
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +92,13 @@ export function UserDetailClient({ data }: { data: any }) {
 
   return (
     <div className="space-y-6">
+      {statusToast && (
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-sm font-semibold flex items-center gap-2 animate-in fade-in duration-200">
+          <CheckCircle2 className="w-5 h-5 shrink-0" />
+          <span>{statusToast}</span>
+        </div>
+      )}
+
       {/* User Header Profile Card */}
       <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-2xs">
         <div className="flex items-center gap-4">
@@ -78,14 +126,34 @@ export function UserDetailClient({ data }: { data: any }) {
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5" />
-              <span>{user.email}</span>
-            </p>
+            <div className="text-sm text-gray-500 mt-1 flex items-center gap-2 flex-wrap">
+              <span className="flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5" />
+                <span>{user.email}</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleOpenEmailModal}
+                className="inline-flex items-center gap-1 text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold cursor-pointer"
+                title="Change user email address"
+              >
+                <Edit2 className="w-3 h-3" />
+                <span>Change Email</span>
+              </button>
+            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleOpenEmailModal}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-border bg-card hover:bg-muted text-xs sm:text-sm font-semibold text-foreground transition-colors cursor-pointer shadow-2xs"
+          >
+            <Mail className="w-4 h-4 text-brand-500" />
+            <span>Change Email</span>
+          </button>
+
           {user.tenant_id && (
             <Link
               href={`/admin/businesses/${user.tenant_id}`}
@@ -99,39 +167,11 @@ export function UserDetailClient({ data }: { data: any }) {
         </div>
       </div>
 
-      {/* Workspace Link Card */}
-      {user.tenant_id && (
-        <div className="p-4 sm:p-5 bg-muted/40 border border-border rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-foreground text-sm">{user.tenant_name || "Workspace"}</span>
-                <PlanBadge plan={user.tenant_plan || "Free"} />
-                <RoleBadge role={user.role || "member"} />
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Workspace ID #{user.tenant_id} • Plan quotas, subscriptions & billing are managed in the Business section.
-              </p>
-            </div>
-          </div>
-
-          <Link
-            href={`/admin/businesses/${user.tenant_id}`}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-brand-500/30 bg-brand-500/10 hover:bg-brand-500/20 text-xs font-bold text-brand-700 dark:text-brand-400 transition-colors shrink-0"
-          >
-            <span>View Business Section</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      )}
-
       {/* Tabs Navigation */}
       <div className="flex items-center gap-2 border-b border-border pb-2 overflow-x-auto select-none">
         {[
           { key: "profile", label: "User Profile", icon: User },
+          { key: "businesses", label: "Linked Businesses", icon: Building2, count: linkedBusinesses.length },
           { key: "security", label: "Security & Access", icon: ShieldCheck },
           { key: "notes", label: "Staff Notes", icon: StickyNote, count: notes.length },
           { key: "danger", label: "Danger Zone", icon: AlertTriangle },
@@ -158,22 +198,34 @@ export function UserDetailClient({ data }: { data: any }) {
 
       {/* TAB 1: USER PROFILE */}
       {activeTab === "profile" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-2xs">
-            <h3 className="font-bold text-foreground text-base">Account Identity</h3>
-            <div className="divide-y divide-border text-sm">
-              <div className="py-2.5 flex justify-between">
-                <span className="text-gray-500">User ID</span>
-                <span className="font-mono font-semibold">{user.id}</span>
-              </div>
-              <div className="py-2.5 flex justify-between">
-                <span className="text-gray-500">Full Name</span>
-                <span className="font-semibold text-foreground">{user.full_name || "Not provided"}</span>
-              </div>
-              <div className="py-2.5 flex justify-between">
-                <span className="text-gray-500">Email Address</span>
-                <span className="font-semibold text-foreground">{user.email}</span>
-              </div>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-2xs">
+              <h3 className="font-bold text-foreground text-base">Account Identity</h3>
+              <div className="divide-y divide-border text-sm">
+                <div className="py-2.5 flex justify-between">
+                  <span className="text-gray-500">User ID</span>
+                  <span className="font-mono font-semibold">{user.id}</span>
+                </div>
+                <div className="py-2.5 flex justify-between">
+                  <span className="text-gray-500">Full Name</span>
+                  <span className="font-semibold text-foreground">{user.full_name || "Not provided"}</span>
+                </div>
+                <div className="py-2.5 flex justify-between items-center">
+                  <span className="text-gray-500">Email Address</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-foreground">{user.email}</span>
+                    <button
+                      type="button"
+                      onClick={handleOpenEmailModal}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-semibold text-brand-700 dark:text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 transition-colors cursor-pointer"
+                      title="Change email"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      <span>Change</span>
+                    </button>
+                  </div>
+                </div>
               <div className="py-2.5 flex justify-between">
                 <span className="text-gray-500">Phone</span>
                 <span>{user.phone || "Not provided"}</span>
@@ -211,15 +263,171 @@ export function UserDetailClient({ data }: { data: any }) {
             </div>
           </div>
         </div>
+
+        {/* Linked Businesses Quick Summary */}
+        <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-foreground text-base">Linked Businesses & Workspaces</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Connected workspaces owned by or shared with this user ({linkedBusinesses.length})
+              </p>
+            </div>
+            {linkedBusinesses.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveTab("businesses")}
+                className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer"
+              >
+                View all ({linkedBusinesses.length})
+              </button>
+            )}
+          </div>
+
+          {linkedBusinesses.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-2">
+              No businesses currently associated with this account.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {linkedBusinesses.slice(0, 3).map((biz: any) => (
+                <div
+                  key={biz.id}
+                  className="p-3.5 rounded-2xl bg-muted/30 border border-border flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+                      <Building2 className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-xs text-foreground truncate">{biz.name}</div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <RoleBadge role={biz.role} />
+                        {biz.isActive && (
+                          <span className="text-[10px] text-brand-600 dark:text-brand-400 font-bold">• Active</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/admin/businesses/${biz.id}`}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+                    title="View business"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
       )}
 
-      {/* TAB 2: SECURITY & ACCESS */}
+      {/* TAB 2: LINKED BUSINESSES */}
+      {activeTab === "businesses" && (
+        <div className="space-y-6">
+          <div className="bg-card border border-border rounded-3xl p-6 shadow-2xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-4">
+              <div>
+                <h3 className="font-bold text-foreground text-lg flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-brand-500" />
+                  <span>Linked Businesses & Workspaces</span>
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  All workspace accounts owned by, administered by, or shared with {user.full_name || user.email}
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-muted text-muted-foreground border border-border w-fit">
+                {linkedBusinesses.length} {linkedBusinesses.length === 1 ? "workspace" : "workspaces"}
+              </span>
+            </div>
+
+            {linkedBusinesses.length === 0 ? (
+              <div className="py-12 text-center text-muted-foreground text-sm">
+                No businesses or workspaces are linked to this user's email ({user.email}).
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                {linkedBusinesses.map((biz: any) => (
+                  <div
+                    key={biz.id}
+                    className="p-5 rounded-2xl bg-card border border-border hover:border-brand-500/30 transition-all shadow-2xs flex flex-col justify-between gap-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-12 h-12 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+                          <Building2 className="w-6 h-6" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-bold text-foreground text-base truncate">{biz.name}</h4>
+                            <PlanBadge plan={biz.plan || "Free"} />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">Workspace ID #{biz.id}</p>
+                        </div>
+                      </div>
+
+                      {biz.isActive && (
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-brand-500/15 text-brand-700 dark:text-brand-400 border border-brand-500/30 shrink-0">
+                          Active Workspace
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-border/60">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Role:</span>
+                        <RoleBadge role={biz.role} />
+                        {biz.isOwner && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                            <Crown className="w-3 h-3" />
+                            Owner
+                          </span>
+                        )}
+                      </div>
+
+                      <Link
+                        href={`/admin/businesses/${biz.id}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-brand-500/30 bg-brand-500/10 hover:bg-brand-500/20 text-xs font-bold text-brand-700 dark:text-brand-400 transition-colors cursor-pointer"
+                      >
+                        <span>View Business</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: SECURITY & ACCESS */}
       {activeTab === "security" && (
-        <div className="bg-card border border-border rounded-3xl p-6 space-y-5 shadow-2xs">
+        <div className="bg-card border border-border rounded-3xl p-6 space-y-6 shadow-2xs">
           <h3 className="font-bold text-foreground text-base">Security & Authentication Status</h3>
 
           <div className="divide-y divide-border text-sm">
-            <div className="py-3 flex items-center justify-between">
+            {/* Email Address & Recovery */}
+            <div className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span className="font-semibold text-foreground block">Account Login Email</span>
+                <span className="text-xs text-gray-500 mt-0.5 block">
+                  Current login: <strong className="text-foreground">{user.email}</strong>. Use when a user loses email access or requests an account transfer.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleOpenEmailModal}
+                className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-xs transition-colors shrink-0 cursor-pointer shadow-xs"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>Change Email Address</span>
+              </button>
+            </div>
+
+            <div className="py-4 flex items-center justify-between">
               <div>
                 <span className="font-semibold text-foreground block">Account Status</span>
                 <span className="text-xs text-gray-500">
@@ -405,7 +613,7 @@ export function UserDetailClient({ data }: { data: any }) {
           onClose={() => setConfirmDelete(false)}
           onConfirm={async () => {
             await softDeleteUser(user.id);
-            router.push("/admin/subscriptions");
+            router.push("/admin/users");
           }}
           title={`Delete ${user.email}`}
           description="This will soft-delete the user record. To confirm permanent archival, please type their email below:"
@@ -413,6 +621,75 @@ export function UserDetailClient({ data }: { data: any }) {
           isDestructive={true}
           typeToConfirmText={user.email}
         />
+      )}
+
+      {/* Change Email Modal */}
+      {emailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Change Account Email</h3>
+                <p className="text-xs text-muted-foreground">Update login email and workspace ownership</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEmailModalOpen(false)}
+                className="p-1.5 rounded-full text-muted-foreground hover:bg-muted cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {emailError && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{emailError}</span>
+              </div>
+            )}
+
+            <div className="p-3 rounded-xl bg-muted/40 border border-border text-xs space-y-1 text-muted-foreground">
+              <p><strong className="text-foreground">Current Email:</strong> {user.email}</p>
+              <p className="text-[11px] leading-relaxed">
+                Updating this email will change their login address and automatically update ownership of any workspaces or team memberships linked to their account.
+              </p>
+            </div>
+
+            <form onSubmit={handleEmailChangeSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                  New Email Address *
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="new-email@example.com"
+                  value={newEmailInput}
+                  onChange={(e) => setNewEmailInput(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm outline-none focus:border-brand-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setEmailModalOpen(false)}
+                  className="px-4 py-2 rounded-full text-xs font-semibold hover:bg-muted transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={emailSubmitting || !newEmailInput.trim() || newEmailInput.trim().toLowerCase() === user.email.toLowerCase()}
+                  className="flex items-center gap-1.5 px-5 py-2 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-full text-xs transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {emailSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Update Email</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

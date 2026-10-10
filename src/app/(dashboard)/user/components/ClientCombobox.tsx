@@ -63,8 +63,8 @@ export default function ClientCombobox({ name, value, onChange, clients, loading
       </button>
 
       {open && (
-        <div className="absolute z-50 top-full left-0 w-full mt-2 bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col">
-          <div className="p-2 border-b border-border flex items-center gap-2 px-3 bg-card">
+        <div className="absolute z-50 top-full left-0 w-full mt-2 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col">
+          <div className="p-2 border-b border-border flex items-center gap-2 px-3 bg-black/[0.02] dark:bg-white/[0.02]">
             <MdSearch className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
             <input
               type="text"
@@ -76,7 +76,7 @@ export default function ClientCombobox({ name, value, onChange, clients, loading
             />
           </div>
           
-          <div className="overflow-y-auto max-h-[240px] bg-card">
+          <div className="overflow-y-auto max-h-[240px] bg-popover">
             <button
               type="button"
               onClick={() => handleSelect("new")}
