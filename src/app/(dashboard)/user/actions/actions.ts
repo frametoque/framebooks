@@ -59,12 +59,9 @@ export async function getDashboardData(startDate?: string, endDate?: string) {
   const start = startDate || '1970-01-01';
   const end = endDate || '2099-12-31';
   const tenantId = await getTenantId();
-  console.log(`[getDashboardData] tenantId=${tenantId}, start=${start}, end=${end}`);
   if (!tenantId) return null;
 
-  const result = await _getDashboardData(tenantId, start, end);
-  console.log(`[getDashboardData] done. totalIncome=${result.totalIncome}, totalExpenses=${result.totalExpenses}`);
-  return result;
+  return await _getDashboardData(tenantId, start, end);
 }
 
 export async function _getDashboardData(tenantId: string, start: string, end: string) {

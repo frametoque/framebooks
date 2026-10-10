@@ -42,9 +42,9 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({ hasInvitation: false, debug: { email, pendingInvitesLength: pendingInvites.length } });
+    return NextResponse.json({ hasInvitation: false });
   } catch (error: any) {
     console.error("[CHECK_INVITATIONS]", error);
-    return NextResponse.json({ error: "Internal Error", msg: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal Error" }, { status: 500 });
   }
 }
