@@ -66,14 +66,14 @@ export default function DashboardPage() {
           {[...Array(5)].map((_, i) => (
             <div 
               key={i} 
-              className={`bg-card border border-border rounded-3xl p-3.5 sm:p-4 2xl:p-5 flex items-center gap-2.5 sm:gap-3 animate-pulse shadow-xs min-w-0 ${
+              className={`bg-card border border-border rounded-3xl p-4 sm:p-5 xl:p-6 flex items-center gap-3.5 animate-pulse shadow-xs min-w-0 ${
                 i === 4 ? "sm:col-span-2 lg:col-span-2 xl:col-span-1" : ""
               }`}
             >
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-black/5 dark:bg-card shrink-0" />
+              <div className="w-10 h-10 rounded-2xl bg-black/5 dark:bg-card shrink-0" />
               <div className="space-y-2 flex-1 min-w-0">
-                <div className="h-3 bg-black/5 dark:bg-card rounded-full w-16" />
-                <div className="h-5 bg-black/10 dark:bg-white/10 rounded-full w-24" />
+                <div className="h-3.5 bg-black/5 dark:bg-card rounded-full w-20" />
+                <div className="h-7 bg-black/10 dark:bg-white/10 rounded-full w-28" />
               </div>
             </div>
           ))}
@@ -82,9 +82,9 @@ export default function DashboardPage() {
         {/* Skeleton Stats Cards (Row 2) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-3xl p-4 sm:p-5 2xl:p-6 flex flex-col justify-between gap-3 animate-pulse shadow-xs min-w-0">
+            <div key={i} className="bg-card border border-border rounded-3xl p-5 sm:p-6 flex flex-col justify-between gap-3 animate-pulse shadow-xs min-w-0">
               <div className="h-3.5 bg-black/5 dark:bg-card rounded-full w-28" />
-              <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-32" />
+              <div className="h-7 bg-black/10 dark:bg-white/10 rounded-full w-32" />
             </div>
           ))}
         </div>
@@ -230,23 +230,23 @@ export default function DashboardPage() {
           <motion.div 
             variants={itemVariants} 
             key={i} 
-            className="bg-card border border-border rounded-3xl p-3.5 sm:p-4 2xl:p-5 flex items-center gap-2.5 sm:gap-3 hover:shadow-md transition-all shadow-xs min-w-0"
+            className="bg-card border border-border rounded-3xl p-4 sm:p-5 xl:p-6 flex items-center gap-3.5 hover:shadow-md transition-all shadow-xs min-w-0"
           >
-            <div className={`p-2 sm:p-2.5 rounded-xl sm:rounded-2xl shrink-0 ${stat.bg}`}>
-              <stat.icon className={`w-4.5 h-4.5 sm:w-5 sm:h-5 ${stat.color}`} />
+            <div className={`p-2.5 sm:p-3 rounded-2xl shrink-0 ${stat.bg}`}>
+              <stat.icon className={`w-5 h-5 sm:w-5 sm:h-5 ${stat.color}`} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-xs xl:text-xs 2xl:text-sm font-medium truncate" title={stat.label}>
+              <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium truncate" title={stat.label}>
                 {stat.label}
               </p>
               <p 
-                className="text-base sm:text-lg lg:text-base xl:text-base 2xl:text-xl font-bold text-foreground tracking-tight whitespace-nowrap overflow-visible" 
+                className="text-xl sm:text-xl lg:text-lg xl:text-2xl font-bold text-foreground tracking-tight whitespace-nowrap overflow-visible" 
                 title={stat.value}
               >
                 <AnimatedNumber value={stat.value} />
               </p>
               {stat.subtext && (
-                <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate" title={stat.subtext}>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate" title={stat.subtext}>
                   {stat.subtext}
                 </p>
               )}
@@ -255,19 +255,19 @@ export default function DashboardPage() {
         ))}
         <motion.div 
           variants={itemVariants} 
-          className="bg-card border border-border rounded-3xl p-3.5 sm:p-4 2xl:p-5 flex items-center gap-2.5 sm:gap-3 hover:shadow-md transition-all shadow-xs relative group min-w-0 sm:col-span-2 lg:col-span-2 xl:col-span-1"
+          className="bg-card border border-border rounded-3xl p-4 sm:p-5 xl:p-6 flex items-center gap-3.5 hover:shadow-md transition-all shadow-xs relative group min-w-0 sm:col-span-2 lg:col-span-2 xl:col-span-1"
         >
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-100/80 dark:bg-amber-400/10 flex items-center justify-center shrink-0">
-            <span className="text-sm sm:text-base font-bold text-amber-700 dark:text-amber-400">
+          <div className="w-10 h-10 rounded-2xl bg-amber-100/80 dark:bg-amber-400/10 flex items-center justify-center shrink-0">
+            <span className="text-base font-bold text-amber-700 dark:text-amber-400">
               <AnimatedNumber value={data.unpaidCount || 0} />
             </span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-xs xl:text-xs 2xl:text-sm font-medium truncate" title="Unpaid Invoices">
+            <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium truncate" title="Unpaid Invoices">
               Unpaid Invoices
             </p>
             <p 
-              className="text-base sm:text-lg lg:text-base xl:text-base 2xl:text-xl font-bold text-amber-600 dark:text-amber-400 tracking-tight whitespace-nowrap overflow-visible" 
+              className="text-xl sm:text-xl lg:text-lg xl:text-2xl font-bold text-amber-600 dark:text-amber-400 tracking-tight whitespace-nowrap overflow-visible" 
               title={formatLKR(data.unpaidAmount || 0)}
             >
               <AnimatedNumber value={formatLKR(data.unpaidAmount || 0)} />
@@ -312,11 +312,11 @@ export default function DashboardPage() {
           else if (pct < 0) pctColor = stat.invertColors ? "text-emerald-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
 
           return (
-            <motion.div variants={itemVariants} key={i} className="bg-card border border-border rounded-3xl p-4 sm:p-5 2xl:p-6 hover:shadow-md transition-all shadow-xs flex flex-col justify-between min-w-0">
+            <motion.div variants={itemVariants} key={i} className="bg-card border border-border rounded-3xl p-5 sm:p-6 hover:shadow-md transition-all shadow-xs flex flex-col justify-between min-w-0">
               <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium mb-2 truncate" title={stat.label}>{stat.label}</p>
               <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 min-w-0">
                 <p 
-                  className="text-base sm:text-lg xl:text-lg 2xl:text-xl font-bold text-foreground tracking-tight whitespace-nowrap overflow-visible"
+                  className="text-xl sm:text-xl xl:text-2xl font-bold text-foreground tracking-tight whitespace-nowrap overflow-visible"
                   title={stat.isCurrency ? formatLKR(stat.value) : String(stat.value)}
                 >
                   <AnimatedNumber value={stat.isCurrency ? formatLKR(stat.value) : stat.value} />

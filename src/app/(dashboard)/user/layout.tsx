@@ -163,7 +163,8 @@ function LayoutContent({ children }) {
 
             {/* Main Content Area */}
             <motion.div
-              animate={{ paddingLeft: isLocked ? 0 : 220 }}
+              animate={{ paddingLeft: isLocked ? 0 : 72 }}
+              transition={{ duration: 0.2 }}
               className="min-h-screen lg:flex flex-col hidden"
             >
               <LimitBanner exceededLimits={exceededLimits} />
@@ -638,6 +639,7 @@ const Sidebar = ({
   setMobileMenuOpen: (open: boolean) => void;
   tenantInfo: { plan: string, name: string, logo_url: string | null, industry: string | null };
 }) => {
+  const [isHovered, setIsHovered] = useState(false);
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const user = session?.user;
@@ -665,10 +667,12 @@ const Sidebar = ({
     return pathname.startsWith(href);
   };
 
+  const isExpanded = mobileMenuOpen || isHovered;
+
   const sidebarSpring = {
     type: "spring",
-    stiffness: 280,
-    damping: 28,
+    stiffness: 300,
+    damping: 30,
     mass: 0.8,
   } as const;
 
@@ -691,42 +695,53 @@ const Sidebar = ({
 
       {/* Sidebar */}
       <motion.aside
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         animate={{
-          width: 220,
+          width: isExpanded ? 240 : 72,
           x: mobileMenuOpen ? 0 : undefined,
         }}
         transition={sidebarSpring}
-        className={`fixed top-0 left-0 h-full bg-background backdrop-blur-xl z-50
-          w-64
-          ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
+        className={`fixed top-0 left-0 h-full bg-background/95 backdrop-blur-2xl z-50 border-r border-border
+          ${isHovered ? "shadow-2xl ring-1 ring-black/5 dark:ring-white/10" : "shadow-xs"}
+          ${mobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0"}`}
         style={{ overflow: "hidden" }}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full w-[240px]">
 
           {/* Logo + Collapse toggle */}
-          <div className="flex items-center justify-between h-20 flex-shrink-0 overflow-hidden px-4">
-
-            <div className="flex-1 flex justify-center overflow-hidden">
-              <Link href="/" className="lg:block flex items-center">
-                <div className="flex items-center">
+          <div className="flex items-center h-20 flex-shrink-0 px-3.5 overflow-hidden">
+            <Link href="/" className="flex items-center w-full overflow-hidden">
+              {isExpanded ? (
+                <div className="flex items-center pl-1 min-w-0 animate-in fade-in duration-200">
                   <Image
                     src="/logos/ft/name-logo.png"
                     alt="FrameBooks"
                     width={125}
                     height={25}
-                    className="h-[25px] w-[125px] flex-shrink-0 animate-fade-in [filter:brightness(0)] dark:[filter:none]"
+                    className="h-[25px] w-[125px] flex-shrink-0 [filter:brightness(0)] dark:[filter:none]"
                   />
                   {tenantInfo.plan && tenantInfo.plan !== "Loading..." && (
-                    <span className="text-gray-400 dark:text-foreground/30 text-[11px] font-medium tracking-widest ml-3 flex-shrink-0 flex items-center gap-2">
+                    <span className="text-gray-400 dark:text-foreground/30 text-[11px] font-medium tracking-widest ml-2.5 flex-shrink-0 flex items-center gap-1.5">
                       |
-                      <span className="text-emerald-700 dark:text-brand-500 font-bold uppercase">
+                      <span className="text-emerald-700 dark:text-brand-500 font-bold uppercase text-[10px]">
                         {tenantInfo.plan.toLowerCase() === "pro plus" ? "PRO +" : tenantInfo.plan}
                       </span>
                     </span>
                   )}
                 </div>
-              </Link>
-            </div>
+              ) : (
+                <div className="w-11 h-11 flex items-center justify-center mx-auto">
+                  <Image
+                    src="/logos/ft/logo.png"
+                    alt="FrameBooks"
+                    width={32}
+                    height={32}
+                    className="h-8 w-8 object-contain [filter:brightness(0)] dark:[filter:none]"
+                  />
+                </div>
+              )}
+            </Link>
 
             {/* Mobile: close button */}
             <button
@@ -738,7 +753,7 @@ const Sidebar = ({
           </div>
 
           {/* Nav links */}
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto min-h-0">
+          <nav className="flex-1 px-2.5 py-4 space-y-1.5 overflow-y-auto overflow-x-hidden min-h-0">
             {links.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
@@ -747,7 +762,9 @@ const Sidebar = ({
                   {active && (
                     <motion.div
                       layoutId="active-sidebar-tab"
-                      className="absolute inset-0 bg-brand-500/15 border border-brand-500/20 dark:bg-white/10 dark:border-transparent rounded-full"
+                      className={`absolute inset-0 bg-brand-500/15 border border-brand-500/20 dark:bg-white/10 dark:border-transparent rounded-2xl ${
+                        !isExpanded ? "w-11 mx-auto" : "w-full"
+                      }`}
                       initial={false}
                       transition={{ type: "spring", stiffness: 350, damping: 30 }}
                     />
@@ -756,19 +773,23 @@ const Sidebar = ({
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
                     target={item.newtab ? "_blank" : "_self"}
-                    className={`relative z-10 flex items-center gap-3 pl-[14px] pr-3 py-2.5 rounded-full transition-colors duration-150 overflow-hidden w-full justify-start
+                    title={!isExpanded ? item.name : undefined}
+                    className={`relative z-10 flex items-center h-11 rounded-2xl transition-all duration-150 overflow-hidden
+                      ${isExpanded ? "px-3.5 gap-3.5 w-full justify-start" : "w-11 mx-auto justify-center"}
                       ${active
                         ? "text-brand-700 dark:text-brand-500 font-semibold"
-                        : "text-foreground font-medium hover:text-brand-600 dark:hover:text-brand-500 bg-transparent"
+                        : "text-foreground font-medium hover:text-brand-600 dark:hover:text-brand-500 hover:bg-black/5 dark:hover:bg-white/5"
                       }`}
                   >
-                    <span className="flex-shrink-0">
+                    <span className="flex-shrink-0 flex items-center justify-center">
                       <Icon className="w-5 h-5" />
                     </span>
 
-                    <span className="overflow-hidden whitespace-nowrap text-sm">
-                      {item.name}
-                    </span>
+                    {isExpanded && (
+                      <span className="overflow-hidden whitespace-nowrap text-sm truncate animate-in fade-in duration-150">
+                        {item.name}
+                      </span>
+                    )}
                   </Link>
                 </div>
               );
@@ -776,42 +797,47 @@ const Sidebar = ({
           </nav>
 
           {/* User Settings Link */}
-          <div className="p-4 flex flex-col mt-auto space-y-2 shrink-0">
+          <div className="p-3 flex flex-col mt-auto space-y-2 shrink-0 border-t border-border">
             <div className="flex items-center gap-2">
               <Link 
                 href="/user/settings?tab=profile"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex-1 flex items-center gap-3 p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-2xl transition-colors min-w-0"
+                title={!isExpanded ? (user?.name || "User Profile") : undefined}
+                className={`flex items-center rounded-2xl transition-colors hover:bg-black/5 dark:hover:bg-white/5
+                  ${isExpanded ? "flex-1 gap-3 p-2 min-w-0" : "w-11 h-11 mx-auto justify-center p-0"}`}
               >
                 <ClientAvatar 
                   imageUrl={user?.image} 
                   name={user?.name || "User"}
                   email={user?.email}
-                  className="w-10 h-10 rounded-full object-cover shrink-0 border border-border"
-                  fallbackClassName="w-10 h-10 rounded-full bg-brand-500/10 border border-border flex items-center justify-center text-brand-400 font-bold text-sm shrink-0"
+                  className="w-9 h-9 rounded-full object-cover shrink-0 border border-border"
+                  fallbackClassName="w-9 h-9 rounded-full bg-brand-500/10 border border-border flex items-center justify-center text-brand-400 font-bold text-xs shrink-0"
                 />
-                <div className="overflow-hidden flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{user?.name || "User"}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || "Account & Security"}</p>
-                </div>
+                {isExpanded && (
+                  <div className="overflow-hidden flex-1 min-w-0 animate-in fade-in duration-150">
+                    <p className="text-sm font-semibold text-foreground truncate">{user?.name || "User"}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || "Account & Security"}</p>
+                  </div>
+                )}
               </Link>
-              <LockSidebarButton />
+              {isExpanded && <LockSidebarButton />}
             </div>
             
-            <div className="px-2 pt-3 pb-1 text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed text-center border-t border-border flex flex-col items-center justify-center gap-1.5">
-              <p className="max-w-[250px]">
-                Your data stays secure with<br/>
-                <span className="text-emerald-700 dark:text-brand-500 font-semibold">end-to-end encryption</span>.<br/>
-                &copy; {new Date().getFullYear()}. <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-600 dark:hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a>.<br/>
-                All rights reserved.
-              </p>
-            </div>
+            {isExpanded && (
+              <div className="px-2 pt-2 pb-1 text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed text-center flex flex-col items-center justify-center gap-1 animate-in fade-in duration-200">
+                <p className="max-w-[220px]">
+                  Your data stays secure with<br/>
+                  <span className="text-emerald-700 dark:text-brand-500 font-semibold">end-to-end encryption</span>.<br/>
+                  &copy; {new Date().getFullYear()}. <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-600 dark:hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a>.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </motion.aside>
     </>
   );
-}
+};
 
 function LockSidebarButton() {
   const { hasAppLock, lock } = useAppLock();
