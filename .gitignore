@@ -46,3 +46,6 @@ src/app/layout.js
 
 # database backups
 /backups/
+/migrations/db_export.sql
+/scripts/import-island-spares/state/
+/scripts/import-island-spares/reports/

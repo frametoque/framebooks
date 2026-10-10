@@ -23,18 +23,21 @@ import {
   FileText,
   DollarSign,
   Briefcase,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from "lucide-react";
 import { PlanBadge, RoleBadge, StatusPill } from "@/components/Formatters";
 import { AdminStatCard } from "@/app/(dashboard)/admin/_components/AdminStatCard";
 import { BusinessDetailView } from "@/app/(dashboard)/admin/_components/BusinessDetailView";
+import { ConfirmModal } from "@/app/(dashboard)/admin/_components/ConfirmModal";
 import { 
   banUser, 
   unbanUser, 
   getBusinessDetails, 
   adminAddBusinessMember, 
   adminUpdateMemberRole, 
-  adminRemoveBusinessMember 
+  adminRemoveBusinessMember,
+  softDeleteUser 
 } from "./actions";
 
 const ROLE_OPTIONS = [
@@ -82,6 +85,10 @@ export function UsersClient({
   const [removeMemberTarget, setRemoveMemberTarget] = useState<{ user: any; tenantId: number; businessName: string } | null>(null);
   const [removeSubmitting, setRemoveSubmitting] = useState(false);
 
+  // Delete user confirmation state
+  const [deleteUserTarget, setDeleteUserTarget] = useState<{ id: number; email: string; name?: string } | null>(null);
+  const [submittingDeleteUser, setSubmittingDeleteUser] = useState(false);
+
   const { users, totalCount, totalPages, page } = initialData;
 
   const showToast = (msg: string) => {
@@ -104,7 +111,7 @@ export function UsersClient({
     const map = new Map<string, { id: number | null; name: string; plan: string; logoUrl?: string | null; users: any[] }>();
 
     users.forEach((u: any) => {
-      const key = u.tenant_id ? `tenant-${u.tenant_id}` : "unassigned";
+      const key = u.tenant_id ? `tenant-${u.tenant_id}` : `unassigned-${u.id}`;
       const name = u.tenant_name || "Direct platform account";
       const plan = u.current_plan || "Free";
       const logoUrl = u.tenant_logo_url || null;
@@ -296,6 +303,21 @@ export function UsersClient({
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (!deleteUserTarget) return;
+    setSubmittingDeleteUser(true);
+    try {
+      await softDeleteUser(deleteUserTarget.id);
+      showToast(`Permanently deleted account "${deleteUserTarget.email}"`);
+      setDeleteUserTarget(null);
+      router.refresh();
+    } catch (err: any) {
+      showToast(err.message || "Failed to delete account");
+    } finally {
+      setSubmittingDeleteUser(false);
+    }
+  };
+
   const activePlanFilter = searchParams.plan || "all";
 
   return (
@@ -437,7 +459,7 @@ export function UsersClient({
                   </div>
                 </div>
 
-                {group.id && (
+                {group.id ? (
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => handleOpenAddMember(group.id!, group.name)}
@@ -448,14 +470,28 @@ export function UsersClient({
                       <span>Add member</span>
                     </button>
 
-                    <button
-                      onClick={() => handleOpenBusiness(group.id!)}
+                    <Link
+                      href={`/admin/businesses/${group.id}`}
                       className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-brand-500/30 bg-brand-500/10 hover:bg-brand-500/20 text-xs font-bold text-brand-700 dark:text-brand-400 transition-colors cursor-pointer shadow-2xs"
                       title="View full business details and management"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>View business</span>
-                    </button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 shrink-0">
+                    {group.users[0] && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteUserTarget({ id: group.users[0].id, email: group.users[0].email, name: group.users[0].full_name || group.users[0].email })}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-red-500/20 bg-card hover:bg-red-500/10 text-xs font-semibold text-red-600 dark:text-red-400 transition-colors cursor-pointer shadow-2xs"
+                        title="Permanently delete direct platform account"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete account</span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -563,6 +599,16 @@ export function UsersClient({
                                 <ShieldBan className="w-4 h-4" />
                               </button>
                             )}
+
+                            {u.system_role !== 'super_admin' && (
+                              <button
+                                onClick={() => setDeleteUserTarget({ id: u.id, email: u.email, name: u.full_name || u.email })}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                                title="Delete user account"
+                              >
+                                <Trash2 className="w-4 h-4 text-rose-500" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -575,29 +621,7 @@ export function UsersClient({
         )}
       </div>
 
-      {/* VIEW BUSINESS DETAILS MODAL */}
-      {businessModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-card border border-border rounded-3xl p-5 sm:p-7 max-w-5xl w-full shadow-2xl max-h-[92vh] overflow-y-auto">
-            {loadingBusinessModal ? (
-              <div className="py-20 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
-                <span className="text-sm">Loading business details...</span>
-              </div>
-            ) : selectedBusiness ? (
-              <BusinessDetailView
-                businessData={selectedBusiness}
-                isModal={true}
-                onClose={() => {
-                  setBusinessModalOpen(false);
-                  setSelectedBusiness(null);
-                }}
-                onRefresh={() => handleOpenBusiness(selectedBusiness.tenant.id)}
-              />
-            ) : null}
-          </div>
-        </div>
-      )}
+
 
       {/* ADD MEMBER MODAL */}
       {addMemberBusiness && (
@@ -874,6 +898,20 @@ export function UsersClient({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Delete User Confirmation Modal */}
+      {deleteUserTarget && (
+        <ConfirmModal
+          isOpen={true}
+          onClose={() => setDeleteUserTarget(null)}
+          onConfirm={handleDeleteUser}
+          title={`Delete Account: ${deleteUserTarget.email}?`}
+          description={`Permanently deletes account "${deleteUserTarget.email}". They will immediately lose access to Framebooks. This action cannot be undone.`}
+          confirmText={submittingDeleteUser ? "Deleting..." : "Permanently Delete Account"}
+          isDestructive={true}
+          typeToConfirmText={deleteUserTarget.email}
+        />
       )}
     </div>
   );

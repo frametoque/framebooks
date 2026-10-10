@@ -7,12 +7,58 @@ import { logSystemAction } from "@/lib/logger";
 
 import { requirePermission } from "./rbac";
 
-async function resolveGraceAndReadOnly(plan: string, planExpiresAt: any, tenantId?: number | null) {
+async function resolveGraceAndReadOnly(plan: string, planExpiresAt: any, tenantId?: number | null, paymentStatus?: string | null) {
   let is_grace_period = false;
   let is_read_only = false;
+  let is_payment_pending = false;
   let grace_days_remaining: number | null = null;
   let grace_end_date: string | null = null;
   let grace_period_days = 7;
+
+  // 1. Explicit admin pending payment flag
+  if (paymentStatus === "pending_payment") {
+    return {
+      grace_period_days: 0,
+      is_grace_period: false,
+      is_read_only: true,
+      is_payment_pending: true,
+      grace_days_remaining: 0,
+      grace_end_date: null,
+      plan_expires_at: planExpiresAt ? new Date(planExpiresAt).toISOString() : null,
+    };
+  }
+
+  // 2. Check subscription status
+  let subStatus: string | null = null;
+  let expires = planExpiresAt;
+  if (tenantId) {
+    try {
+      const subRows = await sql`
+        SELECT status, current_period_end 
+        FROM subscriptions 
+        WHERE tenant_id = ${tenantId}
+        ORDER BY id DESC LIMIT 1
+      `;
+      if (subRows.length > 0) {
+        subStatus = subRows[0].status;
+        if (!expires && subRows[0].current_period_end) {
+          expires = subRows[0].current_period_end;
+        }
+      }
+    } catch (err) {}
+  }
+
+  if (subStatus === "past_due") {
+    return {
+      grace_period_days: 0,
+      is_grace_period: false,
+      is_read_only: true,
+      is_payment_pending: true,
+      grace_days_remaining: 0,
+      grace_end_date: null,
+      plan_expires_at: expires ? new Date(expires).toISOString() : null,
+    };
+  }
 
   try {
     const settingsRows = await sql`SELECT value FROM platform_settings WHERE key = 'grace_period_days' LIMIT 1`;
@@ -21,21 +67,6 @@ async function resolveGraceAndReadOnly(plan: string, planExpiresAt: any, tenantI
     }
   } catch (err) {
     // default 7
-  }
-
-  let expires = planExpiresAt;
-  if (!expires && tenantId) {
-    try {
-      const subRows = await sql`
-        SELECT current_period_end 
-        FROM subscriptions 
-        WHERE tenant_id = ${tenantId} AND current_period_end IS NOT NULL
-        ORDER BY id DESC LIMIT 1
-      `;
-      if (subRows.length > 0 && subRows[0].current_period_end) {
-        expires = subRows[0].current_period_end;
-      }
-    } catch (err) {}
   }
 
   if (plan && plan.toLowerCase() !== "free" && expires) {
@@ -60,6 +91,7 @@ async function resolveGraceAndReadOnly(plan: string, planExpiresAt: any, tenantI
     grace_period_days,
     is_grace_period,
     is_read_only,
+    is_payment_pending: false,
     grace_days_remaining,
     grace_end_date,
     plan_expires_at: expires ? new Date(expires).toISOString() : null,
@@ -123,16 +155,18 @@ export async function getTenantInfo() {
     }
     
     const tenantId = userRows[0].tenant_id;
-    const userRole = userRows[0].role;
-    const tenants = await sql`SELECT id, name, plan, plan_expires_at, logo_url, industry, phone, email, website, address FROM tenants WHERE id = ${tenantId}`;
+    const rawRole = userRows[0].role;
+    const userRole = rawRole ? (rawRole.toLowerCase() === 'viewer' ? 'Viewer' : rawRole) : null;
+    const tenants = await sql`SELECT id, name, plan, plan_expires_at, payment_status, logo_url, industry, phone, email, website, address FROM tenants WHERE id = ${tenantId}`;
     
     const teamMembersCountRows = await sql`SELECT count(*) FROM admin_users WHERE tenant_id = ${tenantId}`;
     const teamMembersCount = parseInt(teamMembersCountRows[0]?.count || '1');
 
     if (tenants.length > 0) {
-      const grace = await resolveGraceAndReadOnly(tenants[0].plan || "Free", tenants[0].plan_expires_at, tenants[0].id);
+      const grace = await resolveGraceAndReadOnly(tenants[0].plan || "Free", tenants[0].plan_expires_at, tenants[0].id, tenants[0].payment_status);
       return { 
         plan: tenants[0].plan || "Free",
+        payment_status: tenants[0].payment_status || "paid",
         ...grace,
         name: tenants[0].name || "My Business",
         logo_url: tenants[0].logo_url || null,

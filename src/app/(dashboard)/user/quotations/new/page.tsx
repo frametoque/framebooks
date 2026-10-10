@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createQuotation, getClients, createClient, getBankAccounts } from "../../actions/actions";
 import CategoryPicker from "../../components/CategoryPicker";
+import { useRole } from "../../context/RoleContext";
 
 /** Returns today's date as YYYY-MM-DD in local time (avoids UTC off-by-one). */
 function localToday() {
@@ -22,6 +23,14 @@ function localToday() {
 
 export default function NewQuotationPage() {
   const router = useRouter();
+  const { role, isViewer, canWrite } = useRole();
+
+  useEffect(() => {
+    if (role === 'Viewer' || isViewer || !canWrite) {
+      router.replace('/user/quotations');
+    }
+  }, [role, isViewer, canWrite, router]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

@@ -10,12 +10,10 @@ import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
 const MODES = ["This Month", "Last Month", "This Year", "Last Year", "Lifetime"];
 
 const formatLKR = (amount: number) => {
-  const isLarge = Math.abs(amount) >= 10000;
-  const num = new Intl.NumberFormat(isLarge ? 'en-US' : 'en-LK', {
-    notation: isLarge ? 'compact' : 'standard',
+  const num = new Intl.NumberFormat('en-LK', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 3,
-  }).format(amount || 0);
+    maximumFractionDigits: 0,
+  }).format(Math.round(amount || 0));
   return `${num} LKR`;
 };
 
@@ -23,8 +21,17 @@ export default function ExpenseBreakdownWidget({ initialData }: { initialData?: 
   const [mode, setMode] = useState<string>("Lifetime");
   const [data, setData] = useState<any[]>(initialData || []);
   const [loading, setLoading] = useState(false);
+  const [initialRender, setInitialRender] = useState(true);
 
   useEffect(() => {
+    if (initialRender) {
+      setInitialRender(false);
+      if (initialData && initialData.length > 0 && mode === "Lifetime") {
+        setData(initialData);
+        return;
+      }
+    }
+
     let active = true;
     setLoading(true);
     getExpenseBreakdownByMode(mode).then((res) => {
@@ -37,7 +44,7 @@ export default function ExpenseBreakdownWidget({ initialData }: { initialData?: 
     });
 
     return () => { active = false; };
-  }, [mode]);
+  }, [mode, initialData, initialRender]);
 
   const total = (data || []).reduce((sum, r) => sum + (r.value || 0), 0);
 

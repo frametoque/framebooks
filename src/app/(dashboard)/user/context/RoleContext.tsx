@@ -6,30 +6,35 @@ interface RoleContextType {
   role: string | null;
   actualRole: string | null;
   isReadOnly: boolean;
+  isPaymentPending: boolean;
   isGracePeriod: boolean;
   graceDaysRemaining: number | null;
   graceEndDate: string | null;
   planExpiresAt: string | null;
   planName: string;
   canWrite: boolean;
+  isViewer: boolean;
 }
 
 const RoleContext = createContext<RoleContextType>({
   role: null,
   actualRole: null,
   isReadOnly: false,
+  isPaymentPending: false,
   isGracePeriod: false,
   graceDaysRemaining: null,
   graceEndDate: null,
   planExpiresAt: null,
   planName: "Free",
   canWrite: true,
+  isViewer: false,
 });
 
 export function RoleProvider({
   role,
   actualRole,
   isReadOnly = false,
+  isPaymentPending = false,
   isGracePeriod = false,
   graceDaysRemaining = null,
   graceEndDate = null,
@@ -40,6 +45,7 @@ export function RoleProvider({
   role: string | null;
   actualRole?: string | null;
   isReadOnly?: boolean;
+  isPaymentPending?: boolean;
   isGracePeriod?: boolean;
   graceDaysRemaining?: number | null;
   graceEndDate?: string | null;
@@ -47,9 +53,10 @@ export function RoleProvider({
   planName?: string;
   children: React.ReactNode;
 }) {
-  const effectiveRole = isReadOnly ? "Viewer" : role;
+  const isViewer = isReadOnly || (Boolean(role) && role!.toLowerCase() === "viewer");
+  const effectiveRole = isViewer ? "Viewer" : role;
   const userActualRole = actualRole || role;
-  const canWrite = !isReadOnly && effectiveRole !== "Viewer";
+  const canWrite = !isReadOnly && !isViewer;
 
   return (
     <RoleContext.Provider
@@ -57,12 +64,14 @@ export function RoleProvider({
         role: effectiveRole,
         actualRole: userActualRole,
         isReadOnly,
+        isPaymentPending,
         isGracePeriod,
         graceDaysRemaining,
         graceEndDate,
         planExpiresAt,
         planName,
         canWrite,
+        isViewer,
       }}
     >
       {children}

@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { updateInvoice, getInvoiceByIdAdmin, getClients, createClient, getBankAccounts } from "../../../actions/actions";
 import CategoryPicker from "../../../components/CategoryPicker";
+import { useRole } from "../../../context/RoleContext";
 
 
 const parseCategories = (raw: string | undefined): string[] => {
@@ -20,6 +21,14 @@ const parseCategories = (raw: string | undefined): string[] => {
 export default function EditInvoicePage() {
   const router = useRouter();
   const { invoice_id } = useParams();
+  const { role, isViewer, canWrite } = useRole();
+
+  useEffect(() => {
+    if (role === 'Viewer' || isViewer || !canWrite) {
+      router.replace(invoice_id ? `/user/invoice/${invoice_id}` : '/user/invoices');
+    }
+  }, [role, isViewer, canWrite, invoice_id, router]);
+
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     }
 
     const inviteRows = await sql`
-      SELECT id, tenant_id FROM team_invitations 
+      SELECT id, tenant_id, role FROM team_invitations 
       WHERE id = ${invitationId} AND email = ${userEmail} AND status = 'pending'
     `;
 
@@ -32,15 +32,16 @@ export async function POST(req: Request) {
     }
 
     const tenantId = inviteRows[0].tenant_id;
+    const inviteRole = inviteRows[0].role || 'Viewer';
 
     if (action === 'accept') {
       // 1. Update invitation status
       await sql`
         UPDATE team_invitations SET status = 'accepted' WHERE id = ${invitationId}
       `;
-      // 2. Update user's tenant
+      // 2. Update user's tenant and role
       await sql`
-        UPDATE admin_users SET tenant_id = ${tenantId} WHERE id = ${Number(userId) || 0} OR LOWER(email) = LOWER(${userEmail})
+        UPDATE admin_users SET tenant_id = ${tenantId}, role = ${inviteRole} WHERE id = ${Number(userId) || 0} OR LOWER(email) = LOWER(${userEmail})
       `;
       return NextResponse.json({ success: true, message: "Invitation accepted. You are now part of the new team." });
     } else {

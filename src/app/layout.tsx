@@ -1,7 +1,7 @@
 import Providers from "@/components/Providers";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { DM_Mono } from "next/font/google";
 import { ConfirmProvider } from "@/components/ui/ConfirmProvider";
 
@@ -10,6 +10,13 @@ const dmMono = DM_Mono({
   subsets: ["latin"],
   weight: ["300", "400", "500"],
 });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: '#00E35B',
+};
 
 export const metadata: Metadata = {
   title: {

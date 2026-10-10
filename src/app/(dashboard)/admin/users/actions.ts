@@ -48,6 +48,7 @@ export async function getUsersList({
       t.name AS tenant_name,
       t.logo_url AS tenant_logo_url,
       t.plan_expires_at,
+      t.payment_status,
       COALESCE(t.plan, 'Free') AS current_plan,
       COALESCE(s.status, 'active') AS subscription_status,
       s.id AS subscription_id,
@@ -191,31 +192,49 @@ export async function unbanUser(userId: number) {
 export async function softDeleteUser(userId: number) {
   const actor = await requireAdmin("delete_users");
 
-  const existing = await sql`SELECT id, email, system_role FROM admin_users WHERE id = ${userId} LIMIT 1`;
+  const existing = await sql`SELECT id, email, system_role, tenant_id FROM admin_users WHERE id = ${userId} LIMIT 1`;
   if (existing.length === 0) throw new Error("User not found");
 
   if (existing[0].system_role === 'super_admin') {
     throw new Error("Super Admin accounts cannot be deleted.");
   }
 
-  await sql`
-    UPDATE admin_users 
-    SET deleted_at = NOW() 
-    WHERE id = ${userId}
-  `;
+  const userEmail = existing[0].email;
+
+  // Clean up non-financial records
+  await sql`DELETE FROM user_notes WHERE user_id = ${userId}`.catch(() => {});
+  await sql`DELETE FROM announcement_dismissals WHERE user_id = ${userId}`.catch(() => {});
+
+  // Check if user has payments or subscriptions
+  const payRows = await sql`SELECT id FROM payments WHERE user_id = ${userId} LIMIT 1`;
+  const subRows = await sql`SELECT id FROM subscriptions WHERE user_id = ${userId} LIMIT 1`;
+
+  if (payRows.length === 0 && subRows.length === 0) {
+    await sql`DELETE FROM admin_users WHERE id = ${userId}`;
+  } else {
+    await sql`
+      UPDATE admin_users 
+      SET deleted_at = NOW(), tenant_id = NULL 
+      WHERE id = ${userId}
+    `;
+  }
 
   await logAdminAction({
     actor,
-    action: "SOFT_DELETE_USER",
+    action: "DELETE_USER",
     targetType: "user",
     targetId: userId,
-    before: { deleted_at: null },
+    before: { email: userEmail, deleted_at: null },
     after: { deleted_at: new Date() }
   });
 
   revalidatePath("/admin/users");
   revalidatePath("/admin/subscriptions");
   return { success: true };
+}
+
+export async function adminDeleteUser({ userId, reason = "" }: { userId: number; reason?: string }) {
+  return softDeleteUser(userId);
 }
 
 export async function addUserNote(userId: number, body: string) {

@@ -7,31 +7,35 @@ import { getTopClients } from "../actions/actions";
 
 
 const formatLKR = (amount: number) => {
-  const isLarge = Math.abs(amount) >= 10000;
-  const num = new Intl.NumberFormat(isLarge ? 'en-US' : 'en-LK', {
-    notation: isLarge ? 'compact' : 'standard',
+  const num = new Intl.NumberFormat('en-LK', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 3,
-  }).format(amount || 0);
+    maximumFractionDigits: 0,
+  }).format(Math.round(amount || 0));
   return `${num} LKR`;
 };
 
-export default function TopClientsWidget() {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function TopClientsWidget({ initialData }: { initialData?: any[] }) {
+  const [data, setData] = useState<any[]>(initialData || []);
+  const [loading, setLoading] = useState(!initialData);
 
   useEffect(() => {
+    if (initialData) {
+      setData(initialData);
+      setLoading(false);
+      return;
+    }
+
     let active = true;
     getTopClients().then(res => {
       if (active) {
-        setData(res);
+        setData(res || []);
         setLoading(false);
       }
     }).catch(() => {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, []);
+  }, [initialData]);
 
   return (
     <div className="bg-card border border-border rounded-3xl p-7 flex flex-col justify-between h-full min-h-[420px] shadow-xs">

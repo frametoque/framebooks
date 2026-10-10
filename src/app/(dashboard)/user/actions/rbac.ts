@@ -79,29 +79,38 @@ export async function hasPermission(role: Role | null, resource: ResourceType, a
 }
 
 /**
- * Checks whether the tenant's grace period has expired (read-only mode active).
+ * Checks whether the tenant's workspace is in read-only mode (e.g. pending payment or grace period expired).
  */
 export async function checkTenantReadOnly(tenantId: number | string | null): Promise<boolean> {
   if (!tenantId) return false;
   try {
     const sql = neon(process.env.DATABASE_URL!);
-    const tenantRows = await sql`SELECT plan, plan_expires_at FROM tenants WHERE id = ${tenantId} LIMIT 1`;
+    const tenantRows = await sql`SELECT plan, plan_expires_at, payment_status FROM tenants WHERE id = ${tenantId} LIMIT 1`;
     if (tenantRows.length === 0) return false;
 
     const tenant = tenantRows[0];
+
+    // 1. Explicit admin pending payment flag
+    if (tenant.payment_status === "pending_payment") {
+      return true;
+    }
+
+    // 2. Check subscription status
+    const subRows = await sql`
+      SELECT status, current_period_end 
+      FROM subscriptions 
+      WHERE tenant_id = ${tenantId} 
+      ORDER BY id DESC LIMIT 1
+    `;
+    if (subRows.length > 0 && subRows[0].status === "past_due") {
+      return true;
+    }
+
     if (!tenant.plan || tenant.plan.toLowerCase() === "free") return false;
 
     let expires = tenant.plan_expires_at;
-    if (!expires) {
-      const subRows = await sql`
-        SELECT current_period_end 
-        FROM subscriptions 
-        WHERE tenant_id = ${tenantId} AND current_period_end IS NOT NULL 
-        ORDER BY id DESC LIMIT 1
-      `;
-      if (subRows.length > 0 && subRows[0].current_period_end) {
-        expires = subRows[0].current_period_end;
-      }
+    if (!expires && subRows.length > 0 && subRows[0].current_period_end) {
+      expires = subRows[0].current_period_end;
     }
 
     if (!expires) return false;
@@ -131,15 +140,25 @@ export async function requirePermission(resource: ResourceType, action: ActionTy
     return { error: "Unauthorized", context: null };
   }
 
-  // Block mutation actions (add/insert, update/edit, delete, manage) if workspace is in read-only mode after grace period!
+  // Block mutation actions (add/insert, update/edit, delete, manage) if workspace is in read-only mode after grace period or pending payment!
   // 'read' action is completely allowed so users can view everything.
   // 'billing' resource is allowed so workspace owner can pay and renew.
   if (action !== 'read' && resource !== 'billing') {
     const isReadOnly = await checkTenantReadOnly(tenantId);
     if (isReadOnly) {
       return { 
-        error: "Your subscription and grace period have expired. Your workspace is currently in read-only mode. Please renew your subscription to create, edit, or delete records.", 
+        error: "Your workspace is currently restricted to view-only mode due to a pending payment or expired subscription. Creating, editing, or deleting records is disabled.", 
         context: null 
+      };
+    }
+  }
+
+  // Viewers can ONLY read data. Block any attempt by Viewers to create, edit, or delete any record!
+  if (role && role.toLowerCase() === 'viewer') {
+    if (action !== 'read') {
+      return {
+        error: "Permission denied: Viewers have view-only access and cannot record, edit, or delete data.",
+        context: null
       };
     }
   }

@@ -9,15 +9,12 @@ import { getDashboardData } from "../actions/actions";
 import ExpenseBreakdownWidget from "../components/ExpenseBreakdownWidget";
 import TopClientsWidget from "../components/TopClientsWidget";
 import AnimatedNumber from "../components/AnimatedNumber";
-import { useAdminDateRange } from "../context/AdminDateRangeContext";
 
 const formatLKR = (amount: number) => {
-  const isLarge = Math.abs(amount) >= 10000;
-  const num = new Intl.NumberFormat(isLarge ? 'en-US' : 'en-LK', {
-    notation: isLarge ? 'compact' : 'standard',
+  const num = new Intl.NumberFormat('en-LK', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 3,
-  }).format(amount || 0);
+    maximumFractionDigits: 0,
+  }).format(Math.round(amount || 0));
   return `${num} LKR`;
 };
 
@@ -25,11 +22,7 @@ const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"
 
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
-  const [analytics, setAnalytics] = useState<any>(null);
-  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
-  const [bookingForecasts, setBookingForecasts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { startDate, endDate } = useAdminDateRange();
   const [chartYear, setChartYear] = useState<number>(new Date().getFullYear());
   const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
   const [isProcessingInvite, setIsProcessingInvite] = useState<string | null>(null);
@@ -40,44 +33,19 @@ export default function DashboardPage() {
     async function load() {
       setLoading(true);
       try {
-        const [res, analyticsRes, eventsRes, weatherRes, invitationsRes] = await Promise.all([
-          getDashboardData(startDate, endDate),
-          Promise.resolve(null),
-          Promise.resolve([]),
-          fetch("/api/admin/weather").then(r => r.ok ? r.json() : null).catch(() => null),
-          fetch("/api/team/invitations/pending").then(r => r.ok ? r.json() : null).catch(() => null),
-        ]);
+        // Fetch invitations asynchronously without blocking dashboard render
+        fetch("/api/team/invitations/pending")
+          .then((r) => (r.ok ? r.json() : null))
+          .then((inv) => {
+            if (!cancelled && inv?.pending) {
+              setPendingInvitations(inv.pending);
+            }
+          })
+          .catch(() => null);
+
+        const res = await getDashboardData();
         if (cancelled) return;
         setData(res);
-        setAnalytics(analyticsRes);
-        if (weatherRes && weatherRes.bookingForecasts) {
-          setBookingForecasts(weatherRes.bookingForecasts);
-        }
-        if (invitationsRes && invitationsRes.pending) {
-          setPendingInvitations(invitationsRes.pending);
-        }
-
-        const now = new Date();
-        const upcoming = eventsRes
-          .filter((e: any) => {
-            if (e.type !== 'booking' || e.status === 'cancelled') return false;
-            // Parse event start date and time
-            const eventDateTime = new Date(`${e.date}T${e.time || '00:00'}:00`);
-            // If start_time was provided, filter out events whose start time has passed.
-            // If no start_time, keep the event until the end of that day (23:59:59).
-            if (e.time) {
-              return eventDateTime >= now;
-            }
-            const endOfDay = new Date(`${e.date}T23:59:59`);
-            return endOfDay >= now;
-          })
-          .sort((a: any, b: any) => {
-            const dateA = `${a.date}T${a.time || '00:00'}:00`;
-            const dateB = `${b.date}T${b.time || '00:00'}:00`;
-            return dateA.localeCompare(dateB);
-          })
-          .slice(0, 5);
-        setUpcomingEvents(upcoming);
       } catch (e) {
         console.error("Failed to load dashboard data", e);
       } finally {
@@ -86,7 +54,7 @@ export default function DashboardPage() {
     }
     load();
     return () => { cancelled = true; };
-  }, [startDate, endDate]);
+  }, []);
 
   if (loading || !data) {
     return (
@@ -94,11 +62,11 @@ export default function DashboardPage() {
         {/* Skeleton Stats Cards (Row 1) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 animate-pulse shadow-xs">
-              <div className="p-3 rounded-2xl bg-black/5 dark:bg-card w-12 h-12" />
-              <div className="space-y-2 flex-1">
-                <div className="h-4 bg-black/5 dark:bg-card rounded-full w-24" />
-                <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-32" />
+            <div key={i} className="bg-card border border-border rounded-3xl p-5 sm:p-5 lg:p-5 xl:p-6 flex items-center gap-3.5 animate-pulse shadow-xs min-w-0">
+              <div className="p-2.5 rounded-2xl bg-black/5 dark:bg-card w-10 h-10 shrink-0" />
+              <div className="space-y-2 flex-1 min-w-0">
+                <div className="h-3.5 bg-black/5 dark:bg-card rounded-full w-20" />
+                <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-24" />
               </div>
             </div>
           ))}
@@ -107,11 +75,9 @@ export default function DashboardPage() {
         {/* Skeleton Stats Cards (Row 2) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 animate-pulse shadow-xs">
-              <div className="space-y-2 flex-1">
-                <div className="h-4 bg-black/5 dark:bg-card rounded-full w-32" />
-                <div className="h-8 bg-black/10 dark:bg-white/10 rounded-full w-40" />
-              </div>
+            <div key={i} className="bg-card border border-border rounded-3xl p-5 sm:p-6 flex flex-col justify-between gap-3 animate-pulse shadow-xs min-w-0">
+              <div className="h-3.5 bg-black/5 dark:bg-card rounded-full w-28" />
+              <div className="h-7 bg-black/10 dark:bg-white/10 rounded-full w-32" />
             </div>
           ))}
         </div>
@@ -156,12 +122,7 @@ export default function DashboardPage() {
     { label: "Net Profit", value: formatLKR(data.netProfit), icon: MdTrendingUp, color: "text-brand-800 dark:text-brand-400", bg: "bg-brand-500/15 dark:bg-brand-400/10" },
   ];
 
-  const analyticsStats = analytics
-    ? [
-        { label: "Visitors (All Time)", value: (analytics.totalVisitors ?? 0).toLocaleString(), icon: MdGroup, color: "text-indigo-700 dark:text-indigo-400", bg: "bg-indigo-100/70 dark:bg-indigo-400/10" },
-        { label: "Pageviews (All Time)", value: (analytics.totalPageviews ?? 0).toLocaleString(), icon: MdRemoveRedEye, color: "text-brand-800 dark:text-brand-400", bg: "bg-brand-500/15 dark:bg-brand-400/10" },
-      ]
-    : [];
+  const analyticsStats: any[] = [];
 
   const handleRespondInvite = async (invitationId: number, action: 'accept' | 'decline') => {
     setIsProcessingInvite(invitationId.toString());
@@ -259,28 +220,28 @@ export default function DashboardPage() {
       
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         {stats.map((stat, i) => (
-          <motion.div variants={itemVariants} key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 hover:shadow-md transition-all shadow-xs">
-            <div className={`p-3 rounded-2xl ${stat.bg}`}>
+          <motion.div variants={itemVariants} key={i} className="bg-card border border-border rounded-3xl p-5 sm:p-5 lg:p-5 xl:p-6 flex items-center gap-3.5 hover:shadow-md transition-all shadow-xs min-w-0">
+            <div className={`p-2.5 rounded-2xl shrink-0 ${stat.bg}`}>
               <stat.icon className={`w-5 h-5 ${stat.color}`} />
             </div>
-            <div>
-              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">{stat.label}</p>
-              <p className="text-3xl font-bold text-foreground">
+            <div className="min-w-0 flex-1">
+              <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium truncate">{stat.label}</p>
+              <p className="text-xl sm:text-xl lg:text-lg xl:text-2xl font-bold text-foreground truncate tracking-tight">
                 <AnimatedNumber value={stat.value} />
               </p>
-              {stat.subtext && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{stat.subtext}</p>}
+              {stat.subtext && <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">{stat.subtext}</p>}
             </div>
           </motion.div>
         ))}
-        <motion.div variants={itemVariants} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 hover:shadow-md transition-all shadow-xs relative group">
-          <div className="w-12 h-12 rounded-2xl bg-amber-100/80 dark:bg-amber-400/10 flex items-center justify-center flex-shrink-0">
-            <span className="text-lg font-bold text-amber-700 dark:text-amber-400">
+        <motion.div variants={itemVariants} className="bg-card border border-border rounded-3xl p-5 sm:p-5 lg:p-5 xl:p-6 flex items-center gap-3.5 hover:shadow-md transition-all shadow-xs relative group min-w-0">
+          <div className="w-10 h-10 rounded-2xl bg-amber-100/80 dark:bg-amber-400/10 flex items-center justify-center shrink-0">
+            <span className="text-base font-bold text-amber-700 dark:text-amber-400">
               <AnimatedNumber value={data.unpaidCount || 0} />
             </span>
           </div>
-          <div>
-            <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Unpaid Invoices</p>
-            <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
+          <div className="min-w-0 flex-1">
+            <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium truncate">Unpaid Invoices</p>
+            <p className="text-xl sm:text-xl lg:text-lg xl:text-2xl font-bold text-amber-600 dark:text-amber-400 truncate tracking-tight">
               <AnimatedNumber value={formatLKR(data.unpaidAmount || 0)} />
             </p>
           </div>
@@ -323,14 +284,14 @@ export default function DashboardPage() {
           else if (pct < 0) pctColor = stat.invertColors ? "text-emerald-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
 
           return (
-            <motion.div variants={itemVariants} key={i} className="bg-card border border-border rounded-3xl p-7 hover:shadow-md transition-all shadow-xs flex flex-col justify-between">
-              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">{stat.label}</p>
-              <div className="flex items-end justify-between">
-                <p className="text-3xl font-bold text-foreground">
+            <motion.div variants={itemVariants} key={i} className="bg-card border border-border rounded-3xl p-5 sm:p-6 hover:shadow-md transition-all shadow-xs flex flex-col justify-between min-w-0">
+              <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium mb-2 truncate">{stat.label}</p>
+              <div className="flex items-end justify-between gap-2 min-w-0">
+                <p className="text-xl sm:text-xl xl:text-2xl font-bold text-foreground truncate tracking-tight">
                   <AnimatedNumber value={stat.isCurrency ? formatLKR(stat.value) : stat.value} />
                 </p>
-                <div className={`flex items-center gap-1 text-sm font-semibold ${pctColor}`}>
-                  {isPositive ? <MdCallMade className="w-4 h-4" /> : <MdCallReceived className="w-4 h-4" />}
+                <div className={`flex items-center gap-1 text-xs xl:text-sm font-semibold shrink-0 ${pctColor}`}>
+                  {isPositive ? <MdCallMade className="w-3.5 h-3.5" /> : <MdCallReceived className="w-3.5 h-3.5" />}
                   <span><AnimatedNumber value={displayPct + "%"} /></span>
                 </div>
               </div>
@@ -561,7 +522,7 @@ export default function DashboardPage() {
         </motion.div>
 
         {/* Top Clients Widget */}
-        <TopClientsWidget />
+        <TopClientsWidget initialData={data.topClients} />
       </div>
 
       {/* Modal Overlay */}

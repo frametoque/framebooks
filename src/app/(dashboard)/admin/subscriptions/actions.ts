@@ -399,3 +399,204 @@ export async function adminRevokeTenantCoupon({
   revalidatePath(`/admin/businesses/${tenantId}`);
   return { success: true, removedCoupon: redemption.code };
 }
+
+export async function adminToggleTenantPaymentStatus({
+  tenantId,
+  paymentStatus,
+  reason = "",
+}: {
+  tenantId: number;
+  paymentStatus: "pending_payment" | "paid";
+  reason?: string;
+}) {
+  const actor = await requireAdmin("manage_subscriptions");
+
+  const tenantRows = await sql`SELECT id, name, plan, payment_status FROM tenants WHERE id = ${tenantId} LIMIT 1`;
+  if (tenantRows.length === 0) throw new Error("Business not found");
+  const tenant = tenantRows[0];
+
+  const prevStatus = tenant.payment_status || "paid";
+
+  // Ensure column exists & update tenants
+  await sql`UPDATE tenants SET payment_status = ${paymentStatus} WHERE id = ${tenantId}`;
+
+  // Update subscription table status
+  const subRows = await sql`
+    SELECT id, status, plan_id 
+    FROM subscriptions 
+    WHERE tenant_id = ${tenantId} 
+    ORDER BY id DESC 
+    LIMIT 1
+  `;
+
+  if (subRows.length > 0) {
+    const sub = subRows[0];
+    const newSubStatus = paymentStatus === "pending_payment" ? "past_due" : "active";
+    await sql`
+      UPDATE subscriptions 
+      SET status = ${newSubStatus}, updated_at = NOW() 
+      WHERE id = ${sub.id}
+    `;
+
+    // Record subscription event
+    await sql`
+      INSERT INTO subscription_events (
+        subscription_id, tenant_id, from_plan, to_plan, reason, changed_by, effective_at, proration_note
+      ) VALUES (
+        ${sub.id},
+        ${tenantId},
+        ${tenant.plan || 'Current'},
+        ${tenant.plan || 'Current'},
+        ${reason || (paymentStatus === 'pending_payment' ? 'Admin flagged business as pending payment' : 'Admin cleared pending payment')},
+        ${actor.email},
+        NOW(),
+        ${paymentStatus === 'pending_payment' ? 'Pending Payment: Workspace set to View-Only mode' : 'Payment Cleared: Full workspace access restored'}
+      )
+    `;
+  }
+
+  // Audit log
+  await logAdminAction({
+    actor,
+    action: paymentStatus === "pending_payment" ? "SET_PENDING_PAYMENT" : "SET_PAID_STATUS",
+    targetType: "tenant",
+    targetId: tenantId,
+    before: { payment_status: prevStatus },
+    after: { payment_status: paymentStatus, reason: reason || undefined },
+  });
+
+  revalidatePath("/admin/subscriptions");
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/businesses/${tenantId}`);
+  revalidatePath("/user");
+
+  return { success: true, paymentStatus };
+}
+
+export async function adminDeleteBusiness({
+  tenantId,
+  confirmName,
+  reason = "",
+}: {
+  tenantId: number;
+  confirmName: string;
+  reason?: string;
+}) {
+  const actor = await requireAdmin("manage_subscriptions");
+
+  const tenantRows = await sql`SELECT id, name, plan FROM tenants WHERE id = ${tenantId} LIMIT 1`;
+  if (tenantRows.length === 0) throw new Error("Business workspace not found");
+  const tenant = tenantRows[0];
+
+  if (confirmName.trim().toLowerCase() !== tenant.name.trim().toLowerCase()) {
+    throw new Error(`Business name confirmation does not match. Expected "${tenant.name}"`);
+  }
+
+  // Find associated users
+  const memberRows = await sql`SELECT id, email FROM admin_users WHERE tenant_id = ${tenantId}`;
+  const memberEmails = memberRows.map((m: any) => m.email);
+
+  // Safely cascade delete workspace records
+  try {
+    // 1. Line items if tables exist
+    await sql`DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE tenant_id = ${tenantId})`.catch(() => {});
+    await sql`DELETE FROM quotation_items WHERE quotation_id IN (SELECT id FROM admin_quotations WHERE tenant_id = ${tenantId})`.catch(() => {});
+
+    // 2. Core entities
+    await sql`DELETE FROM invoices WHERE tenant_id = ${tenantId}`.catch(() => {});
+    await sql`DELETE FROM admin_quotations WHERE tenant_id = ${tenantId}`.catch(() => {});
+    await sql`DELETE FROM admin_incomes WHERE tenant_id = ${tenantId}`.catch(() => {});
+    await sql`DELETE FROM admin_expenses WHERE tenant_id = ${tenantId}`.catch(() => {});
+    await sql`DELETE FROM admin_scheduled_expenses WHERE tenant_id = ${tenantId}`.catch(() => {});
+    await sql`DELETE FROM admin_clients WHERE tenant_id = ${tenantId}`.catch(() => {});
+    await sql`DELETE FROM admin_inventory WHERE tenant_id = ${tenantId}`.catch(() => {});
+    await sql`DELETE FROM admin_transfers WHERE tenant_id = ${tenantId}`.catch(() => {});
+    await sql`DELETE FROM accounts WHERE tenant_id = ${tenantId}`.catch(() => {});
+    await sql`DELETE FROM audit_logs WHERE tenant_id = ${tenantId}`.catch(() => {});
+
+    // 3. Billing & subscriptions
+    await sql`DELETE FROM coupon_redemptions WHERE tenant_id = ${tenantId}`.catch(() => {});
+    await sql`DELETE FROM subscription_events WHERE tenant_id = ${tenantId}`.catch(() => {});
+    await sql`DELETE FROM payments WHERE tenant_id = ${tenantId}`.catch(() => {});
+    await sql`DELETE FROM subscriptions WHERE tenant_id = ${tenantId}`.catch(() => {});
+    await sql`DELETE FROM user_notes WHERE tenant_id = ${tenantId}`.catch(() => {});
+
+    // 4. Unlink team members so their user records are preserved, but unlinked from the deleted workspace
+    await sql`UPDATE admin_users SET tenant_id = NULL, role = 'owner' WHERE tenant_id = ${tenantId}`.catch(() => {});
+
+    // 5. Delete tenant
+    await sql`DELETE FROM tenants WHERE id = ${tenantId}`;
+  } catch (err: any) {
+    console.error("Error during adminDeleteBusiness:", err);
+    throw new Error(`Failed to delete business: ${err.message}`);
+  }
+
+  // Audit log
+  await logAdminAction({
+    actor,
+    action: "DELETE_BUSINESS",
+    targetType: "tenant",
+    targetId: tenantId,
+    before: { name: tenant.name, plan: tenant.plan, member_count: memberRows.length, members: memberEmails },
+    after: { deleted: true, reason: reason || "Deleted by admin" },
+  });
+
+  revalidatePath("/admin/subscriptions");
+  revalidatePath("/admin/users");
+  revalidatePath("/admin");
+
+  return { success: true, deletedName: tenant.name };
+}
+
+export async function adminUpdateBusinessRenewalDate({
+  tenantId,
+  renewalDate,
+  reason = "",
+}: {
+  tenantId: number;
+  renewalDate: string | null;
+  reason?: string;
+}) {
+  const actor = await requireAdmin("manage_subscriptions");
+
+  const tenantRows = await sql`SELECT id, name, plan, plan_expires_at FROM tenants WHERE id = ${tenantId} LIMIT 1`;
+  if (tenantRows.length === 0) throw new Error("Business not found");
+  const tenant = tenantRows[0];
+  const prevDate = tenant.plan_expires_at;
+
+  const parsedDate = renewalDate ? new Date(renewalDate).toISOString() : null;
+
+  // 1. Update tenants table
+  await sql`
+    UPDATE tenants 
+    SET plan_expires_at = ${parsedDate} 
+    WHERE id = ${tenantId}
+  `;
+
+  // 2. Update latest subscription if exists
+  await sql`
+    UPDATE subscriptions 
+    SET current_period_end = ${parsedDate}, updated_at = NOW() 
+    WHERE tenant_id = ${tenantId} 
+    AND id = (SELECT id FROM subscriptions WHERE tenant_id = ${tenantId} ORDER BY id DESC LIMIT 1)
+  `;
+
+  // 3. Log audit event
+  await logAdminAction({
+    actor,
+    action: "UPDATE_RENEWAL_DATE",
+    targetType: "tenant",
+    targetId: tenantId,
+    before: { plan_expires_at: prevDate },
+    after: { plan_expires_at: parsedDate, reason }
+  });
+
+  revalidatePath(`/admin/businesses/${tenantId}`);
+  revalidatePath("/admin/subscriptions");
+  revalidatePath("/admin/users");
+  revalidatePath("/user");
+
+  return { success: true, planExpiresAt: parsedDate };
+}
+
+

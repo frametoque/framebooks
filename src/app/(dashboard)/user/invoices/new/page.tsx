@@ -8,10 +8,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createInvoice, getClients, createClient, getBankAccounts, getLimitStatus } from "../../actions/actions";
 import CategoryPicker from "../../components/CategoryPicker";
+import { useRole } from "../../context/RoleContext";
 
 
 export default function NewInvoicePage() {
   const router = useRouter();
+  const { role, isViewer, canWrite } = useRole();
+
+  useEffect(() => {
+    if (role === 'Viewer' || isViewer || !canWrite) {
+      router.replace('/user/invoices');
+    }
+  }, [role, isViewer, canWrite, router]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [clientsLoading, setClientsLoading] = useState(true);

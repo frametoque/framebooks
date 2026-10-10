@@ -10,7 +10,7 @@ export default function LandingLayout({
 }) {
   return (
     <SmoothScroll>
-      <div className="min-h-screen bg-[#F9FAFB] text-[#082830] font-sans selection:bg-[#00E35B] selection:text-white flex flex-col justify-between">
+      <div className="min-h-screen bg-[#F9FAFB] text-[#082830] font-sans selection:bg-[#00E35B] selection:text-white flex flex-col justify-between overflow-x-clip">
         <Header />
         <div className="flex-1 w-full flex flex-col">
           {children}

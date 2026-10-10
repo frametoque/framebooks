@@ -23,11 +23,14 @@ import {
   CheckCircle2,
   Edit3,
   Tag,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { PlanBadge, RoleBadge, StatusPill } from "@/components/Formatters";
 import { AdminStatCard } from "@/app/(dashboard)/admin/_components/AdminStatCard";
 import { PlanChangeModal } from "@/app/(dashboard)/admin/_components/PlanChangeModal";
 import { BusinessDetailView } from "@/app/(dashboard)/admin/_components/BusinessDetailView";
+import { ConfirmModal } from "@/app/(dashboard)/admin/_components/ConfirmModal";
 import {
   banUser,
   unbanUser,
@@ -35,7 +38,11 @@ import {
   adminAddBusinessMember,
   adminUpdateMemberRole,
   adminRemoveBusinessMember,
+  softDeleteUser,
 } from "@/app/(dashboard)/admin/users/actions";
+import {
+  adminDeleteBusiness,
+} from "@/app/(dashboard)/admin/subscriptions/actions";
 
 const ROLE_OPTIONS = [
   { value: "owner", label: "Owner", description: "Full workspace control & billing access" },
@@ -90,6 +97,13 @@ export function SubscriptionsClient({
   const [banModalUser, setBanModalUser] = useState<any | null>(null);
   const [unbanModalUser, setUnbanModalUser] = useState<any | null>(null);
   const [banReason, setBanReason] = useState("");
+  // Delete business confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [submittingDelete, setSubmittingDelete] = useState(false);
+
+  // Delete direct platform user confirmation state
+  const [deleteUserTarget, setDeleteUserTarget] = useState<{ id: number; email: string; name?: string } | null>(null);
+  const [submittingDeleteUser, setSubmittingDeleteUser] = useState(false);
 
   const { users, totalCount, totalPages, page } = initialData;
 
@@ -116,6 +130,7 @@ export function SubscriptionsClient({
         id: number | null;
         name: string;
         plan: string;
+        paymentStatus: string;
         logoUrl?: string | null;
         subscriptionId?: number | null;
         billingInterval?: string;
@@ -128,16 +143,18 @@ export function SubscriptionsClient({
     >();
 
     users.forEach((u: any) => {
-      const key = u.tenant_id ? `tenant-${u.tenant_id}` : "unassigned";
+      const key = u.tenant_id ? `tenant-${u.tenant_id}` : `unassigned-${u.id}`;
       const name = u.tenant_name || "Direct platform account";
       const plan = u.current_plan || "Free";
       const logoUrl = u.tenant_logo_url || null;
+      const paymentStatus = u.payment_status || "paid";
 
       if (!map.has(key)) {
         map.set(key, {
           id: u.tenant_id || null,
           name,
           plan,
+          paymentStatus,
           logoUrl,
           subscriptionId: u.subscription_id || null,
           billingInterval: u.billing_interval || null,
@@ -149,6 +166,9 @@ export function SubscriptionsClient({
         });
       }
       const entry = map.get(key)!;
+      if (entry.paymentStatus !== "pending_payment" && u.payment_status === "pending_payment") {
+        entry.paymentStatus = "pending_payment";
+      }
       if (!entry.couponCode && u.coupon_code) {
         entry.couponCode = u.coupon_code;
         entry.couponType = u.coupon_type;
@@ -159,6 +179,40 @@ export function SubscriptionsClient({
 
     return Array.from(map.values());
   }, [users]);
+
+  const handleDeleteTarget = async () => {
+    if (!deleteTarget) return;
+    setSubmittingDelete(true);
+    try {
+      await adminDeleteBusiness({
+        tenantId: deleteTarget.id,
+        confirmName: deleteTarget.name,
+        reason: "Permanently deleted by administrator",
+      });
+      showToast(`Permanently deleted "${deleteTarget.name}"`);
+      setDeleteTarget(null);
+      router.refresh();
+    } catch (err: any) {
+      showToast(err.message || "Failed to delete business");
+    } finally {
+      setSubmittingDelete(false);
+    }
+  };
+
+  const handleDeleteUserTarget = async () => {
+    if (!deleteUserTarget) return;
+    setSubmittingDeleteUser(true);
+    try {
+      await softDeleteUser(deleteUserTarget.id);
+      showToast(`Permanently deleted account "${deleteUserTarget.email}"`);
+      setDeleteUserTarget(null);
+      router.refresh();
+    } catch (err: any) {
+      showToast(err.message || "Failed to delete account");
+    } finally {
+      setSubmittingDeleteUser(false);
+    }
+  };
 
   // Distinct businesses counts
   const businessCount = useMemo(() => {
@@ -511,6 +565,14 @@ export function SubscriptionsClient({
                         {group.name}
                       </h3>
                       <PlanBadge plan={group.plan} />
+
+                      {group.paymentStatus === "pending_payment" && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                          <AlertCircle className="w-3 h-3" />
+                          <span>Pending Payment</span>
+                        </span>
+                      )}
+
                       {group.couponCode && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                           <Tag className="w-3 h-3" />
@@ -551,8 +613,8 @@ export function SubscriptionsClient({
                   </div>
                 </div>
 
-                {/* Business Controls */}
-                {group.id && (
+                {/* Business Controls or Direct Account Controls */}
+                {group.id ? (
                   <div className="flex items-center gap-2 flex-wrap shrink-0 w-full md:w-auto justify-end">
                     <button
                       onClick={() => handleOpenChangePlan(group)}
@@ -572,43 +634,57 @@ export function SubscriptionsClient({
                       <span>Add member</span>
                     </button>
 
-                    <button
-                      onClick={() => handleOpenBusiness(group.id!)}
+                    <Link
+                      href={`/admin/businesses/${group.id}`}
                       className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-brand-500/30 bg-brand-500/10 hover:bg-brand-500/20 text-xs font-bold text-brand-700 dark:text-brand-400 transition-colors cursor-pointer shadow-2xs"
                       title="View full business details and team members"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>View business</span>
+                    </Link>
+
+                    {/* Delete Business Workspace Button */}
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget({ id: group.id!, name: group.name })}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-red-500/20 bg-card hover:bg-red-500/10 text-xs font-semibold text-red-600 dark:text-red-400 transition-colors cursor-pointer shadow-2xs"
+                      title="Permanently delete business workspace"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Delete</span>
                     </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 flex-wrap shrink-0 w-full md:w-auto justify-end">
+                    {owner && (
+                      <Link
+                        href={`/admin/users/${owner.id}`}
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-border bg-card hover:bg-muted text-xs font-semibold text-foreground transition-colors cursor-pointer shadow-2xs"
+                        title="View account profile"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>View user</span>
+                      </Link>
+                    )}
+
+                    {owner && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteUserTarget({ id: owner.id, email: owner.email, name: owner.full_name || owner.email })}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-red-500/20 bg-card hover:bg-red-500/10 text-xs font-semibold text-red-600 dark:text-red-400 transition-colors cursor-pointer shadow-2xs"
+                        title="Permanently delete this direct platform account"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
             );
           })
         )}
-      </div>      {/* VIEW BUSINESS DETAILS MODAL */}
-      {businessModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-card border border-border rounded-3xl p-5 sm:p-7 max-w-5xl w-full shadow-2xl max-h-[92vh] overflow-y-auto">
-            {loadingBusinessModal ? (
-              <div className="py-20 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
-                <span className="text-sm">Loading business details...</span>
-              </div>
-            ) : selectedBusiness ? (
-              <BusinessDetailView
-                businessData={selectedBusiness}
-                isModal={true}
-                onClose={() => {
-                  setBusinessModalOpen(false);
-                  setSelectedBusiness(null);
-                }}
-                onRefresh={() => handleOpenBusiness(selectedBusiness.tenant.id)}
-              />
-            ) : null}
-          </div>
-        </div>
-      )}
+      </div>
 
       {/* ADD MEMBER MODAL */}
       {addMemberBusiness && (
@@ -932,6 +1008,35 @@ export function SubscriptionsClient({
             </div>
           </div>
         </div>
+      )}
+
+
+      {/* QUICK DELETE BUSINESS MODAL */}
+      {deleteTarget && (
+        <ConfirmModal
+          isOpen={true}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleDeleteTarget}
+          title={`Delete Business Workspace: ${deleteTarget.name}?`}
+          description={`Permanently deletes "${deleteTarget.name}" and all associated invoices, expenses, incomes, clients, bank accounts, inventory, and quotations. Team members will be unlinked from the business. This action cannot be undone.`}
+          confirmText={submittingDelete ? "Deleting..." : "Permanently Delete Business"}
+          isDestructive={true}
+          typeToConfirmText={deleteTarget.name}
+        />
+      )}
+
+      {/* QUICK DELETE DIRECT PLATFORM USER MODAL */}
+      {deleteUserTarget && (
+        <ConfirmModal
+          isOpen={true}
+          onClose={() => setDeleteUserTarget(null)}
+          onConfirm={handleDeleteUserTarget}
+          title={`Delete Direct Account: ${deleteUserTarget.email}?`}
+          description={`Permanently deletes this direct platform account (${deleteUserTarget.email}). They will immediately lose access to Framebooks. This action cannot be undone.`}
+          confirmText={submittingDeleteUser ? "Deleting..." : "Permanently Delete Account"}
+          isDestructive={true}
+          typeToConfirmText={deleteUserTarget.email}
+        />
       )}
     </div>
   );

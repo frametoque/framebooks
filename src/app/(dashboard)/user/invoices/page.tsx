@@ -6,12 +6,13 @@ import { useEffect, useState, useMemo } from "react";
 import { Edit2, Send, Loader2, Image as ImageIcon, FileText as FileIcon } from "lucide-react";
 import { MdInsertDriveFile, MdCheckCircle, MdAccessTime, MdErrorOutline, MdSearch, MdRemoveRedEye, MdDownload, MdDelete, MdAttachMoney, MdClose, MdUpload } from "react-icons/md";
 import Link from "next/link";
-import { getInvoices, deleteInvoice, recordInvoicePayment, adminUploadPaymentSlip } from "../actions/actions";
+import { getInvoices, deleteInvoice, recordInvoicePayment, adminUploadPaymentSlip, getInvoiceByIdAdmin } from "../actions/actions";
 import { useRole } from "../context/RoleContext";
 import { getTenantInfo } from "../actions/tenants";
 import { useAppLock } from "../components/AppLockProvider";
 import AnimatedNumber from "../components/AnimatedNumber";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
+import { generateInvoicePDF } from "@/lib/generateInvoicePDF";
 import Image from "next/image";
 
 const filters = ["All", "Fully Paid", "Partially Paid", "On Review", "Overdue", "Advance-Paid", "Unpaid"];
@@ -47,6 +48,8 @@ export default function InvoicesPage() {
   const [slipPreview, setSlipPreview] = useState<string | null>(null);
   const [uploadingSlip, setUploadingSlip] = useState(false);
   const [tenantPlan, setTenantPlan] = useState<string>("Free");
+  const [tenantInfo, setTenantInfo] = useState<any>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [includeSlip, setIncludeSlip] = useState(false);
   const [convertingPdf, setConvertingPdf] = useState(false);
 
@@ -222,6 +225,7 @@ export default function InvoicesPage() {
       const [res, tInfo] = await Promise.all([getInvoices(), getTenantInfo()]);
       setData(res);
       setTenantPlan(tInfo?.plan || "Free");
+      setTenantInfo(tInfo);
     } catch (e) {
       console.error("Failed to load invoices", e);
     } finally {
@@ -237,6 +241,7 @@ export default function InvoicesPage() {
         if (!cancelled) {
           setData(res);
           setTenantPlan(tInfo?.plan || "Free");
+          setTenantInfo(tInfo);
           setLoading(false);
         }
       } catch (e) {
@@ -247,6 +252,44 @@ export default function InvoicesPage() {
     load();
     return () => { cancelled = true; };
   }, []);
+
+  const handleDownloadInvoice = async (invoiceId: string) => {
+    setDownloadingId(invoiceId);
+    try {
+      let tInfo = tenantInfo;
+      let tPlan = tenantPlan;
+      if (!tInfo) {
+        tInfo = await getTenantInfo();
+        setTenantInfo(tInfo);
+        tPlan = tInfo?.plan || "Free";
+        setTenantPlan(tPlan);
+      }
+
+      const inv = await getInvoiceByIdAdmin(invoiceId);
+      if (!inv) {
+        alert("Invoice not found");
+        return;
+      }
+
+      const pdfBytes = await generateInvoicePDF(inv, tPlan, tInfo);
+      const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${inv.invoice_number || invoiceId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 150);
+    } catch (err: any) {
+      console.error("Direct PDF download failed:", err);
+      alert("Failed to download PDF: " + (err?.message || String(err)));
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (await confirm("Are you sure you want to delete this invoice?")) {
@@ -472,9 +515,18 @@ export default function InvoicesPage() {
                             </button>
                           </>
                         )}
-                        <Link href={`/user/invoice/${row.id}?download=true`} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground" title="Download PDF">
-                          <MdDownload className="w-4 h-4" />
-                        </Link>
+                        <button
+                          onClick={() => handleDownloadInvoice(row.id)}
+                          disabled={downloadingId === row.id}
+                          className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground disabled:opacity-50"
+                          title="Download PDF"
+                        >
+                          {downloadingId === row.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-brand-500" />
+                          ) : (
+                            <MdDownload className="w-4 h-4" />
+                          )}
+                        </button>
                         {role !== 'Viewer' && (
                           <button onClick={() => handleDelete(row.id)} className="p-2 hover:bg-red-50 dark:hover:bg-red-400/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" title="Delete">
                             <MdDelete className="w-4 h-4" />

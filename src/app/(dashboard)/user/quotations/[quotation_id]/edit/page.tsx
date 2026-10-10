@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { updateQuotation, getQuotationById, getBankAccounts } from "../../../actions/actions";
 import CategoryPicker from "../../../components/CategoryPicker";
+import { useRole } from "../../../context/RoleContext";
 
 /** Returns today's date as YYYY-MM-DD in local time (avoids UTC off-by-one). */
 function localToday() {
@@ -33,6 +34,14 @@ function toLocalDateInput(value: any) {
 export default function EditQuotationPage() {
   const router = useRouter();
   const { quotation_id } = useParams();
+  const { role, isViewer, canWrite } = useRole();
+
+  useEffect(() => {
+    if (role === 'Viewer' || isViewer || !canWrite) {
+      router.replace('/user/quotations');
+    }
+  }, [role, isViewer, canWrite, router]);
+
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
