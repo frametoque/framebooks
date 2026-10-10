@@ -707,10 +707,10 @@ const Sidebar = ({
           ${mobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0"}`}
         style={{ overflow: "hidden" }}
       >
-        <div className="flex flex-col h-full w-[240px]">
+        <div className="flex flex-col h-full w-full">
 
           {/* Logo + Collapse toggle */}
-          <div className="flex items-center h-20 flex-shrink-0 px-3.5 overflow-hidden">
+          <div className="flex items-center h-20 flex-shrink-0 px-3 overflow-hidden">
             <Link href="/" className="flex items-center w-full overflow-hidden">
               {isExpanded ? (
                 <div className="flex items-center pl-1 min-w-0 animate-in fade-in duration-200">
@@ -731,7 +731,7 @@ const Sidebar = ({
                   )}
                 </div>
               ) : (
-                <div className="w-11 h-11 flex items-center justify-center mx-auto">
+                <div className="w-12 h-12 flex items-center justify-center mx-auto">
                   <Image
                     src="/logos/ft/logo.png"
                     alt="FrameBooks"
@@ -753,18 +753,16 @@ const Sidebar = ({
           </div>
 
           {/* Nav links */}
-          <nav className="flex-1 px-2.5 py-4 space-y-1.5 overflow-y-auto overflow-x-hidden min-h-0">
+          <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto overflow-x-hidden min-h-0">
             {links.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
               return (
-                <div key={item.href} className="relative">
+                <div key={item.href} className="relative flex justify-center">
                   {active && (
                     <motion.div
                       layoutId="active-sidebar-tab"
-                      className={`absolute inset-0 bg-brand-500/15 border border-brand-500/20 dark:bg-white/10 dark:border-transparent rounded-2xl ${
-                        !isExpanded ? "w-11 mx-auto" : "w-full"
-                      }`}
+                      className="absolute inset-0 bg-brand-500/15 border border-brand-500/20 dark:bg-white/10 dark:border-transparent rounded-2xl"
                       initial={false}
                       transition={{ type: "spring", stiffness: 350, damping: 30 }}
                     />
@@ -773,15 +771,15 @@ const Sidebar = ({
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
                     target={item.newtab ? "_blank" : "_self"}
-                    title={!isExpanded ? item.name : undefined}
-                    className={`relative z-10 flex items-center h-11 rounded-2xl transition-all duration-150 overflow-hidden
-                      ${isExpanded ? "px-3.5 gap-3.5 w-full justify-start" : "w-11 mx-auto justify-center"}
+                    title={item.name}
+                    className={`relative z-10 flex items-center h-12 rounded-2xl transition-all duration-150 overflow-hidden w-full
+                      ${isExpanded ? "px-3.5 gap-3.5 justify-start" : "justify-center px-0"}
                       ${active
-                        ? "text-brand-700 dark:text-brand-500 font-semibold"
-                        : "text-foreground font-medium hover:text-brand-600 dark:hover:text-brand-500 hover:bg-black/5 dark:hover:bg-white/5"
+                        ? "text-brand-700 dark:text-brand-400 font-semibold"
+                        : "text-gray-700 dark:text-gray-200 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-black/5 dark:hover:bg-white/5"
                       }`}
                   >
-                    <span className="flex-shrink-0 flex items-center justify-center">
+                    <span className="flex-shrink-0 flex items-center justify-center w-6 h-6">
                       <Icon className="w-5 h-5" />
                     </span>
 
@@ -797,21 +795,21 @@ const Sidebar = ({
           </nav>
 
           {/* User Settings Link */}
-          <div className="p-3 flex flex-col mt-auto space-y-2 shrink-0 border-t border-border">
-            <div className="flex items-center gap-2">
+          <div className="p-3 flex flex-col mt-auto space-y-2 shrink-0 border-t border-border w-full">
+            <div className="flex items-center gap-2 w-full justify-center">
               <Link 
                 href="/user/settings?tab=profile"
                 onClick={() => setMobileMenuOpen(false)}
-                title={!isExpanded ? (user?.name || "User Profile") : undefined}
+                title={user?.name || "User Profile"}
                 className={`flex items-center rounded-2xl transition-colors hover:bg-black/5 dark:hover:bg-white/5
-                  ${isExpanded ? "flex-1 gap-3 p-2 min-w-0" : "w-11 h-11 mx-auto justify-center p-0"}`}
+                  ${isExpanded ? "flex-1 gap-3 p-2 min-w-0" : "w-11 h-11 justify-center p-0"}`}
               >
                 <ClientAvatar 
                   imageUrl={user?.image} 
                   name={user?.name || "User"}
                   email={user?.email}
-                  className="w-9 h-9 rounded-full object-cover shrink-0 border border-border"
-                  fallbackClassName="w-9 h-9 rounded-full bg-brand-500/10 border border-border flex items-center justify-center text-brand-400 font-bold text-xs shrink-0"
+                  className="w-10 h-10 rounded-full object-cover shrink-0 border border-border"
+                  fallbackClassName="w-10 h-10 rounded-full bg-brand-500/10 border border-border flex items-center justify-center text-brand-400 font-bold text-xs shrink-0"
                 />
                 {isExpanded && (
                   <div className="overflow-hidden flex-1 min-w-0 animate-in fade-in duration-150">
