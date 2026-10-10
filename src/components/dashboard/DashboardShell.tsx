@@ -42,6 +42,7 @@ import { AnimatedClock } from "@/app/(dashboard)/user/components/AnimatedClock";
 import { ThemeToggle } from "@/app/(dashboard)/user/components/ThemeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
 import ClientAvatar from "@/components/ClientAvatar";
+import { TenantLogo } from "@/components/TenantLogo";
 import { CurrentAdmin } from "@/app/(dashboard)/admin/_lib/auth";
 
 const sidebarSpring = {
@@ -391,13 +392,12 @@ export function DashboardShell({
                       </span>
                     )}
                   </div>
-                  <div className="w-9 h-9 rounded-full bg-card flex items-center justify-center border border-border">
-                    {tenantInfo.logo_url ? (
-                      <Image src={tenantInfo.logo_url} alt="Logo" width={36} height={36} className="w-9 h-9 rounded-full object-cover" />
-                    ) : (
-                      <Building2 className="w-4 h-4 text-gray-400" />
-                    )}
-                  </div>
+                  <TenantLogo
+                    logoUrl={tenantInfo.logo_url}
+                    name={tenantInfo.name}
+                    className="w-9 h-9 rounded-full object-cover border border-border"
+                    fallbackClassName="w-9 h-9 rounded-full bg-card flex items-center justify-center border border-border"
+                  />
                 </Link>
               )}
             </div>

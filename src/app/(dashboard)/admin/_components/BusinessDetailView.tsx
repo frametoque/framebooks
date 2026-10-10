@@ -24,8 +24,14 @@ import {
   Loader2,
   Tag,
   Trash2,
+  AlertCircle,
+  Lock,
+  Unlock,
+  Ban,
+  Calendar,
 } from "lucide-react";
 import { PlanBadge, RoleBadge, StatusPill, Money, formatLKR } from "@/components/Formatters";
+import { TenantLogo } from "@/components/TenantLogo";
 import { ConfirmModal } from "@/app/(dashboard)/admin/_components/ConfirmModal";
 import { 
   adminAddBusinessMember, 
@@ -33,7 +39,11 @@ import {
   adminRemoveBusinessMember, 
   addBusinessNote 
 } from "@/app/(dashboard)/admin/users/actions";
-import { adminRevokeTenantCoupon } from "@/app/(dashboard)/admin/subscriptions/actions";
+import { 
+  adminRevokeTenantCoupon,
+  adminDeleteBusiness,
+  adminUpdateBusinessRenewalDate,
+} from "@/app/(dashboard)/admin/subscriptions/actions";
 
 export interface BusinessDetailViewProps {
   businessData: any;
@@ -85,6 +95,16 @@ export function BusinessDetailView({
   // Revoke Coupon state
   const [isRevokeModalOpen, setIsRevokeModalOpen] = useState(false);
   const [revokingCoupon, setRevokingCoupon] = useState(false);
+
+  // Renewal Date state
+  const [isEditRenewalOpen, setIsEditRenewalOpen] = useState(false);
+  const [renewalDateInput, setRenewalDateInput] = useState("");
+  const [renewalReason, setRenewalReason] = useState("");
+  const [savingRenewal, setSavingRenewal] = useState(false);
+
+  // Delete Business state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletingBusiness, setDeletingBusiness] = useState(false);
 
   const {
     tenant,
@@ -205,6 +225,47 @@ export function BusinessDetailView({
     }
   };
 
+  const handleSaveRenewal = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setSavingRenewal(true);
+    try {
+      await adminUpdateBusinessRenewalDate({
+        tenantId: tenant.id,
+        renewalDate: renewalDateInput ? renewalDateInput : null,
+        reason: renewalReason || "Updated via admin portal",
+      });
+      setIsEditRenewalOpen(false);
+      setRenewalReason("");
+      if (onRefresh) onRefresh();
+      router.refresh();
+    } catch (err: any) {
+      alert(err.message || "Failed to update renewal date");
+    } finally {
+      setSavingRenewal(false);
+    }
+  };
+
+  const handleDeleteBusiness = async () => {
+    setDeletingBusiness(true);
+    try {
+      await adminDeleteBusiness({
+        tenantId: tenant.id,
+        confirmName: tenant.name,
+        reason: "Permanently deleted by administrator",
+      });
+      setIsDeleteModalOpen(false);
+      if (isModal && onClose) {
+        onClose();
+      }
+      if (onRefresh) onRefresh();
+      router.push("/admin/subscriptions");
+    } catch (err: any) {
+      alert(err.message || "Failed to delete business");
+    } finally {
+      setDeletingBusiness(false);
+    }
+  };
+
   const renderLimitBar = (label: string, current: number, max: number) => {
     const isUnlimited = max === -1;
     const pct = isUnlimited ? 0 : Math.min(100, Math.round((current / max) * 100));
@@ -241,13 +302,14 @@ export function BusinessDetailView({
       {/* Business Header Card */}
       <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-2xs">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-brand-500/15 border border-brand-500/30 text-brand-700 dark:text-brand-400 font-bold text-2xl flex items-center justify-center shrink-0 overflow-hidden relative">
-            {tenant.logo_url ? (
-              <img src={tenant.logo_url} alt={tenant.name} className="w-full h-full object-cover" />
-            ) : (
-              <Building2 className="w-8 h-8 text-brand-600 dark:text-brand-400" />
-            )}
-          </div>
+          <TenantLogo
+            logoUrl={tenant.logo_url}
+            name={tenant.name}
+            size={64}
+            className="w-16 h-16 rounded-2xl object-cover shrink-0"
+            fallbackClassName="w-16 h-16 rounded-2xl bg-brand-500/15 border border-brand-500/30 text-brand-700 dark:text-brand-400 font-bold text-2xl flex items-center justify-center shrink-0"
+            iconClassName="w-8 h-8 text-brand-600 dark:text-brand-400"
+          />
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
               <h2 className="text-2xl font-bold text-foreground">
@@ -257,6 +319,20 @@ export function BusinessDetailView({
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/10 text-muted-foreground border border-border">
                 Tenant #{tenant.id}
               </span>
+
+              {/* Payment Status Pill */}
+              {tenant.payment_status === "pending_payment" ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>Pending Payment (View-Only)</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Payment Active</span>
+                </span>
+              )}
+
               {appliedCoupon && (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                   <Tag className="w-3.5 h-3.5" />
@@ -275,7 +351,21 @@ export function BusinessDetailView({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Edit Renewal Date Button */}
+          <button
+            type="button"
+            onClick={() => {
+              const cur = tenant.plan_expires_at ? new Date(tenant.plan_expires_at).toISOString().split('T')[0] : "";
+              setRenewalDateInput(cur);
+              setIsEditRenewalOpen(true);
+            }}
+            className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold border border-border bg-card hover:bg-muted text-foreground transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+          >
+            <Calendar className="w-4 h-4 text-brand-500" />
+            <span>Edit Renewal Date</span>
+          </button>
+
           <Link
             href="/admin/subscriptions"
             className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-brand-500/20"
@@ -339,6 +429,32 @@ export function BusinessDetailView({
               <div className="py-2.5 flex justify-between">
                 <span className="text-gray-500">Business Name</span>
                 <span className="font-semibold text-foreground">{tenant.name}</span>
+              </div>
+              <div className="py-2.5 flex justify-between items-center">
+                <span className="text-gray-500">Plan Renewal Date</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground">
+                    {tenant.plan_expires_at
+                      ? new Date(tenant.plan_expires_at).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "Lifetime / Never"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const cur = tenant.plan_expires_at ? new Date(tenant.plan_expires_at).toISOString().split('T')[0] : "";
+                      setRenewalDateInput(cur);
+                      setIsEditRenewalOpen(true);
+                    }}
+                    className="text-xs font-semibold px-2 py-0.5 rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <Calendar className="w-3 h-3 text-brand-500" />
+                    <span>Edit</span>
+                  </button>
+                </div>
               </div>
               {appliedCoupon && (
                 <div className="py-2.5 flex justify-between items-center">
@@ -445,6 +561,48 @@ export function BusinessDetailView({
       {/* TAB 2: SUBSCRIPTION */}
       {activeTab === "subscription" && (
         <div className="space-y-6">
+          {/* Plan Renewal & Expiration Summary Card */}
+          <div className="bg-card border border-border rounded-3xl p-6 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500 shrink-0">
+                <Calendar className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="font-bold text-foreground text-base">Renewal & Expiration Date</h4>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-500/15 text-brand-700 dark:text-brand-300 border border-brand-500/30">
+                    {tenant.plan || "Free"}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                  Current plan renewal / expiration date:{" "}
+                  <strong className="text-foreground">
+                    {tenant.plan_expires_at
+                      ? new Date(tenant.plan_expires_at).toLocaleDateString(undefined, {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "Lifetime Access / Never (No expiration)"}
+                  </strong>
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const cur = tenant.plan_expires_at ? new Date(tenant.plan_expires_at).toISOString().split('T')[0] : "";
+                setRenewalDateInput(cur);
+                setIsEditRenewalOpen(true);
+              }}
+              className="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-brand-500/20 flex items-center gap-2 cursor-pointer shrink-0"
+            >
+              <Calendar className="w-4 h-4" />
+              <span>Edit Renewal Date</span>
+            </button>
+          </div>
+
           {appliedCoupon && (
             <div className="bg-amber-500/10 border border-amber-500/25 rounded-3xl p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 shadow-2xs">
               <div className="flex items-start gap-4">
@@ -735,18 +893,20 @@ export function BusinessDetailView({
             <h3 className="font-bold text-red-600 dark:text-red-400 text-lg flex items-center gap-2">
               <AlertTriangle className="w-5 h-5" /> Danger Zone Actions
             </h3>
-            <p className="text-xs text-gray-500 mt-1">Actions here impact entire business workspace access and billing.</p>
+            <p className="text-xs text-gray-500 mt-1">Actions here impact entire business workspace access, restriction states, and data persistence.</p>
           </div>
 
           <div className="divide-y divide-border">
-            <div className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* Refresh Usage Quotas */}
+            <div className="py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <p className="font-semibold text-foreground text-sm">Force Reset Usage Quotas</p>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-gray-500 mt-1">
                   Re-evaluate and refresh tenant usage statistics in case of discrepancies.
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   alert("Quotas refreshed successfully");
                   if (onRefresh) onRefresh();
@@ -754,6 +914,27 @@ export function BusinessDetailView({
                 className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-xl text-xs transition-colors shrink-0 cursor-pointer"
               >
                 Refresh Quotas
+              </button>
+            </div>
+
+            {/* Delete Business Workspace */}
+            <div className="py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="font-semibold text-red-600 dark:text-red-400 text-sm flex items-center gap-1.5">
+                  <Trash2 className="w-4 h-4" />
+                  <span>Permanently Delete Business Workspace</span>
+                </p>
+                <p className="text-xs text-gray-500 mt-1 max-w-xl">
+                  Permanently deletes "{tenant.name}" and purges all workspace records (invoices, expenses, incomes, clients, inventory, quotations, accounts, subscriptions). Associated team members will be unlinked from the business. This action cannot be undone.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs transition-colors shrink-0 cursor-pointer flex items-center gap-2 shadow-md shadow-red-600/20"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Business</span>
               </button>
             </div>
           </div>
@@ -884,6 +1065,136 @@ export function BusinessDetailView({
           description={`Are you sure you want to remove coupon "${appliedCoupon?.code || ""}" from ${tenant.name}? This will revoke their complimentary billing access and set their subscription to past due, requiring them to make payment immediately.`}
           confirmText={revokingCoupon ? "Removing..." : "Remove Coupon & Require Payment"}
           isDestructive={true}
+        />
+      )}
+
+      {/* EDIT RENEWAL DATE MODAL */}
+      {isEditRenewalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Edit Renewal Date</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{tenant.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditRenewalOpen(false)}
+                className="p-1.5 rounded-xl hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRenewal} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5">
+                  Plan Expiry / Renewal Date
+                </label>
+                <input
+                  type="date"
+                  value={renewalDateInput}
+                  onChange={(e) => setRenewalDateInput(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground outline-none focus:border-brand-500 transition-colors cursor-pointer"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Leave empty or select &quot;Lifetime Access&quot; to clear expiration.
+                </p>
+              </div>
+
+              {/* Quick Presets */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-2">Quick Presets</label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const d = new Date();
+                      d.setMonth(d.getMonth() + 1);
+                      setRenewalDateInput(d.toISOString().split("T")[0]);
+                    }}
+                    className="px-2.5 py-1 text-xs rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors cursor-pointer"
+                  >
+                    +1 Month
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const d = new Date();
+                      d.setMonth(d.getMonth() + 3);
+                      setRenewalDateInput(d.toISOString().split("T")[0]);
+                    }}
+                    className="px-2.5 py-1 text-xs rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors cursor-pointer"
+                  >
+                    +3 Months
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const d = new Date();
+                      d.setFullYear(d.getFullYear() + 1);
+                      setRenewalDateInput(d.toISOString().split("T")[0]);
+                    }}
+                    className="px-2.5 py-1 text-xs rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors cursor-pointer"
+                  >
+                    +1 Year
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRenewalDateInput("")}
+                    className="px-2.5 py-1 text-xs rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 font-semibold transition-colors cursor-pointer"
+                  >
+                    Lifetime (Never Expires)
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5">
+                  Reason for Change (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Extended by support / Custom billing arrangement"
+                  value={renewalReason}
+                  onChange={(e) => setRenewalReason(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground outline-none focus:border-brand-500 transition-colors"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsEditRenewalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold hover:bg-muted text-foreground transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingRenewal}
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-brand-500 hover:bg-brand-400 text-brand-950 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {savingRenewal && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Save Renewal Date</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Business Modal */}
+      {isDeleteModalOpen && (
+        <ConfirmModal
+          isOpen={true}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={handleDeleteBusiness}
+          title={`Delete Business Workspace: ${tenant.name}?`}
+          description={`This is an irreversible destructive action. All records belonging to "${tenant.name}" (invoices, expenses, incomes, clients, bank accounts, inventory, quotations, audit logs, and subscriptions) will be permanently purged. Associated team members will be unlinked.`}
+          confirmText={deletingBusiness ? "Deleting..." : "Permanently Delete Business"}
+          isDestructive={true}
+          typeToConfirmText={tenant.name}
         />
       )}
     </div>

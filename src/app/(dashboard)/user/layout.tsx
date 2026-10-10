@@ -22,6 +22,7 @@ import { AppLockProvider, useAppLock, LockScreen } from "./components/AppLockPro
 import { ThemeToggle } from "./components/ThemeToggle";
 import { UpgradeModal } from "./components/UpgradeModal";
 import ClientAvatar from "@/components/ClientAvatar";
+import { TenantLogo } from "@/components/TenantLogo";
 import { PlanLockProvider } from "./components/PlanLockProvider";
 import { GracePeriodBanner } from "./components/GracePeriodBanner";
 import { LimitBanner } from "./components/LimitBanner";
@@ -143,6 +144,7 @@ function LayoutContent({ children }) {
         role={tenantInfo.is_read_only ? 'Viewer' : (tenantInfo.userRole || null)}
         actualRole={tenantInfo.userRole || null}
         isReadOnly={Boolean(tenantInfo.is_read_only)}
+        isPaymentPending={Boolean((tenantInfo as any).is_payment_pending)}
         isGracePeriod={Boolean(tenantInfo.is_grace_period)}
         graceDaysRemaining={tenantInfo.grace_days_remaining ?? null}
         graceEndDate={tenantInfo.grace_end_date ?? null}
@@ -451,14 +453,16 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
                   <Link href="/user/invoices" className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors flex items-center justify-center text-gray-400 hover:text-foreground mr-2" title="Back to Invoices">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => window.dispatchEvent(new CustomEvent("invoice:create-income"))}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap"
-                  >
-                    <MdAttachMoney className="w-4 h-4" />
-                    <span>Create Income</span>
-                  </button>
+                  {tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
+                    <button
+                      type="button"
+                      onClick={() => window.dispatchEvent(new CustomEvent("invoice:create-income"))}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap"
+                    >
+                      <MdAttachMoney className="w-4 h-4" />
+                      <span>Create Income</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => window.dispatchEvent(new CustomEvent("invoice:download-pdf"))}
@@ -469,7 +473,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
                   </button>
                 </div>
               )}
-              {isAccounts && (
+              {isAccounts && tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => window.dispatchEvent(new CustomEvent("accounts:open-transfer"))}
@@ -595,12 +599,13 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
               const isProPlus = plan.includes("plus");
               const isPro = !isProPlus && plan.includes("pro");
               
-              const Inner = () => tenantInfo.logo_url ? (
-                <Image src={tenantInfo.logo_url} alt="Logo" width={36} height={36} className="w-9 h-9 rounded-full object-cover" />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-card flex items-center justify-center">
-                  <Building2 className="w-4 h-4 text-gray-400" />
-                </div>
+              const Inner = () => (
+                <TenantLogo
+                  logoUrl={tenantInfo.logo_url}
+                  name={tenantInfo.name}
+                  size={36}
+                  className="w-9 h-9 rounded-full object-cover"
+                />
               );
 
               let containerClass = "rounded-full flex-shrink-0";

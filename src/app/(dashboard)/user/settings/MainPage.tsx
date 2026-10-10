@@ -19,6 +19,7 @@ import AuditLogsTab from "./AuditLogsTab";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import { UpgradeOverlay } from "../components/UpgradeOverlay";
 import Image from "next/image";
+import { TenantLogo } from "@/components/TenantLogo";
 
 export interface PlanViewItem {
   name: string;
@@ -403,6 +404,33 @@ export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } 
     }
   };
 
+  const handleRemoveLogo = async () => {
+    requireAuth(async () => {
+      setLogoUploading(true);
+      try {
+        const res = await updateTenantInfo({
+          name: tenantFormData.name,
+          industry: tenantFormData.industry || null,
+          phone: tenantFormData.phone || null,
+          email: tenantFormData.email || null,
+          website: tenantFormData.website || null,
+          address: tenantFormData.address || null,
+          logo_url: null,
+        });
+        if (res.success) {
+          setTenantInfo(prev => ({ ...prev, logo_url: null }));
+        } else {
+          alert(`Error: ${res.error}`);
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Failed to remove logo.");
+      } finally {
+        setLogoUploading(false);
+      }
+    });
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -578,18 +606,15 @@ export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } 
             
             {/* Business Card */}
             <div className="bg-card rounded-[32px] p-8 flex flex-col items-center text-center shadow-lg">
-              <div className="relative w-20 h-20 rounded-full overflow-hidden mb-4 border-2 border-border">
-                {tenantInfo.logo_url ? (
-                  <Image
-                    src={tenantInfo.logo_url}
-                    alt="Business Logo"
-                    className="w-full h-full object-cover"
-                   width={800} height={800} unoptimized={true} />
-                ) : (
-                  <div className="w-full h-full bg-card flex items-center justify-center">
-                    <Building className="w-8 h-8 text-gray-500" />
-                  </div>
-                )}
+              <div className="mb-4">
+                <TenantLogo
+                  logoUrl={tenantInfo.logo_url}
+                  name={tenantInfo.name}
+                  size={80}
+                  className="w-20 h-20 rounded-full object-cover border-2 border-border"
+                  fallbackClassName="w-20 h-20 rounded-full bg-card flex items-center justify-center border-2 border-border"
+                  iconClassName="w-8 h-8 text-gray-500"
+                />
               </div>
               <h2 className="text-[22px] font-black uppercase leading-tight tracking-wider mb-1">
                 {tenantInfo.name}
@@ -872,21 +897,34 @@ export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } 
                   <>
                     {/* Logo Upload */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                  <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-border">
+                  <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-border flex items-center justify-center bg-card">
                     {logoUploading ? (
-                      <div className="w-full h-full bg-card flex items-center justify-center">
-                        <Loader />
-                      </div>
-                    ) : tenantInfo.logo_url ? (
-                      <Image src={tenantInfo.logo_url} alt="Logo" className="w-full h-full object-cover"  width={800} height={800} unoptimized={true} />
+                      <Loader />
                     ) : (
-                      <div className="w-full h-full bg-card flex items-center justify-center">
-                        <Building className="w-8 h-8 text-gray-500" />
-                      </div>
+                      <TenantLogo
+                        logoUrl={tenantInfo.logo_url}
+                        name={tenantInfo.name}
+                        size={96}
+                        className="w-full h-full object-cover"
+                        fallbackClassName="w-full h-full bg-card flex items-center justify-center"
+                        iconClassName="w-8 h-8 text-gray-500"
+                      />
                     )}
                   </div>
                   <div className="flex-1 flex flex-col gap-2">
-                    <label className="text-sm font-medium text-gray-300">Company Logo</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-gray-300">Company Logo</label>
+                      {tenantInfo.logo_url && currentUserRole !== 'Viewer' && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveLogo}
+                          disabled={logoUploading}
+                          className="text-xs text-rose-500 hover:text-rose-400 font-medium transition flex items-center gap-1 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" /> Remove Logo
+                        </button>
+                      )}
+                    </div>
                     <label className={`flex items-center justify-center w-full h-32 px-4 transition bg-transparent border-2 border-border border-dashed rounded-2xl appearance-none focus:outline-none ${currentUserRole === 'Viewer' ? 'opacity-50 cursor-not-allowed' : 'hover:border-brand-500 cursor-pointer'}`}>
                       <span className="flex items-center space-x-2">
                         <MdUpload className="w-6 h-6 text-gray-400" />
