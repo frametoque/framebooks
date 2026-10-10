@@ -254,7 +254,7 @@ export default function ReportsPage() {
             </div>
             <div>
               <p className="text-gray-500 dark:text-gray-400 text-sm">{stat.label}</p>
-              <p className="text-2xl font-semibold text-foreground">
+              <p className="text-2xl font-bold tracking-tight text-foreground">
                 <AnimatedNumber value={stat.value} />
               </p>
             </div>

@@ -248,7 +248,7 @@ export default function ClientsPage() {
             </div>
             <div className="min-w-0">
               <p className="text-gray-500 dark:text-gray-400 text-sm">{stat.label}</p>
-              <p className="text-xl font-semibold truncate" title={stat.value}>
+              <p className="text-xl sm:text-2xl font-bold text-foreground tracking-tight truncate" title={stat.value}>
                 <AnimatedNumber value={stat.value} />
               </p>
               {stat.sub && (

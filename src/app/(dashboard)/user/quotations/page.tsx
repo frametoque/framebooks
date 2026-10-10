@@ -301,7 +301,7 @@ const handleDelete = async (id: number) => {
             </div>
             <div>
               <p className="text-gray-500 dark:text-gray-400 text-sm">{stat.label}</p>
-              <p className="text-2xl font-semibold">
+              <p className="text-2xl font-bold text-foreground tracking-tight">
                 <AnimatedNumber value={stat.value} />
               </p>
             </div>

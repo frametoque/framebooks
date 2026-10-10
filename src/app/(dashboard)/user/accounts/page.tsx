@@ -211,7 +211,7 @@ export default function AccountsPage() {
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400">Total Assets Balance</p>
-            <p className="text-2xl font-semibold">{formatLKR(totalAssets)}</p>
+            <p className="text-2xl font-bold tracking-tight text-foreground">{formatLKR(totalAssets)}</p>
           </div>
         </div>
         <div className="bg-card border border-border p-6 rounded-3xl flex items-center gap-4 shadow-xs">
@@ -220,7 +220,7 @@ export default function AccountsPage() {
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400">Bank Accounts Balance</p>
-            <p className="text-2xl font-semibold text-emerald-600 dark:text-green-400">{formatLKR(totalBank)}</p>
+            <p className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-green-400">{formatLKR(totalBank)}</p>
           </div>
         </div>
         <div className="bg-card border border-border p-6 rounded-3xl flex items-center gap-4 shadow-xs">
@@ -229,7 +229,7 @@ export default function AccountsPage() {
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400">Cash Accounts Balance</p>
-            <p className="text-2xl font-semibold text-blue-600 dark:text-blue-400">{formatLKR(totalCash)}</p>
+            <p className="text-2xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{formatLKR(totalCash)}</p>
           </div>
         </div>
       </div>
@@ -290,7 +290,7 @@ export default function AccountsPage() {
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Current Balance</p>
-                <p className={`text-xl font-semibold ${(acc.currentBalance < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-green-400')}`}>
+                <p className={`text-xl font-bold tracking-tight ${(acc.currentBalance < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-green-400')}`}>
                   {formatLKR(acc.currentBalance)}
                 </p>
               </div>
