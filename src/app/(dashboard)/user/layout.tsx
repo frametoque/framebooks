@@ -693,11 +693,10 @@ const Sidebar = ({
 
   const isExpanded = mobileMenuOpen || isHovered;
 
-  const sidebarSpring = {
-    type: "spring",
-    stiffness: 300,
-    damping: 30,
-    mass: 0.8,
+  const sidebarTransition = {
+    type: "tween",
+    ease: [0.25, 1, 0.5, 1],
+    duration: 0.28,
   } as const;
 
   return (
@@ -725,46 +724,62 @@ const Sidebar = ({
           width: isExpanded ? 240 : 72,
           x: mobileMenuOpen ? 0 : undefined,
         }}
-        transition={sidebarSpring}
+        transition={sidebarTransition}
         className={`fixed top-0 left-0 h-full bg-background/95 backdrop-blur-2xl z-50 border-r border-border
           ${isHovered ? "shadow-2xl ring-1 ring-black/5 dark:ring-white/10" : "shadow-xs"}
           ${mobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0"}`}
-        style={{ overflow: "hidden" }}
+        style={{ overflow: "hidden", willChange: "width" }}
       >
         <div className="flex flex-col h-full w-full">
 
           {/* Logo + Collapse toggle */}
-          <div className="flex items-center h-20 flex-shrink-0 px-3 overflow-hidden">
-            <Link href="/" className="flex items-center w-full overflow-hidden">
-              {isExpanded ? (
-                <div className="flex items-center pl-1 min-w-0 animate-in fade-in duration-200">
-                  <Image
-                    src="/logos/ft/name-logo.png"
-                    alt="FrameBooks"
-                    width={125}
-                    height={25}
-                    className="h-[25px] w-[125px] flex-shrink-0 [filter:brightness(0)] dark:[filter:none]"
-                  />
-                  {tenantInfo.plan && tenantInfo.plan !== "Loading..." && (
-                    <span className="text-gray-400 dark:text-foreground/30 text-[11px] font-medium tracking-widest ml-2.5 flex-shrink-0 flex items-center gap-1.5">
-                      |
-                      <span className="text-emerald-700 dark:text-brand-500 font-bold uppercase text-[10px]">
-                        {tenantInfo.plan.toLowerCase() === "pro plus" ? "PRO +" : tenantInfo.plan}
-                      </span>
+          <div className="flex items-center h-20 flex-shrink-0 px-3 overflow-hidden relative">
+            <Link href="/" className="flex items-center h-full w-full overflow-hidden relative">
+              {/* Folded icon */}
+              <motion.div
+                initial={false}
+                animate={{
+                  opacity: isExpanded ? 0 : 1,
+                  scale: isExpanded ? 0.85 : 1,
+                }}
+                transition={{ duration: 0.18, ease: "easeInOut" }}
+                className="absolute left-0 w-[48px] h-full flex items-center justify-center pointer-events-none"
+              >
+                <Image
+                  src="/logos/ft/logo.png"
+                  alt="FrameBooks"
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 object-contain [filter:brightness(0)] dark:[filter:none]"
+                />
+              </motion.div>
+
+              {/* Expanded full logo */}
+              <motion.div
+                initial={false}
+                animate={{
+                  opacity: isExpanded ? 1 : 0,
+                  x: isExpanded ? 0 : -8,
+                }}
+                transition={{ duration: isExpanded ? 0.22 : 0.15, ease: "easeOut" }}
+                className="flex items-center pl-1 min-w-0"
+              >
+                <Image
+                  src="/logos/ft/name-logo.png"
+                  alt="FrameBooks"
+                  width={125}
+                  height={25}
+                  className="h-[25px] w-[125px] flex-shrink-0 [filter:brightness(0)] dark:[filter:none]"
+                />
+                {tenantInfo.plan && tenantInfo.plan !== "Loading..." && (
+                  <span className="text-gray-400 dark:text-foreground/30 text-[11px] font-medium tracking-widest ml-2.5 flex-shrink-0 flex items-center gap-1.5 whitespace-nowrap">
+                    |
+                    <span className="text-emerald-700 dark:text-brand-500 font-bold uppercase text-[10px]">
+                      {tenantInfo.plan.toLowerCase() === "pro plus" ? "PRO +" : tenantInfo.plan}
                     </span>
-                  )}
-                </div>
-              ) : (
-                <div className="w-12 h-12 flex items-center justify-center mx-auto">
-                  <Image
-                    src="/logos/ft/logo.png"
-                    alt="FrameBooks"
-                    width={32}
-                    height={32}
-                    className="h-8 w-8 object-contain [filter:brightness(0)] dark:[filter:none]"
-                  />
-                </div>
-              )}
+                  </span>
+                )}
+              </motion.div>
             </Link>
 
             {/* Mobile: close button */}
@@ -782,11 +797,11 @@ const Sidebar = ({
               const Icon = item.icon;
               const active = isActive(item.href);
               return (
-                <div key={item.href} className="relative flex justify-center">
+                <div key={item.href} className="relative flex justify-center w-full">
                   {active && (
                     <motion.div
                       layoutId="active-sidebar-tab"
-                      className="absolute inset-0 bg-brand-500/15 border border-brand-500/20 dark:bg-white/10 dark:border-transparent rounded-2xl"
+                      className="absolute inset-0 bg-brand-500/15 border border-brand-500/20 dark:bg-white/10 dark:border-transparent rounded-2xl pointer-events-none"
                       initial={false}
                       transition={{ type: "spring", stiffness: 350, damping: 30 }}
                     />
@@ -796,8 +811,7 @@ const Sidebar = ({
                     onClick={() => setMobileMenuOpen(false)}
                     target={item.newtab ? "_blank" : "_self"}
                     title={item.name}
-                    className={`relative z-10 flex items-center h-12 rounded-2xl transition-all duration-150 overflow-hidden w-full
-                      ${isExpanded ? "px-3.5 gap-3.5 justify-start" : "justify-center px-0"}
+                    className={`relative z-10 flex items-center h-11 rounded-2xl w-full px-3 gap-3 overflow-hidden transition-colors duration-150
                       ${active
                         ? "text-brand-700 dark:text-brand-400 font-semibold"
                         : "text-gray-700 dark:text-gray-200 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-black/5 dark:hover:bg-white/5"
@@ -807,11 +821,20 @@ const Sidebar = ({
                       <Icon className="w-5 h-5" />
                     </span>
 
-                    {isExpanded && (
-                      <span className="overflow-hidden whitespace-nowrap text-sm truncate animate-in fade-in duration-150">
-                        {item.name}
-                      </span>
-                    )}
+                    <motion.span
+                      initial={false}
+                      animate={{
+                        opacity: isExpanded ? 1 : 0,
+                        x: isExpanded ? 0 : -8,
+                      }}
+                      transition={{
+                        duration: isExpanded ? 0.2 : 0.14,
+                        ease: "easeOut",
+                      }}
+                      className="whitespace-nowrap text-sm truncate font-medium flex-1 pointer-events-none"
+                    >
+                      {item.name}
+                    </motion.span>
                   </Link>
                 </div>
               );
@@ -819,30 +842,50 @@ const Sidebar = ({
           </nav>
 
           {/* User Settings Link */}
-          <div className="p-3 flex flex-col mt-auto space-y-2 shrink-0 border-t border-border w-full">
-            <div className="flex items-center gap-2 w-full justify-center">
+          <div className="p-3 flex flex-col mt-auto space-y-2 shrink-0 border-t border-border w-full overflow-hidden">
+            <div className="flex items-center gap-2 w-full overflow-hidden">
               <Link 
                 href="/user/settings/profile"
                 onClick={() => setMobileMenuOpen(false)}
                 title={user?.name || "User Profile"}
-                className={`flex items-center rounded-2xl transition-colors hover:bg-black/5 dark:hover:bg-white/5
-                  ${isExpanded ? "flex-1 gap-3 p-2 min-w-0" : "w-11 h-11 justify-center p-0"}`}
+                className="flex items-center h-12 px-1 gap-3 rounded-2xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 flex-1 min-w-0 overflow-hidden"
               >
-                <ClientAvatar 
-                  imageUrl={user?.image} 
-                  name={user?.name || "User"}
-                  email={user?.email}
-                  className="w-10 h-10 rounded-full object-cover shrink-0 border border-border"
-                  fallbackClassName="w-10 h-10 rounded-full bg-brand-500/10 border border-border flex items-center justify-center text-brand-400 font-bold text-xs shrink-0"
-                />
-                {isExpanded && (
-                  <div className="overflow-hidden flex-1 min-w-0 animate-in fade-in duration-150">
-                    <p className="text-sm font-semibold text-foreground truncate">{user?.name || "User"}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || "Account & Security"}</p>
-                  </div>
-                )}
+                <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center">
+                  <ClientAvatar 
+                    imageUrl={user?.image} 
+                    name={user?.name || "User"}
+                    email={user?.email}
+                    className="w-10 h-10 rounded-full object-cover shrink-0 border border-border"
+                    fallbackClassName="w-10 h-10 rounded-full bg-brand-500/10 border border-border flex items-center justify-center text-brand-400 font-bold text-xs shrink-0"
+                  />
+                </div>
+
+                <motion.div
+                  initial={false}
+                  animate={{
+                    opacity: isExpanded ? 1 : 0,
+                    x: isExpanded ? 0 : -8,
+                  }}
+                  transition={{ duration: isExpanded ? 0.2 : 0.14, ease: "easeOut" }}
+                  className="overflow-hidden flex-1 min-w-0 pointer-events-none"
+                >
+                  <p className="text-sm font-semibold text-foreground truncate">{user?.name || "User"}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || "Account & Security"}</p>
+                </motion.div>
               </Link>
-              {isExpanded && <LockSidebarButton />}
+              
+              <motion.div
+                initial={false}
+                animate={{
+                  opacity: isExpanded ? 1 : 0,
+                  scale: isExpanded ? 1 : 0.8,
+                  width: isExpanded ? "auto" : 0,
+                }}
+                transition={{ duration: isExpanded ? 0.2 : 0.14 }}
+                className="overflow-hidden flex-shrink-0"
+              >
+                <LockSidebarButton />
+              </motion.div>
             </div>
           </div>
         </div>
