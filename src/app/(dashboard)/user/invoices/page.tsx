@@ -376,13 +376,13 @@ export default function InvoicesPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((stat, i) => (
-          <div key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 hover:shadow-md transition-all shadow-xs">
-            <div className={`p-3 rounded-2xl ${stat.bg}`}>
+          <div key={i} className="bg-card border border-border rounded-3xl p-5 sm:p-6 flex items-center gap-3.5 sm:gap-4 hover:shadow-md transition-all shadow-xs min-w-0">
+            <div className={`p-3 rounded-2xl flex-shrink-0 ${stat.bg}`}>
               <stat.icon className={`w-5 h-5 ${stat.color}`} />
             </div>
-            <div>
-              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">{stat.label}</p>
-              <p className="text-2xl font-bold text-foreground">
+            <div className="min-w-0 flex-1">
+              <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium truncate" title={stat.label}>{stat.label}</p>
+              <p className="text-lg sm:text-xl 2xl:text-2xl font-bold text-foreground tracking-tight whitespace-nowrap overflow-visible" title={stat.value}>
                 <AnimatedNumber value={stat.value} />
               </p>
             </div>

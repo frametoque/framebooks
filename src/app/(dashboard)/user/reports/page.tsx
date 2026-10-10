@@ -248,13 +248,13 @@ export default function ReportsPage() {
       {/* Stats Cards - Displayed on all tabs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((stat, i) => (
-          <div key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 shadow-xs hover:shadow-md transition-all">
-            <div className={`p-3 rounded-2xl ${stat.bg}`}>
+          <div key={i} className="bg-card border border-border rounded-3xl p-5 sm:p-6 flex items-center gap-3.5 sm:gap-4 shadow-xs hover:shadow-md transition-all min-w-0">
+            <div className={`p-3 rounded-2xl flex-shrink-0 ${stat.bg}`}>
               <stat.icon className={`w-5 h-5 ${stat.color}`} />
             </div>
-            <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">{stat.label}</p>
-              <p className="text-2xl font-bold tracking-tight text-foreground">
+            <div className="min-w-0 flex-1">
+              <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium truncate" title={stat.label}>{stat.label}</p>
+              <p className="text-lg sm:text-xl 2xl:text-2xl font-bold tracking-tight text-foreground whitespace-nowrap overflow-visible" title={stat.value}>
                 <AnimatedNumber value={stat.value} />
               </p>
             </div>
