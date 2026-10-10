@@ -334,14 +334,6 @@ export function DashboardShell({
                   </div>
                 </Link>
               </div>
-
-              <div className="px-1 pt-2 text-[9px] text-gray-400 dark:text-gray-500 leading-tight text-center flex flex-col items-center justify-center gap-1">
-                <p className="max-w-[200px]">
-                  Your data stays secure with<br />
-                  <span className="text-emerald-700 dark:text-brand-400 font-semibold">end-to-end encryption</span>.<br />
-                  &copy; {new Date().getFullYear()} FrameToque Digital Media.
-                </p>
-              </div>
             </div>
           )}
         </div>

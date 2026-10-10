@@ -820,16 +820,6 @@ const Sidebar = ({
               </Link>
               {isExpanded && <LockSidebarButton />}
             </div>
-            
-            {isExpanded && (
-              <div className="px-2 pt-2 pb-1 text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed text-center flex flex-col items-center justify-center gap-1 animate-in fade-in duration-200">
-                <p className="max-w-[220px]">
-                  Your data stays secure with<br/>
-                  <span className="text-emerald-700 dark:text-brand-500 font-semibold">end-to-end encryption</span>.<br/>
-                  &copy; {new Date().getFullYear()}. <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-600 dark:hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a>.
-                </p>
-              </div>
-            )}
           </div>
         </div>
       </motion.aside>
