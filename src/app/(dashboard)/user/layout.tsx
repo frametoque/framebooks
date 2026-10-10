@@ -23,6 +23,7 @@ import { ThemeToggle } from "./components/ThemeToggle";
 import { UpgradeModal } from "./components/UpgradeModal";
 import ClientAvatar from "@/components/ClientAvatar";
 import { TenantLogo } from "@/components/TenantLogo";
+import BusinessSwitcher from "./components/BusinessSwitcher";
 import { PlanLockProvider } from "./components/PlanLockProvider";
 import { GracePeriodBanner } from "./components/GracePeriodBanner";
 import { LimitBanner } from "./components/LimitBanner";
@@ -610,43 +611,8 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
           <NotificationBell />
           <ThemeToggle />
 
-          {/* Business Info on Top Bar */}
-          <Link href="/user/settings/business" className="flex items-center gap-3 pl-4 ml-2 border-l border-border hover:opacity-80 transition-opacity">
-            <div className="flex flex-col items-end hidden sm:flex">
-              <span className="text-sm font-semibold text-foreground tracking-tight">{tenantInfo.name}</span>
-              {tenantInfo.userRole && (
-                <span className="text-xs text-gray-500 mt-0.5">You're {tenantInfo.userRole.charAt(0).toUpperCase() + tenantInfo.userRole.slice(1)}</span>
-              )}
-            </div>
-            
-            {(() => {
-              const plan = (tenantInfo.plan || "").toLowerCase();
-              const isProPlus = plan.includes("plus");
-              const isPro = !isProPlus && plan.includes("pro");
-              
-              const Inner = () => (
-                <TenantLogo
-                  logoUrl={tenantInfo.logo_url}
-                  name={tenantInfo.name}
-                  size={36}
-                  className="w-9 h-9 rounded-full object-cover"
-                />
-              );
-
-              let containerClass = "rounded-full flex-shrink-0";
-              if (isProPlus) {
-                containerClass += " ring-2 ring-offset-2 ring-offset-background ring-brand-500 shadow-[0_0_15px_rgba(159,232,112,0.4)]";
-              } else if (isPro) {
-                containerClass += " ring-2 ring-offset-2 ring-offset-background ring-brand-500";
-              }
-
-              return (
-                <div className={containerClass}>
-                  <Inner />
-                </div>
-              );
-            })()}
-          </Link>
+          {/* Business Profile Switcher & Info */}
+          <BusinessSwitcher tenantInfo={tenantInfo} />
         </div>
       </div>
     </header>

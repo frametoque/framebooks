@@ -563,6 +563,7 @@ export async function transferOwnership(newOwnerId: string) {
     
     // Promote new user to owner
     await sql`UPDATE admin_users SET role = 'owner' WHERE id = ${newOwnerId} AND tenant_id = ${tenantId}`;
+    await sql`UPDATE tenants SET owner_email = ${targetRows[0].email} WHERE id = ${tenantId}`;
 
     await logSystemAction(`Transferred ownership to ${targetRows[0].email}`);
 
@@ -596,5 +597,285 @@ export async function deleteTeamInvitation(invitationId: number) {
   } catch (error: any) {
     console.error("Failed to delete invitation:", error);
     return { success: false, error: "Failed to delete invitation" };
+  }
+}
+
+export interface UserBusinessItem {
+  id: number;
+  name: string;
+  logo_url: string | null;
+  plan: string;
+  role: string;
+  isOwner: boolean;
+  isActive: boolean;
+}
+
+export interface PendingInviteItem {
+  id: number;
+  tenantId: number;
+  tenantName: string;
+  logoUrl: string | null;
+  role: string;
+  createdAt: string | null;
+}
+
+export interface UserBusinessesResult {
+  businesses: UserBusinessItem[];
+  pendingInvites: PendingInviteItem[];
+  hasOwnedBusiness: boolean;
+  activeTenantId: number | null;
+}
+
+export async function getUserBusinesses(): Promise<UserBusinessesResult> {
+  try {
+    const { session } = await auth();
+    const email = session?.user?.email?.trim().toLowerCase();
+    if (!email) {
+      return { businesses: [], pendingInvites: [], hasOwnedBusiness: false, activeTenantId: null };
+    }
+
+    const userRows = await sql`
+      SELECT id, tenant_id, role 
+      FROM admin_users 
+      WHERE LOWER(email) = ${email} 
+      LIMIT 1
+    `;
+    const activeTenantId = userRows[0]?.tenant_id || null;
+
+    // 1. Check if user owns any tenant
+    const ownedTenants = await sql`
+      SELECT id, name, logo_url, plan, owner_email 
+      FROM tenants 
+      WHERE LOWER(owner_email) = ${email}
+    `;
+    const hasOwnedBusiness = ownedTenants.length > 0;
+
+    // 2. Check accepted team invitations
+    const acceptedInvites = await sql`
+      SELECT t.id, t.name, t.logo_url, t.plan, ti.role
+      FROM team_invitations ti
+      JOIN tenants t ON ti.tenant_id = t.id::text
+      WHERE LOWER(ti.email) = ${email} AND ti.status = 'accepted'
+    `;
+
+    // 3. Fallback: if activeTenantId exists and isn't in owned or accepted, include it
+    let fallbackTenants: any[] = [];
+    if (activeTenantId && !ownedTenants.some(t => t.id === activeTenantId) && !acceptedInvites.some(t => t.id === activeTenantId)) {
+      fallbackTenants = await sql`
+        SELECT id, name, logo_url, plan 
+        FROM tenants 
+        WHERE id = ${activeTenantId}
+      `;
+    }
+
+    const map = new Map<number, UserBusinessItem>();
+
+    // Add owned
+    for (const t of ownedTenants) {
+      map.set(t.id, {
+        id: t.id,
+        name: t.name,
+        logo_url: t.logo_url,
+        plan: t.plan || 'Free',
+        role: 'Owner',
+        isOwner: true,
+        isActive: t.id === activeTenantId,
+      });
+    }
+
+    // Add accepted invites
+    for (const t of acceptedInvites) {
+      if (!map.has(t.id)) {
+        map.set(t.id, {
+          id: t.id,
+          name: t.name,
+          logo_url: t.logo_url,
+          plan: t.plan || 'Free',
+          role: t.role || 'Viewer',
+          isOwner: false,
+          isActive: t.id === activeTenantId,
+        });
+      }
+    }
+
+    // Add fallback if exists
+    for (const t of fallbackTenants) {
+      if (!map.has(t.id)) {
+        const isOwnerRole = (userRows[0]?.role || '').toLowerCase() === 'owner';
+        map.set(t.id, {
+          id: t.id,
+          name: t.name,
+          logo_url: t.logo_url,
+          plan: t.plan || 'Free',
+          role: userRows[0]?.role || 'Viewer',
+          isOwner: isOwnerRole,
+          isActive: true,
+        });
+      }
+    }
+
+    // 4. Pending invitations
+    const pending = await sql`
+      SELECT ti.id, ti.tenant_id, ti.role, ti.created_at, t.name as tenant_name, t.logo_url
+      FROM team_invitations ti
+      JOIN tenants t ON ti.tenant_id = t.id::text
+      WHERE LOWER(ti.email) = ${email} AND ti.status = 'pending'
+      ORDER BY ti.created_at DESC
+    `;
+
+    return {
+      businesses: Array.from(map.values()),
+      pendingInvites: pending.map(p => ({
+        id: p.id,
+        tenantId: Number(p.tenant_id),
+        tenantName: p.tenant_name,
+        logoUrl: p.logo_url,
+        role: p.role || 'Viewer',
+        createdAt: p.created_at ? new Date(p.created_at).toISOString() : null,
+      })),
+      hasOwnedBusiness,
+      activeTenantId,
+    };
+  } catch (err) {
+    console.error("getUserBusinesses error:", err);
+    return { businesses: [], pendingInvites: [], hasOwnedBusiness: false, activeTenantId: null };
+  }
+}
+
+export async function switchActiveTenant(targetTenantId: number) {
+  try {
+    const { session } = await auth();
+    const email = session?.user?.email?.trim().toLowerCase();
+    if (!email) return { success: false, error: "Unauthorized" };
+
+    // Validate user has permission for targetTenantId
+    const isOwner = await sql`
+      SELECT id FROM tenants WHERE id = ${targetTenantId} AND LOWER(owner_email) = ${email} LIMIT 1
+    `;
+    const invite = await sql`
+      SELECT role FROM team_invitations WHERE tenant_id = ${targetTenantId.toString()} AND LOWER(email) = ${email} AND status = 'accepted' LIMIT 1
+    `;
+
+    let newRole = 'Viewer';
+    if (isOwner.length > 0) {
+      newRole = 'owner';
+    } else if (invite.length > 0) {
+      newRole = invite[0].role || 'Viewer';
+    } else {
+      const existing = await sql`SELECT role FROM admin_users WHERE tenant_id = ${targetTenantId} AND LOWER(email) = ${email} LIMIT 1`;
+      if (existing.length === 0) {
+        return { success: false, error: "You do not have access to this business profile." };
+      }
+      newRole = existing[0].role || 'Viewer';
+    }
+
+    await sql`
+      UPDATE admin_users 
+      SET tenant_id = ${targetTenantId}, role = ${newRole} 
+      WHERE LOWER(email) = ${email}
+    `;
+
+    await logSystemAction(`Switched active workspace to tenant ID ${targetTenantId} as ${newRole}`);
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (err: any) {
+    console.error("switchActiveTenant error:", err);
+    return { success: false, error: err?.message || "Failed to switch workspace" };
+  }
+}
+
+export async function respondToTeamInvitation(invitationId: number, action: 'accept' | 'decline') {
+  try {
+    const { session } = await auth();
+    const email = session?.user?.email?.trim().toLowerCase();
+    if (!email) return { success: false, error: "Unauthorized" };
+
+    const inviteRows = await sql`
+      SELECT id, tenant_id, role 
+      FROM team_invitations 
+      WHERE id = ${invitationId} AND LOWER(email) = ${email} AND status = 'pending'
+      LIMIT 1
+    `;
+    if (inviteRows.length === 0) {
+      return { success: false, error: "Invitation not found or already processed" };
+    }
+
+    const invite = inviteRows[0];
+    const tenantId = Number(invite.tenant_id);
+    const role = invite.role || 'Viewer';
+
+    if (action === 'accept') {
+      await sql`UPDATE team_invitations SET status = 'accepted' WHERE id = ${invitationId}`;
+      await sql`
+        UPDATE admin_users 
+        SET tenant_id = ${tenantId}, role = ${role} 
+        WHERE LOWER(email) = ${email}
+      `;
+      await logSystemAction(`Accepted invitation ${invitationId} and switched to tenant ID ${tenantId}`);
+      revalidatePath("/", "layout");
+      return { success: true, message: "Invitation accepted. Switched to workspace." };
+    } else {
+      await sql`UPDATE team_invitations SET status = 'declined' WHERE id = ${invitationId}`;
+      await logSystemAction(`Declined invitation ${invitationId} for tenant ID ${tenantId}`);
+      return { success: true, message: "Invitation declined." };
+    }
+  } catch (err: any) {
+    console.error("respondToTeamInvitation error:", err);
+    return { success: false, error: err?.message || "Failed to respond to invitation" };
+  }
+}
+
+export async function createOwnedBusinessProfile(name: string, currency: string = 'LKR') {
+  try {
+    const { session } = await auth();
+    const email = session?.user?.email?.trim().toLowerCase();
+    const fullName = session?.user?.name || "";
+    if (!email) return { success: false, error: "Unauthorized" };
+
+    if (!name || !name.trim()) {
+      return { success: false, error: "Business name is required." };
+    }
+
+    // Enforce rule: only one user can create their own business profile from their account!
+    const alreadyOwns = await sql`
+      SELECT id, name FROM tenants WHERE LOWER(owner_email) = ${email} LIMIT 1
+    `;
+    if (alreadyOwns.length > 0) {
+      return { 
+        success: false, 
+        error: `You have already created your business profile ("${alreadyOwns[0].name}"). Each account can create at most 1 owned business profile.` 
+      };
+    }
+
+    const cleanName = name.trim();
+    const cleanCurrency = (currency || 'LKR').trim();
+
+    const newTenant = await sql`
+      INSERT INTO tenants (name, owner_email, plan, currency, created_at)
+      VALUES (${cleanName}, ${email}, 'Free', ${cleanCurrency}, NOW())
+      RETURNING id
+    `;
+    const newTenantId = newTenant[0].id;
+
+    const userRows = await sql`SELECT id FROM admin_users WHERE LOWER(email) = ${email} LIMIT 1`;
+    if (userRows.length > 0) {
+      await sql`
+        UPDATE admin_users 
+        SET tenant_id = ${newTenantId}, role = 'owner' 
+        WHERE id = ${userRows[0].id}
+      `;
+    } else {
+      await sql`
+        INSERT INTO admin_users (email, full_name, tenant_id, role, created_at)
+        VALUES (${email}, ${fullName}, ${newTenantId}, 'owner', NOW())
+      `;
+    }
+
+    await logSystemAction(`Created new owned business profile "${cleanName}" (ID ${newTenantId})`);
+    revalidatePath("/", "layout");
+    return { success: true, tenantId: newTenantId };
+  } catch (err: any) {
+    console.error("createOwnedBusinessProfile error:", err);
+    return { success: false, error: err?.message || "Failed to create business profile" };
   }
 }

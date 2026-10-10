@@ -100,8 +100,8 @@ export async function completeOnboarding(formData: FormData) {
 
     // Create a new tenant
     const newTenant = await sql`
-      INSERT INTO tenants (name, plan, currency, logo_url) 
-      VALUES (${businessName}, ${planName}, 'LKR', ${logoUrl})
+      INSERT INTO tenants (name, owner_email, plan, currency, logo_url) 
+      VALUES (${businessName}, ${email}, ${planName}, 'LKR', ${logoUrl})
       RETURNING id
     `;
     const tenantId = newTenant[0].id;
