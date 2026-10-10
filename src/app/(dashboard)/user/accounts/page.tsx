@@ -125,16 +125,25 @@ export default function AccountsPage() {
     load();
   };
 
-    const handleEdit = (acc: any) => {
+  const isBank = (type?: string) => {
+    const t = String(type || "").trim().toLowerCase();
+    return t === "bank" || t === "bank account";
+  };
+
+  const isCash = (type?: string) => {
+    const t = String(type || "").trim().toLowerCase();
+    return t === "cash" || t === "cash account" || (!isBank(t) && t !== "");
+  };
+
+  const handleEdit = (acc: any) => {
     setEditingId(acc.id);
     setFormData({
       name: acc.name,
-      type: acc.type,
+      type: isBank(acc.type) ? "Bank Account" : "Cash Account",
       bankName: acc.bankName || "",
       accountNumber: acc.accountNumber || "",
       branch: acc.branch || "",
       initialBalance: acc.initialBalance || 0,
-      
     });
     setShowCreate(true);
   };
@@ -147,8 +156,8 @@ export default function AccountsPage() {
   };
 
   const totalAssets = accounts.reduce((sum, a) => sum + (a.currentBalance || 0), 0);
-  const totalBank = accounts.filter(a => a.type === "Bank Account").reduce((sum, a) => sum + a.currentBalance, 0);
-  const totalCash = accounts.filter(a => a.type === "Cash Account").reduce((sum, a) => sum + a.currentBalance, 0);
+  const totalBank = accounts.filter(a => isBank(a.type)).reduce((sum, a) => sum + (a.currentBalance || 0), 0);
+  const totalCash = accounts.filter(a => isCash(a.type)).reduce((sum, a) => sum + (a.currentBalance || 0), 0);
 
   if (loading) {
     return (
@@ -231,18 +240,20 @@ export default function AccountsPage() {
             <div className="flex justify-between items-start mb-6">
               <div className="flex gap-4">
                 <div className={`p-3 rounded-2xl ${
-                  acc.type === 'Bank Account' 
-                    ? 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-foreground' 
-                    : 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-foreground'
+                  isBank(acc.type) 
+                    ? 'bg-emerald-100/70 text-emerald-700 dark:bg-green-500/10 dark:text-green-400' 
+                    : 'bg-blue-100/70 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400'
                 }`}>
-                  {acc.type === 'Bank Account' ? <MdAccountBalance className="w-5 h-5"/> : <MdAccountBalanceWallet className="w-5 h-5"/>}
+                  {isBank(acc.type) ? <MdAccountBalance className="w-5 h-5"/> : <MdAccountBalanceWallet className="w-5 h-5"/>}
                 </div>
                 <div>
                   <h3 className="font-semibold text-lg text-foreground">
                     {acc.name}
                   </h3>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{acc.type}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                      {isBank(acc.type) ? 'Bank Account' : isCash(acc.type) ? 'Cash Account' : acc.type}
+                    </p>
                     {false && (
                       <span className="px-1.5 py-0.5 text-[10px] uppercase font-bold bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-gray-300 rounded-md">
                         {acc.currentBalance < 0 ? "Capital" : "Debt"}
@@ -264,11 +275,11 @@ export default function AccountsPage() {
               </div>
             </div>
             
-            {acc.type === 'Bank Account' && (
+            {isBank(acc.type) && (acc.bankName || acc.accountNumber || acc.branch) && (
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-6 space-y-1">
-                <p>Bank: {acc.bankName}</p>
-                <p>A/C: {acc.accountNumber}</p>
-                <p>Branch: {acc.branch}</p>
+                {acc.bankName && <p>Bank: {acc.bankName}</p>}
+                {acc.accountNumber && <p>A/C: {acc.accountNumber}</p>}
+                {acc.branch && <p>Branch: {acc.branch}</p>}
               </div>
             )}
 
@@ -352,7 +363,7 @@ export default function AccountsPage() {
                 </select>
               </div>
 
-              {formData.type === 'Bank Account' && (
+              {isBank(formData.type) && (
                 <>
                   <div>
                     <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Bank Name</label>

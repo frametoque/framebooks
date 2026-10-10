@@ -16,13 +16,10 @@ export async function getTenantId() {
   const numId = Number(userId) || 0;
   const safeId = (numId > 0 && numId < 2147483647) ? numId : 0;
 
-  const userRows = await sql`
-    SELECT tenant_id 
-    FROM admin_users 
-    WHERE (id = ${safeId} AND ${safeId} > 0)
-       OR (email IS NOT NULL AND LOWER(email) = ${email || ''})
-    LIMIT 1
-  `;
+  const userRows = safeId > 0
+    ? await sql`SELECT tenant_id FROM admin_users WHERE id = ${safeId} LIMIT 1`
+    : await sql`SELECT tenant_id FROM admin_users WHERE email IS NOT NULL AND LOWER(email) = ${email || ''} LIMIT 1`;
+
   if (!userRows || userRows.length === 0 || !userRows[0].tenant_id) {
     return null;
   }
@@ -58,46 +55,42 @@ export async function uploadReceipt(formData: FormData, type: 'income' | 'expens
 
 import { unstable_cache, revalidateTag } from 'next/cache';
 
-// -- DASHBOARD --
 export async function getDashboardData(startDate?: string, endDate?: string) {
   const start = startDate || '1970-01-01';
   const end = endDate || '2099-12-31';
   const tenantId = await getTenantId();
+  console.log(`[getDashboardData] tenantId=${tenantId}, start=${start}, end=${end}`);
   if (!tenantId) return null;
 
-  return unstable_cache(
-    async () => _getDashboardData(tenantId, start, end),
-    [`dashboard-data-v2-${tenantId}-${start}-${end}`],
-    { tags: [`dashboard-${tenantId}`], revalidate: 3600 }
-  )();
+  const result = await _getDashboardData(tenantId, start, end);
+  console.log(`[getDashboardData] done. totalIncome=${result.totalIncome}, totalExpenses=${result.totalExpenses}`);
+  return result;
 }
 
-async function _getDashboardData(tenantId: string, start: string, end: string) {
-    const [
-      incomes,
-      expenses,
-      unpaid,
-      invoiceAging,
-      chartDataRaw,
-      recentInvoicesRaw,
-      recentQuotationsRaw,
-      recentTransactionsRaw,
-      incomeByYear,
-      expenseByYear,
-      expenseBreakdownRange,
-      incomeBreakdownRange,
-      thisMonthIncome,
-      lastMonthIncome,
-      thisMonthExpenses,
-      lastMonthExpenses,
-      clientsCountRows,
-      accounts,
-      unpaidClientsRows
-    ] = await Promise.all([
-      sql`SELECT SUM(amount) as total FROM admin_incomes WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp`,
-      sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp`,
-      sql`SELECT COUNT(*) as count, SUM(COALESCE(total_due, total)) as total_amount FROM invoices WHERE tenant_id = ${tenantId} AND LOWER(payment_status) IN ('unpaid', 'pending', 'partially paid')`,
-    sql`
+export async function _getDashboardData(tenantId: string, start: string, end: string) {
+  const [result] = await sql`
+    WITH
+    inc_sum AS (
+      SELECT
+        COALESCE(SUM(amount), 0) as total,
+        COALESCE(SUM(CASE WHEN date >= date_trunc('month', current_date) AND date < date_trunc('month', current_date) + interval '1 month' THEN amount ELSE 0 END), 0) as this_month,
+        COALESCE(SUM(CASE WHEN date >= date_trunc('month', current_date - interval '1 month') AND date < date_trunc('month', current_date) THEN amount ELSE 0 END), 0) as last_month,
+        COALESCE(SUM(CASE WHEN EXTRACT(YEAR FROM date) = EXTRACT(YEAR FROM current_date) THEN amount ELSE 0 END), 0) as current_year,
+        COALESCE(SUM(CASE WHEN EXTRACT(YEAR FROM date) = EXTRACT(YEAR FROM current_date) - 1 THEN amount ELSE 0 END), 0) as previous_year
+      FROM admin_incomes
+      WHERE tenant_id = ${tenantId}
+    ),
+    exp_sum AS (
+      SELECT
+        COALESCE(SUM(amount), 0) as total,
+        COALESCE(SUM(CASE WHEN date >= date_trunc('month', current_date) AND date < date_trunc('month', current_date) + interval '1 month' THEN amount ELSE 0 END), 0) as this_month,
+        COALESCE(SUM(CASE WHEN date >= date_trunc('month', current_date - interval '1 month') AND date < date_trunc('month', current_date) THEN amount ELSE 0 END), 0) as last_month,
+        COALESCE(SUM(CASE WHEN EXTRACT(YEAR FROM date) = EXTRACT(YEAR FROM current_date) THEN amount ELSE 0 END), 0) as current_year,
+        COALESCE(SUM(CASE WHEN EXTRACT(YEAR FROM date) = EXTRACT(YEAR FROM current_date) - 1 THEN amount ELSE 0 END), 0) as previous_year
+      FROM admin_expenses
+      WHERE tenant_id = ${tenantId}
+    ),
+    inv_aging AS (
       SELECT 
         LOWER(payment_status) as status,
         SUM(COALESCE(total_due, total)) as amount_sum,
@@ -105,8 +98,8 @@ async function _getDashboardData(tenantId: string, start: string, end: string) {
       FROM invoices
       WHERE tenant_id = ${tenantId}
       GROUP BY LOWER(payment_status)
-    `,
-    sql`
+    ),
+    chart_data AS (
       SELECT 
         TO_CHAR(date, 'Mon') as name,
         EXTRACT(MONTH FROM date) as month_num,
@@ -118,114 +111,165 @@ async function _getDashboardData(tenantId: string, start: string, end: string) {
         UNION ALL
         SELECT date, amount, 'expense' as type FROM admin_expenses WHERE tenant_id = ${tenantId}
       ) as combined
-      WHERE date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp
       GROUP BY TO_CHAR(date, 'Mon'), EXTRACT(MONTH FROM date), EXTRACT(YEAR FROM date)
       ORDER BY EXTRACT(YEAR FROM date), EXTRACT(MONTH FROM date)
-    `,
-    sql`
+    ),
+    recent_inv AS (
       SELECT 
         i.invoice_id as id, 
-        COALESCE((SELECT full_name FROM admin_clients c WHERE LOWER(c.email) = LOWER(i.user_email) AND c.tenant_id = ${tenantId} LIMIT 1), i.user_email) as client, 
-        COALESCE((SELECT description FROM invoice_items WHERE invoice_id = i.invoice_id LIMIT 1), 'Project') as service,
+        COALESCE(c.full_name, ce.full_name, i.user_email, 'Client') as client, 
+        COALESCE(it.description, 'Project') as service,
         i.total as amount, 
         i.payment_status as status
-      FROM invoices i
-      WHERE i.tenant_id = ${tenantId} AND i.date >= ${start}::timestamp AND i.date <= (${end} || ' 23:59:59.999')::timestamp
-      ORDER BY i.date DESC, i.created_at DESC
-      LIMIT 4
-    `,
-    sql`
+      FROM (
+        SELECT invoice_id, client_id, user_email, total, payment_status, date, created_at, tenant_id
+        FROM invoices
+        WHERE tenant_id = ${tenantId}
+        ORDER BY date DESC, created_at DESC
+        LIMIT 4
+      ) i
+      LEFT JOIN admin_clients c ON c.id = i.client_id AND c.tenant_id = ${tenantId}
+      LEFT JOIN admin_clients ce ON i.client_id IS NULL AND i.user_email IS NOT NULL AND LOWER(ce.email) = LOWER(i.user_email) AND ce.tenant_id = ${tenantId}
+      LEFT JOIN LATERAL (
+        SELECT description FROM invoice_items WHERE invoice_id = i.invoice_id LIMIT 1
+      ) it ON true
+    ),
+    recent_quot AS (
       SELECT q.id, COALESCE(q.description, 'Untitled') as project, COALESCE(c.full_name, 'Unknown') as client, q.amount as amount, q.status
       FROM admin_quotations q
       LEFT JOIN admin_clients c ON q.client_id = c.id AND c.tenant_id = ${tenantId}
-      WHERE q.tenant_id = ${tenantId} AND q.date >= ${start}::timestamp AND q.date <= (${end} || ' 23:59:59.999')::timestamp
+      WHERE q.tenant_id = ${tenantId}
       ORDER BY q.date DESC, q.created_at DESC
       LIMIT 4
-    `,
-    sql`
-      SELECT id, 'income' as type, description as name, date, created_at, amount FROM admin_incomes WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp
+    ),
+    recent_tx AS (
+      (SELECT id, 'income' as type, description as name, date, created_at, amount FROM admin_incomes WHERE tenant_id = ${tenantId} ORDER BY date DESC, created_at DESC LIMIT 5)
       UNION ALL
-      SELECT id, 'expense' as type, description as name, date, created_at, amount FROM admin_expenses WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp
+      (SELECT id, 'expense' as type, description as name, date, created_at, amount FROM admin_expenses WHERE tenant_id = ${tenantId} ORDER BY date DESC, created_at DESC LIMIT 5)
       ORDER BY date DESC, created_at DESC
       LIMIT 5
-    `,
-    sql`
-      SELECT 
-        EXTRACT(YEAR FROM date) as year,
-        SUM(amount) as total
-      FROM admin_incomes
-      WHERE tenant_id = ${tenantId} AND EXTRACT(YEAR FROM date) IN (EXTRACT(YEAR FROM CURRENT_DATE), EXTRACT(YEAR FROM CURRENT_DATE) - 1)
-      GROUP BY EXTRACT(YEAR FROM date)
-    `,
-    sql`
-      SELECT 
-        EXTRACT(YEAR FROM date) as year,
-        SUM(amount) as total
+    ),
+    exp_cat AS (
+      SELECT category as name, SUM(amount) as value
       FROM admin_expenses
-      WHERE tenant_id = ${tenantId} AND EXTRACT(YEAR FROM date) IN (EXTRACT(YEAR FROM CURRENT_DATE), EXTRACT(YEAR FROM CURRENT_DATE) - 1)
-      GROUP BY EXTRACT(YEAR FROM date)
-    `,
-    sql`
-      SELECT 
-        category as name,
-        SUM(amount) as value
-      FROM admin_expenses
-      WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp
+      WHERE tenant_id = ${tenantId}
       GROUP BY category
       ORDER BY value DESC
-    `,
-    sql`
-      SELECT 
-        category as name,
-        SUM(amount) as value
+    ),
+    inc_cat AS (
+      SELECT category as name, SUM(amount) as value
       FROM admin_incomes
-      WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp
+      WHERE tenant_id = ${tenantId}
       GROUP BY category
       ORDER BY value DESC
-    `,
-    sql`SELECT SUM(amount) as total FROM admin_incomes WHERE tenant_id = ${tenantId} AND date_trunc('month', date) = date_trunc('month', current_date)`,
-    sql`SELECT SUM(amount) as total FROM admin_incomes WHERE tenant_id = ${tenantId} AND date_trunc('month', date) = date_trunc('month', current_date - interval '1 month')`,
-    sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date_trunc('month', date) = date_trunc('month', current_date)`,
-    sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date_trunc('month', date) = date_trunc('month', current_date - interval '1 month')`,
-    sql`SELECT COUNT(*) as count FROM admin_clients WHERE tenant_id = ${tenantId}`,
-    import('./accounts').then(m => m.getAccounts(start, end, tenantId)),
-    sql`
+    ),
+    clients_cnt AS (
+      SELECT COUNT(*) as count FROM admin_clients WHERE tenant_id = ${tenantId}
+    ),
+    unpaid_clients AS (
       SELECT 
-        COALESCE(c.full_name, i.user_email) as client_name,
+        COALESCE(c.full_name, ce.full_name, i.user_email, 'Client') as client_name,
         SUM(COALESCE(i.total_due, i.total)) as amount
       FROM invoices i
-      LEFT JOIN admin_clients c ON LOWER(c.email) = LOWER(i.user_email) AND c.tenant_id = i.tenant_id
+      LEFT JOIN admin_clients c ON c.id = i.client_id AND c.tenant_id = ${tenantId}
+      LEFT JOIN admin_clients ce ON i.client_id IS NULL AND i.user_email IS NOT NULL AND LOWER(ce.email) = LOWER(i.user_email) AND ce.tenant_id = ${tenantId}
       WHERE i.tenant_id = ${tenantId} AND LOWER(i.payment_status) IN ('unpaid', 'pending', 'partially paid')
-      GROUP BY COALESCE(c.full_name, i.user_email)
+      GROUP BY COALESCE(c.full_name, ce.full_name, i.user_email, 'Client')
       ORDER BY amount DESC
-    `
-  ]);
+    ),
+    acc_summary AS (
+      SELECT 
+        a.id,
+        COALESCE(a.initial_balance, 0) as initial_balance,
+        COALESCE(inc.total, 0) as total_inc,
+        COALESCE(exp.total, 0) as total_exp,
+        COALESCE(tr_in.total, 0) as total_tr_in,
+        COALESCE(tr_out.total, 0) as total_tr_out
+      FROM accounts a
+      LEFT JOIN (
+        SELECT account_id, SUM(amount) as total 
+        FROM admin_incomes 
+        WHERE tenant_id = ${tenantId} AND account_id IS NOT NULL
+        GROUP BY account_id
+      ) inc ON inc.account_id = a.id
+      LEFT JOIN (
+        SELECT account_id, SUM(amount) as total 
+        FROM admin_expenses 
+        WHERE tenant_id = ${tenantId} AND account_id IS NOT NULL
+        GROUP BY account_id
+      ) exp ON exp.account_id = a.id
+      LEFT JOIN (
+        SELECT destination_account_id as account_id, SUM(amount) as total 
+        FROM admin_transfers 
+        WHERE tenant_id = ${tenantId} AND destination_account_id IS NOT NULL
+        GROUP BY destination_account_id
+      ) tr_in ON tr_in.account_id = a.id
+      LEFT JOIN (
+        SELECT source_account_id as account_id, SUM(amount) as total 
+        FROM admin_transfers 
+        WHERE tenant_id = ${tenantId} AND source_account_id IS NOT NULL
+        GROUP BY source_account_id
+      ) tr_out ON tr_out.account_id = a.id
+      WHERE a.is_hidden IS NOT TRUE AND a.tenant_id = ${tenantId}
+    ),
+    top_clients AS (
+      SELECT 
+        COALESCE(c.full_name, inv_c.full_name) as name,
+        SUM(i.amount) as value
+      FROM admin_incomes i
+      LEFT JOIN admin_clients c ON i.client_id = c.id AND c.tenant_id = ${tenantId}
+      LEFT JOIN invoices inv ON i.invoice_id = inv.invoice_id AND inv.tenant_id = ${tenantId}
+      LEFT JOIN admin_clients inv_c ON inv_c.id = inv.client_id AND inv_c.tenant_id = ${tenantId}
+      WHERE i.tenant_id = ${tenantId}
+        AND COALESCE(c.full_name, inv_c.full_name) IS NOT NULL
+      GROUP BY COALESCE(c.full_name, inv_c.full_name)
+      ORDER BY value DESC
+      LIMIT 6
+    )
+    SELECT
+      (SELECT row_to_json(inc_sum) FROM inc_sum) as income_summary,
+      (SELECT row_to_json(exp_sum) FROM exp_sum) as expense_summary,
+      (SELECT COALESCE(json_agg(inv_aging), '[]'::json) FROM inv_aging) as invoice_aging,
+      (SELECT COALESCE(json_agg(chart_data), '[]'::json) FROM chart_data) as chart_data,
+      (SELECT COALESCE(json_agg(recent_inv), '[]'::json) FROM recent_inv) as recent_invoices,
+      (SELECT COALESCE(json_agg(recent_quot), '[]'::json) FROM recent_quot) as recent_quotations,
+      (SELECT COALESCE(json_agg(recent_tx), '[]'::json) FROM recent_tx) as recent_transactions,
+      (SELECT COALESCE(json_agg(exp_cat), '[]'::json) FROM exp_cat) as expense_breakdown,
+      (SELECT COALESCE(json_agg(inc_cat), '[]'::json) FROM inc_cat) as income_breakdown,
+      (SELECT count FROM clients_cnt) as clients_count,
+      (SELECT COALESCE(json_agg(unpaid_clients), '[]'::json) FROM unpaid_clients) as unpaid_clients,
+      (SELECT COALESCE(SUM(initial_balance + total_inc + total_tr_in - total_exp - total_tr_out), 0) FROM acc_summary) as total_assets,
+      (SELECT COALESCE(json_agg(top_clients), '[]'::json) FROM top_clients) as top_clients
+  `;
 
-  const totalAssets = accounts.reduce((sum: number, a: any) => sum + (a.currentBalance || 0), 0);
+  const totalAssets = parseFloat(result?.total_assets || 0);
   const totalAfterDebts = totalAssets;
   const totalCapital = 0;
 
-  const totalIncome = incomes[0]?.total ? parseFloat(incomes[0].total) : 0;
-  const totalExpenses = expenses[0]?.total ? parseFloat(expenses[0].total) : 0;
+  const incSum = result?.income_summary || {};
+  const expSum = result?.expense_summary || {};
+
+  const totalIncome = parseFloat(incSum.total || 0);
+  const totalExpenses = parseFloat(expSum.total || 0);
   const netProfit = totalIncome - totalExpenses;
 
-  const currentYear = new Date().getFullYear();
-  const previousYear = currentYear - 1;
+  const currentIncome = parseFloat(incSum.current_year || 0);
+  const previousIncome = parseFloat(incSum.previous_year || 0);
 
-  const previousIncome = parseFloat(incomeByYear.find((r: any) => Math.round(parseFloat(r.year)) === previousYear)?.total || 0);
-  const currentIncome = parseFloat(incomeByYear.find((r: any) => Math.round(parseFloat(r.year)) === currentYear)?.total || 0);
-
-  const previousExpense = parseFloat(expenseByYear.find((r: any) => Math.round(parseFloat(r.year)) === previousYear)?.total || 0);
-  const currentExpense = parseFloat(expenseByYear.find((r: any) => Math.round(parseFloat(r.year)) === currentYear)?.total || 0);
+  const currentExpense = parseFloat(expSum.current_year || 0);
+  const previousExpense = parseFloat(expSum.previous_year || 0);
 
   const previousNet = previousIncome - previousExpense;
   const currentNet = currentIncome - currentExpense;
 
-  const totalExpenseRange = expenseBreakdownRange.reduce((sum, r) => sum + parseFloat(r.value), 0);
-  const totalIncomeRange = incomeBreakdownRange.reduce((sum, r) => sum + parseFloat(r.value), 0);
+  const expenseBreakdownRange = result?.expense_breakdown || [];
+  const incomeBreakdownRange = result?.income_breakdown || [];
 
-  const expenseBreakdown = expenseBreakdownRange.map(r => {
-    const val = parseFloat(r.value);
+  const totalExpenseRange = expenseBreakdownRange.reduce((sum: number, r: any) => sum + parseFloat(r.value || 0), 0);
+  const totalIncomeRange = incomeBreakdownRange.reduce((sum: number, r: any) => sum + parseFloat(r.value || 0), 0);
+
+  const expenseBreakdown = expenseBreakdownRange.map((r: any) => {
+    const val = parseFloat(r.value || 0);
     return {
       name: r.name || 'Other',
       value: val,
@@ -233,14 +277,84 @@ async function _getDashboardData(tenantId: string, start: string, end: string) {
     };
   });
 
-  const incomeBreakdown = incomeBreakdownRange.map(r => {
-    const val = parseFloat(r.value);
+  const incomeBreakdown = incomeBreakdownRange.map((r: any) => {
+    const val = parseFloat(r.value || 0);
     return {
       name: r.name || 'Other',
       value: val,
       percentage: totalIncomeRange > 0 ? parseFloat(((val / totalIncomeRange) * 100).toFixed(1)) : 0
     };
   });
+
+  const invoiceAgingRows = result?.invoice_aging || [];
+  const unpaidRows = invoiceAgingRows.filter((r: any) => ['unpaid', 'pending', 'partially paid'].includes(r.status));
+  const unpaidCount = unpaidRows.reduce((sum: number, r: any) => sum + parseInt(r.count || 0, 10), 0);
+  const unpaidAmount = unpaidRows.reduce((sum: number, r: any) => sum + parseFloat(r.amount_sum || 0), 0);
+
+  const unpaidClients = (result?.unpaid_clients || []).map((r: any) => ({
+    name: r.client_name,
+    amount: parseFloat(r.amount || 0)
+  }));
+
+  const topClients = (result?.top_clients || []).map((r: any) => ({
+    name: r.name,
+    value: parseFloat(r.value || 0)
+  }));
+
+  const chartData = (result?.chart_data || []).map((row: any) => ({
+    name: row.name,
+    income: parseFloat(row.income || 0),
+    expenses: parseFloat(row.expenses || 0),
+    year: parseInt(row.year_num, 10)
+  }));
+
+  const recentInvoices = (result?.recent_invoices || []).map((row: any) => ({
+    id: row.id,
+    service: row.service,
+    client: row.client,
+    amount: parseFloat(row.amount || 0),
+    status: row.status,
+  }));
+
+  const recentQuotations = (result?.recent_quotations || []).map((row: any) => ({
+    id: row.id,
+    project: row.project,
+    client: row.client,
+    amount: parseFloat(row.amount || 0),
+    status: row.status,
+  }));
+
+  const recentTransactions = (result?.recent_transactions || []).map((row: any, index: number) => ({
+    id: index,
+    type: row.type,
+    name: row.name,
+    date: new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    amount: parseFloat(row.amount || 0)
+  }));
+
+  const currentMonthStats = {
+    income: parseFloat(incSum.this_month || 0),
+    expenses: parseFloat(expSum.this_month || 0),
+    lastMonthIncome: parseFloat(incSum.last_month || 0),
+    lastMonthExpenses: parseFloat(expSum.last_month || 0),
+  };
+
+  const invoiceAging = invoiceAgingRows.map((row: any) => ({
+    status: row.status,
+    amount: parseFloat(row.amount_sum || 0),
+    count: parseInt(row.count || 0, 10)
+  }));
+
+  const netIncomeComparison = {
+    previousIncome,
+    currentIncome,
+    previousExpense,
+    currentExpense,
+    previousNet,
+    currentNet
+  };
+
+  const totalClients = parseInt(result?.clients_count || 0, 10);
 
   return {
     totalIncome,
@@ -250,60 +364,19 @@ async function _getDashboardData(tenantId: string, start: string, end: string) {
     totalCapital,
     netProfit,
     incomeBreakdown,
-    totalClients: parseInt(clientsCountRows[0]?.count || 0, 10),
-    unpaidCount: unpaid[0]?.count || 0,
-    unpaidAmount: parseFloat(unpaid[0]?.total_amount || 0),
-    unpaidClients: unpaidClientsRows.map((r: any) => ({
-      name: r.client_name,
-      amount: parseFloat(r.amount)
-    })),
-    currentMonthStats: {
-      income: parseFloat(thisMonthIncome[0]?.total || 0),
-      expenses: parseFloat(thisMonthExpenses[0]?.total || 0),
-      lastMonthIncome: parseFloat(lastMonthIncome[0]?.total || 0),
-      lastMonthExpenses: parseFloat(lastMonthExpenses[0]?.total || 0),
-    },
-    invoiceAging: invoiceAging.map(row => ({
-      status: row.status,
-      amount: parseFloat(row.amount_sum || 0),
-      count: parseInt(row.count || 0)
-    })),
-    chartData: chartDataRaw.map(row => ({
-      name: row.name,
-      income: parseFloat(row.income),
-      expenses: parseFloat(row.expenses),
-      year: parseInt(row.year_num, 10)
-    })),
-    recentInvoices: recentInvoicesRaw.map(row => ({
-      id: row.id,
-      service: row.service,
-      client: row.client,
-      amount: parseFloat(row.amount),
-      status: row.status,
-    })),
-    recentQuotations: recentQuotationsRaw.map(row => ({
-      id: row.id,
-      project: row.project,
-      client: row.client,
-      amount: parseFloat(row.amount),
-      status: row.status,
-    })),
-    recentTransactions: recentTransactionsRaw.map((row, index) => ({
-      id: index,
-      type: row.type,
-      name: row.name,
-      date: new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      amount: parseFloat(row.amount)
-    })),
-    netIncomeComparison: {
-      previousIncome,
-      currentIncome,
-      previousExpense,
-      currentExpense,
-      previousNet,
-      currentNet
-    },
-    expenseBreakdown
+    totalClients,
+    unpaidCount,
+    unpaidAmount,
+    unpaidClients,
+    currentMonthStats,
+    invoiceAging,
+    chartData,
+    recentInvoices,
+    recentQuotations,
+    recentTransactions,
+    netIncomeComparison,
+    expenseBreakdown,
+    topClients
   };
 }
 
@@ -371,7 +444,7 @@ export async function createIncome(data: any) {
   // If payment method is bank transfer and no account_id is provided, try to fetch the invoice's bank account
   let accountId = data.accountId || null;
   if (!accountId && data.paymentMethod === 'Bank Transfer') {
-    const def = await sql`SELECT id FROM accounts WHERE type = 'Bank Account' AND tenant_id = ${tenantId} LIMIT 1`;
+    const def = await sql`SELECT id FROM accounts WHERE (LOWER(type) = 'bank' OR LOWER(type) = 'bank account') AND tenant_id = ${tenantId} LIMIT 1`;
     if (def.length > 0) accountId = def[0].id;
   }
 
@@ -421,7 +494,7 @@ export async function createIncome(data: any) {
 }
 
 export async function createClient(data: { name: string; email: string; company?: string | null; phone?: string | null; address?: string | null; legal_name?: string | null }): Promise<any> {
-  const { error: rbacError } = await requirePermission('incomes', 'read');
+  const { error: rbacError } = await requirePermission('clients', 'insert');
   if (rbacError) throw new Error(rbacError);
 
   const limitCheck = await checkLimit('clients');
@@ -439,7 +512,7 @@ export async function createClient(data: { name: string; email: string; company?
 }
 
 export async function updateClient(clientId: string, data: { name?: string; email?: string; company?: string | null; phone?: string | null; address?: string | null; legal_name?: string | null }) {
-  const { error: rbacError } = await requirePermission('clients', 'insert');
+  const { error: rbacError } = await requirePermission('clients', 'update');
   if (rbacError) throw new Error(rbacError);
 
   const tenantId = await getTenantId();
@@ -472,7 +545,7 @@ export async function updateClient(clientId: string, data: { name?: string; emai
 }
 
 export async function deleteClient(clientId: string) {
-  const { error: rbacError } = await requirePermission('clients', 'update');
+  const { error: rbacError } = await requirePermission('clients', 'delete');
   if (rbacError) throw new Error(rbacError);
 
   const tenantId = await getTenantId();
@@ -483,13 +556,13 @@ export async function deleteClient(clientId: string) {
 }
 
 export async function updateIncome(id: number, data: any) {
-  const { error: rbacError } = await requirePermission('clients', 'delete');
+  const { error: rbacError } = await requirePermission('incomes', 'update');
   if (rbacError) throw new Error(rbacError);
 
   const tenantId = await getTenantId();
   let accountId = data.accountId || null;
   if (!accountId && data.paymentMethod === 'Bank Transfer') {
-    const def = await sql`SELECT id FROM accounts WHERE type = 'Bank Account' AND tenant_id = ${tenantId} LIMIT 1`;
+    const def = await sql`SELECT id FROM accounts WHERE (LOWER(type) = 'bank' OR LOWER(type) = 'bank account') AND tenant_id = ${tenantId} LIMIT 1`;
     if (def.length > 0) accountId = def[0].id;
   }
 
@@ -517,7 +590,7 @@ export async function updateIncome(id: number, data: any) {
 }
 
 export async function deleteIncome(id: number) {
-  const { error: rbacError } = await requirePermission('incomes', 'update');
+  const { error: rbacError } = await requirePermission('incomes', 'delete');
   if (rbacError) throw new Error(rbacError);
 
   const tenantId = await getTenantId();
@@ -648,7 +721,7 @@ export async function createExpense(data: any) {
   const tenantId = await getTenantId();
   let accountId = data.accountId || null;
   if (!accountId && data.paymentMethod === 'Bank Transfer') {
-    const def = await sql`SELECT id FROM accounts WHERE type = 'Bank Account' AND tenant_id = ${tenantId} LIMIT 1`;
+    const def = await sql`SELECT id FROM accounts WHERE (LOWER(type) = 'bank' OR LOWER(type) = 'bank account') AND tenant_id = ${tenantId} LIMIT 1`;
     if (def.length > 0) accountId = def[0].id;
   }
   await sql`
@@ -681,7 +754,7 @@ export async function updateExpense(id: number, data: any) {
   const tenantId = await getTenantId();
   let accountId = data.accountId || null;
   if (!accountId && data.paymentMethod === 'Bank Transfer') {
-    const def = await sql`SELECT id FROM accounts WHERE type = 'Bank Account' AND tenant_id = ${tenantId} LIMIT 1`;
+    const def = await sql`SELECT id FROM accounts WHERE (LOWER(type) = 'bank' OR LOWER(type) = 'bank account') AND tenant_id = ${tenantId} LIMIT 1`;
     if (def.length > 0) accountId = def[0].id;
   }
   await sql`
@@ -821,7 +894,7 @@ export async function getScheduledExpenses() {
 }
 
 export async function createScheduledExpense(data: any) {
-  const { error: rbacError } = await requirePermission('expenses', 'read');
+  const { error: rbacError } = await requirePermission('expenses', 'insert');
   if (rbacError) throw new Error(rbacError);
 
   const tenantId = await getTenantId();
@@ -909,7 +982,7 @@ export async function getInvoices() {
       SELECT 
         i.invoice_id as id, 
         i.user_email as client_email, 
-        (SELECT full_name FROM admin_clients c WHERE LOWER(c.email) = LOWER(i.user_email) AND c.tenant_id = ${tenantId} LIMIT 1) as client_name, 
+        COALESCE((SELECT full_name FROM admin_clients c WHERE (c.id = i.client_id OR (i.user_email IS NOT NULL AND LOWER(c.email) = LOWER(i.user_email))) AND c.tenant_id = ${tenantId} LIMIT 1), i.user_email, 'Client') as client_name, 
         i.project_name as service, i.subtotal, i.total, i.discount, i.advance, i.tax_rate, i.total_due, i.date as due_date, i.payment_status as status, i.legal_name, i.created_at
       FROM invoices i
       WHERE i.tenant_id = ${tenantId}
@@ -922,7 +995,7 @@ export async function getInvoices() {
       GROUP BY invoice_id
     `
     ])
-  , [`invoices-${tenantId}`], 3600);
+  , [`invoices-v2-${tenantId}`], 3600);
   
   const paymentsMap: Record<string, number> = {};
   nonAdvancePaymentsRows.forEach((p: any) => {
@@ -1039,7 +1112,7 @@ export async function getInvoiceByIdAdmin(invoiceId: string) {
       ba.bank_name as bank_acc_bank,
       ba.branch as bank_acc_branch
     FROM invoices i
-    LEFT JOIN accounts ba ON COALESCE(i.bank_account_id, (SELECT id FROM accounts WHERE type = 'Bank Account' AND tenant_id = ${tenantId} LIMIT 1)) = ba.id
+    LEFT JOIN accounts ba ON COALESCE(i.bank_account_id, (SELECT id FROM accounts WHERE (LOWER(type) = 'bank' OR LOWER(type) = 'bank account') AND tenant_id = ${tenantId} LIMIT 1)) = ba.id
     WHERE i.invoice_id = ${invoiceId} AND i.tenant_id = ${tenantId}
   `;
 
@@ -1143,10 +1216,10 @@ export async function getClients() {
            c.phone,
            c.address,
            c.legal_name,
-           (SELECT COUNT(*) FROM invoices i WHERE LOWER(i.user_email) = LOWER(c.email) AND i.tenant_id = ${tenantId}) as invoices,
+           (SELECT COUNT(*) FROM invoices i WHERE (i.client_id = c.id OR (c.email IS NOT NULL AND LOWER(i.user_email) = LOWER(c.email))) AND i.tenant_id = ${tenantId}) as invoices,
            COALESCE((SELECT SUM(amount) FROM admin_incomes inc WHERE inc.client_id = c.id AND inc.tenant_id = ${tenantId}), 0) as revenue,
            (SELECT COUNT(*) FROM admin_incomes inc WHERE inc.client_id = c.id AND inc.tenant_id = ${tenantId}) as income_count,
-           (SELECT COUNT(*) FROM invoices i WHERE LOWER(i.user_email) = LOWER(c.email) AND i.tenant_id = ${tenantId}) as project_count
+           (SELECT COUNT(*) FROM invoices i WHERE (i.client_id = c.id OR (c.email IS NOT NULL AND LOWER(i.user_email) = LOWER(c.email))) AND i.tenant_id = ${tenantId}) as project_count
     FROM admin_clients c
     WHERE c.tenant_id = ${tenantId}
     ORDER BY c.id DESC
@@ -1161,7 +1234,7 @@ export async function getClients() {
 
       return {
         id: r.id,
-        name: r.name || r.email.split('@')[0],
+        name: r.name || (r.email ? r.email.split('@')[0] : 'Client'),
         email: r.email,
         active: r.active,
         company: r.company,
@@ -1549,7 +1622,7 @@ export async function getQuotations(startDate?: string, endDate?: string) {
  
 // ─── REPLACE createQuotation in actions.ts ───────────────────────────────────
 export async function createQuotation(data: any, lineItems: any[] = []) {
-  const { error: rbacError } = await requirePermission('invoices', 'read');
+  const { error: rbacError } = await requirePermission('invoices', 'insert');
   if (rbacError) throw new Error(rbacError);
 
   const tenantId = await getTenantId();
@@ -1595,7 +1668,7 @@ export async function createQuotation(data: any, lineItems: any[] = []) {
 
 // ─── REPLACE updateQuotation in actions.ts ───────────────────────────────────
 export async function updateQuotation(id: number, data: any, lineItems: any[] = []) {
-  const { error: rbacError } = await requirePermission('clients', 'read');
+  const { error: rbacError } = await requirePermission('invoices', 'update');
   if (rbacError) throw new Error(rbacError);
 
   const tenantId = await getTenantId();
@@ -1651,7 +1724,7 @@ export async function updateQuotation(id: number, data: any, lineItems: any[] = 
 }
  
 export async function deleteQuotation(id: number) {
-  const { error: rbacError } = await requirePermission('invoices', 'insert');
+  const { error: rbacError } = await requirePermission('invoices', 'delete');
   if (rbacError) throw new Error(rbacError);
 
   const tenantId = await getTenantId();
@@ -1810,7 +1883,7 @@ export async function getQuotationById(quotationId: string) {
       ba.branch as bank_acc_branch
       FROM admin_quotations q
       LEFT JOIN admin_clients c ON q.client_id = c.id AND c.tenant_id = ${tenantId}
-      LEFT JOIN accounts ba ON COALESCE(q.bank_account_id, (SELECT id FROM accounts WHERE type = 'Bank Account' AND tenant_id = ${tenantId} LIMIT 1)) = ba.id
+      LEFT JOIN accounts ba ON COALESCE(q.bank_account_id, (SELECT id FROM accounts WHERE (LOWER(type) = 'bank' OR LOWER(type) = 'bank account') AND tenant_id = ${tenantId} LIMIT 1)) = ba.id
       WHERE q.id = ${parseInt(quotationId)} AND q.tenant_id = ${tenantId}
     `;
  
@@ -1877,7 +1950,7 @@ export async function getBankAccounts() {
   const rows = await sql`
     SELECT id, name, account_number as number, bank_name as bank, branch, 0 as is_default
     FROM accounts
-    WHERE type = 'Bank Account' AND tenant_id = ${tenantId}
+    WHERE (LOWER(type) = 'bank' OR LOWER(type) = 'bank account') AND tenant_id = ${tenantId}
     ORDER BY id ASC
   `;
   return rows.map(r => ({
@@ -1897,7 +1970,7 @@ export async function recordInvoicePayment(
   paymentDate: string,
   isAdvance: boolean
 ) {
-  const { error: rbacError } = await requirePermission('invoices', 'delete');
+  const { error: rbacError } = await requirePermission('invoices', 'update');
   if (rbacError) throw new Error(rbacError);
 
   const tenantId = await getTenantId();
@@ -2378,7 +2451,7 @@ export async function getTopClients() {
     FROM admin_incomes i
     LEFT JOIN admin_clients c ON i.client_id = c.id AND c.tenant_id = ${tenantId}
     LEFT JOIN invoices inv ON i.invoice_id = inv.invoice_id AND inv.tenant_id = ${tenantId}
-    LEFT JOIN admin_clients inv_c ON LOWER(inv.user_email) = LOWER(inv_c.email) AND inv_c.tenant_id = ${tenantId}
+    LEFT JOIN admin_clients inv_c ON (inv_c.id = inv.client_id OR (inv.user_email IS NOT NULL AND LOWER(inv.user_email) = LOWER(inv_c.email))) AND inv_c.tenant_id = ${tenantId}
     WHERE i.tenant_id = ${tenantId}
       AND COALESCE(c.full_name, inv_c.full_name) IS NOT NULL
     GROUP BY COALESCE(c.full_name, inv_c.full_name)
