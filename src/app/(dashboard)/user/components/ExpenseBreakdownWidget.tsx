@@ -19,22 +19,17 @@ const formatLKR = (amount: number) => {
   return `${num} LKR`;
 };
 
-export default function ExpenseBreakdownWidget({ initialData }: { initialData: any[] }) {
+export default function ExpenseBreakdownWidget({ initialData }: { initialData?: any[] }) {
   const [mode, setMode] = useState<string>("Lifetime");
-  const [data, setData] = useState<any[]>(initialData);
+  const [data, setData] = useState<any[]>(initialData || []);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (mode === "Lifetime" && initialData.length > 0) {
-      setData(initialData);
-      return;
-    }
-
     let active = true;
     setLoading(true);
     getExpenseBreakdownByMode(mode).then((res) => {
       if (active) {
-        setData(res);
+        setData(res || []);
         setLoading(false);
       }
     }).catch(() => {
@@ -42,9 +37,9 @@ export default function ExpenseBreakdownWidget({ initialData }: { initialData: a
     });
 
     return () => { active = false; };
-  }, [mode, initialData]);
+  }, [mode]);
 
-  const total = data.reduce((sum, r) => sum + r.value, 0);
+  const total = (data || []).reduce((sum, r) => sum + (r.value || 0), 0);
 
   const handlePrev = () => {
     const idx = MODES.indexOf(mode);

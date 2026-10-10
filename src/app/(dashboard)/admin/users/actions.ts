@@ -58,7 +58,10 @@ export async function getUsersList({
         SELECT SUM(p.amount) 
         FROM payments p 
         WHERE (p.user_id = u.id OR p.tenant_id = u.tenant_id) AND p.status = 'paid'
-      ), 0) AS lifetime_paid
+      ), 0) AS lifetime_paid,
+      cp.coupon_code,
+      cp.coupon_type,
+      cp.coupon_value
     FROM admin_users u
     LEFT JOIN tenants t ON u.tenant_id = t.id
     LEFT JOIN LATERAL (
@@ -68,6 +71,14 @@ export async function getUsersList({
       ORDER BY id DESC 
       LIMIT 1
     ) s ON true
+    LEFT JOIN LATERAL (
+      SELECT c.code AS coupon_code, c.type AS coupon_type, c.value AS coupon_value
+      FROM coupon_redemptions cr
+      JOIN coupons c ON cr.coupon_id = c.id
+      WHERE cr.tenant_id = u.tenant_id
+      ORDER BY cr.redeemed_at DESC
+      LIMIT 1
+    ) cp ON true
     WHERE u.deleted_at IS NULL
       AND (${searchPattern}::text IS NULL OR u.email ILIKE ${searchPattern} OR u.full_name ILIKE ${searchPattern} OR t.name ILIKE ${searchPattern})
       AND (${plan || null}::text IS NULL OR LOWER(t.plan) = LOWER(${plan}))
@@ -327,6 +338,17 @@ export async function getUserDetails(userId: number) {
     .filter((p: any) => p.status === 'paid')
     .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
 
+  // Applied Coupons
+  const appliedCoupons = tenantId
+    ? await sql`
+        SELECT cr.id AS redemption_id, cr.redeemed_at, c.id AS coupon_id, c.code, c.type, c.value, c.is_active
+        FROM coupon_redemptions cr
+        JOIN coupons c ON cr.coupon_id = c.id
+        WHERE cr.tenant_id = ${tenantId}
+        ORDER BY cr.redeemed_at DESC
+      `
+    : [];
+
   return {
     user,
     plan,
@@ -336,6 +358,8 @@ export async function getUserDetails(userId: number) {
     payments,
     notes,
     lifetimePaid,
+    appliedCoupon: appliedCoupons[0] || null,
+    appliedCoupons,
   };
 }
 
@@ -425,6 +449,14 @@ export async function getBusinessDetails(tenantId: number) {
     LIMIT 50
   `;
 
+  const appliedCoupons = await sql`
+    SELECT cr.id AS redemption_id, cr.redeemed_at, c.id AS coupon_id, c.code, c.type, c.value, c.is_active
+    FROM coupon_redemptions cr
+    JOIN coupons c ON cr.coupon_id = c.id
+    WHERE cr.tenant_id = ${tenantId}
+    ORDER BY cr.redeemed_at DESC
+  `;
+
   return {
     tenant,
     members,
@@ -437,6 +469,8 @@ export async function getBusinessDetails(tenantId: number) {
     lifetimePaid,
     notes,
     activity,
+    appliedCoupon: appliedCoupons[0] || null,
+    appliedCoupons,
   };
 }
 

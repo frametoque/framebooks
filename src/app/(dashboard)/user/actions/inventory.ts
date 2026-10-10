@@ -3,12 +3,17 @@ import { requirePermission } from "./rbac";
 
 import sql from "@/lib/db";
 import { logSystemAction } from "@/lib/logger";
+import { getTenantId } from "./actions";
 
 export async function getInventoryItems() {
+  const tenantId = await getTenantId();
+  if (!tenantId) return [];
+
   try {
     await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS purchase_invoice_url TEXT`;
     await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS warranty_letter_url TEXT`;
     await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS expense_id INTEGER`;
+    await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS tenant_id INTEGER`;
   } catch (e) {
     console.error("Failed to add columns to admin_inventory", e);
   }
@@ -20,24 +25,32 @@ export async function getInventoryItems() {
            e.receipt_url as expense_receipt_url,
            e.category as expense_category
     FROM admin_inventory i
-    LEFT JOIN admin_expenses e ON i.expense_id = e.id
+    LEFT JOIN admin_expenses e ON i.expense_id = e.id AND e.tenant_id = ${tenantId}
+    WHERE i.tenant_id = ${tenantId}
     ORDER BY i.created_at DESC
   `;
   return items;
 }
 
 export async function getInventoryItem(id: string) {
+  const tenantId = await getTenantId();
+  if (!tenantId) return null;
+
   const items = await sql`
     SELECT * FROM admin_inventory
-    WHERE id = ${id}
+    WHERE id = ${id} AND tenant_id = ${tenantId}
   `;
   return items[0];
 }
 
 export async function getExpensesForLinking() {
+  const tenantId = await getTenantId();
+  if (!tenantId) return [];
+
   const rows = await sql`
     SELECT id, description, amount, date, receipt_url, category
     FROM admin_expenses
+    WHERE tenant_id = ${tenantId}
     ORDER BY date DESC
     LIMIT 200
   `;
@@ -55,13 +68,16 @@ export async function createInventoryItem(data: any) {
   const { error: rbacError } = await requirePermission('inventory', 'update');
   if (rbacError) throw new Error(rbacError);
 
+  const tenantId = await getTenantId();
+  if (!tenantId) throw new Error("Tenant required");
+
   const result = await sql`
     INSERT INTO admin_inventory (
-      item_name, category, serial_number, quantity, status, purchase_date, purchase_price, notes, warranty_letter_url, expense_id
+      item_name, category, serial_number, quantity, status, purchase_date, purchase_price, notes, warranty_letter_url, expense_id, tenant_id
     ) VALUES (
       ${data.item_name}, ${data.category}, ${data.serial_number || null}, ${data.quantity || 1}, 
       ${data.status || 'Available'}, ${data.purchase_date || null}, ${data.purchase_price || null}, ${data.notes || null},
-      ${data.warranty_letter_url || null}, ${data.expense_id || null}
+      ${data.warranty_letter_url || null}, ${data.expense_id || null}, ${tenantId}
     )
     RETURNING id
   `;
@@ -72,6 +88,8 @@ export async function createInventoryItem(data: any) {
 export async function updateInventoryItem(id: string, data: any) {
   const { error: rbacError } = await requirePermission('inventory', 'update');
   if (rbacError) throw new Error(rbacError);
+
+  const tenantId = await getTenantId();
 
   await sql`
     UPDATE admin_inventory SET
@@ -86,7 +104,7 @@ export async function updateInventoryItem(id: string, data: any) {
       warranty_letter_url = ${data.warranty_letter_url || null},
       expense_id = ${data.expense_id || null},
       updated_at = NOW()
-    WHERE id = ${id}
+    WHERE id = ${id} AND tenant_id = ${tenantId}
   `;
   await logSystemAction(`Updated inventory item: "${data.item_name}" (ID: ${id})`);
 }
@@ -95,7 +113,9 @@ export async function deleteInventoryItem(id: string, itemName: string) {
   const { error: rbacError } = await requirePermission('inventory', 'update');
   if (rbacError) throw new Error(rbacError);
 
-  await sql`DELETE FROM admin_inventory WHERE id = ${id}`;
+  const tenantId = await getTenantId();
+
+  await sql`DELETE FROM admin_inventory WHERE id = ${id} AND tenant_id = ${tenantId}`;
   await logSystemAction(`Deleted inventory item: "${itemName}" (ID: ${id})`);
 }
 

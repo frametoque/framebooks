@@ -9,15 +9,25 @@ import { logSystemAction } from "@/lib/logger";
 import { getGravatarUrl } from "@/lib/gravatar";
 
 export async function getTenantId() {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+  const { userId, session } = await auth();
+  if (!userId && !session?.user?.email) throw new Error("Unauthorized");
   
-  const userRows = await sql`SELECT tenant_id FROM admin_users WHERE id = ${Number(userId) || 0}`;
+  const email = session?.user?.email?.trim().toLowerCase();
+  const numId = Number(userId) || 0;
+  const safeId = (numId > 0 && numId < 2147483647) ? numId : 0;
+
+  const userRows = await sql`
+    SELECT tenant_id 
+    FROM admin_users 
+    WHERE (id = ${safeId} AND ${safeId} > 0)
+       OR (email IS NOT NULL AND LOWER(email) = ${email || ''})
+    LIMIT 1
+  `;
   if (!userRows || userRows.length === 0 || !userRows[0].tenant_id) {
     return null;
   }
   
-  return userRows[0].tenant_id as string;
+  return String(userRows[0].tenant_id);
 }
 
 export async function uploadReceipt(formData: FormData, type: 'income' | 'expenses'): Promise<string> {
@@ -592,14 +602,24 @@ export async function getExpenses(startDate?: string, endDate?: string) {
   const start = startDate || '1970-01-01';
   const end = endDate || '2099-12-31';
 
+  const tenantId = await getTenantId();
+  if (!tenantId) {
+    return {
+      thisMonth: 0,
+      lastMonth: 0,
+      ytd: 0,
+      items: []
+    };
+  }
+
   const [statsThisMonth, statsLastMonth, statsYtd, rows] = await Promise.all([
-    sql`SELECT SUM(amount) as total FROM admin_expenses WHERE date_trunc('month', date) = date_trunc('month', current_date)`,
-    sql`SELECT SUM(amount) as total FROM admin_expenses WHERE date_trunc('month', date) = date_trunc('month', current_date - interval '1 month')`,
-    sql`SELECT SUM(amount) as total FROM admin_expenses WHERE date_trunc('year', date) = date_trunc('year', current_date)`,
+    sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date_trunc('month', date) = date_trunc('month', current_date)`,
+    sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date_trunc('month', date) = date_trunc('month', current_date - interval '1 month')`,
+    sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date_trunc('year', date) = date_trunc('year', current_date)`,
     sql`
       SELECT id, date, TO_CHAR(date, 'YYYY-MM-DD') as "rawDate", amount, description as desc, category, payment_method as "paidVia", receipt_url as "receiptUrl", account_id as "accountId", created_at
       FROM admin_expenses
-      WHERE date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp
+      WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp
       ORDER BY date DESC, created_at DESC, id DESC
     `
   ]);
@@ -619,7 +639,7 @@ export async function getExpenses(startDate?: string, endDate?: string) {
 }
 
 export async function createExpense(data: any) {
-  const { error: rbacError } = await requirePermission('incomes', 'delete');
+  const { error: rbacError } = await requirePermission('expenses', 'insert');
   if (rbacError) throw new Error(rbacError);
 
   const limitCheck = await checkLimit('expenses');
@@ -647,45 +667,48 @@ export async function createExpense(data: any) {
       nextDate.setFullYear(nextDate.getFullYear() + 1);
     }
     await sql`
-      INSERT INTO admin_scheduled_expenses (title, amount, category, frequency, next_due_date, payment_method, status)
-      VALUES (${data.description}, ${data.amount}, ${data.category}, ${data.frequency}, ${nextDate.toISOString().split('T')[0]}, ${data.paymentMethod}, 'active')
+      INSERT INTO admin_scheduled_expenses (title, amount, category, frequency, next_due_date, payment_method, status, tenant_id)
+      VALUES (${data.description}, ${data.amount}, ${data.category}, ${data.frequency}, ${nextDate.toISOString().split('T')[0]}, ${data.paymentMethod}, 'active', ${tenantId})
     `;
   }
   await logSystemAction(`Created expense: Recorded LKR ${data.amount} for "${data.description}"`);
 }
 
 export async function updateExpense(id: number, data: any) {
-  const { error: rbacError } = await requirePermission('expenses', 'insert');
+  const { error: rbacError } = await requirePermission('expenses', 'update');
   if (rbacError) throw new Error(rbacError);
 
+  const tenantId = await getTenantId();
   let accountId = data.accountId || null;
   if (!accountId && data.paymentMethod === 'Bank Transfer') {
-    const def = await sql`SELECT id FROM accounts WHERE type = 'Bank Account' LIMIT 1`;
+    const def = await sql`SELECT id FROM accounts WHERE type = 'Bank Account' AND tenant_id = ${tenantId} LIMIT 1`;
     if (def.length > 0) accountId = def[0].id;
   }
   await sql`
     UPDATE admin_expenses 
     SET date = ${data.date}, amount = ${data.amount}, description = ${data.description}, category = ${data.category}, payment_method = ${data.paymentMethod}, receipt_url = ${data.receiptUrl || null}, account_id = ${accountId}
-    WHERE id = ${id}
+    WHERE id = ${id} AND tenant_id = ${tenantId}
   `;
   await logSystemAction(`Updated expense ID ${id}: recorded LKR ${data.amount} for "${data.description}"`);
 }
 
 export async function deleteExpense(id: number) {
-  const { error: rbacError } = await requirePermission('expenses', 'update');
+  const { error: rbacError } = await requirePermission('expenses', 'delete');
   if (rbacError) throw new Error(rbacError);
+
+  const tenantId = await getTenantId();
 
   let expDesc = "";
   let expAmount = 0;
   try {
-    const existing = await sql`SELECT description, amount FROM admin_expenses WHERE id = ${id}`;
+    const existing = await sql`SELECT description, amount FROM admin_expenses WHERE id = ${id} AND tenant_id = ${tenantId}`;
     if (existing.length > 0) {
       expDesc = existing[0].description || "";
       expAmount = parseFloat(existing[0].amount || "0");
     }
   } catch (e) {}
 
-  await sql`DELETE FROM admin_expenses WHERE id = ${id}`;
+  await sql`DELETE FROM admin_expenses WHERE id = ${id} AND tenant_id = ${tenantId}`;
   await logSystemAction(`Deleted expense record: "LKR ${expAmount}" for "${expDesc}" (ID: ${id})`);
 }
 
@@ -699,14 +722,21 @@ async function ensureScheduledExpensesTable() {
       frequency VARCHAR(50) NOT NULL,
       next_due_date DATE NOT NULL,
       payment_method VARCHAR(255),
-      status VARCHAR(50) DEFAULT 'active'
+      status VARCHAR(50) DEFAULT 'active',
+      tenant_id INTEGER
     )
   `;
+  try {
+    await sql`ALTER TABLE admin_scheduled_expenses ADD COLUMN IF NOT EXISTS tenant_id INTEGER`;
+  } catch (e) {}
 }
 
 export async function processRecurringExpenses() {
   const { error: rbacError } = await requirePermission('expenses', 'delete');
   if (rbacError) return; // Skip automatic processing if user lacks write access
+
+  const tenantId = await getTenantId();
+  if (!tenantId) return;
 
   await ensureScheduledExpensesTable();
   try {
@@ -716,7 +746,7 @@ export async function processRecurringExpenses() {
     const rows = await sql`
       SELECT id, title, amount, category, frequency, next_due_date, payment_method
       FROM admin_scheduled_expenses
-      WHERE status = 'active' AND next_due_date <= ${todayStr}
+      WHERE status = 'active' AND next_due_date <= ${todayStr} AND tenant_id = ${tenantId}
     `;
 
     for (const item of rows) {
@@ -726,8 +756,8 @@ export async function processRecurringExpenses() {
 
         // 1. Insert into actual expenses
         await sql`
-          INSERT INTO admin_expenses (date, amount, description, category, payment_method)
-          VALUES (${occurrenceDate}, ${item.amount}, ${item.title + ' (Recurring)'}, ${item.category}, ${item.payment_method})
+          INSERT INTO admin_expenses (date, amount, description, category, payment_method, tenant_id)
+          VALUES (${occurrenceDate}, ${item.amount}, ${item.title + ' (Recurring)'}, ${item.category}, ${item.payment_method}, ${tenantId})
         `;
 
         // 2. Roll date forward
@@ -746,7 +776,7 @@ export async function processRecurringExpenses() {
       await sql`
         UPDATE admin_scheduled_expenses
         SET next_due_date = ${nextDate.toISOString().split('T')[0]}
-        WHERE id = ${item.id}
+        WHERE id = ${item.id} AND tenant_id = ${tenantId}
       `;
     }
   } catch (e) {
@@ -755,11 +785,15 @@ export async function processRecurringExpenses() {
 }
 
 export async function getScheduledExpenses() {
+  const tenantId = await getTenantId();
+  if (!tenantId) return [];
+
   await ensureScheduledExpensesTable();
   try {
     const rows = await sql`
       SELECT id, title, amount, category, frequency, next_due_date, payment_method as "paymentMethod", status
       FROM admin_scheduled_expenses
+      WHERE tenant_id = ${tenantId}
       ORDER BY next_due_date ASC
     `;
     return rows.map((r: any) => {
@@ -790,10 +824,11 @@ export async function createScheduledExpense(data: any) {
   const { error: rbacError } = await requirePermission('expenses', 'read');
   if (rbacError) throw new Error(rbacError);
 
+  const tenantId = await getTenantId();
   await ensureScheduledExpensesTable();
   await sql`
-    INSERT INTO admin_scheduled_expenses (title, amount, category, frequency, next_due_date, payment_method, status)
-    VALUES (${data.title}, ${data.amount}, ${data.category}, ${data.frequency}, ${data.next_due_date}, ${data.paymentMethod}, 'active')
+    INSERT INTO admin_scheduled_expenses (title, amount, category, frequency, next_due_date, payment_method, status, tenant_id)
+    VALUES (${data.title}, ${data.amount}, ${data.category}, ${data.frequency}, ${data.next_due_date}, ${data.paymentMethod}, 'active', ${tenantId})
   `;
 }
 
@@ -801,11 +836,12 @@ export async function updateScheduledExpense(id: number, data: any) {
   const { error: rbacError } = await requirePermission('expenses', 'update');
   if (rbacError) throw new Error(rbacError);
 
+  const tenantId = await getTenantId();
   await ensureScheduledExpensesTable();
   await sql`
     UPDATE admin_scheduled_expenses
     SET title = ${data.title}, amount = ${data.amount}, category = ${data.category}, frequency = ${data.frequency}, next_due_date = ${data.next_due_date}, payment_method = ${data.paymentMethod}, status = ${data.status}
-    WHERE id = ${id}
+    WHERE id = ${id} AND tenant_id = ${tenantId}
   `;
 }
 
@@ -813,25 +849,27 @@ export async function deleteScheduledExpense(id: number) {
   const { error: rbacError } = await requirePermission('expenses', 'delete');
   if (rbacError) throw new Error(rbacError);
 
+  const tenantId = await getTenantId();
   await ensureScheduledExpensesTable();
-  await sql`DELETE FROM admin_scheduled_expenses WHERE id = ${id}`;
+  await sql`DELETE FROM admin_scheduled_expenses WHERE id = ${id} AND tenant_id = ${tenantId}`;
 }
 
 export async function payScheduledExpense(id: number) {
   const { error: rbacError } = await requirePermission('expenses', 'insert');
   if (rbacError) throw new Error(rbacError);
 
+  const tenantId = await getTenantId();
   await ensureScheduledExpensesTable();
   const rows = await sql`
-    SELECT * FROM admin_scheduled_expenses WHERE id = ${id}
+    SELECT * FROM admin_scheduled_expenses WHERE id = ${id} AND tenant_id = ${tenantId}
   `;
   if (rows.length === 0) return;
   const item = rows[0];
 
   // 1. Insert into actual expenses
   await sql`
-    INSERT INTO admin_expenses (date, amount, description, category, payment_method)
-    VALUES (CURRENT_DATE, ${item.amount}, ${item.title + ' (Scheduled Payment)'}, ${item.category}, ${item.payment_method})
+    INSERT INTO admin_expenses (date, amount, description, category, payment_method, tenant_id)
+    VALUES (CURRENT_DATE, ${item.amount}, ${item.title + ' (Scheduled Payment)'}, ${item.category}, ${item.payment_method}, ${tenantId})
   `;
 
   // 2. Roll date forward
@@ -841,18 +879,18 @@ export async function payScheduledExpense(id: number) {
     await sql`
       UPDATE admin_scheduled_expenses
       SET next_due_date = ${nextDate.toISOString().split('T')[0]}
-      WHERE id = ${id}
+      WHERE id = ${id} AND tenant_id = ${tenantId}
     `;
   } else if (item.frequency === 'yearly') {
     nextDate.setFullYear(nextDate.getFullYear() + 1);
     await sql`
       UPDATE admin_scheduled_expenses
       SET next_due_date = ${nextDate.toISOString().split('T')[0]}
-      WHERE id = ${id}
+      WHERE id = ${id} AND tenant_id = ${tenantId}
     `;
   } else {
     await sql`
-      DELETE FROM admin_scheduled_expenses WHERE id = ${id}
+      DELETE FROM admin_scheduled_expenses WHERE id = ${id} AND tenant_id = ${tenantId}
     `;
   }
 }
@@ -1144,6 +1182,9 @@ export async function getClients() {
 
 
 export async function getClientById(clientId: string) {
+  const tenantId = await getTenantId();
+  if (!tenantId) return null;
+
   const rows = await sql`
     SELECT c.id,
            c.full_name as name,
@@ -1155,7 +1196,7 @@ export async function getClientById(clientId: string) {
            c.website,
            c.legal_name
     FROM admin_clients c
-    WHERE c.id = ${clientId}
+    WHERE c.id = ${clientId} AND c.tenant_id = ${tenantId}
   `;
 
   if (rows.length === 0) return null;
@@ -1169,7 +1210,7 @@ export async function getClientById(clientId: string) {
   const invoices = await sql`
     SELECT invoice_id as id, project_name as service, total as amount, date as due_date, payment_status as status, created_at
     FROM invoices
-    WHERE LOWER(user_email) = LOWER(${c.email})
+    WHERE LOWER(user_email) = LOWER(${c.email}) AND tenant_id = ${tenantId}
     ORDER BY date DESC, created_at DESC
   `;
 
@@ -1177,7 +1218,7 @@ export async function getClientById(clientId: string) {
   const incomes = await sql`
     SELECT id, description as service, amount, date, category, invoice_id, created_at
     FROM admin_incomes
-    WHERE client_id = ${clientId}
+    WHERE client_id = ${clientId} AND tenant_id = ${tenantId}
     ORDER BY date DESC, created_at DESC, id DESC
   `;
 
@@ -1859,12 +1900,15 @@ export async function recordInvoicePayment(
   const { error: rbacError } = await requirePermission('invoices', 'delete');
   if (rbacError) throw new Error(rbacError);
 
+  const tenantId = await getTenantId();
+  if (!tenantId) throw new Error("Tenant not found");
+
   try {
     // 1. Fetch invoice info
     const invoiceRows = await sql`
-      SELECT user_email, project_name, total, currency, category, payment_status, advance, total_due
+      SELECT user_email, project_name, total, currency, category, payment_status, advance, total_due, tenant_id, bank_slip, bank_account_id
       FROM invoices
-      WHERE invoice_id = ${invoiceId}
+      WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId}
     `;
     if (invoiceRows.length === 0) {
       throw new Error("Invoice not found");
@@ -1878,7 +1922,7 @@ export async function recordInvoicePayment(
     let clientId = null;
     if (invoice.user_email) {
       const clientRows = await sql`
-        SELECT id FROM admin_clients WHERE LOWER(email) = LOWER(${invoice.user_email})
+        SELECT id FROM admin_clients WHERE LOWER(email) = LOWER(${invoice.user_email}) AND tenant_id = ${tenantId}
       `;
       if (clientRows.length > 0) {
         clientId = clientRows[0].id;
@@ -1906,9 +1950,9 @@ export async function recordInvoicePayment(
 
     await sql`
       INSERT INTO admin_incomes (date, amount, description, category, payment_method, invoice_id, client_id, receipt_url, account_id, tenant_id)
-      VALUES (${paymentDate}, ${paidAmount}, ${description}, ${category}, ${paymentMethod}, ${invoiceId}, ${clientId}, ${receiptUrlToAttach}, ${paymentMethod === 'Bank Transfer' ? invoice.bank_account_id : null}, ${invoice.tenant_id})
+      VALUES (${paymentDate}, ${paidAmount}, ${description}, ${category}, ${paymentMethod}, ${invoiceId}, ${clientId}, ${receiptUrlToAttach}, ${paymentMethod === 'Bank Transfer' ? invoice.bank_account_id : null}, ${tenantId})
     `;
-    await incrementLifetimeUsage(Number(invoice.tenant_id), 'incomes');
+    await incrementLifetimeUsage(Number(tenantId), 'incomes');
 
     // 5. Update invoice payment fields
     let newAdvance = currentAdvance;
@@ -2095,6 +2139,8 @@ export async function undoApprovedBankSlipPayment(invoiceId: string, slipId: num
 
     const slipAmount = parseFloat(slipRows[0].amount || "0");
 
+    const tenantId = await getTenantId();
+
     // Find the corresponding income record for this specific slip
     const incomeRows = await sql`
       SELECT id, amount, description
@@ -2102,6 +2148,7 @@ export async function undoApprovedBankSlipPayment(invoiceId: string, slipId: num
       WHERE invoice_id = ${invoiceId}
         AND payment_method = 'Bank Transfer'
         AND amount = ${slipAmount}
+        AND tenant_id = ${tenantId}
       ORDER BY id DESC
       LIMIT 1
     `;
@@ -2143,6 +2190,8 @@ export async function adminUploadPaymentSlip(invoiceId: string, slipBase64: stri
     const { error: rbacError } = await requirePermission('invoices', 'update');
     if (rbacError) return { success: false, error: rbacError };
 
+    const tenantId = await getTenantId();
+
     // Validate amount
     if (!Number.isFinite(amount) || amount <= 0) {
       return { success: false, error: "Please enter a valid payment amount" };
@@ -2176,7 +2225,7 @@ export async function adminUploadPaymentSlip(invoiceId: string, slipBase64: stri
     await sql`
       UPDATE admin_incomes
       SET receipt_url = ${slipUrl}
-      WHERE invoice_id = ${invoiceId} AND receipt_url IS NULL
+      WHERE invoice_id = ${invoiceId} AND receipt_url IS NULL AND tenant_id = ${tenantId}
     `;
 
     await logSystemAction(`Admin uploaded and auto-approved payment slip for invoice ${invoiceId}: LKR ${amount}`);
@@ -2275,6 +2324,9 @@ export async function reviewPaymentSlip(id: number, approved: boolean, reviewerI
 }
 
 export async function getExpenseBreakdownByMode(mode: string) {
+  const tenantId = await getTenantId();
+  if (!tenantId) return [];
+
   let start = '1970-01-01';
   let end = '2099-12-31';
 
@@ -2298,7 +2350,7 @@ export async function getExpenseBreakdownByMode(mode: string) {
       category as name,
       SUM(amount) as value
     FROM admin_expenses
-    WHERE date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp
+    WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp
     GROUP BY category
     ORDER BY value DESC
   `;
@@ -2315,15 +2367,21 @@ export async function getExpenseBreakdownByMode(mode: string) {
 }
 
 export async function getTopClients() {
-  // Lifetime top clients by revenue
+  const tenantId = await getTenantId();
+  if (!tenantId) return [];
+
+  // Lifetime top clients by revenue for the current tenant
   const rows = await sql`
     SELECT 
-      c.full_name as name,
+      COALESCE(c.full_name, inv_c.full_name) as name,
       SUM(i.amount) as value
     FROM admin_incomes i
-    LEFT JOIN admin_clients c ON i.client_id = c.id
-    WHERE c.full_name IS NOT NULL
-    GROUP BY c.id, c.full_name
+    LEFT JOIN admin_clients c ON i.client_id = c.id AND c.tenant_id = ${tenantId}
+    LEFT JOIN invoices inv ON i.invoice_id = inv.invoice_id AND inv.tenant_id = ${tenantId}
+    LEFT JOIN admin_clients inv_c ON LOWER(inv.user_email) = LOWER(inv_c.email) AND inv_c.tenant_id = ${tenantId}
+    WHERE i.tenant_id = ${tenantId}
+      AND COALESCE(c.full_name, inv_c.full_name) IS NOT NULL
+    GROUP BY COALESCE(c.full_name, inv_c.full_name)
     ORDER BY value DESC
     LIMIT 6
   `;

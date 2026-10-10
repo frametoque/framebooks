@@ -22,6 +22,7 @@ import {
   Loader2,
   CheckCircle2,
   Edit3,
+  Tag,
 } from "lucide-react";
 import { PlanBadge, RoleBadge, StatusPill } from "@/components/Formatters";
 import { AdminStatCard } from "@/app/(dashboard)/admin/_components/AdminStatCard";
@@ -119,6 +120,9 @@ export function SubscriptionsClient({
         subscriptionId?: number | null;
         billingInterval?: string;
         currentPeriodEnd?: string | null;
+        couponCode?: string | null;
+        couponType?: string | null;
+        couponValue?: number | null;
         users: any[];
       }
     >();
@@ -138,10 +142,19 @@ export function SubscriptionsClient({
           subscriptionId: u.subscription_id || null,
           billingInterval: u.billing_interval || null,
           currentPeriodEnd: u.current_period_end || u.plan_expires_at || null,
+          couponCode: u.coupon_code || null,
+          couponType: u.coupon_type || null,
+          couponValue: u.coupon_value || null,
           users: [],
         });
       }
-      map.get(key)!.users.push(u);
+      const entry = map.get(key)!;
+      if (!entry.couponCode && u.coupon_code) {
+        entry.couponCode = u.coupon_code;
+        entry.couponType = u.coupon_type;
+        entry.couponValue = u.coupon_value;
+      }
+      entry.users.push(u);
     });
 
     return Array.from(map.values());
@@ -498,6 +511,15 @@ export function SubscriptionsClient({
                         {group.name}
                       </h3>
                       <PlanBadge plan={group.plan} />
+                      {group.couponCode && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                          <Tag className="w-3 h-3" />
+                          <span>{group.couponCode}</span>
+                          <span className="opacity-80">
+                            ({group.couponType === "percent" ? `${group.couponValue}% OFF` : `LKR ${group.couponValue} OFF`})
+                          </span>
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
                       {group.currentPeriodEnd ? (

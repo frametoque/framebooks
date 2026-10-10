@@ -10,18 +10,28 @@ export type ActionType = 'read' | 'insert' | 'update' | 'delete' | 'manage' | 'd
  * Gets the current user's role and tenant ID.
  */
 export async function getUserContext() {
-  const { userId } = await auth();
-  if (!userId) return { userId: null, role: null, tenantId: null };
+  const { userId, session } = await auth();
+  if (!userId && !session?.user?.email) return { userId: null, role: null, tenantId: null };
+
+  const email = session?.user?.email?.trim().toLowerCase();
+  const numId = Number(userId) || 0;
+  const safeId = (numId > 0 && numId < 2147483647) ? numId : 0;
 
   const sql = neon(process.env.DATABASE_URL!);
-  const userRows = await sql`SELECT tenant_id, role FROM admin_users WHERE id = ${Number(userId) || 0}`;
+  const userRows = await sql`
+    SELECT id, tenant_id, role 
+    FROM admin_users 
+    WHERE (id = ${safeId} AND ${safeId} > 0)
+       OR (email IS NOT NULL AND LOWER(email) = ${email || ''})
+    LIMIT 1
+  `;
   
   if (userRows.length === 0) {
     return { userId, role: null, tenantId: null };
   }
 
   return {
-    userId,
+    userId: String(userRows[0].id),
     tenantId: userRows[0].tenant_id,
     role: userRows[0].role as Role
   };

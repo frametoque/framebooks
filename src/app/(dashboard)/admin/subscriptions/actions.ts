@@ -297,3 +297,105 @@ export async function createManualSubscription({
   revalidatePath("/admin/subscriptions");
   return { success: true };
 }
+
+export async function adminRevokeTenantCoupon({
+  tenantId,
+  reason = "Coupon removed by admin to require payment",
+  expireImmediately = true,
+}: {
+  tenantId: number;
+  reason?: string;
+  expireImmediately?: boolean;
+}) {
+  const actor = await requireAdmin("manage_subscriptions");
+
+  const redemptions = await sql`
+    SELECT cr.id AS redemption_id, cr.coupon_id, c.code, c.value, c.type
+    FROM coupon_redemptions cr
+    JOIN coupons c ON cr.coupon_id = c.id
+    WHERE cr.tenant_id = ${tenantId}
+    ORDER BY cr.redeemed_at DESC
+  `;
+
+  if (redemptions.length === 0) {
+    throw new Error("No applied coupon found for this business.");
+  }
+
+  const redemption = redemptions[0];
+
+  // 1. Delete all coupon redemptions for this tenant
+  await sql`DELETE FROM coupon_redemptions WHERE tenant_id = ${tenantId}`;
+  
+  // 2. Decrement redeemed_count on the coupon
+  await sql`UPDATE coupons SET redeemed_count = GREATEST(0, redeemed_count - 1) WHERE id = ${redemption.coupon_id}`;
+
+  // 3. Update subscription if it was comped or has long expiration
+  const subRows = await sql`
+    SELECT s.*, p.name AS plan_name, p.key AS plan_key
+    FROM subscriptions s
+    LEFT JOIN plans p ON s.plan_id = p.id
+    WHERE s.tenant_id = ${tenantId}
+    ORDER BY s.id DESC
+    LIMIT 1
+  `;
+
+  if (subRows.length > 0) {
+    const sub = subRows[0];
+    const newEndDate = expireImmediately ? new Date() : (sub.current_period_end ? new Date(sub.current_period_end) : new Date());
+
+    await sql`
+      UPDATE subscriptions SET
+        source = 'standard',
+        status = ${expireImmediately ? 'past_due' : 'active'},
+        current_period_end = ${newEndDate},
+        updated_at = NOW()
+      WHERE id = ${sub.id}
+    `;
+
+    if (expireImmediately) {
+      await sql`
+        UPDATE tenants SET
+          plan_expires_at = ${newEndDate}
+        WHERE id = ${tenantId}
+      `;
+    }
+
+    // Record subscription event
+    await sql`
+      INSERT INTO subscription_events (
+        subscription_id, tenant_id, from_plan, to_plan, reason, changed_by, effective_at, proration_note
+      ) VALUES (
+        ${sub.id},
+        ${tenantId},
+        ${sub.plan_name || 'Current'},
+        ${sub.plan_name || 'Current'},
+        ${reason},
+        ${actor.email},
+        NOW(),
+        ${`Revoked coupon ${redemption.code} (${redemption.value}% off). Subscription set to ${expireImmediately ? 'past_due (Payment Required)' : 'standard billing'}.`}
+      )
+    `;
+  } else {
+    if (expireImmediately) {
+      await sql`
+        UPDATE tenants SET
+          plan_expires_at = NOW()
+        WHERE id = ${tenantId}
+      `;
+    }
+  }
+
+  await logAdminAction({
+    actor,
+    action: "REVOKE_COUPON",
+    targetType: "tenant",
+    targetId: tenantId,
+    before: { coupon_code: redemption.code, discount: `${redemption.value}%` },
+    after: { coupon_code: null, payment_required: true, reason }
+  });
+
+  revalidatePath("/admin/subscriptions");
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/businesses/${tenantId}`);
+  return { success: true, removedCoupon: redemption.code };
+}

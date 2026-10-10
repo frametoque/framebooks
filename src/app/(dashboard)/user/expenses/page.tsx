@@ -126,16 +126,18 @@ export default function ExpensesPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [res, schedRes, accs, tInfo] = await Promise.all([
+      const [res, schedRes, accs, tInfo, cats] = await Promise.all([
         getExpenses(startDate, endDate),
         getScheduledExpenses().catch(() => []),
         getAccounts(),
-        getTenantInfo()
+        getTenantInfo(),
+        getCategories().catch(() => [])
       ]);
       setAccounts(accs);
       setData(res);
       setScheduledExpenses(schedRes);
       setTenantPlan(tInfo?.plan || "Free");
+      if (cats) setServerCategories(cats);
     } catch (e) {
       console.error("Failed to load expenses data:", e);
     } finally {
@@ -148,17 +150,19 @@ export default function ExpensesPage() {
     async function load() {
       setLoading(true);
       try {
-        const [res, schedRes, accs, tInfo] = await Promise.all([
+        const [res, schedRes, accs, tInfo, cats] = await Promise.all([
           getExpenses(startDate, endDate),
           getScheduledExpenses().catch(() => []),
           getAccounts(),
-          getTenantInfo()
+          getTenantInfo(),
+          getCategories().catch(() => [])
         ]);
         setAccounts(accs);
         if (!cancelled) {
           setData(res);
           setScheduledExpenses(schedRes);
           setTenantPlan(tInfo?.plan || "Free");
+          if (cats) setServerCategories(cats);
         }
       } catch (e) {
         console.error("Failed to load expenses data:", e);

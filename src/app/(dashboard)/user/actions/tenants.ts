@@ -68,8 +68,8 @@ async function resolveGraceAndReadOnly(plan: string, planExpiresAt: any, tenantI
 
 export async function getTenantInfo() {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const { userId, session } = await auth();
+    if (!userId && !session?.user?.email) {
       return {
         plan: "Free",
         plan_expires_at: null,
@@ -90,25 +90,18 @@ export async function getTenantInfo() {
       };
     }
     
-    const userRows = await sql`SELECT tenant_id, role FROM admin_users WHERE id = ${Number(userId) || 0}`;
-    if (!userRows || userRows.length === 0) {
-      const defaultTenant = await sql`SELECT id, name, plan, plan_expires_at, logo_url, industry, phone, email, website, address FROM tenants ORDER BY created_at ASC LIMIT 1`;
-      if (defaultTenant.length > 0) {
-        const grace = await resolveGraceAndReadOnly(defaultTenant[0].plan || "Free", defaultTenant[0].plan_expires_at, defaultTenant[0].id);
-        return { 
-          plan: defaultTenant[0].plan || "Free",
-          ...grace,
-          name: defaultTenant[0].name || "My Business",
-          logo_url: defaultTenant[0].logo_url || null,
-          industry: defaultTenant[0].industry || null,
-          phone: defaultTenant[0].phone || null,
-          email: defaultTenant[0].email || null,
-          website: defaultTenant[0].website || null,
-          address: defaultTenant[0].address || null,
-          userRole: null,
-          teamMembersCount: 1
-        };
-      }
+    const email = session?.user?.email?.trim().toLowerCase();
+    const numId = Number(userId) || 0;
+    const safeId = (numId > 0 && numId < 2147483647) ? numId : 0;
+
+    const userRows = await sql`
+      SELECT tenant_id, role 
+      FROM admin_users 
+      WHERE (id = ${safeId} AND ${safeId} > 0)
+         OR (email IS NOT NULL AND LOWER(email) = ${email || ''})
+      LIMIT 1
+    `;
+    if (!userRows || userRows.length === 0 || !userRows[0].tenant_id) {
       return {
         plan: "Free",
         plan_expires_at: null,

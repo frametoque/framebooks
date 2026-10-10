@@ -21,7 +21,9 @@ import {
   UserMinus,
   Eye,
   X,
-  Loader2
+  Loader2,
+  Tag,
+  Trash2,
 } from "lucide-react";
 import { PlanBadge, RoleBadge, StatusPill, Money, formatLKR } from "@/components/Formatters";
 import { ConfirmModal } from "@/app/(dashboard)/admin/_components/ConfirmModal";
@@ -31,6 +33,7 @@ import {
   adminRemoveBusinessMember, 
   addBusinessNote 
 } from "@/app/(dashboard)/admin/users/actions";
+import { adminRevokeTenantCoupon } from "@/app/(dashboard)/admin/subscriptions/actions";
 
 export interface BusinessDetailViewProps {
   businessData: any;
@@ -79,6 +82,10 @@ export function BusinessDetailView({
   const [removeTarget, setRemoveTarget] = useState<any | null>(null);
   const [removingMember, setRemovingMember] = useState(false);
 
+  // Revoke Coupon state
+  const [isRevokeModalOpen, setIsRevokeModalOpen] = useState(false);
+  const [revokingCoupon, setRevokingCoupon] = useState(false);
+
   const {
     tenant,
     members = [],
@@ -91,6 +98,7 @@ export function BusinessDetailView({
     lifetimePaid = 0,
     notes = [],
     activity = [],
+    appliedCoupon = null,
   } = businessData;
 
   const limits = plan?.limits || {
@@ -179,6 +187,24 @@ export function BusinessDetailView({
     }
   };
 
+  const handleRevokeCoupon = async () => {
+    setRevokingCoupon(true);
+    try {
+      await adminRevokeTenantCoupon({
+        tenantId: tenant.id,
+        reason: "Coupon revoked by admin to require payment",
+        expireImmediately: true,
+      });
+      setIsRevokeModalOpen(false);
+      if (onRefresh) onRefresh();
+      router.refresh();
+    } catch (err: any) {
+      alert(err.message || "Failed to remove coupon");
+    } finally {
+      setRevokingCoupon(false);
+    }
+  };
+
   const renderLimitBar = (label: string, current: number, max: number) => {
     const isUnlimited = max === -1;
     const pct = isUnlimited ? 0 : Math.min(100, Math.round((current / max) * 100));
@@ -231,6 +257,15 @@ export function BusinessDetailView({
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/10 text-muted-foreground border border-border">
                 Tenant #{tenant.id}
               </span>
+              {appliedCoupon && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                  <Tag className="w-3.5 h-3.5" />
+                  <span>Coupon: {appliedCoupon.code}</span>
+                  <span className="opacity-80">
+                    ({appliedCoupon.type === "percent" ? `${appliedCoupon.value}% OFF` : `LKR ${appliedCoupon.value} OFF`})
+                  </span>
+                </span>
+              )}
             </div>
             <p className="text-sm text-gray-500 mt-1">
               Currency: <span className="font-semibold text-foreground">{tenant.currency || "LKR"}</span> • Created:{" "}
@@ -305,6 +340,25 @@ export function BusinessDetailView({
                 <span className="text-gray-500">Business Name</span>
                 <span className="font-semibold text-foreground">{tenant.name}</span>
               </div>
+              {appliedCoupon && (
+                <div className="py-2.5 flex justify-between items-center">
+                  <span className="text-gray-500">Applied Coupon</span>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400 font-mono text-xs px-2.5 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                      <Tag className="w-3 h-3" />
+                      {appliedCoupon.code} ({appliedCoupon.type === "percent" ? `${appliedCoupon.value}% OFF` : `LKR ${appliedCoupon.value} OFF`})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsRevokeModalOpen(true)}
+                      className="text-xs font-semibold text-red-500 hover:text-red-400 px-2 py-0.5 rounded hover:bg-red-500/10 transition-colors cursor-pointer"
+                      title="Remove coupon and require payments"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="py-2.5 flex justify-between">
                 <span className="text-gray-500">Currency</span>
                 <span className="font-semibold">{tenant.currency || "LKR"}</span>
@@ -391,6 +445,40 @@ export function BusinessDetailView({
       {/* TAB 2: SUBSCRIPTION */}
       {activeTab === "subscription" && (
         <div className="space-y-6">
+          {appliedCoupon && (
+            <div className="bg-amber-500/10 border border-amber-500/25 rounded-3xl p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 shadow-2xs">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                  <Tag className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h4 className="font-bold text-foreground text-base">
+                      Coupon Applied: <span className="text-amber-600 dark:text-amber-400 font-mono">{appliedCoupon.code}</span>
+                    </h4>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                      {appliedCoupon.type === "percent" ? `${appliedCoupon.value}% Discount` : `LKR ${appliedCoupon.value} Discount`}
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-2xl">
+                    This business redeemed coupon <strong className="text-foreground">{appliedCoupon.code}</strong>
+                    {appliedCoupon.redeemed_at ? ` on ${new Date(appliedCoupon.redeemed_at).toLocaleDateString()}` : ""}.
+                    They currently have complimentary/exempt billing. Removing this coupon will revoke their exemption and immediately prompt them to start paying.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsRevokeModalOpen(true)}
+                className="shrink-0 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-red-600/20 cursor-pointer flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Remove Coupon & Require Payment</span>
+              </button>
+            </div>
+          )}
+
           <div className="bg-card border border-border rounded-3xl p-6 shadow-2xs">
             <h3 className="font-bold text-foreground text-lg mb-4">Subscription History</h3>
             {subscriptions.length === 0 ? (
@@ -782,6 +870,19 @@ export function BusinessDetailView({
           title={`Remove ${removeTarget.email}`}
           description={`Are you sure you want to remove ${removeTarget.full_name || removeTarget.email} from ${tenant.name}? They will lose access to this workspace.`}
           confirmText="Remove Member"
+          isDestructive={true}
+        />
+      )}
+
+      {/* Revoke Coupon Modal */}
+      {isRevokeModalOpen && (
+        <ConfirmModal
+          isOpen={true}
+          onClose={() => setIsRevokeModalOpen(false)}
+          onConfirm={handleRevokeCoupon}
+          title={`Revoke Coupon ${appliedCoupon?.code || ""}?`}
+          description={`Are you sure you want to remove coupon "${appliedCoupon?.code || ""}" from ${tenant.name}? This will revoke their complimentary billing access and set their subscription to past due, requiring them to make payment immediately.`}
+          confirmText={revokingCoupon ? "Removing..." : "Remove Coupon & Require Payment"}
           isDestructive={true}
         />
       )}
