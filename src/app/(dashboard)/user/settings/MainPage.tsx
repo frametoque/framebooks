@@ -2227,6 +2227,7 @@ function AdminPreferencesView() {
     invoicePrefix: "INV",
     autoRefresh: "30",
     maxUploadSize: "5",
+    defaultViewRange: "this year",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -2240,7 +2241,11 @@ function AdminPreferencesView() {
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.prefs) {
-            setPrefs(data.prefs);
+            setPrefs(prev => ({
+              ...prev,
+              ...data.prefs,
+              defaultViewRange: data.prefs.defaultViewRange || localStorage.getItem("framebooks_default_range") || "this year",
+            }));
           }
         }
       } catch (e) {
@@ -2256,6 +2261,9 @@ function AdminPreferencesView() {
     e.preventDefault();
     setSaving(true);
     try {
+      if (typeof window !== "undefined" && prefs.defaultViewRange) {
+        localStorage.setItem("framebooks_default_range", prefs.defaultViewRange);
+      }
       const res = await fetch("/api/admin/preferences", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2302,6 +2310,23 @@ function AdminPreferencesView() {
             </select>
           </div>
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Default Dashboard View Range</label>
+            <select
+              value={prefs.defaultViewRange || "this year"}
+              onChange={(e) => setPrefs({ ...prefs, defaultViewRange: e.target.value })}
+              className="w-full px-4 py-3 bg-transparent border border-border rounded-3xl text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+            >
+              <option value="this year">This Year</option>
+              <option value="lifetime">Lifetime</option>
+              <option value="6 months">Last 6 Months</option>
+              <option value="three months">Last 3 Months</option>
+              <option value="one month">Last Month</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Invoice Number Prefix</label>
             <input
               type="text"
@@ -2311,9 +2336,6 @@ function AdminPreferencesView() {
               placeholder="INV"
             />
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Analytics Auto-Refresh (sec)</label>
             <select
@@ -2327,6 +2349,9 @@ function AdminPreferencesView() {
               <option value="300">5 minutes</option>
             </select>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Max Receipt Upload Size (MB)</label>
             <input

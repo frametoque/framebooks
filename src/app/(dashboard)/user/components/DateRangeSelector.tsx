@@ -42,7 +42,7 @@ export default function DateRangeSelector({
 
     if (range === "this year") {
       onStartDateChange(`${today.getFullYear()}-01-01`);
-      onEndDateChange(todayStr);
+      onEndDateChange(`${today.getFullYear()}-12-31`);
     } else if (range === "6 months") {
       const d = new Date();
       d.setMonth(d.getMonth() - 6);
@@ -71,8 +71,7 @@ export default function DateRangeSelector({
       onEndDateChange(`${fyEndYear}-03-31`);
     } else if (range === "lifetime") {
       onStartDateChange("1970-01-01");
-      const tzoffset = (new Date()).getTimezoneOffset() * 60000;
-      onEndDateChange((new Date(Date.now() - tzoffset)).toISOString().split('T')[0]);
+      onEndDateChange("2099-12-31");
     }
   };
 

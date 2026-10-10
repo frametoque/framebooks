@@ -327,7 +327,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
   const isLogs = pathname.startsWith("/user/logs");
   const isReports = pathname === "/user/reports";
   const [reportsActiveTab, setReportsActiveTab] = useState("overview");
-  const hideSelector = isInvoiceDetail || isDashboard || isAccounts || isSettings || isLogs || (isInventory && tenantInfo.plan !== 'Pro Plus') || (isReports && tenantInfo.plan !== 'Pro Plus' && reportsActiveTab !== 'overview' && reportsActiveTab !== 'profit_loss');
+  const hideSelector = isInvoiceDetail || isAccounts || isSettings || isLogs || (isInventory && tenantInfo.plan !== 'Pro Plus') || (isReports && tenantInfo.plan !== 'Pro Plus' && reportsActiveTab !== 'overview' && reportsActiveTab !== 'profit_loss');
   const { dateRange, startDate, endDate, setDateRange, setStartDate, setEndDate } = useAdminDateRange();
   const [currentTime, setCurrentTime] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);

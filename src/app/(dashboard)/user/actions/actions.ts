@@ -56,8 +56,9 @@ export async function uploadReceipt(formData: FormData, type: 'income' | 'expens
 import { unstable_cache, revalidateTag } from 'next/cache';
 
 export async function getDashboardData(startDate?: string, endDate?: string) {
-  const start = startDate || '1970-01-01';
-  const end = endDate || '2099-12-31';
+  const currentYear = new Date().getFullYear();
+  const start = startDate || `${currentYear}-01-01`;
+  const end = endDate || `${currentYear}-12-31`;
   const tenantId = await getTenantId();
   if (!tenantId) return null;
 
@@ -67,6 +68,18 @@ export async function getDashboardData(startDate?: string, endDate?: string) {
 export async function _getDashboardData(tenantId: string, start: string, end: string) {
   const [result] = await sql`
     WITH
+    range_inc AS (
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM admin_incomes
+      WHERE tenant_id = ${tenantId}
+        AND date >= ${start}::date AND date <= ${end}::date
+    ),
+    range_exp AS (
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM admin_expenses
+      WHERE tenant_id = ${tenantId}
+        AND date >= ${start}::date AND date <= ${end}::date
+    ),
     inc_sum AS (
       SELECT
         COALESCE(SUM(amount), 0) as total,
@@ -149,14 +162,14 @@ export async function _getDashboardData(tenantId: string, start: string, end: st
     exp_cat AS (
       SELECT category as name, SUM(amount) as value
       FROM admin_expenses
-      WHERE tenant_id = ${tenantId} AND EXTRACT(YEAR FROM date) = EXTRACT(YEAR FROM current_date)
+      WHERE tenant_id = ${tenantId} AND date >= ${start}::date AND date <= ${end}::date
       GROUP BY category
       ORDER BY value DESC
     ),
     inc_cat AS (
       SELECT category as name, SUM(amount) as value
       FROM admin_incomes
-      WHERE tenant_id = ${tenantId}
+      WHERE tenant_id = ${tenantId} AND date >= ${start}::date AND date <= ${end}::date
       GROUP BY category
       ORDER BY value DESC
     ),
@@ -224,6 +237,8 @@ export async function _getDashboardData(tenantId: string, start: string, end: st
       LIMIT 6
     )
     SELECT
+      (SELECT row_to_json(range_inc) FROM range_inc) as range_income,
+      (SELECT row_to_json(range_exp) FROM range_exp) as range_expense,
       (SELECT row_to_json(inc_sum) FROM inc_sum) as income_summary,
       (SELECT row_to_json(exp_sum) FROM exp_sum) as expense_summary,
       (SELECT COALESCE(json_agg(inv_aging), '[]'::json) FROM inv_aging) as invoice_aging,
@@ -245,14 +260,16 @@ export async function _getDashboardData(tenantId: string, start: string, end: st
 
   const incSum = result?.income_summary || {};
   const expSum = result?.expense_summary || {};
+  const rangeInc = result?.range_income || {};
+  const rangeExp = result?.range_expense || {};
 
   const lifetimeIncome = parseFloat(incSum.total || 0);
   const lifetimeExpenses = parseFloat(expSum.total || 0);
   const lifetimeNetProfit = lifetimeIncome - lifetimeExpenses;
 
-  // The primary financial dashboard cards display the Current Fiscal Year (YTD), matching standard P&L
-  const totalIncome = parseFloat(incSum.current_year ?? incSum.total ?? 0);
-  const totalExpenses = parseFloat(expSum.current_year ?? expSum.total ?? 0);
+  // The primary financial dashboard cards display the selected date range
+  const totalIncome = parseFloat(rangeInc.total ?? 0);
+  const totalExpenses = parseFloat(rangeExp.total ?? 0);
   const netProfit = totalIncome - totalExpenses;
 
   const currentIncome = parseFloat(incSum.current_year || 0);

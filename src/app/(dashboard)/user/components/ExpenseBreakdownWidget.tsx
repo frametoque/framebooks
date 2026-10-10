@@ -21,15 +21,11 @@ export default function ExpenseBreakdownWidget({ initialData }: { initialData?: 
   const [mode, setMode] = useState<string>("This Year");
   const [data, setData] = useState<any[]>(initialData || []);
   const [loading, setLoading] = useState(false);
-  const [initialRender, setInitialRender] = useState(true);
 
   useEffect(() => {
-    if (initialRender) {
-      setInitialRender(false);
-      if (initialData && initialData.length > 0 && mode === "This Year") {
-        setData(initialData);
-        return;
-      }
+    if (initialData && initialData.length > 0 && mode === "This Year") {
+      setData(initialData);
+      return;
     }
 
     let active = true;
@@ -44,7 +40,7 @@ export default function ExpenseBreakdownWidget({ initialData }: { initialData?: 
     });
 
     return () => { active = false; };
-  }, [mode, initialData, initialRender]);
+  }, [mode, initialData]);
 
   const total = (data || []).reduce((sum, r) => sum + (r.value || 0), 0);
 
