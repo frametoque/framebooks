@@ -4,13 +4,13 @@ import { Loader } from "@/components/ui/Loader";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { 
-  Loader2, 
-  Building2, 
-  UploadCloud, 
-  CheckCircle2, 
-  Tag, 
-  AlertCircle 
+import {
+  Loader2,
+  Building2,
+  UploadCloud,
+  CheckCircle2,
+  Tag,
+  AlertCircle
 } from "lucide-react";
 import { MdArrowForward, MdKeyboardArrowLeft } from "react-icons/md";
 import { completeOnboarding, validateCouponAction } from "./actions";
@@ -45,7 +45,7 @@ export default function OnboardingPage() {
       if (res?.success && res.plans && res.plans.length > 0) {
         setAvailablePlans(res.plans);
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -192,17 +192,17 @@ export default function OnboardingPage() {
   const displayPlans = availablePlans.length > 0
     ? availablePlans
     : [
-        { id: 1, name: "Free", price_monthly: 0 },
-        { id: 2, name: "Pro", price_monthly: 2500 },
-        { id: 3, name: "Pro Plus", price_monthly: 5000 }
-      ];
+      { id: 1, name: "Free", price_monthly: 0 },
+      { id: 2, name: "Pro", price_monthly: 2500 },
+      { id: 3, name: "Pro Plus", price_monthly: 5000 }
+    ];
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex text-[#082830] overflow-hidden">
       {/* ── LEFT PANEL ── */}
       <div className="relative flex flex-col justify-center w-full lg:w-1/2 px-8 sm:px-16 py-16">
         <div className="relative z-10 max-w-sm w-full mx-auto">
-          
+
           <div className="mb-8 flex justify-between items-center">
             <Image
               src="/logos/ft/name-logo.png"
@@ -242,7 +242,7 @@ export default function OnboardingPage() {
                     </span>
                   </h1>
                   <p className="text-gray-600 text-sm mb-8 leading-relaxed">
-                    You have been invited to join the team for <strong className="text-[#082830]">{pendingInvite.tenantName}</strong>. 
+                    You have been invited to join the team for <strong className="text-[#082830]">{pendingInvite.tenantName}</strong>.
                     Would you like to accept this invitation or decline and create your own business profile?
                   </p>
 
@@ -257,7 +257,7 @@ export default function OnboardingPage() {
                     >
                       {responding ? <Loader size="sm" /> : "Accept Invitation"}
                     </button>
-                    
+
                     <button
                       type="button"
                       onClick={() => handleRespondInvite('decline')}
@@ -340,7 +340,7 @@ export default function OnboardingPage() {
                   </p>
 
                   <div className="space-y-6">
-                    <div 
+                    <div
                       onClick={() => fileInputRef.current?.click()}
                       className="w-full h-40 border-2 border-dashed border-[#E5E7EB] hover:border-[#00C750]/50 rounded-3xl flex flex-col items-center justify-center cursor-pointer transition-colors bg-white shadow-sm group"
                     >
@@ -359,12 +359,12 @@ export default function OnboardingPage() {
                           <span className="text-sm font-medium">Click to upload logo</span>
                         </div>
                       )}
-                      <input 
-                        type="file" 
-                        ref={fileInputRef} 
+                      <input
+                        type="file"
+                        ref={fileInputRef}
                         onChange={handleLogoChange}
                         accept="image/png, image/jpeg, image/svg+xml"
-                        className="hidden" 
+                        className="hidden"
                       />
                     </div>
 
@@ -377,10 +377,10 @@ export default function OnboardingPage() {
                     >
                       Continue <MdArrowForward className="h-4 w-4" />
                     </button>
-                    
+
                     {!logoPreview && !submitting && (
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={handleNext}
                         className="w-full text-center text-xs text-gray-600 hover:text-slate-700 transition-colors cursor-pointer"
                       >
@@ -421,11 +421,10 @@ export default function OnboardingPage() {
                           key={p.name}
                           type="button"
                           onClick={() => setSelectedPlan(p.name)}
-                          className={`w-full text-left p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                            isSelected 
-                            ? "bg-[#E6FDF0] border-[#00E35B] ring-1 ring-[#00E35B]" 
-                            : "bg-white border-[#E5E7EB] hover:border-gray-300"
-                          }`}
+                          className={`w-full text-left p-3.5 rounded-2xl border transition-all cursor-pointer ${isSelected
+                              ? "bg-[#E6FDF0] border-[#00E35B] ring-1 ring-[#00E35B]"
+                              : "bg-white border-[#E5E7EB] hover:border-gray-300"
+                            }`}
                         >
                           <div className="flex justify-between items-center">
                             <div>
@@ -433,8 +432,8 @@ export default function OnboardingPage() {
                                 {p.name}
                               </div>
                               <div className="text-xs text-gray-500 font-medium">
-                                {p.price_monthly === 0 
-                                  ? "Free forever" 
+                                {p.price_monthly === 0
+                                  ? "Free forever"
                                   : (appliedCoupon?.isComplimentary && isSelected)
                                     ? "Complimentary (100% OFF)"
                                     : `LKR ${Number(p.price_monthly).toLocaleString()} /mo`
@@ -470,7 +469,6 @@ export default function OnboardingPage() {
                       <div className="flex gap-2">
                         <input
                           type="text"
-                          placeholder="e.g. EARLYACCESS"
                           value={couponInput}
                           onChange={(e) => {
                             setCouponInput(e.target.value.toUpperCase());
@@ -531,7 +529,7 @@ export default function OnboardingPage() {
               )}
             </AnimatePresence>
           </div>
-          
+
           {/* Progress Indicators */}
           <div className="flex justify-center gap-2 mt-8">
             <div className={`h-1.5 rounded-full transition-all duration-300 ${step >= 1 ? "w-8 bg-[#00E35B]" : "w-4 bg-[#F9FAFB] border border-[#E5E7EB]"}`} />
@@ -544,13 +542,13 @@ export default function OnboardingPage() {
 
       {/* ── RIGHT PANEL ── */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-white border-l border-[#E5E7EB] items-center justify-center">
-         <div className="max-w-md text-center p-12">
-            <div className="w-16 h-16 bg-[#E6FDF0] text-[#00C750] rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-sm">
-               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-            </div>
-            <h2 className="text-3xl font-black text-[#082830] mb-4">Set up your business<span className="text-[#00E35B]">.</span></h2>
-            <p className="text-gray-500 leading-relaxed">It only takes a minute to get your account ready to manage invoices, expenses, and quotations.</p>
-         </div>
+        <div className="max-w-md text-center p-12">
+          <div className="w-16 h-16 bg-[#E6FDF0] text-[#00C750] rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-sm">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+          </div>
+          <h2 className="text-3xl font-black text-[#082830] mb-4">Set up your business<span className="text-[#00E35B]">.</span></h2>
+          <p className="text-gray-500 leading-relaxed">It only takes a minute to get your account ready to manage invoices, expenses, and quotations.</p>
+        </div>
       </div>
     </div>
   );

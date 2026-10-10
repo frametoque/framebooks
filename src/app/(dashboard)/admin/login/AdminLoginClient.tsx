@@ -101,7 +101,6 @@ export default function AdminLoginClient() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@frametoque.com"
                 required
                 autoFocus
                 autoComplete="username"
@@ -118,7 +117,6 @@ export default function AdminLoginClient() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
                   required
                   autoComplete="current-password"
                   className="w-full h-12 px-4 pr-11 rounded-2xl bg-white dark:bg-card border border-[#E5E7EB] dark:border-border text-foreground text-sm outline-none focus:border-[#00E35B] focus:ring-1 focus:ring-[#00E35B] transition-all shadow-xs"

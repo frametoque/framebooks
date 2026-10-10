@@ -144,7 +144,6 @@ export async function completeOnboarding(formData: FormData) {
         UPDATE coupons SET redeemed_count = redeemed_count + 1 WHERE id = ${validatedCoupon.id}
       `;
 
-      // If 100% off coupon applied (e.g. EARLYACCESS), activate complimentary subscription immediately
       if (validatedCoupon.isComplimentary) {
         isComplimentary = true;
         const planRows = await sql`
@@ -166,8 +165,8 @@ export async function completeOnboarding(formData: FormData) {
       }
     }
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       isComplimentary,
       hasDiscount: !!validatedCoupon,
     };
