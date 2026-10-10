@@ -208,7 +208,7 @@ function LayoutContent({ children }) {
                           <p className="text-gray-600 dark:text-gray-400 text-sm">You have active team members, but your current plan doesn't support them. Upgrade to restore their access.</p>
                         </div>
                       </div>
-                      <Link href="/user/settings" className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
+                      <Link href="/user/settings/billing" className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
                         Upgrade Now
                       </Link>
                     </div>
@@ -224,7 +224,7 @@ function LayoutContent({ children }) {
                           <p className="text-gray-600 dark:text-gray-400 text-sm">Enable App Lock (Passkeys/Biometrics) to secure your dashboard from unauthorized access.</p>
                         </div>
                       </div>
-                      <Link href="/user/settings" className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-yellow-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
+                      <Link href="/user/settings/profile" className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-yellow-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
                         Set up App Lock
                       </Link>
                     </div>
@@ -280,7 +280,7 @@ function LayoutContent({ children }) {
                           <p className="text-gray-600 dark:text-gray-400 text-sm">You have active team members, but your current plan doesn't support them. Upgrade to restore their access.</p>
                         </div>
                       </div>
-                      <Link href="/user/settings" className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
+                      <Link href="/user/settings/billing" className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
                         Upgrade Now
                       </Link>
                     </div>
@@ -296,7 +296,7 @@ function LayoutContent({ children }) {
                           <p className="text-gray-600 dark:text-gray-400 text-sm">Enable App Lock (Passkeys/Biometrics) to secure your dashboard from unauthorized access.</p>
                         </div>
                       </div>
-                      <Link href="/user/settings" className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-yellow-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
+                      <Link href="/user/settings/profile" className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-yellow-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
                         Set up App Lock
                       </Link>
                     </div>
@@ -326,7 +326,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
   const isAccounts = pathname.startsWith("/user/accounts");
   const isSettings = pathname.startsWith("/user/settings");
   const isLogs = pathname.startsWith("/user/logs");
-  const isReports = pathname === "/user/reports";
+  const isReports = pathname.startsWith("/user/reports");
   const [reportsActiveTab, setReportsActiveTab] = useState("overview");
   const hideSelector = isInvoiceDetail || isAccounts || isSettings || isLogs || (isInventory && tenantInfo.plan !== 'Pro Plus') || (isReports && tenantInfo.plan !== 'Pro Plus' && reportsActiveTab !== 'overview' && reportsActiveTab !== 'profit_loss');
   const { dateRange, startDate, endDate, setDateRange, setStartDate, setEndDate } = useAdminDateRange();
@@ -388,9 +388,33 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
     if (path.startsWith("/user/quotations")) return "Quotations";
     if (path.startsWith("/user/income")) return "Income";
     if (path.startsWith("/user/expenses")) return "Expenses";
-    if (path.startsWith("/user/accounts")) return "Accounts";
-    if (path.startsWith("/user/reports")) return "Reports";
-    if (path.startsWith("/user/settings")) return "Settings";
+    if (path.startsWith("/user/reports")) {
+      const parts = path.split("/");
+      const sub = parts[3];
+      if (sub === "profit-loss" || sub === "profit_loss") return "Profit & Loss";
+      if (sub === "cash-flow" || sub === "cash_flow") return "Cash Flow";
+      if (sub === "balance-sheet" || sub === "balance_sheet") return "Balance Sheet";
+      if (sub === "tax-summary" || sub === "tax_summary") return "Tax Summary";
+      if (sub === "trial-balance" || sub === "trial_balance") return "Trial Balance";
+      if (sub === "general-ledger" || sub === "general_ledger") return "General Ledger";
+      if (sub === "account-ledger" || sub === "account_ledger") return "Account Ledger";
+      if (sub === "overview") return "Overview";
+      return "Reports";
+    }
+    if (path.startsWith("/user/settings")) {
+      const parts = path.split("/");
+      const sub = parts[3];
+      if (sub === "profile") return "Account & Security";
+      if (sub === "business") return "Business Profile";
+      if (sub === "billing") return "Billing & Plans";
+      if (sub === "team") return "Team Settings";
+      if (sub === "roles") return "Roles & Permissions";
+      if (sub === "audit-logs" || sub === "audit_logs") return "Audit Logs";
+      if (sub === "export") return "Data Export";
+      if (sub === "danger") return "Danger Zone";
+      if (sub === "preferences" || sub === "prefs") return "Admin Preferences";
+      return "Settings";
+    }
     if (path.startsWith("/user/logs")) return "Logs";
     return "Admin";
   };
@@ -587,7 +611,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
           <ThemeToggle />
 
           {/* Business Info on Top Bar */}
-          <Link href="/user/settings?tab=business" className="flex items-center gap-3 pl-4 ml-2 border-l border-border hover:opacity-80 transition-opacity">
+          <Link href="/user/settings/business" className="flex items-center gap-3 pl-4 ml-2 border-l border-border hover:opacity-80 transition-opacity">
             <div className="flex flex-col items-end hidden sm:flex">
               <span className="text-sm font-semibold text-foreground tracking-tight">{tenantInfo.name}</span>
               {tenantInfo.userRole && (
@@ -798,7 +822,7 @@ const Sidebar = ({
           <div className="p-3 flex flex-col mt-auto space-y-2 shrink-0 border-t border-border w-full">
             <div className="flex items-center gap-2 w-full justify-center">
               <Link 
-                href="/user/settings?tab=profile"
+                href="/user/settings/profile"
                 onClick={() => setMobileMenuOpen(false)}
                 title={user?.name || "User Profile"}
                 className={`flex items-center rounded-2xl transition-colors hover:bg-black/5 dark:hover:bg-white/5

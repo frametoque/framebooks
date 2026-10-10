@@ -1,0 +1,952 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Percent, Link as LinkIcon } from "lucide-react";
+import { MdTrendingUp, MdTrendingDown, MdAttachMoney, MdDownload, MdInsertDriveFile, MdCalendarToday, MdGroup, MdMenuBook, MdSearch, MdCallMade, MdCallReceived, MdShowChart } from "react-icons/md";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { getReports, getClients } from "../actions/actions";
+import AnimatedNumber from "../components/AnimatedNumber";
+import { useAdminDateRange } from "../context/AdminDateRangeContext";
+import WheelDatePicker from "../components/WheelDatePicker";
+import { PlanType } from "@/lib/plans";
+import { getTenantPlan } from "../actions/plan";
+import { UpgradeOverlay } from "../components/UpgradeOverlay";
+
+export type ReportTab = "overview" | "profit_loss" | "trial_balance" | "general_ledger" | "account_ledger" | "cash_flow" | "balance_sheet" | "tax_summary";
+
+export const REPORT_TAB_TO_SLUG: Record<ReportTab, string> = {
+  overview: "overview",
+  profit_loss: "profit-loss",
+  cash_flow: "cash-flow",
+  balance_sheet: "balance-sheet",
+  tax_summary: "tax-summary",
+  trial_balance: "trial-balance",
+  general_ledger: "general-ledger",
+  account_ledger: "account-ledger",
+};
+
+export const SLUG_TO_REPORT_TAB: Record<string, ReportTab> = {
+  "overview": "overview",
+  "profit-loss": "profit_loss",
+  "profit_loss": "profit_loss",
+  "cash-flow": "cash_flow",
+  "cash_flow": "cash_flow",
+  "balance-sheet": "balance_sheet",
+  "balance_sheet": "balance_sheet",
+  "tax-summary": "tax_summary",
+  "tax_summary": "tax_summary",
+  "trial-balance": "trial_balance",
+  "trial_balance": "trial_balance",
+  "general-ledger": "general_ledger",
+  "general_ledger": "general_ledger",
+  "account-ledger": "account_ledger",
+  "account_ledger": "account_ledger",
+};
+
+const formatLKR = (amount: number) => {
+  const num = new Intl.NumberFormat('en-LK', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount || 0);
+  return `${num} LKR`;
+};
+
+const GREEN_PALETTE = ['#00E35B', '#00C853', '#00AD45', '#009238', '#00782C', '#005D21'];
+const RED_PALETTE = ['#EF4444', '#E03C3C', '#D13535', '#C22D2D', '#B32525', '#A41D1D'];
+
+export default function ReportsClient({ initialTab = "overview" }: { initialTab?: ReportTab }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryTab = searchParams.get("tab") ? SLUG_TO_REPORT_TAB[searchParams.get("tab")!] : undefined;
+  const [data, setData] = useState<any>(null);
+  const [clients, setClients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { dateRange, startDate, endDate, setStartDate, setEndDate, setDateRange } = useAdminDateRange();
+  const [activeTab, setActiveTab] = useState<ReportTab>(initialTab || queryTab || "overview");
+  const [plan, setPlan] = useState<PlanType>('Free');
+
+  // Ledger specific state
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [journalFilter, setJournalFilter] = useState("all");
+  const [activePicker, setActivePicker] = useState<"trial_date" | null>(null);
+
+  // Trial balance uses its own local date (not the shared global date) 
+  // so switching tabs doesn't re-trigger the main data load.
+  const todayStr = new Date().toISOString().split("T")[0];
+  const [trialBalanceDate, setTrialBalanceDate] = useState(todayStr);
+  const trialStart = "1970-01-01";
+
+  const formatDateFriendly = (dateStr: string) => {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return dateStr;
+    const year = parts[0];
+    const monthIdx = parseInt(parts[1]) - 1;
+    const day = parseInt(parts[2]);
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${monthNames[monthIdx]} ${day}, ${year}`;
+  };
+
+  const [ledgerLoading, setLedgerLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadMain() {
+      setLoading(true);
+      try {
+        const [res, cls, accs, currentPlan] = await Promise.all([
+          getReports(startDate, endDate),
+          getClients(),
+          import("../actions/accounts").then(m => m.getAccounts(startDate, endDate)),
+          getTenantPlan()
+        ]);
+        if (!cancelled) {
+          setData(res);
+          setClients(cls);
+          setAccounts(accs);
+          setPlan(currentPlan);
+        }
+      } catch (e) {
+        console.error("Failed to load reports", e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadMain();
+    return () => { cancelled = true; };
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadLedger() {
+      setLedgerLoading(true);
+      try {
+        // For trial_balance, use the local trialBalanceDate instead of the shared global range
+        const ledgerStart = activeTab === "trial_balance" ? trialStart : startDate;
+        const ledgerEnd   = activeTab === "trial_balance" ? trialBalanceDate : endDate;
+        const accountId   = activeTab === "account_ledger" ? selectedAccountId : null;
+        const txs = await import("../actions/accounts").then(m => m.getLedger(accountId, ledgerStart, ledgerEnd));
+        if (!cancelled) {
+          setTransactions(txs);
+        }
+      } catch (e) {
+        console.error("Failed to load ledger", e);
+      } finally {
+        if (!cancelled) setLedgerLoading(false);
+      }
+    }
+    loadLedger();
+    return () => { cancelled = true; };
+  }, [startDate, endDate, activeTab, selectedAccountId, trialBalanceDate]);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("reports:tab-change", { detail: activeTab }));
+    // No longer mutate global date range on tab switch — trial balance uses its own local date
+  }, [activeTab]);
+
+  useEffect(() => {
+    // Broadcast the trial balance date for the top-bar display
+    if (activeTab === "trial_balance") {
+      window.dispatchEvent(new CustomEvent("reports:formatted-date", { detail: formatDateFriendly(trialBalanceDate) }));
+    } else {
+      window.dispatchEvent(new CustomEvent("reports:formatted-date", { detail: formatDateFriendly(endDate) }));
+    }
+  }, [endDate, trialBalanceDate, activeTab]);
+
+  useEffect(() => {
+    if (initialTab && initialTab !== activeTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  useEffect(() => {
+    const handleToggle = () => {
+      setActivePicker(prev => prev === "trial_date" ? null : "trial_date");
+    };
+    window.addEventListener("reports:toggle-datepicker", handleToggle);
+    return () => {
+      window.removeEventListener("reports:toggle-datepicker", handleToggle);
+    };
+  }, []);
+
+
+
+  if (loading || !data) {
+    return (
+      <div className="space-y-4">
+        {/* Four Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-pulse">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4">
+              <div className="p-3 rounded-2xl bg-card w-12 h-12" />
+              <div className="space-y-2 flex-1">
+                <div className="h-4 bg-card rounded-full w-24" />
+                <div className="h-6 bg-white/10 rounded-full w-32" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tab Buttons */}
+        <div className="flex flex-wrap gap-2 animate-pulse">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-10 bg-transparent border border-border rounded-full w-32" />
+          ))}
+        </div>
+        
+        {/* Two side-by-side charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 animate-pulse">
+          <div className="bg-transparent border border-border rounded-3xl p-6 space-y-6">
+            <div className="h-6 bg-white/10 rounded-full w-40" />
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="h-4 bg-card rounded-full w-20" />
+                  <div className="h-8 bg-white/10 rounded-2xl flex-1" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-transparent border border-border rounded-3xl p-6 space-y-6">
+            <div className="h-6 bg-white/10 rounded-full w-40" />
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="h-4 bg-card rounded-full w-20" />
+                  <div className="h-8 bg-white/10 rounded-2xl flex-1" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Client Revenue Chart */}
+        <div className="bg-transparent border border-border rounded-3xl p-6 animate-pulse space-y-6">
+          <div className="h-6 bg-white/10 rounded-full w-48" />
+          <div className="space-y-3">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <div className="h-4 bg-card rounded-full w-20" />
+                <div className="h-8 bg-white/10 rounded-2xl flex-1" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Compute chronological running balance
+  let runningBalance = 0;
+  const journalEntriesWithBalance = [...(data.journalEntries || [])]
+    .reverse() // older transactions first to compute running balance
+    .map((entry: any) => {
+      if (entry.type === "income") {
+        runningBalance += entry.amount;
+      } else {
+        runningBalance -= entry.amount;
+      }
+      return {
+        ...entry,
+        runningBalance
+      };
+    })
+    .reverse(); // back to latest first for display
+
+  // Filter journal entries
+  const filteredJournal = journalEntriesWithBalance
+    .filter((entry: any) => {
+      const matchesSearch = 
+        entry.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.category.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (journalFilter === "income") return matchesSearch && entry.type === "income";
+      if (journalFilter === "expense") return matchesSearch && entry.type === "expense";
+      return matchesSearch;
+    });
+
+  const stats = [
+    { label: "Total Income", value: formatLKR(data.totalIncome), icon: MdTrendingUp, color: "text-emerald-700 dark:text-green-400", bg: "bg-emerald-100/70 dark:bg-green-400/10" },
+    { label: "Total Expenses", value: formatLKR(data.totalExpenses), icon: MdTrendingDown, color: "text-red-700 dark:text-red-400", bg: "bg-red-100/70 dark:bg-red-400/10" },
+    { label: "Net Profit", value: formatLKR(data.netProfit), icon: MdAttachMoney, color: "text-emerald-700 dark:text-brand-400", bg: "bg-emerald-100/70 dark:bg-brand-400/10" },
+    { label: "Profit Margin", value: `${data.profitMargin}%`, icon: Percent, color: "text-blue-700 dark:text-blue-400", bg: "bg-blue-100/70 dark:bg-blue-400/10" },
+  ];
+
+  // Top 5 clients by revenue for the chart
+  const topClientsChart = [...clients]
+    .filter((c) => c.revenue > 0)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5)
+    .map((c) => ({ name: c.name, revenue: c.revenue }));
+
+  const content = (
+    <div className="space-y-6 print:p-0 print:m-0">
+      {/* Stats Cards - Displayed on all tabs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {stats.map((stat, i) => (
+          <div key={i} className="bg-card border border-border rounded-3xl p-5 sm:p-6 flex items-center gap-3.5 sm:gap-4 shadow-xs hover:shadow-md transition-all min-w-0">
+            <div className={`p-3 rounded-2xl flex-shrink-0 ${stat.bg}`}>
+              <stat.icon className={`w-5 h-5 ${stat.color}`} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium truncate" title={stat.label}>{stat.label}</p>
+              <p className="text-lg sm:text-xl 2xl:text-2xl font-bold tracking-tight text-foreground whitespace-nowrap overflow-visible" title={stat.value}>
+                <AnimatedNumber value={stat.value} />
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs Row - Pill styled like expenses page categories */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 print:hidden">
+        {/* Main Tabs */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-border pb-4">
+          {[
+            { id: "overview", label: "Overview", icon: <MdShowChart className="w-4 h-4" /> },
+            { id: "profit_loss", label: "Profit & Loss", icon: <MdTrendingUp className="w-4 h-4" /> },
+            { id: "cash_flow", label: "Cash Flow", icon: <MdAttachMoney className="w-4 h-4" /> },
+            { id: "balance_sheet", label: "Balance Sheet", icon: <MdMenuBook className="w-4 h-4" /> },
+            { id: "tax_summary", label: "Tax Summary", icon: <Percent className="w-4 h-4" /> },
+            { id: "trial_balance", label: "Trial Balance", icon: <MdInsertDriveFile className="w-4 h-4" /> },
+            { id: "general_ledger", label: "General Ledger", icon: <MdMenuBook className="w-4 h-4" /> },
+            { id: "account_ledger", label: "Account Ledger", icon: <MdGroup className="w-4 h-4" /> }
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => {
+                const targetTab = t.id as ReportTab;
+                setActiveTab(targetTab);
+                if (targetTab === 'account_ledger' && accounts.length > 0 && !selectedAccountId) {
+                  setSelectedAccountId(accounts[0].id);
+                }
+                if (targetTab === 'general_ledger') {
+                  setSelectedAccountId(null);
+                }
+                router.push(`/user/reports/${REPORT_TAB_TO_SLUG[targetTab]}`);
+              }}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
+                activeTab === t.id
+                  ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs"
+                  : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Datepicker dropdown for trial balance (anchored here) */}
+        {activePicker === "trial_date" && (
+          <WheelDatePicker
+            value={endDate}
+            onChange={(date) => {
+              setEndDate(date);
+              setStartDate("1970-01-01");
+            }}
+            onClose={() => setActivePicker(null)}
+            label="As of Date"
+          />
+        )}
+      </div>
+
+      {activeTab !== "overview" && activeTab !== "profit_loss" && plan !== "Pro Plus" ? (
+        <UpgradeOverlay
+          title="Advanced Stats & Analytics"
+          description="Gain deep insights with general ledgers, trial balances, and detailed profit & loss reports. Upgrade to Pro Plus to unlock this feature."
+          requiredPlan="Pro Plus"
+        >
+          <div />
+        </UpgradeOverlay>
+      ) : (
+        <>
+          {activeTab === "overview" && (
+        <>
+
+          {/* Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {/* Income Chart */}
+            <div className="bg-card border border-border rounded-3xl p-6 shadow-xs">
+              <h2 className="text-xl font-semibold mb-6 text-foreground">Income by Service</h2>
+              <div style={{ height: Math.max(300, (data.incomeByService?.length || 0) * 45) }} className="w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.incomeByService} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" horizontal={false} />
+                    <XAxis type="number" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `LKR ${value / 1000}k`} />
+                    <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={11} tickLine={false} axisLine={false} width={150} />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(150,150,150,0.08)' }}
+                      contentStyle={{
+                        backgroundColor: 'var(--card-bg, #ffffff)',
+                        borderColor: 'var(--border-color, rgba(0,0,0,0.1))',
+                        borderRadius: '16px',
+                        color: 'var(--text-main, #111827)',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+                      }}
+                      itemStyle={{ color: 'var(--text-main, #111827)' }}
+                      formatter={(value: any) => [formatLKR(value), 'Income']}
+                    />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
+                      {data.incomeByService?.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={GREEN_PALETTE[index % GREEN_PALETTE.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Expenses Chart */}
+            <div className="bg-card border border-border rounded-3xl p-6 shadow-xs">
+              <h2 className="text-xl font-semibold mb-6 text-foreground">Expenses Breakdown</h2>
+              <div style={{ height: Math.max(300, (data.expensesBreakdown?.length || 0) * 45) }} className="w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.expensesBreakdown} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" horizontal={false} />
+                    <XAxis type="number" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `LKR ${value / 1000}k`} />
+                    <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={11} tickLine={false} axisLine={false} width={150} />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(150,150,150,0.08)' }}
+                      contentStyle={{
+                        backgroundColor: 'var(--card-bg, #ffffff)',
+                        borderColor: 'var(--border-color, rgba(0,0,0,0.1))',
+                        borderRadius: '16px',
+                        color: 'var(--text-main, #111827)',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+                      }}
+                      itemStyle={{ color: 'var(--text-main, #111827)' }}
+                      formatter={(value: any) => [formatLKR(value), 'Expense']}
+                    />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
+                      {data.expensesBreakdown?.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={RED_PALETTE[index % RED_PALETTE.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Top Clients by Revenue Chart */}
+          {topClientsChart.length > 0 && (
+            <div className="bg-card border border-border rounded-3xl p-6 shadow-xs">
+              <div className="flex items-center gap-3 mb-6">
+                <h2 className="text-xl font-semibold text-foreground">Top Clients by Revenue</h2>
+              </div>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={topClientsChart} layout="vertical" margin={{ top: 0, right: 30, left: 20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" horizontal={false} />
+                    <XAxis
+                      type="number"
+                      stroke="#9ca3af"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `LKR ${value / 1000}k`}
+                    />
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      stroke="#9ca3af"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      width={100}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(150,150,150,0.08)' }}
+                      contentStyle={{
+                        backgroundColor: 'var(--card-bg, #ffffff)',
+                        borderColor: 'var(--border-color, rgba(0,0,0,0.1))',
+                        borderRadius: '16px',
+                        color: 'var(--text-main, #111827)',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+                      }}
+                      itemStyle={{ color: 'var(--text-main, #111827)' }}
+                      formatter={(value: any) => [formatLKR(value), 'Revenue']}
+                    />
+                    <Bar dataKey="revenue" radius={[0, 4, 4, 0]} barSize={24}>
+                      {topClientsChart.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={GREEN_PALETTE[index % GREEN_PALETTE.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {(activeTab === "general_ledger" || activeTab === "account_ledger") && (
+        <div className="space-y-4">
+          {activeTab === "account_ledger" && accounts.find(a => a.id === selectedAccountId) && (() => {
+            const selectedAccount = accounts.find(a => a.id === selectedAccountId);
+            const periodInflow = transactions.reduce((sum, t) => sum + t.debit, 0);
+            const periodOutflow = transactions.reduce((sum, t) => sum + t.credit, 0);
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-card border border-border p-6 rounded-3xl flex items-center gap-4 shadow-xs">
+                  <div className="p-4 text-foreground flex shrink-0"><MdMenuBook className="w-6 h-6"/></div>
+                  <div><p className="text-xs font-semibold text-gray-700 dark:text-gray-400 uppercase tracking-wider">Account Book Balance</p><p className="text-2xl font-bold text-foreground mt-0.5">{formatLKR(selectedAccount.currentBalance)}</p></div>
+                </div>
+                <div className="bg-card border border-border p-6 rounded-3xl flex items-center gap-4 shadow-xs">
+                  <div className="p-4 text-emerald-700 dark:text-green-400 flex shrink-0"><MdCallMade className="w-6 h-6"/></div>
+                  <div><p className="text-xs font-semibold text-gray-700 dark:text-gray-400 uppercase tracking-wider">Period Inflow (Debit)</p><p className="text-2xl font-bold text-emerald-600 dark:text-green-400 mt-0.5">+{formatLKR(periodInflow)}</p></div>
+                </div>
+                <div className="bg-card border border-border p-6 rounded-3xl flex items-center gap-4 shadow-xs">
+                  <div className="p-4 text-rose-700 dark:text-red-400 flex shrink-0"><MdCallReceived className="w-6 h-6"/></div>
+                  <div><p className="text-xs font-semibold text-gray-700 dark:text-gray-400 uppercase tracking-wider">Period Outflow (Credit)</p><p className="text-2xl font-bold text-rose-600 dark:text-red-400 mt-0.5">-{formatLKR(periodOutflow)}</p></div>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-xs">
+            <div className="p-6 border-b border-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center gap-3">
+                {activeTab === 'general_ledger' && (
+                  <h2 className="text-lg font-semibold text-foreground">Ledger: All Accounts</h2>
+                )}
+                {activeTab === 'account_ledger' && (
+                  <select value={selectedAccountId || ""} onChange={e => setSelectedAccountId(parseInt(e.target.value))} className="bg-card border border-border rounded-xl px-4 py-2 text-sm outline-none text-foreground shadow-2xs">
+                    {accounts.map(a => <option key={a.id} value={a.id} className="bg-card text-foreground">{a.name} ({a.type.split(' ')[0]})</option>)}
+                  </select>
+                )}
+              </div>
+              <div className="relative w-full sm:w-64">
+                <MdSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
+                <input type="text" placeholder="Search descriptions..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-card border border-border rounded-xl pl-9 pr-4 py-2 text-sm outline-none focus:border-brand-500 transition-colors text-foreground placeholder:text-gray-500 dark:placeholder:text-gray-400 shadow-2xs" />
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[800px]">
+                <thead>
+                  <tr className="border-b border-border bg-slate-50/75 dark:bg-white/[0.02] text-xs text-gray-700 dark:text-gray-400 uppercase tracking-wider font-semibold">
+                    <th className="p-4 font-semibold">Date</th>
+                    {activeTab === 'general_ledger' && <th className="p-4 font-semibold">Account</th>}
+                    <th className="p-4 font-semibold">Description</th>
+                    <th className="p-4 font-semibold">Reference</th>
+                    <th className="p-4 font-semibold text-right">Debit (+)</th>
+                    <th className="p-4 font-semibold text-right">Credit (-)</th>
+                    {activeTab === 'account_ledger' && <th className="p-4 font-semibold text-right">Running Balance</th>}
+                  </tr>
+                </thead>
+                <tbody className="text-sm divide-y divide-border">
+                  {ledgerLoading ? (
+                    <tr><td colSpan={6} className="p-8 text-center text-gray-500 dark:text-gray-400">Loading ledger...</td></tr>
+                  ) : transactions.filter(t => t.description.toLowerCase().includes(searchTerm.toLowerCase()) || t.referenceType.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+                    <tr><td colSpan={6} className="p-8 text-center text-gray-500 dark:text-gray-400">No transactions found for this period.</td></tr>
+                  ) : (
+                    (() => {
+                      let rb = activeTab === 'account_ledger' && selectedAccountId ? (accounts.find(a => a.id === selectedAccountId)?.initialBalance || 0) : 0;
+                      
+                      const filtered = transactions.filter(t => t.description.toLowerCase().includes(searchTerm.toLowerCase()) || t.referenceType.toLowerCase().includes(searchTerm.toLowerCase()));
+                      
+                      const withBalance = filtered.map(t => {
+                        if (activeTab === 'account_ledger') {
+                          rb += t.debit - t.credit;
+                        }
+                        return { ...t, rb };
+                      });
+
+                      return withBalance.reverse().map((t, i) => {
+                        const accName = accounts.find(a => a.id === t.accountId)?.name || 'Unknown';
+                        const relatedAccName = accounts.find(a => a.id === t.relatedAccountId)?.name || 'Unknown';
+                        let displayAccount = accName;
+                        if (activeTab === 'general_ledger' && t.referenceType === 'Transfer') {
+                          displayAccount = `${accName} → ${relatedAccName}`;
+                        }
+                        return (
+                          <tr key={i} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                            <td className="p-4 text-gray-700 dark:text-gray-300 font-medium">{new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                            {activeTab === 'general_ledger' && <td className="p-4 text-gray-700 dark:text-gray-300 text-xs">{displayAccount}</td>}
+                            <td className="p-4 text-foreground">{t.description || "-"}</td>
+                            <td className="p-4">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${t.referenceType === 'Income' ? 'bg-emerald-100/80 text-emerald-800 border border-emerald-200/60 dark:bg-brand-500/20 dark:text-brand-500 dark:border-transparent' : t.referenceType === 'Expense' ? 'bg-rose-100/80 text-rose-800 border border-rose-200/60 dark:bg-red-500/20 dark:text-red-500 dark:border-transparent' : 'bg-purple-100/80 text-purple-800 border border-purple-200/60 dark:bg-purple-500/20 dark:text-purple-400 dark:border-transparent'}`}>
+                                {t.referenceType.toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="p-4 text-right text-emerald-600 dark:text-green-400 font-semibold">{t.debit > 0 ? `+${formatLKR(t.debit)}` : "-"}</td>
+                            <td className="p-4 text-right text-rose-600 dark:text-red-400 font-semibold">{t.credit > 0 ? `-${formatLKR(t.credit)}` : "-"}</td>
+                            {activeTab === 'account_ledger' && (
+                              <td className={`p-4 text-right font-bold ${t.rb < 0 ? 'text-rose-600 dark:text-red-400' : 'text-emerald-600 dark:text-green-400'}`}>
+                                {formatLKR(t.rb)}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      });
+                    })()
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "profit_loss" && (
+        <div className="space-y-4">
+          {/* Income vs Expenses Cards */}
+          <div className="bg-card border border-border rounded-3xl p-8 flex flex-col md:flex-row items-center justify-around gap-8 text-center shadow-xs">
+            <div className="flex flex-col">
+              <span className="text-gray-700 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Income</span>
+              <span className="text-2xl font-bold text-emerald-600 dark:text-green-400">{formatLKR(data.totalIncome)}</span>
+            </div>
+            <div className="hidden md:block text-2xl text-gray-400 font-light">—</div>
+            <div className="flex flex-col">
+              <span className="text-gray-700 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Expenses</span>
+              <span className="text-2xl font-bold text-rose-600 dark:text-red-400">{formatLKR(data.totalExpenses)}</span>
+            </div>
+            <div className="hidden md:block text-2xl text-gray-400 font-light">=</div>
+            <div className="flex flex-col">
+              <span className="text-gray-700 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Net Profit</span>
+              <span className={`text-2xl font-bold ${data.netProfit >= 0 ? "text-emerald-600 dark:text-green-400" : "text-rose-600 dark:text-red-400"}`}>
+                {data.netProfit < 0 ? "-" : ""}{formatLKR(Math.abs(data.netProfit))}
+              </span>
+            </div>
+          </div>
+
+          {/* Accounts Breakdown Table */}
+          <div className="bg-card border border-border rounded-3xl p-6 space-y-6 shadow-xs">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-gray-700 dark:text-gray-400">Accounts</h3>
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">
+                {dateRange === "lifetime"
+                  ? "Lifetime"
+                  : `${new Date(startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} to ${new Date(endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {/* Income */}
+              <div>
+                <h4 className="text-sm font-bold text-foreground mb-3">Income</h4>
+                <div className="divide-y divide-border pl-4">
+                  {data.incomeByService.map((row: any, i: number) => (
+                    <div key={i} className="flex justify-between py-3.5 text-sm">
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">{row.name}</span>
+                      <span className="text-foreground font-semibold">{formatLKR(row.value)}</span>
+                    </div>
+                  ))}
+                  {data.incomeByService.length === 0 && (
+                    <div className="flex justify-between py-3.5 text-sm text-gray-500">
+                      <span>No income recorded in this period</span>
+                      <span>LKR 0.00</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-4 text-sm font-bold border-t border-border mt-2">
+                    <span className="text-foreground">Total Income</span>
+                    <span className="text-foreground">{formatLKR(data.totalIncome)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Expenses */}
+              <div>
+                <h4 className="text-sm font-bold text-foreground mb-3">Expenses</h4>
+                <div className="divide-y divide-border pl-4">
+                  {data.expensesBreakdown.map((row: any, i: number) => (
+                    <div key={i} className="flex justify-between py-3.5 text-sm">
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">{row.name}</span>
+                      <span className="text-foreground font-semibold">{formatLKR(row.value)}</span>
+                    </div>
+                  ))}
+                  {data.expensesBreakdown.length === 0 && (
+                    <div className="flex justify-between py-3.5 text-sm text-gray-500">
+                      <span>No expenses recorded in this period</span>
+                      <span>LKR 0.00</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-4 text-sm font-bold border-t border-border mt-2">
+                    <span className="text-foreground">Total Expenses</span>
+                    <span className="text-foreground">{formatLKR(data.totalExpenses)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Margin */}
+            <div className="bg-black/[0.02] dark:bg-card rounded-2xl p-5 flex justify-between items-center border border-border">
+              <div>
+                <div className="text-sm font-bold text-foreground">Net Profit</div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-0.5">As a percentage of Total Income</div>
+              </div>
+              <div className="text-right">
+                <div className={`text-lg font-bold ${data.netProfit >= 0 ? "text-emerald-600 dark:text-green-400" : "text-rose-600 dark:text-red-400"}`}>
+                  {data.netProfit < 0 ? "-" : ""}{formatLKR(Math.abs(data.netProfit))}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">{data.profitMargin}%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "trial_balance" && (
+        <div className="bg-card border border-border rounded-3xl p-6 space-y-6 shadow-xs">
+          <div className="flex items-center justify-between border-b border-border pb-4">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-700 dark:text-gray-400">Accounts</h3>
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">
+              As of {new Date(trialBalanceDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="border-b border-border bg-slate-50/75 dark:bg-white/[0.02] text-gray-700 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                  <th className="py-3 px-4 w-1/2 font-semibold">Accounts</th>
+                  <th className="py-3 px-4 text-right font-semibold">Debit</th>
+                  <th className="py-3 px-4 text-right font-semibold">Credit</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border text-sm">
+                {/* Assets Section */}
+                <tr className="bg-slate-100/70 dark:bg-card font-bold">
+                  <td colSpan={3} className="py-3 px-4 text-foreground text-xs uppercase tracking-wider">Accounts (Assets & Liabilities)</td>
+                </tr>
+                {accounts.map(acc => {
+                  if (acc.currentBalance === 0) return null;
+                  return (
+                    <tr key={acc.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                      <td className="py-3.5 px-6 text-gray-700 dark:text-gray-300 pl-8 font-medium">
+                        {false 
+                          ? `${acc.currentBalance < 0 ? 'Capital' : 'Debt'} ${acc.name.replace(/Debts?\s*/i, '')}` 
+                          : acc.name}
+                      </td>
+                      <td className="py-3.5 px-4 text-right text-foreground font-semibold">
+                        {acc.currentBalance > 0 ? formatLKR(acc.currentBalance) : "—"}
+                      </td>
+                      <td className="py-3.5 px-4 text-right text-gray-500 dark:text-gray-400 font-medium">
+                        {acc.currentBalance < 0 ? formatLKR(Math.abs(acc.currentBalance)) : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {/* Income Section */}
+                <tr className="bg-slate-100/70 dark:bg-card font-bold">
+                  <td colSpan={3} className="py-3 px-4 text-foreground text-xs uppercase tracking-wider">Income</td>
+                </tr>
+                {data.incomeByService.map((row: any, i: number) => (
+                  <tr key={i} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                    <td className="py-3.5 px-6 text-gray-700 dark:text-gray-300 pl-8 font-medium">{row.name}</td>
+                    <td className="py-3.5 px-4 text-right text-gray-400 font-medium">—</td>
+                    <td className="py-3.5 px-4 text-right text-foreground font-semibold">{formatLKR(row.value)}</td>
+                  </tr>
+                ))}
+                {data.incomeByService.length === 0 && (
+                  <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                    <td className="py-3.5 px-6 text-gray-400 pl-8">No Income Category</td>
+                    <td className="py-3.5 px-4 text-right text-gray-400 font-medium">—</td>
+                    <td className="py-3.5 px-4 text-right text-gray-400 font-medium">—</td>
+                  </tr>
+                )}
+                <tr className="font-semibold text-gray-700 dark:text-gray-300 bg-slate-50/50 dark:bg-transparent">
+                  <td className="py-3.5 px-6 pl-8">Total Income</td>
+                  <td className="py-3.5 px-4 text-right text-gray-400 font-medium">—</td>
+                  <td className="py-3.5 px-4 text-right text-foreground font-bold">
+                    {formatLKR(data.totalIncome)}
+                  </td>
+                </tr>
+
+                {/* Expenses Section */}
+                <tr className="bg-slate-100/70 dark:bg-card font-bold">
+                  <td colSpan={3} className="py-3 px-4 text-foreground text-xs uppercase tracking-wider">Expenses</td>
+                </tr>
+                {data.expensesBreakdown.map((row: any, i: number) => (
+                  <tr key={i} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                    <td className="py-3.5 px-6 text-gray-700 dark:text-gray-300 pl-8 font-medium">{row.name}</td>
+                    <td className="py-3.5 px-4 text-right text-foreground font-semibold">{formatLKR(row.value)}</td>
+                    <td className="py-3.5 px-4 text-right text-gray-400 font-medium">—</td>
+                  </tr>
+                ))}
+                {data.expensesBreakdown.length === 0 && (
+                  <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                    <td className="py-3.5 px-6 text-gray-400 pl-8">No Expense Category</td>
+                    <td className="py-3.5 px-4 text-right text-gray-400 font-medium">—</td>
+                    <td className="py-3.5 px-4 text-right text-gray-400 font-medium">—</td>
+                  </tr>
+                )}
+                <tr className="font-semibold text-gray-700 dark:text-gray-300 bg-slate-50/50 dark:bg-transparent">
+                  <td className="py-3.5 px-6 pl-8">Total Expenses</td>
+                  <td className="py-3.5 px-4 text-right text-foreground font-bold">
+                    {formatLKR(data.totalExpenses)}
+                  </td>
+                  <td className="py-3.5 px-4 text-right text-gray-400 font-medium">—</td>
+                </tr>
+
+                {/* Initial Capital / Opening Balance */}
+                {(() => {
+                  const totalInit = accounts.reduce((sum, a) => sum + (a.initialBalance || 0), 0);
+                  if (totalInit === 0) return null;
+                  return (
+                    <tr className="font-semibold text-gray-700 dark:text-gray-300">
+                      <td className="py-3.5 px-6 pl-8">Net Opening Balance</td>
+                      <td className="py-3.5 px-4 text-right text-foreground font-medium">
+                        {totalInit < 0 ? formatLKR(Math.abs(totalInit)) : "—"}
+                      </td>
+                      <td className="py-3.5 px-4 text-right text-foreground font-medium">
+                        {totalInit > 0 ? formatLKR(totalInit) : "—"}
+                      </td>
+                    </tr>
+                  );
+                })()}
+
+                {/* Grand Totals */}
+                {(() => {
+                  const totalAccountsDebit = accounts.reduce((sum, a) => sum + (a.currentBalance > 0 ? a.currentBalance : 0), 0);
+                  const totalAccountsCredit = accounts.reduce((sum, a) => sum + (a.currentBalance < 0 ? Math.abs(a.currentBalance) : 0), 0);
+                  const totalInit = accounts.reduce((sum, a) => sum + (a.initialBalance || 0), 0);
+                  
+                  const grandTotalDebit = totalAccountsDebit + data.totalExpenses + (totalInit < 0 ? Math.abs(totalInit) : 0);
+                  const grandTotalCredit = totalAccountsCredit + data.totalIncome + (totalInit > 0 ? totalInit : 0);
+                  return (
+                    <tr className="bg-slate-100 dark:bg-white/10 font-bold border-t-2 border-slate-300 dark:border-white/20">
+                      <td className="py-4 px-4 text-foreground uppercase tracking-wider">Total for all accounts</td>
+                      <td className="py-4 px-4 text-right text-foreground text-base">{formatLKR(grandTotalDebit)}</td>
+                      <td className="py-4 px-4 text-right text-foreground text-base">{formatLKR(grandTotalCredit)}</td>
+                    </tr>
+                  );
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "cash_flow" && data?.advanced && (
+        <div className="bg-card border border-border rounded-3xl p-8 overflow-x-auto print:p-0 print:border-none shadow-xs">
+          <h2 className="text-2xl font-bold mb-6 text-foreground">Statement of Cash Flows</h2>
+          <table className="w-full text-sm text-left">
+            <thead className="border-b border-border bg-slate-50/75 dark:bg-white/[0.02] text-gray-700 dark:text-gray-400">
+              <tr>
+                <th className="py-4 px-4 font-semibold uppercase tracking-wider">Description</th>
+                <th className="py-4 px-4 font-semibold uppercase tracking-wider text-right">Amount (LKR)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors group">
+                <td className="py-4 px-4 font-medium text-foreground">Cash Inflow (Operating Activities)</td>
+                <td className="py-4 px-4 text-right text-emerald-600 dark:text-green-400 font-semibold">{formatLKR(data.totalIncome)}</td>
+              </tr>
+              <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors group">
+                <td className="py-4 px-4 font-medium text-foreground pl-8">Customer Payments & Sales</td>
+                <td className="py-4 px-4 text-right text-gray-700 dark:text-gray-300">{formatLKR(data.totalIncome)}</td>
+              </tr>
+              <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors group">
+                <td className="py-4 px-4 font-medium text-foreground">Cash Outflow (Operating Activities)</td>
+                <td className="py-4 px-4 text-right text-rose-600 dark:text-red-400 font-semibold">({formatLKR(data.totalExpenses)})</td>
+              </tr>
+              <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors group">
+                <td className="py-4 px-4 font-medium text-foreground pl-8">Operating Expenses & Purchases</td>
+                <td className="py-4 px-4 text-right text-gray-700 dark:text-gray-300">({formatLKR(data.totalExpenses)})</td>
+              </tr>
+              <tr className="bg-slate-100 dark:bg-white/10 font-bold border-t-2 border-slate-300 dark:border-white/20">
+                <td className="py-4 px-4 text-foreground uppercase tracking-wider">Net Cash Flow from Operations</td>
+                <td className={`py-4 px-4 text-right text-base ${data.totalIncome - data.totalExpenses >= 0 ? 'text-emerald-600 dark:text-green-400' : 'text-rose-600 dark:text-red-400'}`}>
+                  {formatLKR(data.totalIncome - data.totalExpenses)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {activeTab === "balance_sheet" && data?.advanced && (
+        <div className="bg-card border border-border rounded-3xl p-8 overflow-x-auto print:p-0 print:border-none shadow-xs">
+          <h2 className="text-2xl font-bold mb-6 text-foreground">Balance Sheet (Statement of Financial Position)</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h3 className="text-lg font-bold border-b border-border pb-2 mb-4 text-emerald-700 dark:text-brand-400">Assets</h3>
+              <table className="w-full text-sm text-left">
+                <tbody className="divide-y divide-border">
+                  <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                    <td className="py-3 px-2 font-medium text-foreground">Cash and Cash Equivalents (Bank)</td>
+                    <td className="py-3 px-2 text-right font-semibold text-foreground">{formatLKR(data.advanced.assets.bankBalance)}</td>
+                  </tr>
+                  <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                    <td className="py-3 px-2 font-medium text-foreground">Accounts Receivable (Unpaid Invoices)</td>
+                    <td className="py-3 px-2 text-right font-semibold text-foreground">{formatLKR(data.advanced.assets.accountsReceivable)}</td>
+                  </tr>
+                  <tr className="font-bold border-t border-slate-300 dark:border-white/20 bg-slate-50 dark:bg-white/5">
+                    <td className="py-3 px-2 text-foreground">Total Assets</td>
+                    <td className="py-3 px-2 text-right text-foreground">{formatLKR(data.advanced.assets.total)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold border-b border-border pb-2 mb-4 text-rose-700 dark:text-red-400">Liabilities & Equity</h3>
+              <table className="w-full text-sm text-left">
+                <tbody className="divide-y divide-border">
+                  <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                    <td className="py-3 px-2 font-medium text-gray-700 dark:text-gray-400">Accounts Payable</td>
+                    <td className="py-3 px-2 text-right text-gray-700 dark:text-gray-400 font-medium">{formatLKR(data.advanced.liabilities.accountsPayable)}</td>
+                  </tr>
+                  <tr className="font-bold border-t border-border text-gray-700 dark:text-gray-400">
+                    <td className="py-3 px-2">Total Liabilities</td>
+                    <td className="py-3 px-2 text-right">{formatLKR(data.advanced.liabilities.total)}</td>
+                  </tr>
+                  <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors mt-4">
+                    <td className="py-3 px-2 font-medium text-emerald-700 dark:text-brand-400">Owner's Equity / Retained Earnings</td>
+                    <td className="py-3 px-2 text-right font-semibold text-emerald-700 dark:text-brand-400">{formatLKR(data.advanced.equity)}</td>
+                  </tr>
+                  <tr className="font-bold border-t border-slate-300 dark:border-white/20 bg-slate-50 dark:bg-white/5">
+                    <td className="py-3 px-2 text-foreground">Total Liabilities & Equity</td>
+                    <td className="py-3 px-2 text-right text-foreground">{formatLKR(data.advanced.liabilities.total + data.advanced.equity)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "tax_summary" && data?.advanced && (
+        <div className="bg-card border border-border rounded-3xl p-8 overflow-x-auto print:p-0 print:border-none max-w-2xl shadow-xs">
+          <h2 className="text-2xl font-bold mb-6 text-foreground">Tax Summary</h2>
+          <table className="w-full text-sm text-left">
+            <thead className="border-b border-border bg-slate-50/75 dark:bg-white/[0.02] text-gray-700 dark:text-gray-400">
+              <tr>
+                <th className="py-4 px-4 font-semibold uppercase tracking-wider">Tax Type</th>
+                <th className="py-4 px-4 font-semibold uppercase tracking-wider text-right">Amount (LKR)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors group">
+                <td className="py-4 px-4 font-medium text-foreground">Tax Collected (Sales/Invoices)</td>
+                <td className="py-4 px-4 text-right text-gray-700 dark:text-gray-300 font-medium">{formatLKR(data.advanced.taxCollected)}</td>
+              </tr>
+              <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors group text-gray-500">
+                <td className="py-4 px-4 font-medium">Tax Paid (Expenses/Purchases)</td>
+                <td className="py-4 px-4 text-right">-</td>
+              </tr>
+              <tr className="bg-slate-100 dark:bg-white/10 font-bold border-t-2 border-slate-300 dark:border-white/20">
+                <td className="py-4 px-4 text-foreground uppercase tracking-wider">Net Tax Liability</td>
+                <td className="py-4 px-4 text-right text-base text-amber-600 dark:text-amber-400 font-bold">
+                  {formatLKR(data.advanced.taxCollected)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="mt-4 text-xs text-gray-600 dark:text-gray-400">* Note: Net Tax Liability is the estimated tax you owe based on recorded invoices. Please consult a professional accountant for official filings.</p>
+        </div>
+      )}
+        </>
+      )}
+    </div>
+  );
+
+  return content;
+}

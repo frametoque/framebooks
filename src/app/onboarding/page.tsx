@@ -170,7 +170,7 @@ export default function OnboardingPage() {
       if (result.isComplimentary || selectedPlan === "Free") {
         router.push("/user/dashboard");
       } else {
-        router.push("/user/settings?tab=billing");
+        router.push("/user/settings/billing");
       }
     } else {
       setErrorMsg(result.error || "Failed to set up your account. Please try again.");

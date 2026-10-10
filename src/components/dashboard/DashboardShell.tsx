@@ -313,7 +313,7 @@ export function DashboardShell({
             <div className="p-3.5 flex flex-col mt-auto space-y-2 shrink-0 border-t border-border">
               <div className="flex items-center gap-2">
                 <Link
-                  href="/user/settings?tab=profile"
+                  href="/user/settings/profile"
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex-1 flex items-center gap-2.5 p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-2xl transition-colors min-w-0"
                 >
@@ -373,7 +373,7 @@ export function DashboardShell({
               {/* Profile pill on top bar (User only) */}
               {variant !== "admin" && (
                 <Link
-                  href="/user/settings?tab=business"
+                  href="/user/settings/business"
                   className="flex items-center gap-3 pl-3 border-l border-border hover:opacity-80 transition-opacity"
                 >
                   <div className="flex flex-col items-end hidden sm:flex">

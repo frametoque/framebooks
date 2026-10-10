@@ -60,7 +60,7 @@ export function GracePeriodBanner() {
 
           <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
             <Link
-              href="/user/settings?tab=billing"
+              href="/user/settings/billing"
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer whitespace-nowrap"
             >
               <CreditCard className="w-3.5 h-3.5" />
@@ -98,7 +98,7 @@ export function GracePeriodBanner() {
 
           <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
             <Link
-              href="/user/settings?tab=billing"
+              href="/user/settings/billing"
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer whitespace-nowrap"
             >
               <CreditCard className="w-3.5 h-3.5" />
@@ -137,7 +137,7 @@ export function GracePeriodBanner() {
 
           <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
             <Link
-              href="/user/settings?tab=billing"
+              href="/user/settings/billing"
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold text-xs shadow-md transition-all cursor-pointer whitespace-nowrap"
             >
               <CreditCard className="w-3.5 h-3.5" />

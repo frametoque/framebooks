@@ -32,7 +32,7 @@ export function PlanLockProvider({ children }: { children: React.ReactNode }) {
         </p>
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <Link 
-            href="/user/settings?tab=billing" 
+            href="/user/settings/billing" 
             className="w-full sm:w-auto px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl font-bold text-xs sm:text-sm transition-all shadow-md flex items-center justify-center gap-2"
           >
             <CreditCard size={16} />

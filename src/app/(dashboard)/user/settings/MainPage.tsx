@@ -151,7 +151,38 @@ const defaultPlans: PlanViewItem[] = [
   }
 ];
 
-export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } = {}) {
+export const SETTINGS_SLUG_TO_TAB: Record<string, string> = {
+  "profile": "profile",
+  "business": "business",
+  "billing": "billing",
+  "team": "team",
+  "roles": "roles",
+  "audit-logs": "audit_logs",
+  "audit_logs": "audit_logs",
+  "export": "export",
+  "danger": "danger",
+  "preferences": "prefs",
+  "prefs": "prefs",
+};
+
+export const SETTINGS_TAB_TO_SLUG: Record<string, string> = {
+  "profile": "profile",
+  "business": "business",
+  "billing": "billing",
+  "team": "team",
+  "roles": "roles",
+  "audit_logs": "audit-logs",
+  "export": "export",
+  "danger": "danger",
+  "prefs": "preferences",
+};
+
+export interface SettingsPageProps {
+  initialPlans?: any[];
+  initialSection?: string;
+}
+
+export default function SettingsPage({ initialPlans, initialSection }: SettingsPageProps = {}) {
   const [plansList, setPlansList] = useState<PlanViewItem[]>(() => {
     if (initialPlans && initialPlans.length > 0) {
       return initialPlans.map(formatDBPlanToDashboardPlan);
@@ -172,8 +203,26 @@ export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } 
   const isLoaded = status !== "loading";
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "profile");
-  const [activeView, setActiveView] = useState(searchParams.get("tab") ? "form" : "hub");
+
+  const targetTabFromSection = initialSection ? SETTINGS_SLUG_TO_TAB[initialSection] : undefined;
+  const targetTabFromQuery = searchParams.get("tab") ? SETTINGS_SLUG_TO_TAB[searchParams.get("tab")!] : undefined;
+
+  const [activeTab, setActiveTab] = useState(targetTabFromSection || targetTabFromQuery || "profile");
+  const [activeView, setActiveView] = useState(initialSection || searchParams.get("tab") ? "form" : "hub");
+
+  useEffect(() => {
+    if (initialSection) {
+      const mapped = SETTINGS_SLUG_TO_TAB[initialSection] || "profile";
+      setActiveTab(mapped);
+      setActiveView("form");
+    } else if (searchParams.get("tab")) {
+      const mapped = SETTINGS_SLUG_TO_TAB[searchParams.get("tab")!] || "profile";
+      setActiveTab(mapped);
+      setActiveView("form");
+    } else {
+      setActiveView("hub");
+    }
+  }, [initialSection, searchParams]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -670,6 +719,7 @@ export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } 
                   { name: "Billing & Plans", sub: "Manage your subscription and payments.", icon: MdCreditCard, id: "billing", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
                   { name: "Team Settings", sub: "Manage team members and roles.", icon: MdGroup, id: "team", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
                   { name: "Roles & Permissions", sub: "Configure custom roles.", icon: MdSecurity, id: "roles", allowed: currentUserRole === 'owner' },
+                  { name: "Admin Preferences", sub: "Configure default dashboard date range and display preferences.", icon: Sliders, id: "prefs", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin' },
                   { name: "Audit Logs", sub: "View system and user activity.", icon: MdHistory, id: "audit_logs", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
                   { name: "Data Export", sub: "Export your workspace data to CSV.", icon: MdDownload, id: "export", allowed: currentUserRole === 'owner' },
                   { name: "Danger Zone", sub: "Destructive account and workspace actions.", icon: MdWarning, id: "danger", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' }
@@ -678,7 +728,12 @@ export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } 
                 .map((item, i) => (
                   <button 
                     key={i} 
-                    onClick={() => { setActiveTab(item.id); setActiveView("form"); router.push(`/user/settings?tab=${item.id}`); }}
+                    onClick={() => {
+                      const slug = SETTINGS_TAB_TO_SLUG[item.id] || item.id;
+                      setActiveTab(item.id);
+                      setActiveView("form");
+                      router.push(`/user/settings/${slug}`);
+                    }}
                     className="flex items-center justify-between py-4 group cursor-pointer text-left hover:bg-card px-2 -mx-2 rounded-xl transition-colors"
                   >
                     <div className="flex items-center gap-5">
@@ -712,20 +767,59 @@ export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } 
       {/* Data Export Tab */}
       {activeTab === "export" && (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="flex items-center gap-4 mb-6 relative z-50">
-            <button 
-              type="button"
-              onClick={(e) => { 
-                e.preventDefault();
-                setActiveTab("profile"); 
-                setActiveView("hub"); 
-                router.replace("/user/settings"); 
-              }} 
-              className="p-2 hover:bg-card rounded-full transition-colors cursor-pointer relative z-50"
-            >
-              <MdKeyboardArrowLeft className="w-6 h-6" />
-            </button>
-            <h2 className="text-xl font-bold">Data Export</h2>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 relative z-50">
+            <div className="flex items-center gap-4">
+              <button 
+                type="button"
+                onClick={(e) => { 
+                  e.preventDefault();
+                  setActiveTab("profile"); 
+                  setActiveView("hub"); 
+                  router.push("/user/settings"); 
+                }} 
+                className="p-2 hover:bg-card rounded-full transition-colors cursor-pointer relative z-50"
+              >
+                <MdKeyboardArrowLeft className="w-6 h-6" />
+              </button>
+              <h2 className="text-xl font-bold">Data Export</h2>
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
+              {[
+                { name: "Business", id: "business", icon: MdBusiness, allowed: currentUserRole !== 'Viewer' && currentUserRole !== 'Editor' },
+                { name: "Account", id: "profile", icon: MdPerson, allowed: true },
+                { name: "Billing", id: "billing", icon: MdCreditCard, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
+                { name: "Team", id: "team", icon: MdGroup, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
+                { name: "Roles", id: "roles", icon: MdSecurity, allowed: currentUserRole === 'owner' },
+                { name: "Preferences", id: "prefs", icon: Sliders, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin' },
+                { name: "Audit Logs", id: "audit_logs", icon: MdHistory, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
+                { name: "Export", id: "export", icon: MdDownload, allowed: currentUserRole === 'owner' },
+                { name: "Danger Zone", id: "danger", icon: MdWarning, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' }
+              ]
+              .filter(item => item.allowed)
+              .map(item => {
+                const isCurrent = activeTab === item.id;
+                const slug = SETTINGS_TAB_TO_SLUG[item.id] || item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      router.push(`/user/settings/${slug}`);
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                      isCurrent
+                        ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs"
+                        : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
+                    }`}
+                  >
+                    <item.icon className="w-3.5 h-3.5" />
+                    {item.name}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="bg-transparent border border-border rounded-3xl p-7">
@@ -873,15 +967,54 @@ export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } 
       {/* Form Views */}
       {activeView === "form" && activeTab !== "export" && (
         <div className="w-full">
-          <button 
-            onClick={() => {
-              setActiveView("hub");
-              router.push("/user/settings");
-            }}
-            className="flex items-center gap-2 text-gray-400 hover:text-foreground font-semibold mb-8 transition-colors"
-          >
-            <MdKeyboardArrowLeft className="w-5 h-5" /> Settings
-          </button>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <button 
+              onClick={() => {
+                setActiveView("hub");
+                router.push("/user/settings");
+              }}
+              className="flex items-center gap-2 text-gray-400 hover:text-foreground font-semibold transition-colors cursor-pointer w-fit"
+            >
+              <MdKeyboardArrowLeft className="w-5 h-5" /> Settings
+            </button>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
+              {[
+                { name: "Business", id: "business", icon: MdBusiness, allowed: currentUserRole !== 'Viewer' && currentUserRole !== 'Editor' },
+                { name: "Account", id: "profile", icon: MdPerson, allowed: true },
+                { name: "Billing", id: "billing", icon: MdCreditCard, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
+                { name: "Team", id: "team", icon: MdGroup, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
+                { name: "Roles", id: "roles", icon: MdSecurity, allowed: currentUserRole === 'owner' },
+                { name: "Preferences", id: "prefs", icon: Sliders, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin' },
+                { name: "Audit Logs", id: "audit_logs", icon: MdHistory, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
+                { name: "Export", id: "export", icon: MdDownload, allowed: currentUserRole === 'owner' },
+                { name: "Danger Zone", id: "danger", icon: MdWarning, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' }
+              ]
+              .filter(item => item.allowed)
+              .map(item => {
+                const isCurrent = activeTab === item.id;
+                const slug = SETTINGS_TAB_TO_SLUG[item.id] || item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      router.push(`/user/settings/${slug}`);
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                      isCurrent
+                        ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs"
+                        : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
+                    }`}
+                  >
+                    <item.icon className="w-3.5 h-3.5" />
+                    {item.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           
           <div className="bg-transparent">
 
@@ -1529,6 +1662,10 @@ export default function SettingsPage({ initialPlans }: { initialPlans?: any[] } 
 
             {activeTab === "billing" && (
               <BillingView tenantInfo={tenantInfo} plansList={plansList} />
+            )}
+
+            {activeTab === "prefs" && (
+              <AdminPreferencesView />
             )}
           </div>
         </div>
