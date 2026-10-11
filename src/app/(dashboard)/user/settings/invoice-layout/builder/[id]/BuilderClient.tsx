@@ -59,6 +59,7 @@ const PALETTE_BLOCKS: {
     { type: "items_col_desc", name: "Line Name (Description)", icon: FileText, category: "Table" },
     { type: "items_col_qty", name: "Quantity", icon: Hash, category: "Table" },
     { type: "items_col_price", name: "Unit Price", icon: DollarSign, category: "Table" },
+    { type: "items_col_amount", name: "Line Item Amount", icon: DollarSign, category: "Table" },
 
     // 5. Brand & Business
     { type: "logo", name: "Business Logo", icon: ImageIcon, category: "Brand" },
@@ -1759,10 +1760,10 @@ export default function BuilderClient({ initialLayout, layoutId }: BuilderClient
                 <>
                   <div className="flex items-center justify-between pb-2 border-b border-border">
                     <div>
-                      <h4 className="font-bold text-foreground capitalize">
+                      <h4 className="font-bold text-foreground">
                         {(selectedBlock as LayoutBlock).props?.itemIndex !== undefined
                           ? `Line ${(selectedBlock as LayoutBlock).props.itemIndex + 1} ${(selectedBlock as LayoutBlock).type.replace("items_col_", "").replace("_", " ")}`
-                          : (selectedBlock as LayoutBlock).type.replace("_", " ")}
+                          : (PALETTE_BLOCKS.find((p) => p.type === (selectedBlock as LayoutBlock).type)?.name || (selectedBlock as LayoutBlock).type.replaceAll("_", " "))}
                       </h4>
                     </div>
 
