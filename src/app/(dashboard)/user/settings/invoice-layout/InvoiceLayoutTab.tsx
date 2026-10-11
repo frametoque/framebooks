@@ -194,42 +194,80 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
       ) : (
         /* Layouts Grid */
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {/* 1. Default Standard Layout */}
-            <div className="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between transition-all hover:border-brand-500/30 group">
+            <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 flex flex-row gap-3.5 sm:gap-4 md:gap-5 transition-all hover:border-brand-500/30 group relative">
+              {/* Left: Portrait Preview Thumbnail */}
+              <div
+                onClick={() => setPreviewLayout(STANDARD_LAYOUT_DEFINITION)}
+                className="relative w-[115px] sm:w-[125px] xl:w-[130px] 2xl:w-[140px] aspect-[210/297] rounded-xl border border-border/70 bg-white overflow-hidden shrink-0 flex justify-center items-start cursor-pointer group/thumb transition-colors hover:border-brand-500/50 shadow-2xs"
+                title="Click to preview layout"
+              >
+                <div className="pointer-events-none transform scale-[0.145] sm:scale-[0.158] xl:scale-[0.164] 2xl:scale-[0.176] origin-top select-none">
+                  <InvoiceRenderer
+                    layout={STANDARD_LAYOUT_DEFINITION}
+                    invoice={SAMPLE_INVOICE_DATA}
+                    tenantInfo={SAMPLE_TENANT_INFO}
+                    plan="Pro Plus"
+                    scale={1}
+                  />
+                </div>
+                {/* Hover Overlay with Preview Button */}
+                <div className="absolute inset-0 bg-black/45 backdrop-blur-[1.5px] opacity-0 group-hover/thumb:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 z-20">
+                  <div className="px-2.5 py-1 rounded-full bg-white/95 dark:bg-card text-foreground flex items-center gap-1.5 shadow-lg transform group-hover/thumb:scale-105 transition-transform text-[11px] font-bold">
+                    <Eye className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+                    <span>Preview</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: Title, Selector Buttons, Edit Buttons & Actions */}
+              <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                 <div>
-                  <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                  {/* Title & Status Badge */}
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-base sm:text-lg text-foreground truncate" title="Standard Classic">
+                        Standard Classic
+                      </h3>
+                    </div>
+
                     {/* Status Badge */}
-                    <div>
+                    <div className="shrink-0">
                       {standardStatus === "both" && (
-                        <span className="text-[10px] font-bold text-brand-500 bg-brand-500/10 border border-brand-500/25 px-2 py-0.5 rounded-full">
-                          Both (Invoice & Quotation)
+                        <span className="text-[10px] sm:text-[11px] font-bold text-brand-500 bg-brand-500/10 border border-brand-500/25 px-2.5 py-0.5 rounded-full inline-block">
+                          Both
                         </span>
                       )}
                       {standardStatus === "invoice" && (
-                        <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 border border-blue-500/25 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] sm:text-[11px] font-bold text-blue-500 bg-blue-500/10 border border-blue-500/25 px-2.5 py-0.5 rounded-full inline-block">
                           Invoice Only
                         </span>
                       )}
                       {standardStatus === "quotation" && (
-                        <span className="text-[10px] font-bold text-purple-500 bg-purple-500/10 border border-purple-500/25 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] sm:text-[11px] font-bold text-purple-500 bg-purple-500/10 border border-purple-500/25 px-2.5 py-0.5 rounded-full inline-block">
                           Quotation Only
                         </span>
                       )}
                       {standardStatus === "off" && (
-                        <span className="text-[10px] font-semibold text-muted-foreground bg-muted/60 border border-border px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground bg-muted/60 border border-border px-2.5 py-0.5 rounded-full inline-block">
                           Off
                         </span>
                       )}
                     </div>
+                  </div>
 
-                    {/* 3 Format Target Buttons */}
-                    <div className="flex items-center bg-muted/50 p-0.5 rounded-xl border border-border">
+                  {/* Selector Buttons */}
+                  <div className="mt-3">
+                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                      Assign To
+                    </span>
+                    <div className="inline-flex items-center bg-muted/50 p-0.5 rounded-xl border border-border">
                       <button
                         type="button"
                         disabled={!canManage || updatingFormatId === "standard"}
                         onClick={() => handleSetFormat("standard", "invoice")}
-                        className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                        className={`px-2.5 sm:px-3 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
                           standardStatus === "invoice"
                             ? "bg-brand-500 text-brand-950 shadow-xs"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -242,7 +280,7 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
                         type="button"
                         disabled={!canManage || updatingFormatId === "standard"}
                         onClick={() => handleSetFormat("standard", "quotation")}
-                        className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                        className={`px-2.5 sm:px-3 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
                           standardStatus === "quotation"
                             ? "bg-brand-500 text-brand-950 shadow-xs"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -255,7 +293,7 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
                         type="button"
                         disabled={!canManage || updatingFormatId === "standard"}
                         onClick={() => handleSetFormat("standard", "both")}
-                        className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                        className={`px-2.5 sm:px-3 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
                           standardStatus === "both"
                             ? "bg-brand-500 text-brand-950 shadow-xs"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -266,36 +304,19 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
                       </button>
                     </div>
                   </div>
-
-                  <h3 className="font-bold text-base text-foreground mb-3">Standard Classic</h3>
-
-                  {/* Miniature Layout Preview Card */}
-                  <div
-                    onClick={() => setPreviewLayout(STANDARD_LAYOUT_DEFINITION)}
-                    className="relative w-full aspect-[210/297] mb-3 rounded-xl border border-border/70 bg-gray-100/90 dark:bg-gray-950/70 overflow-hidden flex justify-center items-start pt-2 cursor-pointer group/thumb transition-colors hover:border-brand-500/50 shadow-2xs"
-                    title="Click to preview layout"
-                  >
-                    <div className="pointer-events-none transform scale-[0.30] sm:scale-[0.32] origin-top select-none">
-                      <InvoiceRenderer
-                        layout={STANDARD_LAYOUT_DEFINITION}
-                        invoice={SAMPLE_INVOICE_DATA}
-                        tenantInfo={SAMPLE_TENANT_INFO}
-                        plan="Pro Plus"
-                        scale={1}
-                      />
-                    </div>
-                    {/* Hover Overlay with Preview Button */}
-                    <div className="absolute inset-0 bg-black/45 backdrop-blur-[1.5px] opacity-0 group-hover/thumb:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 z-20">
-                      <div className="px-3.5 py-1.5 rounded-full bg-white/95 dark:bg-card text-foreground flex items-center gap-1.5 shadow-lg transform group-hover/thumb:scale-105 transition-transform text-xs font-bold">
-                        <Eye className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                        <span>Preview</span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
-                <div className="flex items-center justify-between gap-2 pt-1">
+                {/* Bottom Actions Row */}
+                <div className="flex items-center justify-between gap-2 pt-3 mt-4 border-t border-border/60">
                   <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewLayout(STANDARD_LAYOUT_DEFINITION)}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                      title="Preview Standard Classic Layout"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
                     {canManage && isProPlus && (
                       <button
                         type="button"
@@ -333,6 +354,7 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
                   )}
                 </div>
               </div>
+            </div>
 
             {/* Custom Layouts */}
             {layouts.map((l) => {
@@ -348,156 +370,178 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
               return (
                 <div
                   key={l.id}
-                  className="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between transition-all hover:border-brand-500/30 group relative"
+                  className="bg-card border border-border rounded-2xl p-4 sm:p-5 flex flex-row gap-3.5 sm:gap-4 md:gap-5 transition-all hover:border-brand-500/30 group relative"
                 >
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-                      {/* Status Badge */}
-                      <div>
-                        {cStatus === "both" && (
-                          <span className="text-[10px] font-bold text-brand-500 bg-brand-500/10 border border-brand-500/25 px-2 py-0.5 rounded-full">
-                            Both (Invoice & Quotation)
-                          </span>
-                        )}
-                        {cStatus === "invoice" && (
-                          <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 border border-blue-500/25 px-2 py-0.5 rounded-full">
-                            Invoice Only
-                          </span>
-                        )}
-                        {cStatus === "quotation" && (
-                          <span className="text-[10px] font-bold text-purple-500 bg-purple-500/10 border border-purple-500/25 px-2 py-0.5 rounded-full">
-                            Quotation Only
-                          </span>
-                        )}
-                        {cStatus === "off" && (
-                          <span className="text-[10px] font-semibold text-muted-foreground bg-muted/60 border border-border px-2 py-0.5 rounded-full">
-                            Off
-                          </span>
-                        )}
-                      </div>
-
-                      {/* 3 Action Buttons */}
-                      <div className="flex items-center bg-muted/50 p-0.5 rounded-xl border border-border">
-                        <button
-                          type="button"
-                          disabled={!canManage || updatingFormatId === l.id}
-                          onClick={() => handleSetFormat(l.id, "invoice")}
-                          className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
-                            cStatus === "invoice"
-                              ? "bg-brand-500 text-brand-950 shadow-xs"
-                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                          }`}
-                          title="Assign to Invoice"
-                        >
-                          Invoice
-                        </button>
-                        <button
-                          type="button"
-                          disabled={!canManage || updatingFormatId === l.id}
-                          onClick={() => handleSetFormat(l.id, "quotation")}
-                          className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
-                            cStatus === "quotation"
-                              ? "bg-brand-500 text-brand-950 shadow-xs"
-                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                          }`}
-                          title="Assign to Quotation"
-                        >
-                          Quotation
-                        </button>
-                        <button
-                          type="button"
-                          disabled={!canManage || updatingFormatId === l.id}
-                          onClick={() => handleSetFormat(l.id, "both")}
-                          className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
-                            cStatus === "both"
-                              ? "bg-brand-500 text-brand-950 shadow-xs"
-                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                          }`}
-                          title="Assign to Both Documents"
-                        >
-                          Both
-                        </button>
+                  {/* Left: Portrait Preview Thumbnail */}
+                  <div
+                    onClick={() => setPreviewLayout(getLayoutDef(l.definition))}
+                    className="relative w-[115px] sm:w-[125px] xl:w-[130px] 2xl:w-[140px] aspect-[210/297] rounded-xl border border-border/70 bg-white overflow-hidden shrink-0 flex justify-center items-start cursor-pointer group/thumb transition-colors hover:border-brand-500/50 shadow-2xs"
+                    title="Click to preview layout"
+                  >
+                    <div className="pointer-events-none transform scale-[0.145] sm:scale-[0.158] xl:scale-[0.164] 2xl:scale-[0.176] origin-top select-none">
+                      <InvoiceRenderer
+                        layout={getLayoutDef(l.definition)}
+                        invoice={SAMPLE_INVOICE_DATA}
+                        tenantInfo={SAMPLE_TENANT_INFO}
+                        plan="Pro Plus"
+                        scale={1}
+                      />
+                    </div>
+                    {/* Hover Overlay with Preview Button */}
+                    <div className="absolute inset-0 bg-black/45 backdrop-blur-[1.5px] opacity-0 group-hover/thumb:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 z-20">
+                      <div className="px-2.5 py-1 rounded-full bg-white/95 dark:bg-card text-foreground flex items-center gap-1.5 shadow-lg transform group-hover/thumb:scale-105 transition-transform text-[11px] font-bold">
+                        <Eye className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+                        <span>Preview</span>
                       </div>
                     </div>
+                  </div>
 
-                    <h3 className="font-bold text-base text-foreground mb-3 truncate">{l.name}</h3>
+                  {/* Right: Title, Selector Buttons, Edit Buttons & Actions */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                    <div>
+                      {/* Title & Status Badge */}
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-bold text-base sm:text-lg text-foreground truncate" title={l.name}>
+                            {l.name}
+                          </h3>
+                        </div>
 
-                    {/* Miniature Layout Preview Card */}
-                    <div
-                      onClick={() => setPreviewLayout(getLayoutDef(l.definition))}
-                      className="relative w-full aspect-[210/297] mb-3 rounded-xl border border-border/70 bg-gray-100/90 dark:bg-gray-950/70 overflow-hidden flex justify-center items-start pt-2 cursor-pointer group/thumb transition-colors hover:border-brand-500/50 shadow-2xs"
-                      title="Click to preview layout"
-                    >
-                      <div className="pointer-events-none transform scale-[0.30] sm:scale-[0.32] origin-top select-none">
-                        <InvoiceRenderer
-                          layout={getLayoutDef(l.definition)}
-                          invoice={SAMPLE_INVOICE_DATA}
-                          tenantInfo={SAMPLE_TENANT_INFO}
-                          plan="Pro Plus"
-                          scale={1}
-                        />
+                        {/* Status Badge */}
+                        <div className="shrink-0">
+                          {cStatus === "both" && (
+                            <span className="text-[10px] sm:text-[11px] font-bold text-brand-500 bg-brand-500/10 border border-brand-500/25 px-2.5 py-0.5 rounded-full inline-block">
+                              Both
+                            </span>
+                          )}
+                          {cStatus === "invoice" && (
+                            <span className="text-[10px] sm:text-[11px] font-bold text-blue-500 bg-blue-500/10 border border-blue-500/25 px-2.5 py-0.5 rounded-full inline-block">
+                              Invoice Only
+                            </span>
+                          )}
+                          {cStatus === "quotation" && (
+                            <span className="text-[10px] sm:text-[11px] font-bold text-purple-500 bg-purple-500/10 border border-purple-500/25 px-2.5 py-0.5 rounded-full inline-block">
+                              Quotation Only
+                            </span>
+                          )}
+                          {cStatus === "off" && (
+                            <span className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground bg-muted/60 border border-border px-2.5 py-0.5 rounded-full inline-block">
+                              Off
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      {/* Hover Overlay with Preview Button */}
-                      <div className="absolute inset-0 bg-black/45 backdrop-blur-[1.5px] opacity-0 group-hover/thumb:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 z-20">
-                        <div className="px-3.5 py-1.5 rounded-full bg-white/95 dark:bg-card text-foreground flex items-center gap-1.5 shadow-lg transform group-hover/thumb:scale-105 transition-transform text-xs font-bold">
-                          <Eye className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                          <span>Preview</span>
+
+                      {/* Selector Buttons */}
+                      <div className="mt-3">
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                          Assign To
+                        </span>
+                        <div className="inline-flex items-center bg-muted/50 p-0.5 rounded-xl border border-border">
+                          <button
+                            type="button"
+                            disabled={!canManage || updatingFormatId === l.id}
+                            onClick={() => handleSetFormat(l.id, "invoice")}
+                            className={`px-2.5 sm:px-3 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                              cStatus === "invoice"
+                                ? "bg-brand-500 text-brand-950 shadow-xs"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                            }`}
+                            title="Assign to Invoice"
+                          >
+                            Invoice
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!canManage || updatingFormatId === l.id}
+                            onClick={() => handleSetFormat(l.id, "quotation")}
+                            className={`px-2.5 sm:px-3 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                              cStatus === "quotation"
+                                ? "bg-brand-500 text-brand-950 shadow-xs"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                            }`}
+                            title="Assign to Quotation"
+                          >
+                            Quotation
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!canManage || updatingFormatId === l.id}
+                            onClick={() => handleSetFormat(l.id, "both")}
+                            className={`px-2.5 sm:px-3 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                              cStatus === "both"
+                                ? "bg-brand-500 text-brand-950 shadow-xs"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                            }`}
+                            title="Assign to Both Documents"
+                          >
+                            Both
+                          </button>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                <div className="flex items-center justify-between gap-2 pt-1">
-                  <div className="flex items-center gap-1">
-                    {canManage && (
-                      <button
-                        type="button"
-                        disabled={duplicatingId === l.id}
-                        onClick={() => handleDuplicate(l.id)}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-50"
-                        title="Duplicate Layout"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                    )}
-                    {canManage && (
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(l.id)}
-                        className="p-1.5 rounded-lg text-red-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                        title="Delete Layout"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
+                    {/* Bottom Actions Row */}
+                    <div className="flex items-center justify-between gap-2 pt-3 mt-4 border-t border-border/60">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewLayout(getLayoutDef(l.definition))}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                          title="Preview Layout"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        {canManage && (
+                          <button
+                            type="button"
+                            disabled={duplicatingId === l.id}
+                            onClick={() => handleDuplicate(l.id)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-50"
+                            title="Duplicate Layout"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canManage && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(l.id)}
+                            className="p-1.5 rounded-lg text-red-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                            title="Delete Layout"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
 
-                  {canManage && (
-                    !isProPlus ? (
-                      <button
-                        type="button"
-                        onClick={() => handleUpgradePrompt("custom layouts")}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-500 border border-brand-500/25 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
-                        title="Upgrade to Pro Plus to edit"
-                      >
-                        <Lock className="w-3.5 h-3.5" />
-                        <span>Edit (Pro Plus)</span>
-                      </button>
-                    ) : (
-                      <Link
-                        href={`/user/settings/invoice-layout/builder/${l.id}`}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-500 border border-brand-500/25 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
-                        title="Edit this format in the Builder Studio"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        <span>Edit Format</span>
-                      </Link>
-                    )
-                  )}
+                      {canManage && (
+                        !isProPlus ? (
+                          <button
+                            type="button"
+                            onClick={() => handleUpgradePrompt("custom layouts")}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-500 border border-brand-500/25 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                            title="Upgrade to Pro Plus to edit"
+                          >
+                            <Lock className="w-3.5 h-3.5" />
+                            <span>Edit (Pro Plus)</span>
+                          </button>
+                        ) : (
+                          <Link
+                            href={`/user/settings/invoice-layout/builder/${l.id}`}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-500 border border-brand-500/25 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                            title="Edit this format in the Builder Studio"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Edit Format</span>
+                          </Link>
+                        )
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
           </div>
         </div>
       )}
