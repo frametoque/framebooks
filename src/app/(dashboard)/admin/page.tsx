@@ -1,7 +1,8 @@
 import React from "react";
 import { Metadata } from "next";
-import { OverviewClient } from "./OverviewClient";
+import { DashboardClient } from "./DashboardClient";
 import { getOverviewStats } from "./actions";
+import { getPlatformAnalytics } from "./analytics/actions";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard",
@@ -9,19 +10,34 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminOverviewPage({
+export default async function AdminDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: "7d" | "30d" | "90d" | "12m" }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
 }) {
   const resolvedParams = await searchParams;
-  const range = resolvedParams.range || "30d";
+  const currentYear = new Date().getFullYear();
+  const defaultFrom = `${currentYear - 1}-03-31`;
+  const defaultTo = `${currentYear}-04-01`;
 
-  const data = await getOverviewStats(range);
+  const range = resolvedParams.range || "lifetime";
+  const from = resolvedParams.from || (range === "custom" ? defaultFrom : undefined);
+  const to = resolvedParams.to || (range === "custom" ? defaultTo : undefined);
+
+  const [overviewData, analyticsData] = await Promise.all([
+    getOverviewStats(range, from, to),
+    getPlatformAnalytics(),
+  ]);
 
   return (
     <div className="space-y-6">
-      <OverviewClient data={data} currentRange={range} />
+      <DashboardClient
+        overviewData={overviewData}
+        analyticsData={analyticsData}
+        currentRange={range}
+        customFrom={from || defaultFrom}
+        customTo={to || defaultTo}
+      />
     </div>
   );
 }

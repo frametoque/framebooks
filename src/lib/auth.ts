@@ -87,17 +87,26 @@ export const authOptions: NextAuthOptions = {
       }
 
       const email = user.email.trim().toLowerCase();
+      const avatarUrl = user.image || (profile as any)?.picture || null;
       // Check if user exists by email (case-insensitive)
       const existing = await sql`SELECT id FROM admin_users WHERE LOWER(email) = ${email} LIMIT 1`;
       
       if (existing.length === 0) {
         await sql`
-          INSERT INTO admin_users (email, full_name, role, created_at)
-          VALUES (${email}, ${user.name || ''}, 'pending', NOW())
-          ON CONFLICT (email) DO NOTHING
+          INSERT INTO admin_users (email, full_name, avatar_url, role, last_login_at, created_at)
+          VALUES (${email}, ${user.name || ''}, ${avatarUrl}, 'pending', NOW(), NOW())
+          ON CONFLICT (email) DO UPDATE SET 
+            last_login_at = NOW(),
+            avatar_url = COALESCE(EXCLUDED.avatar_url, admin_users.avatar_url)
         `;
       } else {
-        await sql`UPDATE admin_users SET full_name = COALESCE(full_name, ${user.name || ''}) WHERE LOWER(email) = ${email}`;
+        await sql`
+          UPDATE admin_users 
+          SET full_name = COALESCE(full_name, ${user.name || ''}),
+              avatar_url = COALESCE(${avatarUrl}, avatar_url),
+              last_login_at = NOW()
+          WHERE LOWER(email) = ${email}
+        `;
       }
 
       return true;
@@ -113,7 +122,16 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).isBanned = !!token?.isBanned;
         (session.user as any).tenantId = token?.tenantId;
         (session.user as any).role = token?.role;
-        if (token?.picture) session.user.image = token.picture as string;
+        if (token?.picture) {
+          session.user.image = token.picture as string;
+          try {
+            await sql`
+              UPDATE admin_users 
+              SET avatar_url = COALESCE(avatar_url, ${token.picture as string}) 
+              WHERE LOWER(email) = ${email} AND avatar_url IS NULL
+            `;
+          } catch {}
+        }
         if (token?.name) session.user.name = token.name as string;
 
         try {

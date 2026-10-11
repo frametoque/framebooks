@@ -12,7 +12,6 @@ import {
   CreditCard,
   Layers,
   Tag,
-  BarChart3,
   Megaphone,
   History,
   UserCog,
@@ -33,12 +32,11 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Overview", href: "/admin", icon: LayoutDashboard },
+  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Subscriptions", href: "/admin/subscriptions", icon: Repeat, permission: "view_subscriptions" },
   { label: "Payments", href: "/admin/payments", icon: CreditCard, permission: "view_payments" },
   { label: "Plans", href: "/admin/plans", icon: Layers, permission: "view_plans" },
   { label: "Coupons", href: "/admin/coupons", icon: Tag, permission: "view_coupons" },
-  { label: "Analytics", href: "/admin/analytics", icon: BarChart3, permission: "view_analytics" },
   { label: "Announcements", href: "/admin/announcements", icon: Megaphone, permission: "manage_announcements" },
   { label: "Audit Logs", href: "/admin/audit-logs", icon: History, permission: "view_audit_logs" },
   { label: "Admins & Roles", href: "/admin/admins", icon: UserCog, superAdminOnly: true },

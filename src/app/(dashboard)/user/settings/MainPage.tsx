@@ -22,6 +22,7 @@ import { useConfirm } from '@/components/ui/ConfirmProvider';
 import { UpgradeOverlay } from "../components/UpgradeOverlay";
 import Image from "next/image";
 import { TenantLogo } from "@/components/TenantLogo";
+import ClientAvatar from "@/components/ClientAvatar";
 
 export interface PlanViewItem {
   name: string;
@@ -1865,12 +1866,21 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                     <div className="space-y-3">
                       {teamMembers.map(member => (
                         <div key={member.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50/50 dark:bg-black/20 rounded-2xl border border-border gap-4">
-                          <div>
-                            <p className="font-medium text-foreground flex items-center gap-2">
-                              {member.full_name || 'Unnamed User'}
-                              {(String(member.id) === String(user?.id) || String(member.id) === String((user as any)?.dbId)) && <span className="px-2 py-0.5 bg-emerald-100/80 text-emerald-800 border border-emerald-200/60 dark:bg-brand-500/10 dark:text-brand-400 text-[10px] uppercase font-bold rounded-full dark:border-brand-500/20">You</span>}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{member.email}</p>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <ClientAvatar
+                              imageUrl={member.avatar_url}
+                              email={member.email}
+                              name={member.full_name}
+                              className="w-10 h-10 rounded-xl object-cover shrink-0 border border-border"
+                              fallbackClassName="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold flex items-center justify-center uppercase shrink-0 text-sm"
+                            />
+                            <div className="min-w-0">
+                              <p className="font-medium text-foreground flex items-center gap-2">
+                                {member.full_name || 'Unnamed User'}
+                                {(String(member.id) === String(user?.id) || String(member.id) === String((user as any)?.dbId)) && <span className="px-2 py-0.5 bg-emerald-100/80 text-emerald-800 border border-emerald-200/60 dark:bg-brand-500/10 dark:text-brand-400 text-[10px] uppercase font-bold rounded-full dark:border-brand-500/20">You</span>}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{member.email}</p>
+                            </div>
                           </div>
                           
                           <div className="flex items-center gap-3">
@@ -1880,9 +1890,11 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                                 onChange={(e) => handleRoleChange(member.id, e.target.value)}
                                 className="bg-card border border-border rounded-xl px-3 py-1.5 text-sm text-foreground outline-none cursor-pointer shadow-2xs"
                               >
-                                {availableRoles.length > 0 ? availableRoles.filter(r => r.role.toLowerCase() !== 'owner').map((r) => (
-                                  <option key={r.role} value={r.role} className="bg-card text-foreground">{r.role}</option>
-                                )) : (
+                                {availableRoles.length > 0 ? (
+                                  availableRoles.filter(r => r.role.toLowerCase() !== 'owner').map((r) => (
+                                    <option key={r.role} value={r.role} className="bg-card text-foreground">{r.role}</option>
+                                  ))
+                                ) : (
                                   <>
                                     <option value="Admin" className="bg-card text-foreground">Admin</option>
                                     <option value="Editor" className="bg-card text-foreground">Editor</option>
@@ -1926,9 +1938,18 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                     <div className="space-y-3">
                       {sentInvitations.map(inv => (
                         <div key={inv.id} className="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-black/20 rounded-2xl border border-border">
-                          <div>
-                            <p className="font-medium text-foreground">{inv.email}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Sent on {new Date(inv.created_at).toLocaleDateString()}</p>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <ClientAvatar
+                              imageUrl={inv.avatar_url}
+                              email={inv.email}
+                              name={inv.full_name}
+                              className="w-10 h-10 rounded-xl object-cover shrink-0 border border-border"
+                              fallbackClassName="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold flex items-center justify-center uppercase shrink-0 text-sm"
+                            />
+                            <div className="min-w-0">
+                              <p className="font-medium text-foreground truncate">{inv.email}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Sent on {new Date(inv.created_at).toLocaleDateString()}</p>
+                            </div>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className={`inline-block px-3 py-1 text-xs font-bold uppercase rounded-full ${

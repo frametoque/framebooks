@@ -14,7 +14,6 @@ import {
   AlertTriangle,
   ArrowRight,
   ExternalLink,
-  ShieldCheck,
   Calendar,
   Layers,
   Sparkles,
@@ -37,27 +36,7 @@ export function AnalyticsClient({ data }: { data: any }) {
 
   return (
     <div className="space-y-8">
-      {/* Privacy Notice Banner */}
-      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex items-center justify-between gap-4 text-xs">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 shrink-0">
-            <ShieldCheck className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="font-bold text-foreground">Tenant Privacy & Security Enforced</span>
-            <p className="text-muted-foreground mt-0.5">
-              Admin analytics only display platform SaaS metrics (subscriptions, revenue, payment health, and account growth). Customer invoices, quotations, inventory, and banking records are strictly isolated.
-            </p>
-          </div>
-        </div>
-        <Link 
-          href="/admin/subscriptions" 
-          className="shrink-0 font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
-        >
-          <span>Manage Subscriptions</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
+
 
       {/* Top Financial & SaaS KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

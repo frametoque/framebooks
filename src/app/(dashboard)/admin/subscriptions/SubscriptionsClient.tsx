@@ -8,9 +8,6 @@ import {
   Search,
   Download,
   Building2,
-  Layers,
-  Crown,
-  Repeat,
   Eye,
   UserPlus,
   UserCheck,
@@ -138,20 +135,23 @@ export function SubscriptionsClient({
         couponCode?: string | null;
         couponType?: string | null;
         couponValue?: number | null;
+        ownerEmail?: string | null;
+        createdAt?: string | null;
         users: any[];
       }
     >();
 
     users.forEach((u: any) => {
-      const key = u.tenant_id ? `tenant-${u.tenant_id}` : `unassigned-${u.id}`;
-      const name = u.tenant_name || "Direct platform account";
+      if (!u.tenant_id) return; // Do not show direct platform accounts as subscriptions
+      const key = `tenant-${u.tenant_id}`;
+      const name = u.tenant_name || "Workspace";
       const plan = u.current_plan || "Free";
       const logoUrl = u.tenant_logo_url || null;
       const paymentStatus = u.payment_status || "paid";
 
       if (!map.has(key)) {
         map.set(key, {
-          id: u.tenant_id || null,
+          id: u.tenant_id,
           name,
           plan,
           paymentStatus,
@@ -162,6 +162,8 @@ export function SubscriptionsClient({
           couponCode: u.coupon_code || null,
           couponType: u.coupon_type || null,
           couponValue: u.coupon_value || null,
+          ownerEmail: u.owner_email || null,
+          createdAt: u.created_at || null,
           users: [],
         });
       }
@@ -174,7 +176,15 @@ export function SubscriptionsClient({
         entry.couponType = u.coupon_type;
         entry.couponValue = u.coupon_value;
       }
-      entry.users.push(u);
+      if (!entry.ownerEmail && u.owner_email) {
+        entry.ownerEmail = u.owner_email;
+      }
+      if (!entry.createdAt && u.created_at) {
+        entry.createdAt = u.created_at;
+      }
+      if (u.id) {
+        entry.users.push(u);
+      }
     });
 
     return Array.from(map.values());
@@ -435,34 +445,22 @@ export function SubscriptionsClient({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <AdminStatCard
           label="Active subscriptions"
-          value={businessCount || 1}
-          icon={Repeat}
-          iconBg="bg-brand-500/15 dark:bg-brand-400/10"
-          iconColor="text-brand-700 dark:text-brand-400"
+          value={businessCount}
         />
 
         <AdminStatCard
           label="Pro Plus"
           value={proPlusCount}
-          icon={Crown}
-          iconBg="bg-emerald-100/80 dark:bg-emerald-400/10"
-          iconColor="text-emerald-700 dark:text-emerald-400"
         />
 
         <AdminStatCard
           label="Pro"
           value={proCount}
-          icon={Layers}
-          iconBg="bg-blue-100/80 dark:bg-blue-400/10"
-          iconColor="text-blue-700 dark:text-blue-400"
         />
 
         <AdminStatCard
           label="Free"
           value={freeCount}
-          icon={Building2}
-          iconBg="bg-purple-100/80 dark:bg-purple-400/10"
-          iconColor="text-purple-700 dark:text-purple-400"
         />
       </div>
 
@@ -534,11 +532,11 @@ export function SubscriptionsClient({
                 (u: any) => (u.workspace_role || u.role)?.toLowerCase() === "admin"
               ) ||
               group.users[0];
-            const ownerEmail = owner?.email;
+            const ownerEmail = owner?.email || group.ownerEmail;
 
             return (
               <div
-                key={group.id || "unassigned"}
+                key={group.id ? `biz-${group.id}` : `unassigned-${owner?.id || Math.random()}`}
                 className="bg-card border border-border rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xs hover:border-border/80 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
               >
                 {/* Business Info: Logo, Name, Plan, Date & Owner Email */}
@@ -593,10 +591,10 @@ export function SubscriptionsClient({
                             year: "numeric",
                           })}
                         </span>
-                      ) : owner?.created_at ? (
+                      ) : (owner?.created_at || group.createdAt) ? (
                         <span>
                           Joined:{" "}
-                          {new Date(owner.created_at).toLocaleDateString(undefined, {
+                          {new Date(owner?.created_at || group.createdAt).toLocaleDateString(undefined, {
                             month: "short",
                             day: "numeric",
                             year: "numeric",
@@ -613,73 +611,17 @@ export function SubscriptionsClient({
                   </div>
                 </div>
 
-                {/* Business Controls or Direct Account Controls */}
-                {group.id ? (
-                  <div className="flex items-center gap-2 flex-wrap shrink-0 w-full md:w-auto justify-end">
-                    <button
-                      onClick={() => handleOpenChangePlan(group)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card hover:bg-muted text-xs font-semibold text-foreground transition-colors cursor-pointer shadow-2xs"
-                      title="Change subscription plan"
-                    >
-                      <Edit3 className="w-3.5 h-3.5 text-blue-500" />
-                      <span>Change plan</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleOpenAddMember(group.id!, group.name)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card hover:bg-muted text-xs font-semibold text-foreground transition-colors cursor-pointer shadow-2xs"
-                      title="Add a team member to this business"
-                    >
-                      <UserPlus className="w-3.5 h-3.5 text-brand-500" />
-                      <span>Add member</span>
-                    </button>
-
-                    <Link
-                      href={`/admin/businesses/${group.id}`}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-brand-500/30 bg-brand-500/10 hover:bg-brand-500/20 text-xs font-bold text-brand-700 dark:text-brand-400 transition-colors cursor-pointer shadow-2xs"
-                      title="View full business details and team members"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>View business</span>
-                    </Link>
-
-                    {/* Delete Business Workspace Button */}
-                    <button
-                      type="button"
-                      onClick={() => setDeleteTarget({ id: group.id!, name: group.name })}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-red-500/20 bg-card hover:bg-red-500/10 text-xs font-semibold text-red-600 dark:text-red-400 transition-colors cursor-pointer shadow-2xs"
-                      title="Permanently delete business workspace"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Delete</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 flex-wrap shrink-0 w-full md:w-auto justify-end">
-                    {owner && (
-                      <Link
-                        href={`/admin/users/${owner.id}`}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-border bg-card hover:bg-muted text-xs font-semibold text-foreground transition-colors cursor-pointer shadow-2xs"
-                        title="View account profile"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>View user</span>
-                      </Link>
-                    )}
-
-                    {owner && (
-                      <button
-                        type="button"
-                        onClick={() => setDeleteUserTarget({ id: owner.id, email: owner.email, name: owner.full_name || owner.email })}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-red-500/20 bg-card hover:bg-red-500/10 text-xs font-semibold text-red-600 dark:text-red-400 transition-colors cursor-pointer shadow-2xs"
-                        title="Permanently delete this direct platform account"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Delete</span>
-                      </button>
-                    )}
-                  </div>
-                )}
+                {/* Business Controls: Only View business button */}
+                <div className="flex items-center gap-2 flex-wrap shrink-0 w-full md:w-auto justify-end">
+                  <Link
+                    href={`/admin/businesses/${group.id}`}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-brand-500/30 bg-brand-500/10 hover:bg-brand-500/20 text-xs font-bold text-brand-700 dark:text-brand-400 transition-colors cursor-pointer shadow-2xs"
+                    title="View full business details and team members"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>View business</span>
+                  </Link>
+                </div>
               </div>
             );
           })

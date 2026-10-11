@@ -18,10 +18,11 @@ export async function GET() {
     const tenantId = userRows[0].tenant_id;
 
     const sent = await sql`
-      SELECT id, email, status, created_at
-      FROM team_invitations
-      WHERE tenant_id = ${tenantId}
-      ORDER BY created_at DESC
+      SELECT ti.id, ti.email, ti.status, ti.created_at, u.avatar_url, u.full_name
+      FROM team_invitations ti
+      LEFT JOIN admin_users u ON LOWER(ti.email) = LOWER(u.email) AND u.deleted_at IS NULL
+      WHERE ti.tenant_id = ${tenantId}
+      ORDER BY ti.created_at DESC
     `;
 
     return NextResponse.json({ sent: sent || [] });

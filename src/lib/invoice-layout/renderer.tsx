@@ -443,7 +443,14 @@ export function InvoiceRenderer({
       case "client_name": {
         const label = block.props?.label !== undefined ? block.props.label : "";
         const showLabel = block.props?.showLabel !== false && Boolean(label);
-        const clientName = block.props?.clientName || invoice?.legal_name || (isInteractive ? "Company Name" : "");
+        const clientName =
+          block.props?.clientName ||
+          invoice?.client_name ||
+          invoice?.legal_name ||
+          invoice?.client?.full_name ||
+          invoice?.client?.name ||
+          invoice?.user_email ||
+          (isInteractive ? "Company Name" : "");
         if (!clientName) {
           content = null;
           break;
@@ -465,7 +472,15 @@ export function InvoiceRenderer({
       case "client_address": {
         const label = block.props?.label !== undefined ? block.props.label : "";
         const showLabel = block.props?.showLabel !== false && Boolean(label);
-        const billingAddress = block.props?.billingAddress || invoice?.billing_address || (isInteractive ? "Client Address" : "");
+        const billingAddress =
+          block.props?.billingAddress ||
+          invoice?.billing_address ||
+          invoice?.client_address ||
+          invoice?.client?.address ||
+          invoice?.client?.billing_address ||
+          (invoice?.client_phone ? `Tel: ${invoice.client_phone}` : "") ||
+          (invoice?.client_email ? invoice.client_email : "") ||
+          (isInteractive ? "Client Address" : "");
         if (!billingAddress) {
           content = null;
           break;
@@ -492,7 +507,12 @@ export function InvoiceRenderer({
       case "client_email": {
         const label = block.props?.label !== undefined ? block.props.label : "Email: ";
         const showLabel = block.props?.showLabel !== false && Boolean(label);
-        const clientEmail = block.props?.clientEmail || invoice?.client_email || (isInteractive ? "accounts@acme.com" : "");
+        const clientEmail =
+          block.props?.clientEmail ||
+          invoice?.client_email ||
+          invoice?.user_email ||
+          invoice?.client?.email ||
+          (isInteractive ? "accounts@acme.com" : "");
         if (!clientEmail) {
           content = null;
           break;
@@ -519,7 +539,11 @@ export function InvoiceRenderer({
       case "client_phone": {
         const label = block.props?.label !== undefined ? block.props.label : "Phone: ";
         const showLabel = block.props?.showLabel !== false && Boolean(label);
-        const clientPhone = block.props?.clientPhone || invoice?.client_phone || (isInteractive ? "+1 (555) 019-2834" : "");
+        const clientPhone =
+          block.props?.clientPhone ||
+          invoice?.client_phone ||
+          invoice?.client?.phone ||
+          (isInteractive ? "+1 (555) 019-2834" : "");
         if (!clientPhone) {
           content = null;
           break;
@@ -545,9 +569,28 @@ export function InvoiceRenderer({
 
       case "bill_to": {
         const label = block.props?.label || "Bill To:";
-        const clientName = block.props?.clientName || invoice?.legal_name || "Company Name";
-        const billingAddress = block.props?.billingAddress || invoice?.billing_address || (isInteractive ? "Client Address" : undefined);
-        const clientEmail = block.props?.clientEmail || invoice?.client_email;
+        const clientName =
+          block.props?.clientName ||
+          invoice?.client_name ||
+          invoice?.legal_name ||
+          invoice?.client?.full_name ||
+          invoice?.client?.name ||
+          invoice?.user_email ||
+          (isInteractive ? "Company Name" : "");
+        const billingAddress =
+          block.props?.billingAddress ||
+          invoice?.billing_address ||
+          invoice?.client_address ||
+          invoice?.client?.address ||
+          invoice?.client?.billing_address ||
+          (invoice?.client_phone ? `Tel: ${invoice.client_phone}` : "") ||
+          (invoice?.client_email ? invoice.client_email : "") ||
+          (isInteractive ? "Client Address" : undefined);
+        const clientEmail =
+          block.props?.clientEmail ||
+          invoice?.client_email ||
+          invoice?.user_email ||
+          invoice?.client?.email;
         content = (
           <div className="space-y-1" style={{ fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined }}>
             <div style={{ color: primaryColor }} className="font-bold text-xs uppercase tracking-wider">

@@ -8,7 +8,11 @@ import { usePathname } from "next/navigation";
 export function LimitBanner({ exceededLimits }: { exceededLimits: string[] }) {
   const pathname = usePathname();
 
-  if (!exceededLimits || exceededLimits.length === 0) return null;
+  const activeLimits = (exceededLimits || []).filter(
+    (item) => item.toLowerCase() !== "accounts" && item.toLowerCase() !== "account"
+  );
+
+  if (!activeLimits || activeLimits.length === 0) return null;
   if (pathname.startsWith("/user/settings")) return null;
 
   return (
@@ -16,7 +20,7 @@ export function LimitBanner({ exceededLimits }: { exceededLimits: string[] }) {
       <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
         <AlertTriangle size={18} />
         <span className="text-sm font-medium">
-          You have reached the maximum limit for your current plan on: {exceededLimits.join(", ")}.
+          You have reached the maximum limit for your current plan on: {activeLimits.join(", ")}.
         </span>
       </div>
       <Link

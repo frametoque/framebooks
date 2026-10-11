@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import sql from "@/lib/db";
 import { BusinessDetailView } from "@/app/(dashboard)/admin/_components/BusinessDetailView";
 import { getBusinessDetails } from "@/app/(dashboard)/admin/users/actions";
 
@@ -37,7 +38,10 @@ export default async function BusinessDetailPage({
   const tenantId = parseInt(id, 10);
   if (isNaN(tenantId)) notFound();
 
-  const businessData = await getBusinessDetails(tenantId);
+  const [businessData, allPlans] = await Promise.all([
+    getBusinessDetails(tenantId),
+    sql`SELECT * FROM plans ORDER BY sort_order ASC`,
+  ]);
   if (!businessData) notFound();
 
   return (
@@ -50,7 +54,7 @@ export default async function BusinessDetailPage({
         <span className="text-foreground font-medium">{businessData.tenant.name}</span>
       </div>
 
-      <BusinessDetailView businessData={businessData} />
+      <BusinessDetailView businessData={businessData} allPlans={allPlans} />
     </div>
   );
 }

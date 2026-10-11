@@ -182,11 +182,19 @@ export async function approvePayment(
         await sqlTx`UPDATE payments SET subscription_id = ${subId} WHERE id = ${paymentId}`;
       }
 
-      // Update tenant plan
+      // Update tenant plan and payment status
       if (pay.plan_name) {
         await sqlTx`
           UPDATE tenants SET
             plan = ${pay.plan_name},
+            payment_status = 'paid',
+            plan_expires_at = ${newEnd}
+          WHERE id = ${pay.tenant_id}
+        `;
+      } else {
+        await sqlTx`
+          UPDATE tenants SET
+            payment_status = 'paid',
             plan_expires_at = ${newEnd}
           WHERE id = ${pay.tenant_id}
         `;

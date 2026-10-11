@@ -16,21 +16,29 @@ export default function middleware(req: NextRequest) {
     });
   }
 
-  const sessionCookie =
-    req.cookies.get("next-auth.session-token")?.value ||
-    req.cookies.get("__Secure-next-auth.session-token")?.value;
+  // Admin routes: protected by framebooks-admin-token (or fallback next-auth session)
+  if (pathname.startsWith("/admin")) {
+    const adminSession =
+      req.cookies.get("framebooks-admin-token")?.value ||
+      req.cookies.get("next-auth.session-token")?.value ||
+      req.cookies.get("__Secure-next-auth.session-token")?.value;
 
-  // If no session cookie is present, redirect to appropriate login screen
-  if (!sessionCookie) {
-    if (pathname.startsWith("/admin")) {
+    if (!adminSession) {
       const loginUrl = new URL("/admin/login", req.url);
       if (pathname !== "/admin") {
         loginUrl.searchParams.set("callbackUrl", pathname);
       }
       return NextResponse.redirect(loginUrl);
     }
+  }
 
-    if (pathname.startsWith("/user")) {
+  // User dashboard routes: protected by user session (next-auth)
+  if (pathname.startsWith("/user")) {
+    const userSession =
+      req.cookies.get("next-auth.session-token")?.value ||
+      req.cookies.get("__Secure-next-auth.session-token")?.value;
+
+    if (!userSession) {
       const loginUrl = new URL("/login", req.url);
       loginUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(loginUrl);

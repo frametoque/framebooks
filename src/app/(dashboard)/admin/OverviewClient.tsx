@@ -166,8 +166,9 @@ export function OverviewClient({
         <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs flex flex-col justify-between">
           <div>
             <h3 className="text-base font-bold text-foreground">Subscribers by plan</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Platform users grouped by current tier</p>
           </div>
-          <div className="h-[220px] w-full my-auto">
+          <div className="h-[210px] w-full my-auto">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -176,8 +177,8 @@ export function OverviewClient({
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  innerRadius={55}
-                  outerRadius={80}
+                  innerRadius={50}
+                  outerRadius={75}
                   paddingAngle={3}
                   stroke="none"
                 >
@@ -196,6 +197,72 @@ export function OverviewClient({
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+
+          {/* Billing Interval & Revenue by Plan */}
+          <div className="pt-3 border-t border-border space-y-3">
+            {/* Billing interval counts — sourced from kpis if available */}
+            {(kpis.monthlyBilling !== undefined || kpis.yearlyBilling !== undefined) && (
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="p-2.5 bg-muted/30 border border-border rounded-2xl">
+                  <span className="text-base font-bold text-foreground block">{kpis.monthlyBilling ?? 0}</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">Monthly billing</span>
+                </div>
+                <div className="p-2.5 bg-muted/30 border border-border rounded-2xl">
+                  <span className="text-base font-bold text-foreground block">{kpis.yearlyBilling ?? 0}</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">Yearly billing</span>
+                </div>
+              </div>
+            )}
+
+            {/* Monthly Revenue by Plan */}
+            {charts.revenueByPlan && charts.revenueByPlan.length > 0 && (
+              <div className="pt-1 space-y-1">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                  Revenue this month · by plan
+                </p>
+                {charts.revenueByPlan.map((r: any, i: number) => {
+                  const totalPlanRevenue = charts.revenueByPlan.reduce(
+                    (sum: number, x: any) => sum + x.revenue, 0
+                  );
+                  const pct = totalPlanRevenue > 0
+                    ? Math.round((r.revenue / totalPlanRevenue) * 100)
+                    : 0;
+                  return (
+                    <div key={r.plan ?? i} className="flex items-center gap-2">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ background: PLAN_COLORS[i % PLAN_COLORS.length] }}
+                      />
+                      <span className="text-[11px] text-muted-foreground flex-1 truncate">
+                        {r.plan ?? "Free"}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-16 h-1 bg-muted/50 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${pct}%`,
+                              background: PLAN_COLORS[i % PLAN_COLORS.length],
+                            }}
+                          />
+                        </div>
+                        <span className="text-[11px] font-semibold text-foreground tabular-nums">
+                          {formatLKR(r.revenue)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Fallback: empty state */}
+            {(!charts.revenueByPlan || charts.revenueByPlan.length === 0) && (
+              <p className="text-[11px] text-muted-foreground/60 italic text-center pb-1">
+                No revenue recorded this month
+              </p>
+            )}
           </div>
         </div>
       </div>

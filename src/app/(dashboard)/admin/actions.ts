@@ -11,14 +11,75 @@ import { unstable_cache, revalidateTag, revalidatePath } from "next/cache";
  * without firing 10 heavy queries on every single request.
  */
 const fetchOverviewData = unstable_cache(
-  async (range: "7d" | "30d" | "90d" | "12m") => {
-    // Determine interval offset
-    let intervalSql = "30 days";
-    if (range === "7d") intervalSql = "7 days";
-    else if (range === "90d") intervalSql = "90 days";
-    else if (range === "12m") intervalSql = "365 days";
+  async (range: string = "lifetime", from?: string, to?: string) => {
+    // Determine condition for new users & charts
+    let userDateCondition = sql`TRUE`;
+    let chartRevenueQuery;
 
-    // Run ALL 10 KPI, chart, list, and MRR queries concurrently in a single parallel batch
+    if (range === "lifetime") {
+      userDateCondition = sql`TRUE`;
+      chartRevenueQuery = sql`
+        SELECT 
+          TO_CHAR(date_trunc('month', created_at), 'Mon YYYY') AS month_label,
+          date_trunc('month', created_at) AS month_date,
+          COALESCE(SUM(amount), 0) AS revenue
+        FROM payments
+        WHERE status = 'paid'
+        GROUP BY date_trunc('month', created_at)
+        ORDER BY date_trunc('month', created_at) ASC
+      `;
+    } else if (range === "custom" && from && to) {
+      userDateCondition = sql`created_at >= ${from}::timestamp AND created_at <= (${to}::timestamp + interval '1 day')`;
+      chartRevenueQuery = sql`
+        SELECT 
+          TO_CHAR(date_trunc('month', created_at), 'Mon YYYY') AS month_label,
+          date_trunc('month', created_at) AS month_date,
+          COALESCE(SUM(amount), 0) AS revenue
+        FROM payments
+        WHERE status = 'paid' AND created_at >= ${from}::timestamp AND created_at <= (${to}::timestamp + interval '1 day')
+        GROUP BY date_trunc('month', created_at)
+        ORDER BY date_trunc('month', created_at) ASC
+      `;
+    } else if (range === "90d") {
+      userDateCondition = sql`created_at >= NOW() - interval '90 days'`;
+      chartRevenueQuery = sql`
+        SELECT 
+          TO_CHAR(date_trunc('month', created_at), 'Mon YYYY') AS month_label,
+          date_trunc('month', created_at) AS month_date,
+          COALESCE(SUM(amount), 0) AS revenue
+        FROM payments
+        WHERE status = 'paid' AND created_at >= NOW() - interval '90 days'
+        GROUP BY date_trunc('month', created_at)
+        ORDER BY date_trunc('month', created_at) ASC
+      `;
+    } else if (range === "12m") {
+      userDateCondition = sql`created_at >= NOW() - interval '365 days'`;
+      chartRevenueQuery = sql`
+        SELECT 
+          TO_CHAR(date_trunc('month', created_at), 'Mon YYYY') AS month_label,
+          date_trunc('month', created_at) AS month_date,
+          COALESCE(SUM(amount), 0) AS revenue
+        FROM payments
+        WHERE status = 'paid' AND created_at >= NOW() - interval '12 months'
+        GROUP BY date_trunc('month', created_at)
+        ORDER BY date_trunc('month', created_at) ASC
+      `;
+    } else {
+      // 30d
+      userDateCondition = sql`created_at >= NOW() - interval '30 days'`;
+      chartRevenueQuery = sql`
+        SELECT 
+          TO_CHAR(date_trunc('day', created_at), 'Mon DD') AS month_label,
+          date_trunc('day', created_at) AS month_date,
+          COALESCE(SUM(amount), 0) AS revenue
+        FROM payments
+        WHERE status = 'paid' AND created_at >= NOW() - interval '30 days'
+        GROUP BY date_trunc('day', created_at)
+        ORDER BY date_trunc('day', created_at) ASC
+      `;
+    }
+
+    // Run ALL 11 KPI, chart, list, and MRR queries concurrently in a single parallel batch
     const [
       kpisSummaryRes,
       allMonthlyRevenueRes,
@@ -30,27 +91,20 @@ const fetchOverviewData = unstable_cache(
       usersByPlanRes,
       paymentsByStatusRes,
       activeSubsDetailed,
+      revenueByPlanRes,
+      billingIntervalsRes,
     ] = await Promise.all([
       // 1. All core KPI counts (index-friendly filter on current month)
       sql`
         SELECT
           (SELECT COUNT(*) FROM admin_users WHERE deleted_at IS NULL)::int as total_users,
-          (SELECT COUNT(*) FROM admin_users WHERE created_at >= NOW() - ${intervalSql}::interval AND deleted_at IS NULL)::int as new_users,
+          (SELECT COUNT(*) FROM admin_users WHERE ${userDateCondition} AND deleted_at IS NULL)::int as new_users,
           (SELECT COUNT(*) FROM subscriptions WHERE status = 'active')::int as active_subs,
           (SELECT COUNT(DISTINCT user_id) FROM payments WHERE status = 'paid')::int as paying_users,
           (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'paid' AND created_at >= date_trunc('month', CURRENT_DATE))::int as revenue_this_month
       `,
-      // 2. Monthly revenue over past 12 months for chart
-      sql`
-        SELECT 
-          TO_CHAR(date_trunc('month', created_at), 'Mon YYYY') AS month_label,
-          date_trunc('month', created_at) AS month_date,
-          COALESCE(SUM(amount), 0) AS revenue
-        FROM payments
-        WHERE status = 'paid' AND created_at >= NOW() - interval '12 months'
-        GROUP BY date_trunc('month', created_at)
-        ORDER BY date_trunc('month', created_at) ASC
-      `,
+      // 2. Revenue for chart
+      chartRevenueQuery,
       // 3. Expiring subscriptions in next 7 days
       sql`
         SELECT s.id, s.current_period_end, t.name AS tenant_name, p.name AS plan_name, u.email AS user_email
@@ -137,6 +191,26 @@ const fetchOverviewData = unstable_cache(
         ) c ON true
         WHERE s.status = 'active'
       `,
+      // 11. Monthly revenue per plan (paid payments in current month grouped by tenant plan)
+      sql`
+        SELECT 
+          COALESCE(t.plan, 'Free') AS plan_name,
+          COALESCE(SUM(p.amount), 0) AS monthly_revenue,
+          COUNT(DISTINCT p.id) AS payment_count
+        FROM payments p
+        LEFT JOIN tenants t ON p.tenant_id = t.id
+        WHERE p.status = 'paid'
+          AND p.created_at >= date_trunc('month', CURRENT_DATE)
+        GROUP BY t.plan
+        ORDER BY monthly_revenue DESC
+      `,
+      // 12. Billing interval counts (active subscriptions)
+      sql`
+        SELECT billing_interval, COUNT(*) AS count
+        FROM subscriptions
+        WHERE status = 'active'
+        GROUP BY billing_interval
+      `,
     ]);
 
     // MRR Calculation (factoring in discounts, coupons, and complimentary subscriptions)
@@ -179,6 +253,9 @@ const fetchOverviewData = unstable_cache(
     const pendingCount = pendingStatusRow ? Number(pendingStatusRow.count) || 0 : 0;
     const pendingTotal = pendingStatusRow ? Number(pendingStatusRow.total) || 0 : 0;
 
+    const monthlyBillingRow = billingIntervalsRes.find((r: any) => r.billing_interval === 'monthly');
+    const yearlyBillingRow = billingIntervalsRes.find((r: any) => r.billing_interval === 'yearly');
+
     return {
       kpis: {
         totalUsers: totalUsersCount,
@@ -192,6 +269,8 @@ const fetchOverviewData = unstable_cache(
         pendingTotal,
         churnRate: "1.2%",
         conversionRate: `${conversionRate}%`,
+        monthlyBilling: Number(monthlyBillingRow?.count) || 0,
+        yearlyBilling: Number(yearlyBillingRow?.count) || 0,
       },
       charts: {
         revenueByMonth: allMonthlyRevenueRes.map((r) => ({
@@ -201,6 +280,11 @@ const fetchOverviewData = unstable_cache(
         usersByPlan: usersByPlanRes.map((r) => ({
           name: r.plan_name,
           value: parseInt(r.count) || 0,
+        })),
+        revenueByPlan: revenueByPlanRes.map((r) => ({
+          plan: r.plan_name,
+          revenue: parseInt(r.monthly_revenue) || 0,
+          paymentCount: parseInt(r.payment_count) || 0,
         })),
         paymentsByStatus: paymentsByStatusRes.map((r) => ({
           status: r.status,
@@ -224,9 +308,9 @@ const fetchOverviewData = unstable_cache(
   }
 );
 
-export async function getOverviewStats(range: "7d" | "30d" | "90d" | "12m" = "30d") {
+export async function getOverviewStats(range: string = "lifetime", from?: string, to?: string) {
   await requireAdmin("view_overview");
-  return fetchOverviewData(range);
+  return fetchOverviewData(range, from, to);
 }
 
 export async function revalidateOverviewStats() {

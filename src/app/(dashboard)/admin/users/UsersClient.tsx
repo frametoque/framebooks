@@ -10,9 +10,6 @@ import {
   ShieldBan, 
   ShieldCheck, 
   Building2, 
-  Users, 
-  Layers, 
-  Crown,
   Eye,
   CheckCircle2,
   X,
@@ -21,7 +18,7 @@ import {
   Trash2,
   Mail
 } from "lucide-react";
-import { PlanBadge, RoleBadge, StatusPill } from "@/components/Formatters";
+import ClientAvatar from "@/components/ClientAvatar";
 import { AdminStatCard } from "@/app/(dashboard)/admin/_components/AdminStatCard";
 import { ConfirmModal } from "@/app/(dashboard)/admin/_components/ConfirmModal";
 import { 
@@ -94,19 +91,30 @@ export function UsersClient({
     router.push(`/admin/users?${params.toString()}`);
   };
 
-  // Distinct businesses count
-  const businessCount = useMemo(() => {
-    const ids = new Set(
-      users.flatMap((u: any) => 
-        (u.linked_businesses || []).map((b: any) => b.id).concat(u.tenant_id ? [u.tenant_id] : [])
-      )
-    );
-    return ids.size;
-  }, [users]);
+  // User statistics
+  const userStats = useMemo(() => {
+    if (initialData.stats) return initialData.stats;
+    let linked = 0;
+    let notLinked = 0;
+    let singleWorkspace = 0;
 
-  const paidUsersCount = useMemo(() => {
-    return users.filter((u: any) => u.current_plan && u.current_plan.toLowerCase() !== "free").length;
-  }, [users]);
+    users.forEach((u: any) => {
+      const count = (u.linked_businesses || []).length;
+      if (count > 0) {
+        linked++;
+        if (count === 1) singleWorkspace++;
+      } else {
+        notLinked++;
+      }
+    });
+
+    return {
+      total: totalCount || users.length,
+      linked,
+      notLinked,
+      singleWorkspace,
+    };
+  }, [initialData.stats, users, totalCount]);
 
   const exportCSV = () => {
     const headers = ["ID", "Email", "Name", "Business", "Plan", "Role", "Status", "Joined"];
@@ -191,34 +199,22 @@ export function UsersClient({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <AdminStatCard
           label="Total users"
-          value={totalCount || users.length}
-          icon={Users}
-          iconBg="bg-brand-500/15 dark:bg-brand-400/10"
-          iconColor="text-brand-700 dark:text-brand-400"
+          value={userStats.total}
         />
 
         <AdminStatCard
-          label="Businesses"
-          value={businessCount}
-          icon={Building2}
-          iconBg="bg-blue-100/80 dark:bg-blue-400/10"
-          iconColor="text-blue-700 dark:text-blue-400"
+          label="Users linked to workspaces"
+          value={userStats.linked}
         />
 
         <AdminStatCard
-          label="Paid accounts"
-          value={paidUsersCount}
-          icon={Crown}
-          iconBg="bg-emerald-100/80 dark:bg-emerald-400/10"
-          iconColor="text-emerald-700 dark:text-emerald-400"
+          label="Users not linked"
+          value={userStats.notLinked}
         />
 
         <AdminStatCard
-          label="Workspaces"
-          value={businessCount || 1}
-          icon={Layers}
-          iconBg="bg-purple-100/80 dark:bg-purple-400/10"
-          iconColor="text-purple-700 dark:text-purple-400"
+          label="Users with single workspace"
+          value={userStats.singleWorkspace}
         />
       </div>
 
@@ -287,8 +283,7 @@ export function UsersClient({
                 <tr className="border-b border-border bg-slate-50/75 dark:bg-white/[0.02] text-xs font-semibold text-muted-foreground uppercase tracking-wider select-none">
                   <th className="p-4">User</th>
                   <th className="p-4">Linked Businesses</th>
-                  <th className="p-4">Role & Plan</th>
-                  <th className="p-4">Status</th>
+                  <th className="p-4">Last Login</th>
                   <th className="p-4">Joined</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
@@ -306,9 +301,13 @@ export function UsersClient({
                       {/* User Info Column */}
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-700 dark:text-brand-400 font-bold text-xs flex items-center justify-center shrink-0">
-                            {(u.full_name || u.email).charAt(0).toUpperCase()}
-                          </div>
+                          <ClientAvatar
+                            imageUrl={u.avatar_url}
+                            email={u.email}
+                            name={u.full_name}
+                            className="w-9 h-9 rounded-full object-cover shrink-0 border border-border shadow-2xs"
+                            fallbackClassName="w-9 h-9 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-700 dark:text-brand-400 font-bold text-xs flex items-center justify-center shrink-0"
+                          />
                           <div className="min-w-0">
                             <div className="font-semibold text-foreground flex items-center gap-1.5">
                               <Link
@@ -318,6 +317,11 @@ export function UsersClient({
                                 {u.full_name || "Unnamed"}
                               </Link>
                               <span className="text-[10px] text-muted-foreground font-mono">#{u.id}</span>
+                              {u.is_banned && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                                  Banned
+                                </span>
+                              )}
                             </div>
                             <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                               <span className="truncate max-w-[200px]">{u.email}</span>
@@ -365,29 +369,26 @@ export function UsersClient({
                         )}
                       </td>
 
-                      {/* Role & Plan Column */}
-                      <td className="p-4">
-                        <div className="flex flex-col gap-1 items-start">
-                          <div className="flex items-center gap-1.5">
-                            <RoleBadge role={u.workspace_role || u.role || "member"} />
-                            <PlanBadge plan={u.current_plan || "Free"} />
-                          </div>
-                          {u.system_role && u.system_role !== 'user' && (
-                            <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 capitalize">
-                              {u.system_role}
+                      {/* Last Login Column */}
+                      <td className="p-4 text-xs text-muted-foreground whitespace-nowrap">
+                        {u.last_login_at ? (
+                          <div className="flex flex-col">
+                            <span className="font-medium text-foreground">
+                              {new Date(u.last_login_at).toLocaleDateString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
                             </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Status Column */}
-                      <td className="p-4">
-                        {u.is_banned ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-                            Banned
-                          </span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {new Date(u.last_login_at).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
                         ) : (
-                          <StatusPill status="active" />
+                          <span className="text-muted-foreground/50 italic">Never</span>
                         )}
                       </td>
 

@@ -1110,11 +1110,12 @@ export async function deleteInvoice(id: string) {
 
 export async function getInvoiceByIdAdmin(invoiceId: string) {
   const tenantId = await getTenantId();
-  // Join with admin_clients and bank_accs to get client name + billing address + bank account
+  // Join with admin_clients and bank_accs to get client name + billing address + phone + email + bank account
   const result = await sql`
     SELECT
       i.invoice_id,
       i.user_email,
+      i.client_id,
       i.project_name,
       i.date,
       i.currency,
@@ -1128,20 +1129,29 @@ export async function getInvoiceByIdAdmin(invoiceId: string) {
       i.payment_status,
       i.bank_account_id,
       i.tax_rate,
-      i.legal_name,
+      COALESCE(i.legal_name, ac.legal_name, ac.company, ac.full_name, ac.name, i.user_email) as legal_name,
       i.bank_slip,
       i.layout_id,
       i.custom_field_values,
       i.layout_snapshot,
       COALESCE(il.name, def_il.name) as layout_name,
       COALESCE(i.layout_snapshot, il.definition, def_il.definition) as active_layout_definition,
-      COALESCE((SELECT full_name FROM admin_clients ac WHERE LOWER(ac.email) = LOWER(i.user_email) AND ac.tenant_id = ${tenantId} LIMIT 1), i.user_email) as client_name,
-      (SELECT address FROM admin_clients ac WHERE LOWER(ac.email) = LOWER(i.user_email) AND ac.tenant_id = ${tenantId} LIMIT 1) as billing_address,
+      COALESCE(ac.full_name, ac.name, ac.company, i.legal_name, i.user_email) as client_name,
+      COALESCE(ac.billing_address, ac.address) as billing_address,
+      COALESCE(ac.address, ac.billing_address) as client_address,
+      ac.email as client_email,
+      ac.phone as client_phone,
+      ac.company as client_company,
+      ac.tax_id as client_tax_id,
       ba.name as bank_acc_name,
       ba.account_number as bank_acc_number,
       ba.bank_name as bank_acc_bank,
       ba.branch as bank_acc_branch
     FROM invoices i
+    LEFT JOIN admin_clients ac ON (
+      (i.client_id IS NOT NULL AND (ac.id = i.client_id OR ac.id::text = i.client_id::text))
+      OR (i.user_email IS NOT NULL AND LOWER(ac.email) = LOWER(i.user_email))
+    ) AND ac.tenant_id = ${tenantId}
     LEFT JOIN accounts ba ON COALESCE(i.bank_account_id, (SELECT id FROM accounts WHERE (LOWER(type) = 'bank' OR LOWER(type) = 'bank account') AND tenant_id = ${tenantId} LIMIT 1)) = ba.id
     LEFT JOIN invoice_layouts il ON i.layout_id = il.id
     LEFT JOIN LATERAL (
@@ -1494,12 +1504,12 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
   const invoiceId = await generateUniqueInvoiceId();
   await sql`
   INSERT INTO invoices (
-    invoice_id, user_email, project_name, date, 
+    invoice_id, client_id, user_email, project_name, date, 
     subtotal, discount, total, advance, total_due, 
     work_status, payment_status, currency, category, bank_account_id, tax_rate, legal_name, tenant_id,
     layout_id, custom_field_values, layout_snapshot
   ) VALUES (
-    ${invoiceId}, ${invoiceData.userEmail},
+    ${invoiceId}, ${invoiceData.clientId || null}, ${invoiceData.userEmail || null},
     ${invoiceData.projectName}, ${invoiceData.date},
     ${invoiceData.subtotal}, ${invoiceData.discount}, ${invoiceData.total}, ${invoiceData.advance}, ${invoiceData.totalDue},
     ${invoiceData.workStatus}, ${invoiceData.paymentStatus}, ${invoiceData.currency}, ${invoiceData.category || null},
@@ -1586,6 +1596,7 @@ export async function updateInvoice(invoiceId: string, invoiceData: any, lineIte
 
   await sql`
   UPDATE invoices SET
+    client_id = COALESCE(${invoiceData.clientId || null}, client_id),
     user_email = ${invoiceData.userEmail},
     project_name = ${invoiceData.projectName},
     date = ${invoiceData.date},
@@ -2668,7 +2679,7 @@ export async function getTopClients() {
 }
 
 export async function getAllLimits() {
-  const resources = ['invoices', 'quotations', 'incomes', 'expenses', 'clients', 'accounts'] as const;
+  const resources = ['invoices', 'quotations', 'incomes', 'expenses', 'clients'] as const;
   const exceeded: string[] = [];
   for (const r of resources) {
     const check = await checkLimit(r);

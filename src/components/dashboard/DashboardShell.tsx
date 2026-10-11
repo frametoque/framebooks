@@ -113,13 +113,13 @@ export function DashboardShell({
   // Compute page title based on path
   const getPageTitle = (path: string): string => {
     if (variant === "admin") {
-      if (path === "/admin") return "Overview";
+      if (path === "/admin") return "Dashboard";
       if (path.startsWith("/admin/users")) return "Users";
       if (path.startsWith("/admin/subscriptions")) return "Subscriptions";
       if (path.startsWith("/admin/payments")) return "Payments";
       if (path.startsWith("/admin/plans")) return "Plans";
       if (path.startsWith("/admin/coupons")) return "Coupons";
-      if (path.startsWith("/admin/analytics")) return "Analytics";
+      if (path.startsWith("/admin/analytics")) return "Dashboard";
       if (path.startsWith("/admin/announcements")) return "Announcements";
       if (path.startsWith("/admin/audit-logs")) return "Audit Logs";
       if (path.startsWith("/admin/admins")) return "Admins & Staff";
@@ -158,13 +158,12 @@ export function DashboardShell({
 
   // Define sidebar links based on variant
   const adminLinks = [
-    { name: "Overview", href: "/admin", icon: MdDashboard },
+    { name: "Dashboard", href: "/admin", icon: MdDashboard },
     { name: "Users", href: "/admin/users", icon: MdGroup },
     { name: "Subscriptions", href: "/admin/subscriptions", icon: Repeat },
     { name: "Payments", href: "/admin/payments", icon: MdAccountBalanceWallet },
     { name: "Plans", href: "/admin/plans", icon: Layers },
     { name: "Coupons", href: "/admin/coupons", icon: MdLocalOffer },
-    { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
     { name: "Announcements", href: "/admin/announcements", icon: Megaphone },
     { name: "Audit Logs", href: "/admin/audit-logs", icon: Terminal },
     { name: "Settings", href: "/admin/settings", icon: MdSettings },
@@ -301,7 +300,13 @@ export function DashboardShell({
             {variant === "admin" && (
               <div className="pt-2 mt-2 border-t border-border">
                 <button
-                  onClick={() => signOut({ callbackUrl: "/admin/login" })}
+                  onClick={async () => {
+                    try {
+                      await fetch("/api/admin/auth/logout", { method: "POST" });
+                    } finally {
+                      window.location.href = "/admin/login";
+                    }
+                  }}
                   className="relative z-10 flex items-center gap-3 pl-3.5 pr-3 py-2 rounded-full transition-colors duration-150 overflow-hidden w-full justify-start text-foreground/80 font-medium hover:text-rose-600 dark:hover:text-rose-400 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
                 >
                   <span className="flex-shrink-0">
@@ -328,8 +333,8 @@ export function DashboardShell({
                     imageUrl={user?.image}
                     name={user?.name || "User"}
                     email={user?.email}
-                    className="w-8 h-8 rounded-full object-cover shrink-0 border border-border"
-                    fallbackClassName="w-8 h-8 rounded-full bg-brand-500/10 border border-border flex items-center justify-center text-brand-400 font-bold text-xs shrink-0"
+                    className="w-8 h-8 rounded-full object-cover shrink-0 border border-border aspect-square"
+                    fallbackClassName="w-8 h-8 rounded-full bg-brand-500/10 border border-border flex items-center justify-center text-brand-400 font-bold text-xs shrink-0 aspect-square"
                   />
                   <div className="overflow-hidden flex-1 min-w-0">
                     <p className="text-xs font-semibold text-foreground truncate">

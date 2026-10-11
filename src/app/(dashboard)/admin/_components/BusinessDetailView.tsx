@@ -29,10 +29,13 @@ import {
   Unlock,
   Ban,
   Calendar,
+  Edit3,
 } from "lucide-react";
 import { PlanBadge, RoleBadge, StatusPill, Money, formatLKR } from "@/components/Formatters";
 import { TenantLogo } from "@/components/TenantLogo";
+import ClientAvatar from "@/components/ClientAvatar";
 import { ConfirmModal } from "@/app/(dashboard)/admin/_components/ConfirmModal";
+import { PlanChangeModal } from "@/app/(dashboard)/admin/_components/PlanChangeModal";
 import { 
   adminAddBusinessMember, 
   adminUpdateMemberRole, 
@@ -47,6 +50,7 @@ import {
 
 export interface BusinessDetailViewProps {
   businessData: any;
+  allPlans?: any[];
   onClose?: () => void;
   onRefresh?: () => void;
   isModal?: boolean;
@@ -63,6 +67,7 @@ const ROLE_OPTIONS = [
 
 export function BusinessDetailView({
   businessData,
+  allPlans = [],
   onClose,
   onRefresh,
   isModal = false,
@@ -71,6 +76,9 @@ export function BusinessDetailView({
   const [activeTab, setActiveTab] = useState<
     "overview" | "subscription" | "payments" | "members" | "activity" | "notes" | "danger"
   >("overview");
+
+  // Change Plan state
+  const [isChangePlanOpen, setIsChangePlanOpen] = useState(false);
 
   // Notes state
   const [newNote, setNewNote] = useState("");
@@ -351,7 +359,29 @@ export function BusinessDetailView({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Change Plan Button */}
+          <button
+            type="button"
+            onClick={() => setIsChangePlanOpen(true)}
+            className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold border border-border bg-card hover:bg-muted text-foreground transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            title="Change subscription plan"
+          >
+            <Edit3 className="w-4 h-4 text-blue-500" />
+            <span>Change Plan</span>
+          </button>
+
+          {/* Add Member Button */}
+          <button
+            type="button"
+            onClick={() => setIsAddMemberOpen(true)}
+            className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold border border-border bg-card hover:bg-muted text-foreground transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            title="Add a team member to this business"
+          >
+            <UserPlus className="w-4 h-4 text-brand-500" />
+            <span>Add Member</span>
+          </button>
+
           {/* Edit Renewal Date Button */}
           <button
             type="button"
@@ -366,12 +396,17 @@ export function BusinessDetailView({
             <span>Edit Renewal Date</span>
           </button>
 
-          <Link
-            href="/admin/subscriptions"
-            className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-brand-500/20"
+          {/* Delete Business Button */}
+          <button
+            type="button"
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold border border-rose-500/20 bg-card hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            title="Permanently delete business workspace"
           >
-            Manage Subscription
-          </Link>
+            <Trash2 className="w-4 h-4" />
+            <span>Delete Business</span>
+          </button>
+
           {isModal && onClose && (
             <button
               onClick={onClose}
@@ -764,9 +799,13 @@ export function BusinessDetailView({
             {members.map((m: any) => (
               <div key={m.id} className="p-4 flex items-center justify-between gap-4 hover:bg-muted/20 transition-colors">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold flex items-center justify-center uppercase shrink-0">
-                    {m.full_name ? m.full_name[0] : m.email[0]}
-                  </div>
+                  <ClientAvatar
+                    imageUrl={m.avatar_url}
+                    email={m.email}
+                    name={m.full_name}
+                    className="w-10 h-10 rounded-xl object-cover shrink-0 border border-border"
+                    fallbackClassName="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold flex items-center justify-center uppercase shrink-0 text-sm"
+                  />
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-foreground text-sm truncate">{m.full_name || "Unnamed"}</span>
@@ -1196,6 +1235,25 @@ export function BusinessDetailView({
           confirmText={deletingBusiness ? "Deleting..." : "Permanently Delete Business"}
           isDestructive={true}
           typeToConfirmText={tenant.name}
+        />
+      )}
+
+      {/* Change Plan Modal */}
+      {isChangePlanOpen && (
+        <PlanChangeModal
+          isOpen={isChangePlanOpen}
+          subscription={{
+            tenant_id: tenant.id,
+            plan_id: plan?.id || 1,
+            current_plan: tenant.plan,
+          }}
+          allPlans={allPlans || []}
+          onClose={() => setIsChangePlanOpen(false)}
+          onSuccess={() => {
+            setIsChangePlanOpen(false);
+            if (onRefresh) onRefresh();
+            router.refresh();
+          }}
         />
       )}
     </div>

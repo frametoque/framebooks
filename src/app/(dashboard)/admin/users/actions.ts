@@ -44,6 +44,7 @@ export async function getUsersList({
       u.banned_reason,
       u.created_at,
       u.last_login_at,
+      u.avatar_url,
       u.tenant_id,
       t.name AS tenant_name,
       t.logo_url AS tenant_logo_url,
@@ -81,6 +82,7 @@ export async function getUsersList({
       LIMIT 1
     ) cp ON true
     WHERE u.deleted_at IS NULL
+      AND (LOWER(u.email) != 'admin@frametoque.com' OR ${searchPattern}::text IS NOT NULL)
       AND (${searchPattern}::text IS NULL OR u.email ILIKE ${searchPattern} OR u.full_name ILIKE ${searchPattern} OR t.name ILIKE ${searchPattern})
       AND (${plan || null}::text IS NULL OR LOWER(t.plan) = LOWER(${plan}))
       AND (${status || null}::text IS NULL OR LOWER(s.status) = LOWER(${status}))
@@ -111,6 +113,7 @@ export async function getUsersList({
       LIMIT 1
     ) s ON true
     WHERE u.deleted_at IS NULL
+      AND (LOWER(u.email) != 'admin@frametoque.com' OR ${searchPattern}::text IS NOT NULL)
       AND (${searchPattern}::text IS NULL OR u.email ILIKE ${searchPattern} OR u.full_name ILIKE ${searchPattern} OR t.name ILIKE ${searchPattern})
       AND (${plan || null}::text IS NULL OR LOWER(t.plan) = LOWER(${plan}))
       AND (${status || null}::text IS NULL OR LOWER(s.status) = LOWER(${status}))
@@ -213,11 +216,49 @@ export async function getUsersList({
     };
   });
 
+  // Calculate global statistics across all active users
+  const allActiveUsers = await sql`
+    SELECT u.id, u.tenant_id, LOWER(u.email) as email
+    FROM admin_users u
+    WHERE u.deleted_at IS NULL AND LOWER(u.email) != 'admin@frametoque.com'
+  `;
+  const allEmails = allActiveUsers.map(u => u.email).filter(Boolean);
+  let globalLinked = 0;
+  let globalNotLinked = 0;
+  let globalSingle = 0;
+
+  if (allEmails.length > 0) {
+    const [allOwned, allInvites] = await Promise.all([
+      sql`SELECT id, LOWER(owner_email) as owner_email FROM tenants WHERE LOWER(owner_email) = ANY(${allEmails})`,
+      sql`SELECT t.id, LOWER(ti.email) as email FROM team_invitations ti JOIN tenants t ON ti.tenant_id = t.id::text WHERE LOWER(ti.email) = ANY(${allEmails}) AND ti.status = 'accepted'`
+    ]);
+
+    for (const u of allActiveUsers) {
+      const wsSet = new Set<number>();
+      if (u.tenant_id) wsSet.add(u.tenant_id);
+      allOwned.filter(o => o.owner_email === u.email).forEach(o => wsSet.add(o.id));
+      allInvites.filter(i => i.email === u.email).forEach(i => wsSet.add(i.id));
+
+      if (wsSet.size > 0) {
+        globalLinked++;
+        if (wsSet.size === 1) globalSingle++;
+      } else {
+        globalNotLinked++;
+      }
+    }
+  }
+
   return {
     users: mappedUsers,
     totalCount,
     totalPages: Math.ceil(totalCount / limit),
     page,
+    stats: {
+      total: allActiveUsers.length,
+      linked: globalLinked,
+      notLinked: globalNotLinked,
+      singleWorkspace: globalSingle
+    }
   };
 }
 
@@ -632,12 +673,12 @@ export async function getBusinessDetails(tenantId: number) {
   // Fetch both users who have this tenant active and users with accepted team invitations
   const [activeMembers, invitedMembers] = await Promise.all([
     sql`
-      SELECT id, email, full_name, role, system_role, is_banned, created_at, last_login_at
+      SELECT id, email, full_name, role, system_role, is_banned, created_at, last_login_at, avatar_url
       FROM admin_users 
       WHERE tenant_id = ${tenantId} AND deleted_at IS NULL
     `,
     sql`
-      SELECT u.id, u.email, u.full_name, ti.role, u.system_role, u.is_banned, ti.created_at, u.last_login_at
+      SELECT u.id, u.email, u.full_name, ti.role, u.system_role, u.is_banned, ti.created_at, u.last_login_at, u.avatar_url
       FROM team_invitations ti
       JOIN admin_users u ON LOWER(ti.email) = LOWER(u.email)
       WHERE ti.tenant_id = ${tenantId.toString()} AND ti.status = 'accepted' AND u.deleted_at IS NULL

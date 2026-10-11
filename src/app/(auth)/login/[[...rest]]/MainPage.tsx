@@ -28,7 +28,7 @@ export default function CustomLogin() {
         try {
           const response = await fetch("/api/auth/check-role");
           const data = await response.json();
-          const redirectPath = data.isNewUser ? "/onboarding" : (data.isAdmin ? "/admin" : "/user/dashboard");
+          const redirectPath = data.isNewUser ? "/onboarding" : "/user/dashboard";
           router.replace(redirectPath);
         } catch (err: any) {
           if (err.name === 'TypeError' || err.message === 'Failed to fetch') return;

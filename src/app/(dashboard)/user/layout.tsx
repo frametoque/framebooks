@@ -128,6 +128,7 @@ function LayoutContent({ children }) {
     name: string;
     logo_url: string | null;
     industry: string | null;
+    payment_status?: string | null;
     userRole?: string | null;
     teamMembersCount?: number;
     plan_expires_at?: string | null;
@@ -179,6 +180,12 @@ function LayoutContent({ children }) {
       router.push("/onboarding");
     }
   }, [isLoaded, user, router]);
+
+  useEffect(() => {
+    if (tenantInfo.payment_status === 'pending_payment') {
+      router.push("/onboarding");
+    }
+  }, [tenantInfo.payment_status, router]);
 
   const isTeamLocked = tenantInfo.plan !== 'Loading...' && tenantInfo.plan !== 'Pro Plus' && tenantInfo.userRole !== 'owner' && tenantInfo.userRole !== 'Super Admin' && tenantInfo.userRole !== null;
   const showOwnerWarning = tenantInfo.plan !== 'Loading...' && tenantInfo.plan !== 'Pro Plus' && (tenantInfo.userRole === 'owner' || tenantInfo.userRole === 'Super Admin') && (tenantInfo.teamMembersCount || 0) > 1;
@@ -930,8 +937,8 @@ const Sidebar = ({
           </nav>
 
           {/* User Settings Link */}
-          <div className="p-3 flex flex-col mt-auto space-y-2 shrink-0 border-t border-border w-full overflow-hidden">
-            <div className="flex items-center gap-2 w-full overflow-hidden">
+          <div className="p-3 flex flex-col mt-auto space-y-2 shrink-0 border-t border-border w-full">
+            <div className={`flex items-center w-full ${isExpanded ? "gap-2" : "justify-center"}`}>
               <Link
                 href="/user/settings/profile"
                 onClick={() => {
@@ -939,44 +946,49 @@ const Sidebar = ({
                   setIsHovered(false);
                 }}
                 title={user?.name || "User Profile"}
-                className="flex items-center h-12 px-1 gap-3 rounded-2xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 flex-1 min-w-0 overflow-hidden"
+                className={`flex items-center h-12 rounded-2xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${
+                  isExpanded ? "flex-1 min-w-0 px-2 gap-3" : "w-12 justify-center px-0"
+                }`}
               >
                 <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center">
                   <ClientAvatar
                     imageUrl={user?.image}
                     name={user?.name || "User"}
                     email={user?.email}
-                    className="w-10 h-10 rounded-full object-cover shrink-0 border border-border"
-                    fallbackClassName="w-10 h-10 rounded-full bg-brand-500/10 border border-border flex items-center justify-center text-brand-400 font-bold text-xs shrink-0"
+                    className="w-10 h-10 rounded-full object-cover shrink-0 border border-border aspect-square"
+                    fallbackClassName="w-10 h-10 rounded-full bg-brand-500/10 border border-border flex items-center justify-center text-brand-400 font-bold text-xs shrink-0 aspect-square"
                   />
                 </div>
 
-                <motion.div
-                  initial={false}
-                  animate={{
-                    opacity: isExpanded ? 1 : 0,
-                    x: isExpanded ? 0 : -8,
-                  }}
-                  transition={{ duration: isExpanded ? 0.2 : 0.14, ease: "easeOut" }}
-                  className="overflow-hidden flex-1 min-w-0 pointer-events-none"
-                >
-                  <p className="text-sm font-semibold text-foreground truncate">{user?.name || "User"}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || "Account & Security"}</p>
-                </motion.div>
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ opacity: 0, width: 0, x: -8 }}
+                      animate={{ opacity: 1, width: "auto", x: 0 }}
+                      exit={{ opacity: 0, width: 0, x: -8 }}
+                      transition={{ duration: 0.18, ease: "easeOut" }}
+                      className="overflow-hidden flex-1 min-w-0 pointer-events-none"
+                    >
+                      <p className="text-sm font-semibold text-foreground truncate">{user?.name || "User"}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || "Account & Security"}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </Link>
 
-              <motion.div
-                initial={false}
-                animate={{
-                  opacity: isExpanded ? 1 : 0,
-                  scale: isExpanded ? 1 : 0.8,
-                  width: isExpanded ? "auto" : 0,
-                }}
-                transition={{ duration: isExpanded ? 0.2 : 0.14 }}
-                className="overflow-hidden flex-shrink-0"
-              >
-                <LockSidebarButton />
-              </motion.div>
+              <AnimatePresence initial={false}>
+                {isExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, width: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, width: "auto", scale: 1 }}
+                    exit={{ opacity: 0, width: 0, scale: 0.8 }}
+                    transition={{ duration: 0.18 }}
+                    className="overflow-hidden flex-shrink-0"
+                  >
+                    <LockSidebarButton />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

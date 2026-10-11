@@ -69,6 +69,144 @@ export async function getSubscriptionsList({
   };
 }
 
+export async function getWorkspacesAndSubscriptionsList({
+  search = "",
+  plan = "",
+  status = "",
+  role = "",
+  banned = "",
+  page = 1,
+  limit = 20,
+  sortBy = "created_at",
+  sortOrder = "desc",
+}: {
+  search?: string;
+  plan?: string;
+  status?: string;
+  role?: string;
+  banned?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}) {
+  await requireAdmin("view_subscriptions");
+
+  const offset = (Math.max(1, page) - 1) * limit;
+  const searchPattern = search ? `%${search.trim()}%` : null;
+
+  // 1. All tenants with their latest subscription, latest coupon, and owner user
+  const tenants = await sql`
+    SELECT 
+      t.id AS tenant_id,
+      t.name AS tenant_name,
+      t.logo_url AS tenant_logo_url,
+      COALESCE(t.plan, 'Free') AS current_plan,
+      t.payment_status,
+      t.plan_expires_at,
+      t.owner_email,
+      t.created_at,
+      s.id AS subscription_id,
+      COALESCE(s.status, 'active') AS subscription_status,
+      s.billing_interval,
+      s.source AS subscription_source,
+      s.current_period_end,
+      cp.coupon_code,
+      cp.coupon_type,
+      cp.coupon_value,
+      u.id AS id,
+      COALESCE(u.email, t.owner_email) AS email,
+      COALESCE(u.full_name, t.name) AS full_name,
+      COALESCE(u.role, 'owner') AS workspace_role,
+      u.system_role,
+      u.is_banned,
+      COALESCE((
+        SELECT SUM(p.amount) 
+        FROM payments p 
+        WHERE p.tenant_id = t.id AND p.status = 'paid'
+      ), 0) AS lifetime_paid
+    FROM tenants t
+    LEFT JOIN LATERAL (
+      SELECT id, status, billing_interval, source, current_period_end 
+      FROM subscriptions 
+      WHERE tenant_id = t.id 
+      ORDER BY id DESC 
+      LIMIT 1
+    ) s ON true
+    LEFT JOIN LATERAL (
+      SELECT c.code AS coupon_code, c.type AS coupon_type, c.value AS coupon_value
+      FROM coupon_redemptions cr
+      JOIN coupons c ON cr.coupon_id = c.id
+      WHERE cr.tenant_id = t.id
+      ORDER BY cr.redeemed_at DESC
+      LIMIT 1
+    ) cp ON true
+    LEFT JOIN LATERAL (
+      SELECT id, email, full_name, role, system_role, is_banned
+      FROM admin_users 
+      WHERE (tenant_id = t.id AND role = 'owner')
+         OR (email IS NOT NULL AND t.owner_email IS NOT NULL AND LOWER(email) = LOWER(t.owner_email))
+      ORDER BY CASE WHEN LOWER(email) = LOWER(t.owner_email) THEN 0 ELSE 1 END
+      LIMIT 1
+    ) u ON true
+    WHERE (${searchPattern}::text IS NULL OR t.name ILIKE ${searchPattern} OR t.owner_email ILIKE ${searchPattern} OR u.email ILIKE ${searchPattern} OR u.full_name ILIKE ${searchPattern})
+      AND (${plan || null}::text IS NULL OR LOWER(t.plan) = LOWER(${plan}))
+      AND (${status || null}::text IS NULL OR LOWER(s.status) = LOWER(${status}))
+  `;
+
+  // 2. Additional members who have active tenant_id matching one of the tenants
+  const tenantIds = tenants.map((t: any) => t.tenant_id).filter(Boolean);
+  const matchedUserIds = tenants.map((t: any) => t.id).filter(Boolean);
+  let additionalMembers: any[] = [];
+  if (tenantIds.length > 0) {
+    additionalMembers = await sql`
+      SELECT 
+        u.tenant_id,
+        t.name AS tenant_name,
+        t.logo_url AS tenant_logo_url,
+        COALESCE(t.plan, 'Free') AS current_plan,
+        t.payment_status,
+        t.plan_expires_at,
+        t.owner_email,
+        u.created_at,
+        NULL::integer AS subscription_id,
+        'active'::text AS subscription_status,
+        NULL::text AS billing_interval,
+        NULL::text AS subscription_source,
+        NULL::timestamp AS current_period_end,
+        NULL::text AS coupon_code,
+        NULL::text AS coupon_type,
+        NULL::numeric AS coupon_value,
+        u.id AS id,
+        u.email,
+        u.full_name,
+        COALESCE(u.role, 'member') AS workspace_role,
+        u.system_role,
+        u.is_banned,
+        0::numeric AS lifetime_paid
+      FROM admin_users u
+      JOIN tenants t ON u.tenant_id = t.id
+      WHERE u.tenant_id = ANY(${tenantIds})
+        AND u.deleted_at IS NULL
+        AND (${matchedUserIds.length > 0 ? sql`u.id != ALL(${matchedUserIds})` : sql`true`})
+    `;
+  }
+
+  // Combine tenants and additional members (only actual workspaces)
+  const allRows = [...tenants, ...additionalMembers];
+
+  // Map to distinct workspaces for pagination count
+  const uniqueKeys = new Set(allRows.map((r: any) => r.tenant_id).filter(Boolean));
+  const totalCount = uniqueKeys.size;
+
+  return {
+    users: allRows,
+    totalCount,
+    totalPages: Math.ceil(totalCount / limit) || 1,
+    page,
+  };
+}
+
 export async function checkDowngradeEligibility(tenantId: number, targetPlanKey: string) {
   await requireAdmin("view_subscriptions");
 

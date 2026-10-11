@@ -8,7 +8,7 @@ export interface AdminStatCardProps {
   label: string;
   value: string | number;
   unit?: string;
-  icon: React.ElementType;
+  icon?: React.ElementType;
   iconBg?: string;
   iconColor?: string;
   trend?: string;
@@ -27,9 +27,11 @@ export function AdminStatCard({
 }: AdminStatCardProps) {
   return (
     <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 flex items-center gap-4 hover:shadow-md transition-all shadow-xs">
-      <div className={`p-3.5 rounded-2xl ${iconBg} shrink-0`}>
-        <Icon className={`w-5 h-5 ${iconColor}`} />
-      </div>
+      {Icon && (
+        <div className={`p-3.5 rounded-2xl ${iconBg} shrink-0`}>
+          <Icon className={`w-5 h-5 ${iconColor}`} />
+        </div>
+      )}
       <div className="min-w-0 flex-1">
         <p className="text-gray-700 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider truncate">
           {label}

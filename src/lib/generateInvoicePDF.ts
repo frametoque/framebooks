@@ -152,12 +152,14 @@ export async function generateInvoicePDF(invoice: any, tenantPlan: string = "Fre
   });
   
   currentY -= 20;
-  if (legal_name) {
-    page.drawText(legal_name, { x: 40, y: currentY, size: 10, font: helveticaBold, color: textColor });
+  const clientDisplayName = invoice?.client_name || legal_name || invoice?.client?.full_name || invoice?.client?.name;
+  if (clientDisplayName) {
+    page.drawText(clientDisplayName, { x: 40, y: currentY, size: 10, font: helveticaBold, color: textColor });
     currentY -= 15;
   }
-  if (billing_address) {
-    const addressLines = wrapText(billing_address, helvetica, 10, 250);
+  const clientDisplayAddress = billing_address || invoice?.client_address || invoice?.client?.address || invoice?.client?.billing_address || (invoice?.client_phone ? `Tel: ${invoice.client_phone}` : "");
+  if (clientDisplayAddress) {
+    const addressLines = wrapText(clientDisplayAddress, helvetica, 10, 250);
     for (const line of addressLines) {
       page.drawText(line, { x: 40, y: currentY, size: 10, font: helvetica, color: textColor });
       currentY -= 15;

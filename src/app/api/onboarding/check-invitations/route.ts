@@ -19,6 +19,15 @@ export async function GET() {
       LIMIT 1
     `;
     if (existingUser.length > 0 && existingUser[0].tenant_id) {
+      const tenantRows = await sql`
+        SELECT plan, payment_status FROM tenants 
+        WHERE id = ${existingUser[0].tenant_id} 
+        LIMIT 1
+      `;
+      const tenant = tenantRows[0];
+      if (tenant && tenant.payment_status === 'pending_payment') {
+        return NextResponse.json({ hasInvitation: false, isPendingPayment: true, tenantId: existingUser[0].tenant_id });
+      }
       return NextResponse.json({ hasInvitation: false, redirect: '/user/dashboard' });
     }
 

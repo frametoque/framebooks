@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { adminLoginAction } from "./actions";
 
 export default function AdminLoginClient() {
   const router = useRouter();
@@ -35,29 +35,18 @@ export default function AdminLoginClient() {
     }, 12000);
 
     try {
-      const res = await signIn("admin-credentials", {
+      const res = await adminLoginAction({
         email: email.trim().toLowerCase(),
         password,
-        redirect: false,
-        callbackUrl,
       });
 
       clearTimeout(timeoutTimer);
 
-      if (!res) {
-        setError("No response from server. Please try again.");
+      if (!res.success) {
+        setError(res.error || "Invalid email or password.");
         setLoading(false);
-        return;
-      }
-
-      if (res.error) {
-        setError("Invalid email or password.");
-        setLoading(false);
-      } else if (res.ok) {
-        window.location.replace(callbackUrl);
       } else {
-        setError("Sign in failed. Please verify credentials.");
-        setLoading(false);
+        window.location.replace(callbackUrl);
       }
     } catch (err: any) {
       clearTimeout(timeoutTimer);

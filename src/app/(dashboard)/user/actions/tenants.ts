@@ -369,13 +369,13 @@ export async function getTeamMembers() {
     
     const [activeMembers, invitedMembers] = await Promise.all([
       sql`
-        SELECT id, email, full_name, role, created_at
+        SELECT id, email, full_name, role, created_at, avatar_url
         FROM admin_users
         WHERE tenant_id = ${tenantId} AND deleted_at IS NULL
         ORDER BY created_at ASC
       `,
       sql`
-        SELECT u.id, u.email, u.full_name, ti.role, ti.created_at
+        SELECT u.id, u.email, u.full_name, ti.role, ti.created_at, u.avatar_url
         FROM team_invitations ti
         JOIN admin_users u ON LOWER(ti.email) = LOWER(u.email)
         WHERE ti.tenant_id = ${tenantId.toString()} AND ti.status = 'accepted' AND u.deleted_at IS NULL

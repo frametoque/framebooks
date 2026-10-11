@@ -2,7 +2,7 @@ import React from "react";
 import { Metadata } from "next";
 import sql from "@/lib/db";
 import { SubscriptionsClient } from "./SubscriptionsClient";
-import { getUsersList } from "@/app/(dashboard)/admin/users/actions";
+import { getWorkspacesAndSubscriptionsList } from "./actions";
 
 export const metadata: Metadata = {
   title: "Subscriptions & Businesses",
@@ -28,7 +28,7 @@ export default async function AdminSubscriptionsPage({
   const page = parseInt(resolvedParams.page || "1", 10);
 
   const [data, allPlans] = await Promise.all([
-    getUsersList({
+    getWorkspacesAndSubscriptionsList({
       search: resolvedParams.search,
       plan: resolvedParams.plan,
       status: resolvedParams.status,

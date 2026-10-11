@@ -25,6 +25,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { PlanBadge, RoleBadge } from "@/components/Formatters";
+import ClientAvatar from "@/components/ClientAvatar";
 import { ConfirmModal } from "@/app/(dashboard)/admin/_components/ConfirmModal";
 import { banUser, unbanUser, softDeleteUser, addUserNote, adminUpdateUserEmail } from "../actions";
 
@@ -101,9 +102,13 @@ export function UserDetailClient({ data }: { data: any }) {
       {/* User Header Profile Card */}
       <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-2xs">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-brand-500/15 border border-brand-500/30 text-brand-700 dark:text-brand-400 font-bold text-2xl flex items-center justify-center uppercase shrink-0">
-            {user.full_name ? user.full_name[0] : user.email[0]}
-          </div>
+          <ClientAvatar
+            imageUrl={user.avatar_url}
+            email={user.email}
+            name={user.full_name}
+            className="w-16 h-16 rounded-2xl object-cover shrink-0 border border-brand-500/30 shadow-xs"
+            fallbackClassName="w-16 h-16 rounded-2xl bg-brand-500/15 border border-brand-500/30 text-brand-700 dark:text-brand-400 font-bold text-2xl flex items-center justify-center uppercase shrink-0"
+          />
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
               <h2 className="text-2xl font-bold text-foreground">

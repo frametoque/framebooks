@@ -3,6 +3,7 @@ import React from "react";
 import { headers } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getAdminUser } from "@/app/(dashboard)/admin/_lib/auth";
 import { redirect } from "next/navigation";
 
 import sql from "@/lib/db";
@@ -23,21 +24,25 @@ export default async function DashboardRootLayout({
     return <>{children}</>;
   }
 
-  // Base auth check (Check 1 of 2): verify a session is present for the dashboard group
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    if (pathname.startsWith("/admin")) {
+  // Base auth check: Admin vs User routes
+  let userSession: any = null;
+  if (pathname.startsWith("/admin")) {
+    const admin = await getAdminUser();
+    if (!admin) {
       redirect("/admin/login");
-    } else {
+    }
+  } else {
+    userSession = await getServerSession(authOptions);
+    if (!userSession?.user) {
       redirect("/login");
     }
   }
 
   // Resolve active workspace accent color for user dashboard (zero flash of unstyled theme)
   let accentCss = "";
-  if (!pathname.startsWith("/admin") && session?.user?.email) {
+  if (!pathname.startsWith("/admin") && userSession?.user?.email) {
     try {
-      const email = session.user.email.toLowerCase();
+      const email = userSession.user.email.toLowerCase();
       const userRows = await sql`
         SELECT t.accent_color
         FROM admin_users u
