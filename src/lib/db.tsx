@@ -10,14 +10,12 @@ const sql =
   globalThis._sql ||
   postgres(process.env.DATABASE_URL!, {
     prepare: false,
-    max: 10,
+    max: 20,
     connect_timeout: 15,
-    idle_timeout: 20,
+    idle_timeout: 30,
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalThis._sql = sql;
-}
+globalThis._sql = sql;
 
 export const cachedQuery = async <T,>(
   queryFn: () => Promise<T>,

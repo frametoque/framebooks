@@ -1,4 +1,4 @@
-// src/lib/admin/auth.ts
+import { cache } from "react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import sql from "@/lib/db";
@@ -17,8 +17,9 @@ export interface CurrentAdmin {
 /**
  * Validates staff authentication and queries fresh status from PostgreSQL.
  * Rejects non-staff, banned, or soft-deleted users.
+ * Wrapped in React.cache to deduplicate session and DB checks within the same request.
  */
-export async function getAdminUser(): Promise<CurrentAdmin | null> {
+export const getAdminUser = cache(async (): Promise<CurrentAdmin | null> => {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return null;
@@ -38,7 +39,7 @@ export async function getAdminUser(): Promise<CurrentAdmin | null> {
     systemRole: role,
     image: session.user.image || undefined,
   };
-}
+});
 
 /**
  * Server-side guard to enforce staff access and specific permissions.
