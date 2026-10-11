@@ -6,7 +6,10 @@ import { requireAdmin } from "./_lib/auth";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 
 export const metadata: Metadata = {
-  title: "Framebooks Admin Portal",
+  title: {
+    default: "Framebooks Admin Portal",
+    template: "%s | Framebooks Admin",
+  },
   robots: {
     index: false,
     follow: false,

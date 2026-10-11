@@ -26,10 +26,13 @@ export function validateCompulsoryBlocks(def: InvoiceLayoutDefinition): Compulso
   const missingBlocks: string[] = [];
 
   // 1. Business Identity (satisfied if letterhead background stationery is uploaded)
-  if (!presentTypes.has('business_header') && !presentTypes.has('business_info') && !presentTypes.has('logo')) {
-    if (!def.theme?.backgroundImage) {
-      missingBlocks.push('Business Name / Logo');
-    }
+  const hasBusiness =
+    presentTypes.has('business_header') ||
+    presentTypes.has('business_info') ||
+    presentTypes.has('business_address') ||
+    presentTypes.has('logo');
+  if (!hasBusiness && !def.theme?.backgroundImage) {
+    missingBlocks.push('Business Name / Logo');
   }
 
   // 2. Invoice Metadata (Number, Date)
@@ -41,14 +44,23 @@ export function validateCompulsoryBlocks(def: InvoiceLayoutDefinition): Compulso
     missingBlocks.push('Invoice Details (Number & Date)');
   }
 
-  // 3. Client Bill-To
-  if (!presentTypes.has('bill_to') && !def.theme?.backgroundImage) {
-    missingBlocks.push('Bill To (Client Information)');
+  // 3. Client Information
+  const hasClient =
+    presentTypes.has('bill_to') ||
+    presentTypes.has('client_name') ||
+    presentTypes.has('client_header') ||
+    presentTypes.has('client_address');
+  if (!hasClient && !def.theme?.backgroundImage) {
+    missingBlocks.push('Client Information (Name / Bill-To)');
   }
 
-  // 4. Items Table
-  if (!presentTypes.has('items_table') && !def.theme?.backgroundImage) {
-    missingBlocks.push('Line Items Table');
+  // 4. Line Items Table / Columns
+  const hasItems =
+    presentTypes.has('items_table') ||
+    presentTypes.has('items_col_desc') ||
+    presentTypes.has('items_col_amount');
+  if (!hasItems && !def.theme?.backgroundImage) {
+    missingBlocks.push('Line Items');
   }
 
   // 5. Totals & Balance

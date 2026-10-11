@@ -1,8 +1,12 @@
-// src/app/(dashboard)/admin/subscriptions/page.tsx
 import React from "react";
+import { Metadata } from "next";
 import sql from "@/lib/db";
 import { SubscriptionsClient } from "./SubscriptionsClient";
 import { getUsersList } from "@/app/(dashboard)/admin/users/actions";
+
+export const metadata: Metadata = {
+  title: "Subscriptions & Businesses",
+};
 
 export const dynamic = "force-dynamic";
 

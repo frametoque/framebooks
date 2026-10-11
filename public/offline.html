@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,6 +11,7 @@
       margin: 0;
       padding: 0;
     }
+
     body {
       min-height: 100vh;
       display: flex;
@@ -20,6 +22,7 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       padding: 1.5rem;
     }
+
     .card {
       background: rgba(18, 24, 30, 0.85);
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -30,6 +33,7 @@
       text-align: center;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
     }
+
     .icon-wrapper {
       width: 72px;
       height: 72px;
@@ -42,18 +46,21 @@
       justify-content: center;
       color: #00E35B;
     }
+
     h1 {
       font-size: 1.5rem;
       font-weight: 700;
       margin-bottom: 0.75rem;
       letter-spacing: -0.02em;
     }
+
     p {
       color: #9CA3AF;
       font-size: 0.925rem;
       line-height: 1.5;
       margin-bottom: 2rem;
     }
+
     .btn {
       display: inline-block;
       width: 100%;
@@ -68,12 +75,15 @@
       transition: opacity 0.15s ease, transform 0.1s ease;
       text-decoration: none;
     }
+
     .btn:hover {
       opacity: 0.92;
     }
+
     .btn:active {
       transform: scale(0.98);
     }
+
     .footer-note {
       margin-top: 1.5rem;
       font-size: 0.775rem;
@@ -81,10 +91,12 @@
     }
   </style>
 </head>
+
 <body>
   <div class="card">
     <div class="icon-wrapper">
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
         <line x1="1" y1="1" x2="23" y2="23"></line>
         <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
         <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
@@ -95,9 +107,11 @@
       </svg>
     </div>
     <h1>You're Offline</h1>
-    <p>Framebooks needs an internet connection to securely access your workspace, calculate invoices, and sync records.</p>
+    <p>Framebooks needs an internet connection to securely access your workspace.
+    </p>
     <button class="btn" onclick="window.location.reload()">Retry Connection</button>
-    <div class="footer-note">Framebooks PWA • Reconnect to resume</div>
+    <div class="footer-note">Framebooks</div>
   </div>
 </body>
+
 </html>

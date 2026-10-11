@@ -22,6 +22,7 @@ const ACTIONS = [
 const GLOBAL_PERMS = [
   { key: 'settings', action: 'manage', label: 'Manage Settings' },
   { key: 'settings', action: 'appearance', label: 'Appearance & Accent Colour' },
+  { key: 'invoices', action: 'customize', label: 'Invoice Customization' },
   { key: 'team', action: 'manage', label: 'Manage Team' },
   { key: 'export', action: 'data', label: 'Export Data' }
 ];
@@ -56,10 +57,13 @@ export default function RolesConfigurator({ currentUserRole }: { currentUserRole
 
   const handleToggleResource = (roleIndex: number, resourceKey: string, actionKey: string) => {
     const newRoles = [...roles];
-    const perms = { ...newRoles[roleIndex].granular_permissions };
-    if (!perms[resourceKey]) perms[resourceKey] = { read: false, insert: false, update: false, delete: false };
-    perms[resourceKey][actionKey] = !perms[resourceKey][actionKey];
-    newRoles[roleIndex] = { ...newRoles[roleIndex], granular_permissions: perms };
+    const role = { ...newRoles[roleIndex] };
+    const perms = { ...role.granular_permissions };
+    const targetPerms = { ...(perms[resourceKey] || {}) };
+    targetPerms[actionKey] = !targetPerms[actionKey];
+    perms[resourceKey] = targetPerms;
+    role.granular_permissions = perms;
+    newRoles[roleIndex] = role;
     setRoles(newRoles);
   };
 
@@ -92,8 +96,13 @@ export default function RolesConfigurator({ currentUserRole }: { currentUserRole
     if (!newRoleName.trim()) return;
     try {
       const defaultPerms: Record<string, any> = {};
-      RESOURCES.forEach(r => defaultPerms[r.key] = { read: false, insert: false, update: false, delete: false });
-      GLOBAL_PERMS.forEach(g => defaultPerms[g.key] = { [g.action]: false });
+      RESOURCES.forEach(r => defaultPerms[r.key] = { read: false, insert: false, update: false, delete: false, customize: false });
+      GLOBAL_PERMS.forEach(g => {
+        defaultPerms[g.key] = {
+          ...(defaultPerms[g.key] || {}),
+          [g.action]: false
+        };
+      });
 
       await saveRole({
         role: newRoleName.trim(),

@@ -9,11 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1149.0",
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.3",
     "@sparticuz/chromium": "^133.0.0",
     "@vercel/analytics": "^2.0.1",
-    "@vercel/blob": "^2.6.1",
     "cheerio": "^1.2.0",
     "dom-to-image-more": "^3.10.2",
     "framer-motion": "^12.42.2",

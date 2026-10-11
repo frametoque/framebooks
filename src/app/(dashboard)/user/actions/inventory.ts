@@ -120,10 +120,14 @@ export async function deleteInventoryItem(id: string, itemName: string) {
 }
 
 export async function uploadInventoryDocument(formData: FormData): Promise<string> {
-  const { put } = await import('@vercel/blob');
+  const { uploadToR2 } = await import('@/lib/r2');
   const file = formData.get('file') as File;
   if (!file) throw new Error("No file uploaded");
-  const filename = `admin/inventory/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-  const blob = await put(filename, file, { access: 'public' });
-  return blob.url;
+  const cleanName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+  const result = await uploadToR2({
+    file,
+    fileName: cleanName,
+    folder: "inventory",
+  });
+  return result.url;
 }

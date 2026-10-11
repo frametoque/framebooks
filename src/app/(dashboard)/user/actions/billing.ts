@@ -3,7 +3,7 @@
 import sql from "@/lib/db";
 import { getTenantId } from "./actions";
 import { auth } from "@/lib/auth";
-import { put } from "@vercel/blob";
+import { uploadToR2 } from "@/lib/r2";
 import { getActivePlans, DBPlan } from "@/lib/plans-db";
 
 export async function getAvailablePlansAction(): Promise<{ success: boolean; plans: DBPlan[] }> {
@@ -86,10 +86,14 @@ export async function submitSubscriptionPayment(formData: FormData) {
       return { success: false, error: "Please upload a photo of the payment slip." };
     }
 
-    // 1. Upload to Blob
-    const filename = `admin/subscriptions/${tenantId}-${Date.now()}-${slipFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    const blob = await put(filename, slipFile, { access: 'public' });
-    const slipUrl = blob.url;
+    // 1. Upload to Cloudflare R2
+    const cleanFileName = `${tenantId}-${Date.now()}-${slipFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const result = await uploadToR2({
+      file: slipFile,
+      fileName: cleanFileName,
+      folder: "subscriptions",
+    });
+    const slipUrl = result.url;
 
     // 2. Lookup plan ID
     let planId: number | null = null;

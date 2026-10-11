@@ -4,7 +4,7 @@ import { Loader } from "@/components/ui/Loader";
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { Loader2, CheckCircle2, ShieldCheck, Image as ImageIcon, FileText as FileIcon, Layout, FileText, Sparkles } from "lucide-react";
+import { Loader2, CheckCircle2, ShieldCheck, Image as ImageIcon, FileText as FileIcon, Layout, FileText, Sparkles, Printer } from "lucide-react";
 import { MdDownload, MdArrowBack, MdInsertDriveFile, MdCalendarToday, MdLocalOffer, MdWorkOutline, MdImage, MdCancel, MdAttachMoney, MdClose, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdDelete, MdUpload } from "react-icons/md";
 import Link from "next/link";
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
@@ -56,6 +56,7 @@ const formatDateTime = (dateString: string | Date | null | undefined) => {
 };
 
 import { formatMoney, hexToRgb, formatMoneySlash, wrapText, generateInvoicePDF } from "@/lib/generateInvoicePDF";
+import { downloadInvoiceWithLayout, printInvoiceWithLayout } from "@/lib/invoice-layout/export-pdf";
 import { useRole } from "../../context/RoleContext";
 
 
@@ -68,6 +69,7 @@ export default function AdminInvoicePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [autoDownloaded, setAutoDownloaded] = useState(false);
   const [approving, setApproving] = useState(false);
   const [declining, setDeclining] = useState(false);
@@ -226,23 +228,42 @@ export default function AdminInvoicePage() {
     }
   }, [invoice, searchParams]);
 
+  const activeLayoutDef = invoice?.layout_snapshot || invoice?.active_layout_definition;
+
   const handleDownload = async () => {
     if (!invoice) return;
     setDownloading(true);
     try {
-      const pdfBytes = await generateInvoicePDF(invoice, tenantPlan, tenantInfo);
-      const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${invoice_id}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await downloadInvoiceWithLayout({
+        invoice,
+        tenantInfo,
+        plan: tenantPlan,
+        layoutDef: activeLayoutDef,
+        fileName: `${invoice_id}.pdf`,
+      });
     } catch (err) {
       console.error("PDF generation failed:", err);
       alert("Failed to generate PDF. Please try again.\nError: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    if (!invoice) return;
+    setPrinting(true);
+    try {
+      await printInvoiceWithLayout({
+        invoice,
+        tenantInfo,
+        plan: tenantPlan,
+        layoutDef: activeLayoutDef,
+      });
+    } catch (err) {
+      console.error("Print generation failed:", err);
+      alert("Failed to print invoice. Please try again.\nError: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setPrinting(false);
     }
   };
 
@@ -264,13 +285,16 @@ export default function AdminInvoicePage() {
       if (role !== 'Viewer' && !isViewer && canWrite) openIncomeModal();
     };
     const handleDownloadEvent = () => handleDownload();
+    const handlePrintEvent = () => handlePrint();
     window.addEventListener("invoice:create-income", handleCreateIncomeEvent);
     window.addEventListener("invoice:download-pdf", handleDownloadEvent);
+    window.addEventListener("invoice:print", handlePrintEvent);
     return () => {
       window.removeEventListener("invoice:create-income", handleCreateIncomeEvent);
       window.removeEventListener("invoice:download-pdf", handleDownloadEvent);
+      window.removeEventListener("invoice:print", handlePrintEvent);
     };
-  }, [invoice, role, isViewer, canWrite]);
+  }, [invoice, role, isViewer, canWrite, tenantInfo, tenantPlan, activeLayoutDef]);
 
   const handleDeleteAndReversePayment = async (incomeId: number, amount: number) => {
     if (!await confirm(`Are you sure you want to delete and reverse this payment of ${formatMoney(amount, invoice?.currency)}? This will restore the due balance on the invoice.`)) {
@@ -467,8 +491,6 @@ export default function AdminInvoicePage() {
     }
   };
 
-  const activeLayoutDef = invoice.layout_snapshot || invoice.active_layout_definition;
-
   return (
     <div className="space-y-6 pb-20">
       {/* View Switcher (If custom layout is assigned to invoice) */}
@@ -498,16 +520,40 @@ export default function AdminInvoicePage() {
               <span>Document Layout</span>
             </button>
           </div>
-          <div className="text-xs text-gray-400 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-brand-400 animate-pulse" />
-            <span className="font-medium text-foreground">
-              {invoice.layout_name || "Custom Template"}
-            </span>
-            {invoice.layout_snapshot && (
-              <span className="text-[10px] text-gray-500 border border-border px-1.5 py-0.5 rounded">
-                Snapshot Frozen
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-gray-400 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-brand-400 animate-pulse" />
+              <span className="font-medium text-foreground">
+                {invoice.layout_name || "Custom Template"}
               </span>
-            )}
+              {invoice.layout_snapshot && (
+                <span className="text-[10px] text-gray-500 border border-border px-1.5 py-0.5 rounded">
+                  Snapshot Frozen
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 pl-2 border-l border-border">
+              <button
+                onClick={handleDownload}
+                disabled={downloading}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-xl text-xs font-semibold text-foreground transition-all cursor-pointer"
+                title="Download PDF"
+              >
+                {downloading ? <Loader size="sm" /> : <MdDownload className="w-3.5 h-3.5" />}
+                <span>PDF</span>
+              </button>
+              {tenantPlan === "Pro Plus" && (
+                <button
+                  onClick={handlePrint}
+                  disabled={printing}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                  title="Direct Print Invoice (Pro Plus)"
+                >
+                  {printing ? <Loader size="sm" /> : <Printer className="w-3.5 h-3.5" />}
+                  <span>Print</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

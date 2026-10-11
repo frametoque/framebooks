@@ -1,5 +1,5 @@
-// src/app/(dashboard)/admin/businesses/[id]/page.tsx
 import React from "react";
+import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
@@ -7,6 +7,26 @@ import { BusinessDetailView } from "@/app/(dashboard)/admin/_components/Business
 import { getBusinessDetails } from "@/app/(dashboard)/admin/users/actions";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const tenantId = parseInt(id, 10);
+  if (!isNaN(tenantId)) {
+    try {
+      const businessData = await getBusinessDetails(tenantId);
+      if (businessData?.tenant?.name) {
+        return { title: businessData.tenant.name };
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return { title: "Business Details" };
+}
 
 export default async function BusinessDetailPage({
   params,

@@ -1,8 +1,12 @@
-// src/app/(dashboard)/admin/payments/page.tsx
 import React from "react";
+import { Metadata } from "next";
 import sql from "@/lib/db";
 import { PaymentsClient } from "./PaymentsClient";
 import { getPaymentsList, getPaymentsSummary } from "./actions";
+
+export const metadata: Metadata = {
+  title: "Payments",
+};
 
 export const dynamic = "force-dynamic";
 

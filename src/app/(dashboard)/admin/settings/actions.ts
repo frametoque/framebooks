@@ -14,6 +14,8 @@ export async function getPlatformSettings() {
     default_currency: "LKR",
     support_email: "support@frametoque.com",
     maintenance_mode: false,
+    maintenance_message: "We're performing scheduled maintenance. We'll be back shortly.",
+    maintenance_allowed_tenants: [],
     signups_enabled: true,
   };
 
@@ -51,4 +53,20 @@ export async function savePlatformSettings(newSettings: Record<string, any>) {
 
   revalidatePath("/admin/settings");
   return { success: true };
+}
+
+/** Fetch all tenants for the allowlist picker in SettingsClient */
+export async function getTenantsForAllowlist() {
+  await requireAdmin("manage_settings");
+  const rows = await sql`
+    SELECT id, name, plan, owner_email
+    FROM tenants
+    ORDER BY name ASC
+  `;
+  return rows.map((r) => ({
+    id: String(r.id),
+    name: r.name || "Unnamed Workspace",
+    plan: r.plan || "Free",
+    ownerEmail: r.owner_email || "",
+  }));
 }

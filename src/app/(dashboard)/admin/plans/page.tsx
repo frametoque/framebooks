@@ -1,7 +1,11 @@
-// src/app/(dashboard)/admin/plans/page.tsx
 import React from "react";
+import { Metadata } from "next";
 import { PlansClient } from "./PlansClient";
 import { getPlansWithStats } from "./actions";
+
+export const metadata: Metadata = {
+  title: "Plans & Pricing",
+};
 
 export const dynamic = "force-dynamic";
 

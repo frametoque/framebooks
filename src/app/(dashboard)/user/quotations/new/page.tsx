@@ -97,7 +97,7 @@ export default function NewQuotationPage() {
 
         if (plan === "Pro Plus") {
           const defLayout = lyts.find(
-            (l) => l.is_default && (l.document_type === "quotation" || l.document_type === "both" || !l.document_type)
+            (l) => l.document_type === "quotation" || l.document_type === "both"
           );
           if (defLayout) {
             setSelectedLayoutId(defLayout.id);
@@ -199,6 +199,29 @@ export default function NewQuotationPage() {
     }
   };
 
+  const activeLayout = layouts.find(l => l.id === selectedLayoutId) || (tenantPlan === "Pro Plus" ? layouts.find(l => l.document_type === "quotation" || l.document_type === "both") : null);
+  const layoutMaxItems: number | null = (() => {
+    if (!activeLayout?.definition) return null;
+    if (typeof activeLayout.definition.lineItemsLimit === "number" && activeLayout.definition.lineItemsLimit > 0) {
+      return activeLayout.definition.lineItemsLimit;
+    }
+    let blockMax: number | null = null;
+    for (const sec of activeLayout.definition.sections || []) {
+      for (const col of sec.columns || []) {
+        for (const blk of col.blocks || []) {
+          if (["items_table", "items_col_desc", "items_col_qty", "items_col_price", "items_col_amount"].includes(blk.type)) {
+            if (typeof blk.props?.maxItems === "number" && blk.props.maxItems > 0) {
+              if (blockMax === null || blk.props.maxItems < blockMax) {
+                blockMax = blk.props.maxItems;
+              }
+            }
+          }
+        }
+      }
+    }
+    return blockMax;
+  })();
+
   const handleLineItemChange = (id: number, field: string, value: any) => {
     setLineItems(prev => prev.map(item =>
       item.id === id ? { ...item, [field]: value } : item
@@ -206,6 +229,10 @@ export default function NewQuotationPage() {
   };
 
   const addLineItem = () => {
+    if (layoutMaxItems && lineItems.length >= layoutMaxItems) {
+      alert(`This quotation layout is limited to a maximum of ${layoutMaxItems} line item${layoutMaxItems > 1 ? "s" : ""}.`);
+      return;
+    }
     setLineItems(prev => [...prev, { id: Date.now(), description: "", quantity: 1, rate: 0 }]);
   };
 
@@ -226,6 +253,10 @@ export default function NewQuotationPage() {
 
   const handleSave = async () => {
     if (!formData.clientName && !formData.userEmail) { alert("Please select or enter a client name/email."); return; }
+    if (layoutMaxItems && lineItems.length > layoutMaxItems) {
+      alert(`This quotation layout allows a maximum of ${layoutMaxItems} line item${layoutMaxItems > 1 ? "s" : ""}. Please remove extra items before saving.`);
+      return;
+    }
     if (lineItems.every(item => !item.description)) {
       alert("Please add at least one line item with description.");
       return;
@@ -447,7 +478,18 @@ export default function NewQuotationPage() {
         {/* Right Column */}
         <div className="space-y-8">
           <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
-            <h2 className="text-xl font-semibold mb-4">Services/Line Items</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Services/Line Items</h2>
+              {layoutMaxItems && (
+                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                  lineItems.length >= layoutMaxItems
+                    ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                    : "bg-muted text-muted-foreground"
+                }`}>
+                  {lineItems.length} / {layoutMaxItems} items max
+                </span>
+              )}
+            </div>
 
             <div className="space-y-3">
               {lineItems.map((item) => (
@@ -478,8 +520,15 @@ export default function NewQuotationPage() {
               ))}
             </div>
 
-            <button onClick={addLineItem}
-              className="flex items-center gap-2 text-sm text-brand-400 font-medium hover:text-brand-300 transition-colors mt-4">
+            <button
+              onClick={addLineItem}
+              disabled={Boolean(layoutMaxItems && lineItems.length >= layoutMaxItems)}
+              className={`flex items-center gap-2 text-sm font-medium transition-colors mt-4 ${
+                layoutMaxItems && lineItems.length >= layoutMaxItems
+                  ? "text-muted-foreground opacity-50 cursor-not-allowed"
+                  : "text-brand-400 hover:text-brand-300 cursor-pointer"
+              }`}
+            >
               <MdAdd className="w-4 h-4" /> Add line item
             </button>
 

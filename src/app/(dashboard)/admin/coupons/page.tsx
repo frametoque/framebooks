@@ -1,7 +1,11 @@
-// src/app/(dashboard)/admin/coupons/page.tsx
 import React from "react";
+import { Metadata } from "next";
 import { CouponsClient } from "./CouponsClient";
 import { getCouponsList } from "./actions";
+
+export const metadata: Metadata = {
+  title: "Coupons & Discounts",
+};
 
 export const dynamic = "force-dynamic";
 

@@ -17,7 +17,7 @@ import {
 import DateRangeSelector from "./components/DateRangeSelector";
 import { AdminDateRangeProvider, useAdminDateRange } from "./context/AdminDateRangeContext";
 import { RoleProvider } from "./context/RoleContext";
-import { User as UserIcon, Building2, Receipt, Droplets, BarChart3, NotepadTextDashed, FolderOpenDot, Layers, FilePenLine, ChartLine, CalendarPlus, ExternalLink, Globe, RefreshCw, Server, Cloud, Megaphone, Terminal } from "lucide-react";
+import { User as UserIcon, Building2, Receipt, Droplets, BarChart3, NotepadTextDashed, FolderOpenDot, Layers, FilePenLine, ChartLine, CalendarPlus, ExternalLink, Globe, RefreshCw, Server, Cloud, Megaphone, Terminal, Printer } from "lucide-react";
 import { MdCreditCard, MdNotifications, MdMenu, MdSearch, MdDashboard, MdAccountBalanceWallet, MdInsertDriveFile, MdGroup, MdInventory2, MdLogout, MdClose, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdWorkOutline, MdKeyboardDoubleArrowLeft, MdKeyboardDoubleArrowRight, MdCalendarToday, MdAdd, MdAccessTime, MdSettings, MdAttachMoney, MdDownload, MdMenuBook, MdAccountBalance, MdLockOutline, MdLock, MdWarning } from "react-icons/md";
 import { AppLockProvider, useAppLock, LockScreen } from "./components/AppLockProvider";
 import { ThemeToggle } from "./components/ThemeToggle";
@@ -30,8 +30,8 @@ import { GracePeriodBanner } from "./components/GracePeriodBanner";
 import { LimitBanner } from "./components/LimitBanner";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { NotificationBell } from "@/components/NotificationBell";
-import InstallPwaButton from "@/components/pwa/InstallPwaButton";
 import { getAllLimits } from "./actions/actions";
+
 
 // Framer Motion spring config for sidebar width
 const sidebarSpring = {
@@ -156,7 +156,7 @@ function LayoutContent({ children }) {
         if (clientTag) clientTag.innerHTML = newCss;
         if (ssrTag) ssrTag.innerHTML = newCss;
       }
-    } catch {}
+    } catch { }
 
     const handleAccentChange = (e: Event) => {
       const custom = e as CustomEvent<string>;
@@ -182,6 +182,23 @@ function LayoutContent({ children }) {
 
   const isTeamLocked = tenantInfo.plan !== 'Loading...' && tenantInfo.plan !== 'Pro Plus' && tenantInfo.userRole !== 'owner' && tenantInfo.userRole !== 'Super Admin' && tenantInfo.userRole !== null;
   const showOwnerWarning = tenantInfo.plan !== 'Loading...' && tenantInfo.plan !== 'Pro Plus' && (tenantInfo.userRole === 'owner' || tenantInfo.userRole === 'Super Admin') && (tenantInfo.teamMembersCount || 0) > 1;
+  const isMainDashboard = pathname === "/user/dashboard" || pathname === "/user";
+
+  // --- Maintenance mode ---
+  const [maintenance, setMaintenance] = useState<{ active: boolean; message: string; allowed: boolean } | null>(null);
+  useEffect(() => {
+    const check = () => {
+      fetch("/api/maintenance-status")
+        .then((r) => r.json())
+        .then(setMaintenance)
+        .catch(() => {});
+    };
+    check();
+    const interval = setInterval(check, 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const showMaintenanceScreen = maintenance?.active && !maintenance?.allowed;
 
   return (
     <AdminDateRangeProvider>
@@ -189,6 +206,37 @@ function LayoutContent({ children }) {
         id="tenant-accent-theme-client"
         dangerouslySetInnerHTML={{ __html: generateTenantThemeCss(tenantInfo.accent_color || DEFAULT_ACCENT_HEX) }}
       />
+
+      {/* Maintenance screen – full viewport takeover, no sidebar/header */}
+      {showMaintenanceScreen && (
+        <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-background text-foreground">
+          <div className="flex flex-col items-center text-center px-6 max-w-lg">
+            <div className="w-20 h-20 rounded-3xl bg-amber-500/10 flex items-center justify-center mb-8">
+              <svg className="w-10 h-10 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z" />
+              </svg>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-semibold mb-5">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              Scheduled Maintenance
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">
+              We'll be back soon
+            </h1>
+            <p className="text-muted-foreground leading-relaxed mb-8 text-sm sm:text-base">
+              {maintenance?.message || "We're performing scheduled maintenance. We'll be back shortly."}
+            </p>
+            <button
+              onClick={() => signOut()}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border bg-card hover:bg-muted/60 text-sm font-medium text-foreground transition-colors"
+            >
+              <MdLogout className="w-4 h-4" />
+              Sign out
+            </button>
+          </div>
+        </div>
+      )}
+
       <RoleProvider
         role={tenantInfo.is_read_only ? 'Viewer' : (tenantInfo.userRole || null)}
         actualRole={tenantInfo.userRole || null}
@@ -201,8 +249,8 @@ function LayoutContent({ children }) {
         planName={tenantInfo.plan || "Free"}
       >
         <PlanLockProvider>
-          <div className="min-h-screen bg-background text-foreground font-sans antialiased">
-            {!isLocked && (
+          <div className={`min-h-screen bg-background text-foreground font-sans antialiased${showMaintenanceScreen ? " pointer-events-none select-none" : ""}`}>
+            {!isLocked && !showMaintenanceScreen && (
               <Sidebar
                 mobileMenuOpen={mobileMenuOpen}
                 setMobileMenuOpen={setMobileMenuOpen}
@@ -212,155 +260,155 @@ function LayoutContent({ children }) {
               />
             )}
 
-            {/* Main Content Area */}
+            {/* Main Content Area – desktop */}
             <motion.div
-              animate={{ paddingLeft: isLocked ? 0 : 72 }}
+              animate={{ paddingLeft: isLocked || showMaintenanceScreen ? 0 : 72 }}
               transition={{ duration: 0.2 }}
               className="min-h-screen lg:flex flex-col hidden"
             >
-              <LimitBanner exceededLimits={exceededLimits} />
-              <Header user={user} isLoaded={isLoaded} setMobileMenuOpen={setMobileMenuOpen} tenantInfo={tenantInfo} />
+              {!showMaintenanceScreen && <LimitBanner exceededLimits={exceededLimits} />}
+              {!showMaintenanceScreen && <Header user={user} isLoaded={isLoaded} setMobileMenuOpen={setMobileMenuOpen} tenantInfo={tenantInfo} />}
               <main className="px-4 sm:px-6 lg:px-8 pt-4 pb-8 flex-1 flex flex-col">
-              {isLocked ? <LockScreen /> : isTeamLocked ? (
-                <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
-                  <div className="w-20 h-20 bg-brand-500/10 text-brand-500 rounded-3xl flex items-center justify-center mb-6">
-                    <MdLockOutline className="w-10 h-10" />
-                  </div>
-                  <h2 className="text-3xl font-bold text-foreground mb-3">Workspace Locked</h2>
-                  <p className="text-gray-400 max-w-md mx-auto mb-8 leading-relaxed">
-                    Your workspace owner has downgraded their plan, which means team member access is currently disabled. Please contact your workspace owner to upgrade to Pro Plus to restore access.
-                  </p>
-                  <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <button onClick={() => signOut()} className="px-6 py-3 bg-card hover:bg-black/10 dark:hover:bg-white/10 text-foreground border border-border rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
-                      <MdLogout className="w-5 h-5" />
-                      Sign Out
-                    </button>
-                    <button onClick={async () => {
-                      if(confirm("Are you sure you want to leave this workspace? This action cannot be undone.")) {
-                        await leaveTeam();
-                        window.location.reload();
-                      }
-                    }} className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
-                      <MdWarning className="w-5 h-5" />
-                      Leave Workspace
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {showOwnerWarning && (
-                    <div className="mb-6 p-4 bg-brand-500/10 border border-brand-500/20 rounded-2xl flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-brand-500/20 rounded-lg text-brand-500">
-                          <MdGroup className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h3 className="text-foreground font-semibold">Team Access Disabled</h3>
-                          <p className="text-gray-600 dark:text-gray-400 text-sm">You have active team members, but your current plan doesn't support them. Upgrade to restore their access.</p>
-                        </div>
-                      </div>
-                      <Link href="/user/settings/billing" className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
-                        Upgrade Now
-                      </Link>
+                {isLocked ? <LockScreen /> : isTeamLocked ? (
+                  <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
+                    <div className="w-20 h-20 bg-brand-500/10 text-brand-500 rounded-3xl flex items-center justify-center mb-6">
+                      <MdLockOutline className="w-10 h-10" />
                     </div>
-                  )}
-                  {!hasAppLock && (
-                    <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-yellow-500/20 rounded-lg text-yellow-500">
-                          <MdLockOutline className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h3 className="text-foreground font-semibold">App Lock Not Configured</h3>
-                          <p className="text-gray-600 dark:text-gray-400 text-sm">Enable App Lock (Passkeys/Biometrics) to secure your dashboard from unauthorized access.</p>
-                        </div>
-                      </div>
-                      <Link href="/user/settings/profile" className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-yellow-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
-                        Set up App Lock
-                      </Link>
+                    <h2 className="text-3xl font-bold text-foreground mb-3">Workspace Locked</h2>
+                    <p className="text-gray-400 max-w-md mx-auto mb-8 leading-relaxed">
+                      Your workspace owner has downgraded their plan, which means team member access is currently disabled. Please contact your workspace owner to upgrade to Pro Plus to restore access.
+                    </p>
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                      <button onClick={() => signOut()} className="px-6 py-3 bg-card hover:bg-black/10 dark:hover:bg-white/10 text-foreground border border-border rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
+                        <MdLogout className="w-5 h-5" />
+                        Sign Out
+                      </button>
+                      <button onClick={async () => {
+                        if (confirm("Are you sure you want to leave this workspace? This action cannot be undone.")) {
+                          await leaveTeam();
+                          window.location.reload();
+                        }
+                      }} className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
+                        <MdWarning className="w-5 h-5" />
+                        Leave Workspace
+                      </button>
                     </div>
-                  )}
-                  <GracePeriodBanner />
-                  <AnnouncementBanner userPlan={tenantInfo.plan} />
-                  {children}
-                </>
-              )}
-          </main>
-        </motion.div>
+                  </div>
+                ) : (
+                  <>
+                    {showOwnerWarning && (
+                      <div className="mb-6 p-4 bg-brand-500/10 border border-brand-500/20 rounded-2xl flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-brand-500/20 rounded-lg text-brand-500">
+                            <MdGroup className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h3 className="text-foreground font-semibold">Team Access Disabled</h3>
+                            <p className="text-gray-600 dark:text-gray-400 text-sm">You have active team members, but your current plan doesn't support them. Upgrade to restore their access.</p>
+                          </div>
+                        </div>
+                        <Link href="/user/settings/billing" className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
+                          Upgrade Now
+                        </Link>
+                      </div>
+                    )}
+                    {!hasAppLock && isMainDashboard && (
+                      <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-yellow-500/20 rounded-lg text-yellow-500">
+                            <MdLockOutline className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h3 className="text-foreground font-semibold">App Lock Not Configured</h3>
+                            <p className="text-gray-600 dark:text-gray-400 text-sm">Enable App Lock (Passkeys/Biometrics) to secure your dashboard from unauthorized access.</p>
+                          </div>
+                        </div>
+                        <Link href="/user/settings/profile" className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-yellow-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
+                          Set up App Lock
+                        </Link>
+                      </div>
+                    )}
+                    <GracePeriodBanner />
+                    <AnnouncementBanner userPlan={tenantInfo.plan} />
+                    {children}
+                  </>
+                )}
+              </main>
+            </motion.div>
 
-        {/* Mobile: no left padding */}
-        <div className="lg:hidden flex flex-col min-h-screen">
-          <LimitBanner exceededLimits={exceededLimits} />
-          <Header user={user} isLoaded={isLoaded} setMobileMenuOpen={setMobileMenuOpen} tenantInfo={tenantInfo} />
-          <main className="px-4 sm:px-6 pt-4 pb-8 flex-1 flex flex-col">
-              {isLocked ? <LockScreen /> : isTeamLocked ? (
-                <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
-                  <div className="w-20 h-20 bg-brand-500/10 text-brand-500 rounded-3xl flex items-center justify-center mb-6">
-                    <MdLockOutline className="w-10 h-10" />
-                  </div>
-                  <h2 className="text-3xl font-bold text-foreground mb-3">Workspace Locked</h2>
-                  <p className="text-gray-400 max-w-md mx-auto mb-8 leading-relaxed">
-                    Your workspace owner has downgraded their plan, which means team member access is currently disabled. Please contact your workspace owner to upgrade to Pro Plus to restore access.
-                  </p>
-                  <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <button onClick={() => signOut()} className="px-6 py-3 bg-card hover:bg-black/10 dark:hover:bg-white/10 text-foreground border border-border rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
-                      <MdLogout className="w-5 h-5" />
-                      Sign Out
-                    </button>
-                    <button onClick={async () => {
-                      if(confirm("Are you sure you want to leave this workspace? This action cannot be undone.")) {
-                        await leaveTeam();
-                        window.location.reload();
-                      }
-                    }} className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
-                      <MdWarning className="w-5 h-5" />
-                      Leave Workspace
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {showOwnerWarning && (
-                    <div className="mb-6 p-4 bg-brand-500/10 border border-brand-500/20 rounded-2xl flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-brand-500/20 rounded-lg text-brand-500">
-                          <MdGroup className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h3 className="text-foreground font-semibold">Team Access Disabled</h3>
-                          <p className="text-gray-600 dark:text-gray-400 text-sm">You have active team members, but your current plan doesn't support them. Upgrade to restore their access.</p>
-                        </div>
-                      </div>
-                      <Link href="/user/settings/billing" className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
-                        Upgrade Now
-                      </Link>
+            {/* Mobile: no left padding */}
+            <div className="lg:hidden flex flex-col min-h-screen">
+              {!showMaintenanceScreen && <LimitBanner exceededLimits={exceededLimits} />}
+              {!showMaintenanceScreen && <Header user={user} isLoaded={isLoaded} setMobileMenuOpen={setMobileMenuOpen} tenantInfo={tenantInfo} />}
+              <main className="px-4 sm:px-6 pt-4 pb-8 flex-1 flex flex-col">
+                {isLocked ? <LockScreen /> : isTeamLocked ? (
+                  <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
+                    <div className="w-20 h-20 bg-brand-500/10 text-brand-500 rounded-3xl flex items-center justify-center mb-6">
+                      <MdLockOutline className="w-10 h-10" />
                     </div>
-                  )}
-                  {!hasAppLock && (
-                    <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-yellow-500/20 rounded-lg text-yellow-500">
-                          <MdLockOutline className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h3 className="text-foreground font-semibold">App Lock Not Configured</h3>
-                          <p className="text-gray-600 dark:text-gray-400 text-sm">Enable App Lock (Passkeys/Biometrics) to secure your dashboard from unauthorized access.</p>
-                        </div>
-                      </div>
-                      <Link href="/user/settings/profile" className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-yellow-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
-                        Set up App Lock
-                      </Link>
+                    <h2 className="text-3xl font-bold text-foreground mb-3">Workspace Locked</h2>
+                    <p className="text-gray-400 max-w-md mx-auto mb-8 leading-relaxed">
+                      Your workspace owner has downgraded their plan, which means team member access is currently disabled. Please contact your workspace owner to upgrade to Pro Plus to restore access.
+                    </p>
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                      <button onClick={() => signOut()} className="px-6 py-3 bg-card hover:bg-black/10 dark:hover:bg-white/10 text-foreground border border-border rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
+                        <MdLogout className="w-5 h-5" />
+                        Sign Out
+                      </button>
+                      <button onClick={async () => {
+                        if (confirm("Are you sure you want to leave this workspace? This action cannot be undone.")) {
+                          await leaveTeam();
+                          window.location.reload();
+                        }
+                      }} className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
+                        <MdWarning className="w-5 h-5" />
+                        Leave Workspace
+                      </button>
                     </div>
-                  )}
-                  <GracePeriodBanner />
-                  <AnnouncementBanner userPlan={tenantInfo.plan} />
-                  {children}
-                </>
-              )}
-          </main>
-        </div>
-      </div>
-      <IdleTimer />
+                  </div>
+                ) : (
+                  <>
+                    {showOwnerWarning && (
+                      <div className="mb-6 p-4 bg-brand-500/10 border border-brand-500/20 rounded-2xl flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-brand-500/20 rounded-lg text-brand-500">
+                            <MdGroup className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h3 className="text-foreground font-semibold">Team Access Disabled</h3>
+                            <p className="text-gray-600 dark:text-gray-400 text-sm">You have active team members, but your current plan doesn't support them. Upgrade to restore their access.</p>
+                          </div>
+                        </div>
+                        <Link href="/user/settings/billing" className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
+                          Upgrade Now
+                        </Link>
+                      </div>
+                    )}
+                    {!hasAppLock && isMainDashboard && (
+                      <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-yellow-500/20 rounded-lg text-yellow-500">
+                            <MdLockOutline className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h3 className="text-foreground font-semibold">App Lock Not Configured</h3>
+                            <p className="text-gray-600 dark:text-gray-400 text-sm">Enable App Lock (Passkeys/Biometrics) to secure your dashboard from unauthorized access.</p>
+                          </div>
+                        </div>
+                        <Link href="/user/settings/profile" className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-yellow-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
+                          Set up App Lock
+                        </Link>
+                      </div>
+                    )}
+                    <GracePeriodBanner />
+                    <AnnouncementBanner userPlan={tenantInfo.plan} />
+                    {children}
+                  </>
+                )}
+              </main>
+            </div>
+          </div>
+          <IdleTimer />
         </PlanLockProvider>
       </RoleProvider>
     </AdminDateRangeProvider>
@@ -440,6 +488,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
     if (path.startsWith("/user/quotations")) return "Quotations";
     if (path.startsWith("/user/income")) return "Income";
     if (path.startsWith("/user/expenses")) return "Expenses";
+    if (path.startsWith("/user/accounts")) return "Bank Accounts";
     if (path.startsWith("/user/reports")) {
       const parts = path.split("/");
       const sub = parts[3];
@@ -454,6 +503,12 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
       return "Reports";
     }
     if (path.startsWith("/user/settings")) {
+      if (path.includes("/invoice-layout/builder")) {
+        return "Invoice Layout";
+      }
+      if (path.includes("/invoice-layout")) {
+        return "Invoice Layouts";
+      }
       const parts = path.split("/");
       const sub = parts[3];
       if (sub === "profile") return "Account & Security";
@@ -469,12 +524,12 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
       return "Settings";
     }
     if (path.startsWith("/user/logs")) return "Logs";
-    return "Admin";
+    return "Dashboard";
   };
 
   useEffect(() => {
     const pageTitle = getPageTitle(pathname);
-    document.title = pageTitle;
+    document.title = pageTitle ? `${pageTitle} | Framebooks` : "Framebooks";
   }, [pathname]);
 
   useEffect(() => {
@@ -549,6 +604,17 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
                     <MdDownload className="w-4 h-4" />
                     <span>Download PDF</span>
                   </button>
+                  {tenantInfo?.plan === "Pro Plus" && (
+                    <button
+                      type="button"
+                      onClick={() => window.dispatchEvent(new CustomEvent("invoice:print"))}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-card hover:bg-black/5 dark:hover:bg-white/10 text-foreground border border-border rounded-3xl font-bold transition-colors active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap shadow-2xs"
+                      title="Direct Print Invoice"
+                    >
+                      <Printer className="w-4 h-4 text-brand-500" />
+                      <span>Print</span>
+                    </button>
+                  )}
                 </div>
               )}
               {isAccounts && tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
@@ -660,7 +726,6 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
             <span className="font-medium text-sm">{currentDate || "Loading..."}</span>
           </div>
 
-          <InstallPwaButton />
           <NotificationBell />
           <ThemeToggle />
 
@@ -867,7 +932,7 @@ const Sidebar = ({
           {/* User Settings Link */}
           <div className="p-3 flex flex-col mt-auto space-y-2 shrink-0 border-t border-border w-full overflow-hidden">
             <div className="flex items-center gap-2 w-full overflow-hidden">
-              <Link 
+              <Link
                 href="/user/settings/profile"
                 onClick={() => {
                   setMobileMenuOpen(false);
@@ -877,8 +942,8 @@ const Sidebar = ({
                 className="flex items-center h-12 px-1 gap-3 rounded-2xl transition-colors hover:bg-black/5 dark:hover:bg-white/5 flex-1 min-w-0 overflow-hidden"
               >
                 <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center">
-                  <ClientAvatar 
-                    imageUrl={user?.image} 
+                  <ClientAvatar
+                    imageUrl={user?.image}
                     name={user?.name || "User"}
                     email={user?.email}
                     className="w-10 h-10 rounded-full object-cover shrink-0 border border-border"
@@ -899,7 +964,7 @@ const Sidebar = ({
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || "Account & Security"}</p>
                 </motion.div>
               </Link>
-              
+
               <motion.div
                 initial={false}
                 animate={{
@@ -941,23 +1006,23 @@ function IdleTimer() {
   useEffect(() => {
     let idleTimeout: NodeJS.Timeout;
     let countdownInterval: NodeJS.Timeout;
-    
+
     const IDLE_TIME_MS = 14 * 60 * 1000; // 14 minutes until warning
-    
+
     const resetTimer = () => {
       clearTimeout(idleTimeout);
       clearInterval(countdownInterval);
       setShowWarning(false);
       setTimeLeft(60);
-      
+
       idleTimeout = setTimeout(() => {
         setShowWarning(true);
         let currentLeft = 60;
-        
+
         countdownInterval = setInterval(() => {
           currentLeft -= 1;
           setTimeLeft(currentLeft);
-          
+
           if (currentLeft <= 0) {
             clearInterval(countdownInterval);
             signOut();
@@ -967,7 +1032,7 @@ function IdleTimer() {
     };
 
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    
+
     const handleActivity = () => {
       if (!showWarning) {
         resetTimer();

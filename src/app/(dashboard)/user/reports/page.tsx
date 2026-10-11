@@ -5,7 +5,7 @@ import { Loader } from "@/components/ui/Loader";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Reports",
+  title: "Reports | Framebooks",
   description: "Comprehensive financial overview, profit & loss, balance sheet, and accounting ledgers.",
 };
 

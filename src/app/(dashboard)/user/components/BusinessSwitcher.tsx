@@ -4,18 +4,16 @@ import React, { useState, useEffect, useRef } from "react";
 import { 
   Building2, 
   Check, 
-  ChevronDown, 
   Plus, 
-  Crown, 
   ShieldCheck, 
   UserCheck, 
   Eye, 
   Loader2, 
   MailCheck, 
   X, 
-  AlertCircle,
-  Briefcase
+  AlertCircle
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import TenantLogo from "@/components/TenantLogo";
 import { 
   getUserBusinesses, 
@@ -191,7 +189,7 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
   const isProPlus = plan.includes("plus");
   const isPro = !isProPlus && plan.includes("pro");
 
-  let containerClass = "rounded-full flex-shrink-0 transition-transform group-hover:scale-105";
+  let containerClass = "rounded-lg flex-shrink-0 transition-transform group-hover:scale-105";
   if (isProPlus) {
     containerClass += " ring-2 ring-offset-2 ring-offset-background ring-brand-500 shadow-[0_0_15px_rgba(159,232,112,0.4)]";
   } else if (isPro) {
@@ -212,21 +210,14 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
           setShowCreateModal(false);
           setGeneralMessage(null);
         }}
-        className="flex items-center gap-3 pl-4 ml-2 border-l border-border hover:opacity-90 transition-all text-left group focus:outline-none"
+        className="flex items-center gap-3 pl-4 ml-2 border-l border-border hover:opacity-90 transition-all text-left group focus:outline-none cursor-pointer"
         aria-haspopup="true"
         aria-expanded={isOpen}
       >
         <div className="flex flex-col items-end hidden sm:flex">
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm font-semibold text-foreground tracking-tight group-hover:text-brand-500 transition-colors max-w-[150px] truncate">
-              {tenantInfo.name || "My Business"}
-            </span>
-            <ChevronDown
-              className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 ${
-                isOpen ? "rotate-180 text-brand-500" : ""
-              }`}
-            />
-          </div>
+          <span className="text-sm font-semibold text-foreground tracking-tight group-hover:text-brand-500 transition-colors whitespace-nowrap">
+            {tenantInfo.name || "My Business"}
+          </span>
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className="text-xs text-gray-500 dark:text-gray-400">
               You're {roleText}
@@ -246,7 +237,8 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
               logoUrl={tenantInfo.logo_url}
               name={tenantInfo.name}
               size={36}
-              className="w-9 h-9 rounded-full object-cover"
+              className="w-9 h-9 rounded-lg object-cover"
+              fallbackClassName="w-9 h-9 rounded-lg bg-card flex items-center justify-center border border-border/50"
             />
           </div>
           {pendingInvites.length > 0 && (
@@ -256,14 +248,20 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
       </button>
 
       {/* Popover Dropdown */}
-      {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-84 sm:w-96 rounded-2xl bg-popover border border-border shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: -8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: -8 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute right-0 top-full mt-2 w-84 sm:w-96 rounded-2xl bg-popover border border-border shadow-2xl z-50 overflow-hidden"
+          >
           {/* Header */}
           <div className="p-3.5 border-b border-border/60 flex items-center justify-between bg-black/[0.02] dark:bg-white/[0.03]">
-            <div className="flex items-center gap-2">
-              <Briefcase className="w-4 h-4 text-brand-500" />
+            <div className="flex items-center">
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Workspaces
+                Business Profiles
               </span>
             </div>
           </div>
@@ -404,8 +402,7 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
                             {biz.name}
                           </span>
                           {biz.isOwner ? (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                              <Crown className="w-2.5 h-2.5" />
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                               Owner
                             </span>
                           ) : (
@@ -538,8 +535,9 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       )}
-    </div>
-  );
+    </AnimatePresence>
+  </div>
+);
 }

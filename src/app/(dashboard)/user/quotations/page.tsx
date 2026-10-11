@@ -3,11 +3,12 @@ import { Loader } from "@/components/ui/Loader";
 
 
 import { useEffect, useState, useMemo } from "react";
-import { Edit2, Loader2, CheckCircle2, FolderOpen } from "lucide-react";
+import { Edit2, Loader2, CheckCircle2, FolderOpen, Printer } from "lucide-react";
 import { MdAccountBalanceWallet, MdTrendingUp, MdAdd, MdDelete, MdRemoveRedEye, MdClose, MdDownload } from "react-icons/md";
 import Link from "next/link";
 import domtoimage from 'dom-to-image-more';
 import { jsPDF } from 'jspdf';
+import { downloadInvoiceWithLayout, printInvoiceWithLayout, printPdfBlob } from "@/lib/invoice-layout/export-pdf";
 import { useRouter } from "next/navigation";
 import { 
   getQuotations, 
@@ -20,6 +21,7 @@ import AnimatedNumber from "../components/AnimatedNumber";
 import { useAdminDateRange } from "../context/AdminDateRangeContext";
 import { useAppLock } from "../components/AppLockProvider";
 import { useRole } from "../context/RoleContext";
+import { getTenantInfo } from "../actions/tenants";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import Image from "next/image";
 
@@ -54,13 +56,36 @@ export default function QuotationsPage() {
   const [selectedBankAccountId, setSelectedBankAccountId] = useState<string>("");
 
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [printingId, setPrintingId] = useState<number | null>(null);
+  const [tenantPlan, setTenantPlan] = useState<string>("Free");
+  const [tenantInfo, setTenantInfo] = useState<any>(null);
 
   const handleDownloadPDF = async (row: any) => {
     setDownloadingId(row.id);
     try {
-      const q = await getQuotationById(row.id.toString());
+      const [q, tInfo] = await Promise.all([
+        getQuotationById(row.id.toString()),
+        getTenantInfo(),
+      ]);
       if (!q) {
         alert("Failed to load quotation details");
+        return;
+      }
+
+      const layoutDef = q.layout_snapshot || q.active_layout_definition;
+      if (layoutDef) {
+        await downloadInvoiceWithLayout({
+          invoice: {
+            ...q,
+            invoice_id: `QT-${String(q.id).padStart(5, "0")}`,
+            subtotal: q.amount,
+            total: q.total_due || q.amount,
+          },
+          tenantInfo: tInfo,
+          plan: tInfo?.plan || "Free",
+          layoutDef,
+          fileName: `QT-${String(q.id).padStart(5, "0")}.pdf`,
+        });
         return;
       }
       
@@ -141,6 +166,123 @@ export default function QuotationsPage() {
     }
   };
 
+  const handlePrintQuotation = async (row: any) => {
+    setPrintingId(row.id);
+    try {
+      let tInfo = tenantInfo;
+      let tPlan = tenantPlan;
+      if (!tInfo) {
+        tInfo = await getTenantInfo();
+        setTenantInfo(tInfo);
+        tPlan = tInfo?.plan || "Free";
+        setTenantPlan(tPlan);
+      }
+
+      const q = await getQuotationById(row.id.toString());
+      if (!q) {
+        alert("Failed to load quotation details for printing");
+        return;
+      }
+
+      const layoutDef = q.layout_snapshot || q.active_layout_definition;
+      if (layoutDef) {
+        await printInvoiceWithLayout({
+          invoice: {
+            ...q,
+            invoice_id: `QT-${String(q.id).padStart(5, "0")}`,
+            subtotal: q.amount,
+            total: q.total_due || q.amount,
+          },
+          tenantInfo: tInfo,
+          plan: tPlan,
+          layoutDef,
+        });
+        return;
+      }
+
+      // Fallback: render HTML and print
+      const element = document.createElement("div");
+      element.style.position = "absolute";
+      element.style.left = "-9999px";
+      element.style.top = "-9999px";
+      element.style.width = "800px";
+      element.style.padding = "40px";
+      element.style.background = "#ffffff";
+      element.style.color = "#000000";
+      element.style.fontFamily = "sans-serif";
+
+      const itemsHtml = (q.items && q.items.length > 0) ? q.items.map((item: any) => `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 12px 0;">${item.description}</td>
+          <td style="padding: 12px 0; text-align: center;">${item.quantity}</td>
+          <td style="padding: 12px 0; text-align: right;">${formatLKR(item.rate)}</td>
+          <td style="padding: 12px 0; text-align: right; font-weight: bold;">${formatLKR(item.quantity * item.rate)}</td>
+        </tr>
+      `).join("") : `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 12px 0;">${q.description || 'Services'}</td>
+          <td style="padding: 12px 0; text-align: center;">1</td>
+          <td style="padding: 12px 0; text-align: right;">${formatLKR(q.amount)}</td>
+          <td style="padding: 12px 0; text-align: right; font-weight: bold;">${formatLKR(q.amount)}</td>
+        </tr>
+      `;
+
+      element.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px;">
+          <div>
+            <h1 style="font-size: 28px; font-weight: bold; margin: 0; color: #111827;">QUOTATION</h1>
+            <p style="color: #6b7280; margin: 4px 0 0 0;">QT-${String(q.id).padStart(5, '0')}</p>
+          </div>
+          <div style="text-align: right;">
+            <p style="font-weight: bold; margin: 0; font-size: 16px;">${tInfo?.company_name || 'FrameBooks'}</p>
+            <p style="color: #6b7280; margin: 4px 0 0 0;">Date: ${q.date}</p>
+          </div>
+        </div>
+        <div style="margin-bottom: 40px; background: #f9fafb; padding: 20px; border-radius: 8px;">
+          <p style="color: #6b7280; font-size: 12px; text-transform: uppercase; margin: 0 0 8px 0; font-weight: bold;">Quotation For:</p>
+          <p style="font-size: 16px; font-weight: bold; margin: 0 0 4px 0;">${q.client_name || (q as any).client || 'Client'}</p>
+          ${q.billing_address ? `<p style="color: #4b5563; margin: 0; white-space: pre-line;">${q.billing_address}</p>` : ''}
+        </div>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
+          <thead>
+            <tr style="border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 14px;">
+              <th style="text-align: left; padding: 8px 0;">Description</th>
+              <th style="text-align: center; padding: 8px 0; width: 80px;">Qty</th>
+              <th style="text-align: right; padding: 8px 0; width: 120px;">Rate</th>
+              <th style="text-align: right; padding: 8px 0; width: 140px;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>${itemsHtml}</tbody>
+        </table>
+        <div style="display: flex; justify-content: flex-end;">
+          <div style="width: 250px;">
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 2px solid #111827; font-weight: bold; font-size: 16px;">
+              <span>Total:</span>
+              <span>${formatLKR(q.amount)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(element);
+      const imgData = await domtoimage.toPng(element, { quality: 1.0 });
+      document.body.removeChild(element);
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (element.offsetHeight * 2 * pdfWidth) / (800 * 2);
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.autoPrint();
+      const blob = pdf.output('blob');
+      printPdfBlob(blob);
+    } catch (err: any) {
+      console.error("Direct quotation print failed:", err);
+      alert("Failed to print quotation: " + (err?.message || String(err)));
+    } finally {
+      setPrintingId(null);
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -171,19 +313,24 @@ export default function QuotationsPage() {
   }, [startDate, endDate]);
 
   useEffect(() => {
-    async function loadBanks() {
+    async function init() {
       try {
-        const banks = await getBankAccounts();
+        const [banks, tInfo] = await Promise.all([
+          getBankAccounts(),
+          getTenantInfo(),
+        ]);
         setBankAccounts(banks);
         if (banks.length > 0) {
           const def = banks.find((a: any) => a.is_default === 1) || banks[0];
           setSelectedBankAccountId(def.id.toString());
         }
+        setTenantInfo(tInfo);
+        setTenantPlan(tInfo?.plan || "Free");
       } catch (e) {
-        console.error("Failed to load bank accounts", e);
+        console.error("Failed to load initial data", e);
       }
     }
-    loadBanks();
+    init();
   }, []);
 
   // Step 1: open modal to ask for project name
@@ -403,7 +550,7 @@ const handleDelete = async (id: number) => {
                       onClick={() => handleDownloadPDF(row)}
                       disabled={downloadingId === row.id}
                       className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-foreground disabled:opacity-50"
-                      title="MdDownload PDF"
+                      title="Download PDF"
                     >
                       {downloadingId === row.id ? (
                         <Loader size="sm" />
@@ -411,6 +558,20 @@ const handleDelete = async (id: number) => {
                         <MdDownload className="w-4 h-4" />
                       )}
                     </button>
+                    {tenantPlan === "Pro Plus" && (
+                      <button
+                        onClick={() => handlePrintQuotation(row)}
+                        disabled={printingId === row.id}
+                        className="p-2 hover:bg-brand-500/10 rounded-xl transition-colors text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 disabled:opacity-50"
+                        title="Direct Print Quotation"
+                      >
+                        {printingId === row.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-brand-500" />
+                        ) : (
+                          <Printer className="w-4 h-4" />
+                        )}
+                      </button>
+                    )}
                     {role !== 'Viewer' && (
                       <>
                         <button 

@@ -3,7 +3,7 @@ import { Loader } from "@/components/ui/Loader";
 
 
 import { useEffect, useState, useMemo } from "react";
-import { Edit2, Send, Loader2, Image as ImageIcon, FileText as FileIcon } from "lucide-react";
+import { Edit2, Send, Loader2, Image as ImageIcon, FileText as FileIcon, Printer } from "lucide-react";
 import { MdInsertDriveFile, MdCheckCircle, MdAccessTime, MdErrorOutline, MdSearch, MdRemoveRedEye, MdDownload, MdDelete, MdAttachMoney, MdClose, MdUpload } from "react-icons/md";
 import Link from "next/link";
 import { getInvoices, deleteInvoice, recordInvoicePayment, adminUploadPaymentSlip, getInvoiceByIdAdmin } from "../actions/actions";
@@ -13,6 +13,7 @@ import { useAppLock } from "../components/AppLockProvider";
 import AnimatedNumber from "../components/AnimatedNumber";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import { generateInvoicePDF } from "@/lib/generateInvoicePDF";
+import { downloadInvoiceWithLayout, printInvoiceWithLayout } from "@/lib/invoice-layout/export-pdf";
 import Image from "next/image";
 
 const filters = ["All", "Fully Paid", "Partially Paid", "On Review", "Overdue", "Advance-Paid", "Unpaid"];
@@ -50,6 +51,7 @@ export default function InvoicesPage() {
   const [tenantPlan, setTenantPlan] = useState<string>("Free");
   const [tenantInfo, setTenantInfo] = useState<any>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [printingId, setPrintingId] = useState<string | null>(null);
   const [includeSlip, setIncludeSlip] = useState(false);
   const [convertingPdf, setConvertingPdf] = useState(false);
 
@@ -271,23 +273,50 @@ export default function InvoicesPage() {
         return;
       }
 
-      const pdfBytes = await generateInvoicePDF(inv, tPlan, tInfo);
-      const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${inv.invoice_number || invoiceId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 150);
+      await downloadInvoiceWithLayout({
+        invoice: inv,
+        tenantInfo: tInfo,
+        plan: tPlan,
+        layoutDef: inv.layout_snapshot || inv.active_layout_definition,
+        fileName: `${inv.invoice_number || invoiceId}.pdf`,
+      });
     } catch (err: any) {
       console.error("Direct PDF download failed:", err);
       alert("Failed to download PDF: " + (err?.message || String(err)));
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  const handlePrintInvoice = async (invoiceId: string) => {
+    setPrintingId(invoiceId);
+    try {
+      let tInfo = tenantInfo;
+      let tPlan = tenantPlan;
+      if (!tInfo) {
+        tInfo = await getTenantInfo();
+        setTenantInfo(tInfo);
+        tPlan = tInfo?.plan || "Free";
+        setTenantPlan(tPlan);
+      }
+
+      const inv = await getInvoiceByIdAdmin(invoiceId);
+      if (!inv) {
+        alert("Invoice not found");
+        return;
+      }
+
+      await printInvoiceWithLayout({
+        invoice: inv,
+        tenantInfo: tInfo,
+        plan: tPlan,
+        layoutDef: inv.layout_snapshot || inv.active_layout_definition || null,
+      });
+    } catch (err: any) {
+      console.error("Direct invoice print failed:", err);
+      alert("Failed to print invoice: " + (err?.message || String(err)));
+    } finally {
+      setPrintingId(null);
     }
   };
 
@@ -527,6 +556,20 @@ export default function InvoicesPage() {
                             <MdDownload className="w-4 h-4" />
                           )}
                         </button>
+                        {tenantPlan === "Pro Plus" && (
+                          <button
+                            onClick={() => handlePrintInvoice(row.id)}
+                            disabled={printingId === row.id}
+                            className="p-2 hover:bg-brand-500/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 disabled:opacity-50"
+                            title="Direct Print Invoice"
+                          >
+                            {printingId === row.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-brand-500" />
+                            ) : (
+                              <Printer className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
                         {role !== 'Viewer' && (
                           <button onClick={() => handleDelete(row.id)} className="p-2 hover:bg-red-50 dark:hover:bg-red-400/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" title="Delete">
                             <MdDelete className="w-4 h-4" />

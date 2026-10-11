@@ -1,7 +1,11 @@
-// src/app/(dashboard)/admin/audit-logs/page.tsx
 import React from "react";
+import { Metadata } from "next";
 import { AuditLogsClient } from "./AuditLogsClient";
 import { getAuditLogsList } from "./actions";
+
+export const metadata: Metadata = {
+  title: "Audit Logs",
+};
 
 export const dynamic = "force-dynamic";
 

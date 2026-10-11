@@ -32,6 +32,18 @@ const formatLKR = (amount: number | string, currency = "LKR", showCurrency = tru
   return `${currency === "LKR" ? "Rs." : currency} ${formatted}`;
 };
 
+const getCurrencyParts = (amount: number | string, currency = "LKR", showCurrency = true) => {
+  const num = typeof amount === "number" ? amount : parseFloat(amount || "0");
+  const formatted = isNaN(num)
+    ? "0.00"
+    : new Intl.NumberFormat("en-LK", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(num);
+  const symbol = showCurrency ? (currency === "LKR" ? "Rs." : currency) : "";
+  return { symbol, formatted };
+};
+
 const formatDate = (dateStr: string) => {
   if (!dateStr) return "N/A";
   const d = new Date(dateStr);
@@ -97,6 +109,7 @@ export function InvoiceRenderer({
     const primaryColor = theme.primaryColor || "#1a3a4a";
     const textColor = styles.color || theme.textColor || "#222222";
     const accentColor = theme.accentColor || "#00E35B";
+    const isInteractive = Boolean(onSelectBlock);
 
     const blockStyle: React.CSSProperties = {
       color: textColor,
@@ -105,6 +118,8 @@ export function InvoiceRenderer({
       paddingBottom: styles.paddingBottom ? `${styles.paddingBottom}px` : undefined,
       fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
       fontWeight: styles.fontWeight || undefined,
+      fontFamily: styles.fontFamily || undefined,
+      fontStyle: styles.fontStyle || undefined,
     };
 
     let content: React.ReactNode = null;
@@ -130,9 +145,127 @@ export function InvoiceRenderer({
 
       case "business_header": {
         const name = block.props?.name || tenantInfo?.name || "Business Name";
+        const busWeight = styles.fontWeight || "bold";
+        const busStyle = styles.fontStyle || "normal";
         content = (
-          <div style={{ color: primaryColor, fontWeight: "bold" }} className="text-xl leading-tight">
+          <div
+            style={{
+              color: styles.color || primaryColor,
+              fontWeight: busWeight,
+              fontStyle: busStyle,
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+            }}
+            className="text-xl leading-tight"
+          >
             {name}
+          </div>
+        );
+        break;
+      }
+
+      case "business_address": {
+        const label = block.props?.label !== undefined ? block.props.label : "";
+        const showLabel = block.props?.showLabel !== false && Boolean(label);
+        const address = block.props?.address || tenantInfo?.address || (isInteractive ? "123 Business Street, Colombo 03" : "");
+        if (!address) {
+          content = null;
+          break;
+        }
+        const addrWeight = styles.fontWeight || "normal";
+        const addrStyle = styles.fontStyle || "normal";
+        content = (
+          <div
+            className="text-xs whitespace-pre-line leading-normal"
+            style={{
+              color: styles.color || "#4b5563",
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+              fontWeight: addrWeight,
+              fontStyle: addrStyle,
+            }}
+          >
+            {showLabel && <span className="text-gray-500 font-medium mr-1.5" style={{ fontStyle: "normal" }}>{label}</span>}
+            <span>{address}</span>
+          </div>
+        );
+        break;
+      }
+
+      case "business_phone": {
+        const label = block.props?.label !== undefined ? block.props.label : "Tel: ";
+        const showLabel = block.props?.showLabel !== false && Boolean(label);
+        const phone = block.props?.phone || tenantInfo?.phone || (isInteractive ? "+94 11 234 5678" : "");
+        if (!phone) {
+          content = null;
+          break;
+        }
+        const phoneWeight = styles.fontWeight || "normal";
+        const phoneStyle = styles.fontStyle || "normal";
+        content = (
+          <div
+            className="text-xs leading-normal"
+            style={{
+              color: styles.color || "#4b5563",
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+              fontWeight: phoneWeight,
+              fontStyle: phoneStyle,
+            }}
+          >
+            {showLabel && <span className="text-gray-500 font-medium mr-1.5" style={{ fontStyle: "normal" }}>{label}</span>}
+            <span>{phone}</span>
+          </div>
+        );
+        break;
+      }
+
+      case "business_email": {
+        const label = block.props?.label !== undefined ? block.props.label : "Email: ";
+        const showLabel = block.props?.showLabel !== false && Boolean(label);
+        const email = block.props?.email || tenantInfo?.email || (isInteractive ? "billing@company.com" : "");
+        if (!email) {
+          content = null;
+          break;
+        }
+        const emailWeight = styles.fontWeight || "normal";
+        const emailStyle = styles.fontStyle || "normal";
+        content = (
+          <div
+            className="text-xs leading-normal"
+            style={{
+              color: styles.color || "#4b5563",
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+              fontWeight: emailWeight,
+              fontStyle: emailStyle,
+            }}
+          >
+            {showLabel && <span className="text-gray-500 font-medium mr-1.5" style={{ fontStyle: "normal" }}>{label}</span>}
+            <span>{email}</span>
+          </div>
+        );
+        break;
+      }
+
+      case "business_website": {
+        const label = block.props?.label !== undefined ? block.props.label : "Web: ";
+        const showLabel = block.props?.showLabel !== false && Boolean(label);
+        const website = block.props?.website || tenantInfo?.website || (isInteractive ? "www.company.com" : "");
+        if (!website) {
+          content = null;
+          break;
+        }
+        const webWeight = styles.fontWeight || "normal";
+        const webStyle = styles.fontStyle || "normal";
+        content = (
+          <div
+            className="text-xs leading-normal"
+            style={{
+              color: styles.color || "#4b5563",
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+              fontWeight: webWeight,
+              fontStyle: webStyle,
+            }}
+          >
+            {showLabel && <span className="text-gray-500 font-medium mr-1.5" style={{ fontStyle: "normal" }}>{label}</span>}
+            <span>{website}</span>
           </div>
         );
         break;
@@ -146,7 +279,15 @@ export function InvoiceRenderer({
         const email = block.props?.email || tenantInfo?.email;
         const website = block.props?.website || tenantInfo?.website;
         content = (
-          <div className="text-xs space-y-0.5 text-gray-600 dark:text-gray-400">
+          <div
+            className="text-xs space-y-0.5"
+            style={{
+              color: styles.color || "#4b5563",
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+              fontWeight: styles.fontWeight,
+              fontStyle: styles.fontStyle,
+            }}
+          >
             {legalName && <div>{legalName}</div>}
             {industry && <div>{industry}</div>}
             {address && <div>{address}</div>}
@@ -198,8 +339,18 @@ export function InvoiceRenderer({
         const isQuotationDoc = Boolean(invoice?.isQuotation || invoice?.documentType === "quotation");
         const defaultTitle = isQuotationDoc ? "QUOTATION" : "INVOICE";
         const title = block.props?.title || defaultTitle;
+        const titleWeight = styles.fontWeight || "bold";
+        const titleStyle = styles.fontStyle || "normal";
         content = (
-          <div style={{ color: styles.color || primaryColor }} className="text-2xl font-bold tracking-tight">
+          <div
+            style={{
+              color: styles.color || primaryColor,
+              fontWeight: titleWeight,
+              fontStyle: titleStyle,
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+            }}
+            className="text-2xl tracking-tight"
+          >
             {title}
           </div>
         );
@@ -212,11 +363,16 @@ export function InvoiceRenderer({
         const label = block.props?.label !== undefined ? block.props.label : defaultLabel;
         const showLabel = block.props?.showLabel !== false && Boolean(label);
         const invNo = invoice?.invoice_id || invoice?.quotation_id || (isQuotationDoc ? "QT-00001" : "INV-2026-0842");
+        const valWeight = styles.fontWeight || "bold";
+        const valStyle = styles.fontStyle || "normal";
 
         content = (
-          <div className="text-xs leading-normal">
-            {showLabel && <span className="text-gray-500 mr-1.5">{label}</span>}
-            <span className="font-bold">{invNo}</span>
+          <div
+            className="text-xs leading-normal"
+            style={{ fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined, color: styles.color }}
+          >
+            {showLabel && <span className="text-gray-500 mr-1.5" style={{ fontStyle: "normal", fontWeight: "normal" }}>{label}</span>}
+            <span style={{ fontWeight: valWeight, fontStyle: valStyle }}>{invNo}</span>
           </div>
         );
         break;
@@ -226,11 +382,16 @@ export function InvoiceRenderer({
         const label = block.props?.label !== undefined ? block.props.label : "Date: ";
         const showLabel = block.props?.showLabel !== false && Boolean(label);
         const dateVal = formatDate(invoice?.date);
+        const valWeight = styles.fontWeight || "semibold";
+        const valStyle = styles.fontStyle || "normal";
 
         content = (
-          <div className="text-xs leading-normal">
-            {showLabel && <span className="text-gray-500 mr-1.5">{label}</span>}
-            <span className="font-semibold">{dateVal}</span>
+          <div
+            className="text-xs leading-normal"
+            style={{ fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined, color: styles.color }}
+          >
+            {showLabel && <span className="text-gray-500 mr-1.5" style={{ fontStyle: "normal", fontWeight: "normal" }}>{label}</span>}
+            <span style={{ fontWeight: valWeight, fontStyle: valStyle }}>{dateVal}</span>
           </div>
         );
         break;
@@ -244,11 +405,139 @@ export function InvoiceRenderer({
           block.props?.sampleDueDate ||
           (invoice?.date ? new Date(new Date(invoice.date).getTime() + 14 * 86400000).toISOString() : new Date().toISOString())
         );
+        const valWeight = styles.fontWeight || "semibold";
+        const valStyle = styles.fontStyle || "normal";
 
         content = (
-          <div className="text-xs leading-normal">
-            {showLabel && <span className="text-gray-500 mr-1.5">{label}</span>}
-            <span className="font-semibold">{dueVal}</span>
+          <div
+            className="text-xs leading-normal"
+            style={{ fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined, color: styles.color }}
+          >
+            {showLabel && <span className="text-gray-500 mr-1.5" style={{ fontStyle: "normal", fontWeight: "normal" }}>{label}</span>}
+            <span style={{ fontWeight: valWeight, fontStyle: valStyle }}>{dueVal}</span>
+          </div>
+        );
+        break;
+      }
+
+      case "client_header": {
+        const label = block.props?.label !== undefined ? block.props.label : "Bill To:";
+        const headWeight = styles.fontWeight || "bold";
+        const headStyle = styles.fontStyle || "normal";
+        content = (
+          <div
+            style={{
+              color: styles.color || primaryColor,
+              fontWeight: headWeight,
+              fontStyle: headStyle,
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+            }}
+            className="text-xs uppercase tracking-wider"
+          >
+            {label}
+          </div>
+        );
+        break;
+      }
+
+      case "client_name": {
+        const label = block.props?.label !== undefined ? block.props.label : "";
+        const showLabel = block.props?.showLabel !== false && Boolean(label);
+        const clientName = block.props?.clientName || invoice?.legal_name || (isInteractive ? "Company Name" : "");
+        if (!clientName) {
+          content = null;
+          break;
+        }
+        const nameWeight = styles.fontWeight || "bold";
+        const nameStyle = styles.fontStyle || "normal";
+        content = (
+          <div
+            className="text-sm leading-normal"
+            style={{ color: styles.color || textColor, fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined }}
+          >
+            {showLabel && <span className="text-gray-500 text-xs font-normal mr-1.5" style={{ fontStyle: "normal" }}>{label}</span>}
+            <span style={{ fontWeight: nameWeight, fontStyle: nameStyle }}>{clientName}</span>
+          </div>
+        );
+        break;
+      }
+
+      case "client_address": {
+        const label = block.props?.label !== undefined ? block.props.label : "";
+        const showLabel = block.props?.showLabel !== false && Boolean(label);
+        const billingAddress = block.props?.billingAddress || invoice?.billing_address || (isInteractive ? "Client Address" : "");
+        if (!billingAddress) {
+          content = null;
+          break;
+        }
+        const addrWeight = styles.fontWeight || "normal";
+        const addrStyle = styles.fontStyle || "normal";
+        content = (
+          <div
+            className="text-xs whitespace-pre-line leading-normal"
+            style={{
+              color: styles.color || "#4b5563",
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+              fontWeight: addrWeight,
+              fontStyle: addrStyle,
+            }}
+          >
+            {showLabel && <span className="text-gray-500 font-medium mr-1.5" style={{ fontStyle: "normal" }}>{label}</span>}
+            <span>{billingAddress}</span>
+          </div>
+        );
+        break;
+      }
+
+      case "client_email": {
+        const label = block.props?.label !== undefined ? block.props.label : "Email: ";
+        const showLabel = block.props?.showLabel !== false && Boolean(label);
+        const clientEmail = block.props?.clientEmail || invoice?.client_email || (isInteractive ? "accounts@acme.com" : "");
+        if (!clientEmail) {
+          content = null;
+          break;
+        }
+        const emailWeight = styles.fontWeight || "normal";
+        const emailStyle = styles.fontStyle || "normal";
+        content = (
+          <div
+            className="text-xs leading-normal"
+            style={{
+              color: styles.color || "#6b7280",
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+              fontWeight: emailWeight,
+              fontStyle: emailStyle,
+            }}
+          >
+            {showLabel && <span className="text-gray-500 font-medium mr-1.5" style={{ fontStyle: "normal" }}>{label}</span>}
+            <span>{clientEmail}</span>
+          </div>
+        );
+        break;
+      }
+
+      case "client_phone": {
+        const label = block.props?.label !== undefined ? block.props.label : "Phone: ";
+        const showLabel = block.props?.showLabel !== false && Boolean(label);
+        const clientPhone = block.props?.clientPhone || invoice?.client_phone || (isInteractive ? "+1 (555) 019-2834" : "");
+        if (!clientPhone) {
+          content = null;
+          break;
+        }
+        const phoneWeight = styles.fontWeight || "normal";
+        const phoneStyle = styles.fontStyle || "normal";
+        content = (
+          <div
+            className="text-xs leading-normal"
+            style={{
+              color: styles.color || "#6b7280",
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+              fontWeight: phoneWeight,
+              fontStyle: phoneStyle,
+            }}
+          >
+            {showLabel && <span className="text-gray-500 font-medium mr-1.5" style={{ fontStyle: "normal" }}>{label}</span>}
+            <span>{clientPhone}</span>
           </div>
         );
         break;
@@ -256,18 +545,20 @@ export function InvoiceRenderer({
 
       case "bill_to": {
         const label = block.props?.label || "Bill To:";
-        const clientName = block.props?.clientName || invoice?.legal_name || "Client Name";
-        const billingAddress = block.props?.billingAddress || invoice?.billing_address;
+        const clientName = block.props?.clientName || invoice?.legal_name || "Company Name";
+        const billingAddress = block.props?.billingAddress || invoice?.billing_address || (isInteractive ? "Client Address" : undefined);
         const clientEmail = block.props?.clientEmail || invoice?.client_email;
         content = (
-          <div className="space-y-1">
+          <div className="space-y-1" style={{ fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined }}>
             <div style={{ color: primaryColor }} className="font-bold text-xs uppercase tracking-wider">
               {label}
             </div>
             <div className="text-xs space-y-0.5">
-              <div className="font-bold text-sm text-foreground">{clientName}</div>
+              <div style={{ color: styles.color || textColor, fontWeight: styles.fontWeight || "bold", fontStyle: styles.fontStyle || "normal" }} className="text-sm">
+                {clientName}
+              </div>
               {billingAddress && (
-                <div className="text-gray-600 dark:text-gray-400 whitespace-pre-line">{billingAddress}</div>
+                <div className="text-gray-600 whitespace-pre-line">{billingAddress}</div>
               )}
               {clientEmail && (
                 <div className="text-gray-500">{clientEmail}</div>
@@ -284,12 +575,24 @@ export function InvoiceRenderer({
             ? invoice.total_due
             : Math.max(0, (invoice?.total || 0) - (invoice?.advance || 0));
         const label = block.props?.label || "Amount Due";
+        const valWeight = styles.fontWeight || "bold";
+        const valStyle = styles.fontStyle || "normal";
         content = (
           <div className="space-y-0.5">
-            <div style={{ color: primaryColor }} className="font-bold text-xs uppercase tracking-wider">
-              {label}
-            </div>
-            <div style={{ color: primaryColor }} className="text-xl font-bold">
+            {Boolean(label) && (
+              <div style={{ color: primaryColor }} className="font-bold text-xs uppercase tracking-wider">
+                {label}
+              </div>
+            )}
+            <div
+              style={{
+                color: styles.color || primaryColor,
+                fontWeight: valWeight,
+                fontStyle: valStyle,
+                fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+              }}
+              className="text-xl"
+            >
               {formatLKR(calculatedTotalDue, invoice?.currency)}
             </div>
           </div>
@@ -299,24 +602,31 @@ export function InvoiceRenderer({
 
       case "items_table": {
         const rawItems = invoice?.items;
-        const items = Array.isArray(rawItems)
+        const allItems = Array.isArray(rawItems)
           ? rawItems
           : typeof rawItems === "string"
             ? JSON.parse(rawItems || "[]")
             : [];
+        const limit = block.props?.maxItems ?? layout?.lineItemsLimit;
+        const items = limit && limit > 0 ? allItems.slice(0, limit) : allItems;
         const isStriped = Boolean(block.props?.striped);
+        const showHeader = block.props?.showHeader !== false;
+        const showBorder = block.props?.showBorder !== false;
+        const rowHeight = block.props?.rowHeightMm ? Number(block.props.rowHeightMm) : undefined;
 
         content = (
-          <div className="w-full overflow-hidden rounded-md border border-gray-200 dark:border-gray-800">
+          <div className={`w-full overflow-hidden ${showBorder ? "rounded-md border border-gray-200" : ""}`}>
             <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-gray-100 dark:bg-gray-800/60 font-semibold" style={{ color: primaryColor }}>
-                  <th className="py-2 px-3">Description</th>
-                  <th className="py-2 px-3 text-right">Price</th>
-                  <th className="py-2 px-3 text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+              {showHeader && (
+                <thead>
+                  <tr className="bg-gray-100 font-semibold" style={{ color: primaryColor }}>
+                    <th className="py-2 px-3">Description</th>
+                    <th className="py-2 px-3 text-right">Price</th>
+                    <th className="py-2 px-3 text-right">Total</th>
+                  </tr>
+                </thead>
+              )}
+              <tbody className={showBorder ? "divide-y divide-gray-200" : ""}>
                 {items.length === 0 ? (
                   <tr>
                     <td colSpan={3} className="py-3 px-3 text-center text-gray-400">
@@ -326,17 +636,40 @@ export function InvoiceRenderer({
                 ) : (
                   items.map((it: any, idx: number) => {
                     const qty = Number(it.quantity || it.qty) || 1;
+                    const rowStyle = rowHeight ? { height: `${rowHeight}mm` } : undefined;
                     return (
                       <tr
                         key={idx}
-                        className={isStriped && idx % 2 === 1 ? "bg-gray-50/70 dark:bg-gray-800/20" : ""}
+                        style={rowStyle}
+                        className={isStriped && idx % 2 === 1 ? "bg-gray-50/70" : ""}
                       >
-                        <td className="py-2 px-3 font-medium text-foreground">{it.description || "Item"}</td>
-                        <td className="py-2 px-3 text-right text-gray-500">
+                        <td className="py-2 px-3 font-medium" style={{ color: styles.color || textColor, fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined, fontFamily: styles.fontFamily, fontWeight: styles.fontWeight }}>
+                          {it.description || `Line Item ${idx + 1}`}
+                        </td>
+                        <td
+                          className="py-2 px-3 text-right tabular-nums"
+                          style={{
+                            color: styles.color || "#6b7280",
+                            fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+                            fontFamily: styles.fontFamily,
+                            fontVariantNumeric: "tabular-nums",
+                            fontFeatureSettings: '"tnum"',
+                          }}
+                        >
                           {qty > 1 ? `${qty} × ` : ""}
                           {formatLKR(it.price, invoice?.currency)}
                         </td>
-                        <td className="py-2 px-3 text-right font-semibold text-foreground">
+                        <td
+                          className="py-2 px-3 text-right font-semibold tabular-nums"
+                          style={{
+                            color: styles.color || textColor,
+                            fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+                            fontFamily: styles.fontFamily,
+                            fontWeight: styles.fontWeight,
+                            fontVariantNumeric: "tabular-nums",
+                            fontFeatureSettings: '"tnum"',
+                          }}
+                        >
                           {formatLKR(it.total, invoice?.currency)}
                         </td>
                       </tr>
@@ -345,6 +678,273 @@ export function InvoiceRenderer({
                 )}
               </tbody>
             </table>
+          </div>
+        );
+        break;
+      }
+
+      case "items_col_desc":
+      case "items_col_qty":
+      case "items_col_price":
+      case "items_col_amount": {
+        const rawItems = invoice?.items;
+        const allItems = Array.isArray(rawItems)
+          ? rawItems
+          : typeof rawItems === "string"
+            ? JSON.parse(rawItems || "[]")
+            : [];
+        const limit = block.props?.maxItems ?? layout?.lineItemsLimit;
+        const items = limit && limit > 0 ? allItems.slice(0, limit) : allItems;
+        const showHeader = block.props?.showHeader === true;
+        const rowHeight = block.props?.rowHeightMm ? Number(block.props.rowHeightMm) : 7;
+        const defaultTitle = block.type === "items_col_desc" ? "Description"
+          : block.type === "items_col_qty" ? "Qty"
+          : block.type === "items_col_price" ? "Price"
+          : "Total";
+        const headerText = block.props?.headerLabel !== undefined ? block.props.headerLabel : defaultTitle;
+
+        const isSingleItem = block.props?.itemIndex !== undefined;
+        const itemIndex = isSingleItem ? Number(block.props.itemIndex) : 0;
+
+        const itemTextStyle: React.CSSProperties = {
+          fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+          fontFamily: styles.fontFamily || undefined,
+          fontWeight: styles.fontWeight || undefined,
+          fontStyle: styles.fontStyle || undefined,
+          color: styles.color || textColor,
+          fontVariantNumeric: "tabular-nums",
+          fontFeatureSettings: '"tnum"',
+        };
+
+        const renderCurrencyCell = (
+          amount: number | string,
+          align: "left" | "center" | "right" | undefined
+        ) => {
+          const { symbol, formatted } = getCurrencyParts(amount, invoice?.currency);
+          const effectiveAlign = align || "right";
+
+          if (effectiveAlign === "left") {
+            return (
+              <div
+                className="w-full flex items-center justify-start tabular-nums gap-1"
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                  gap: "0.25rem",
+                  fontVariantNumeric: "tabular-nums",
+                  fontFeatureSettings: '"tnum"',
+                }}
+              >
+                {Boolean(symbol) && (
+                  <span style={itemTextStyle} className="shrink-0 select-none">
+                    {symbol}
+                  </span>
+                )}
+                <span
+                  style={{
+                    ...itemTextStyle,
+                    fontVariantNumeric: "tabular-nums",
+                    fontFeatureSettings: '"tnum"',
+                    textAlign: "left",
+                  }}
+                  className="tabular-nums text-left"
+                >
+                  {formatted}
+                </span>
+              </div>
+            );
+          }
+
+          if (effectiveAlign === "center") {
+            return (
+              <div
+                className="w-full flex items-center justify-center tabular-nums gap-1"
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.25rem",
+                  fontVariantNumeric: "tabular-nums",
+                  fontFeatureSettings: '"tnum"',
+                }}
+              >
+                {Boolean(symbol) && (
+                  <span style={itemTextStyle} className="shrink-0 select-none">
+                    {symbol}
+                  </span>
+                )}
+                <span
+                  style={{
+                    ...itemTextStyle,
+                    fontVariantNumeric: "tabular-nums",
+                    fontFeatureSettings: '"tnum"',
+                  }}
+                  className="tabular-nums text-center"
+                >
+                  {formatted}
+                </span>
+              </div>
+            );
+          }
+
+          return (
+            <div
+              className="w-full flex items-center justify-end tabular-nums gap-1"
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                gap: "0.25rem",
+                fontVariantNumeric: "tabular-nums",
+                fontFeatureSettings: '"tnum"',
+              }}
+            >
+              {Boolean(symbol) && (
+                <span style={itemTextStyle} className="shrink-0 select-none">
+                  {symbol}
+                </span>
+              )}
+              <span
+                style={{
+                  ...itemTextStyle,
+                  fontVariantNumeric: "tabular-nums",
+                  fontFeatureSettings: '"tnum"',
+                  textAlign: "right",
+                }}
+                className="tabular-nums text-right"
+              >
+                {formatted}
+              </span>
+            </div>
+          );
+        };
+
+        const alignStyle = styles.align === "left"
+          ? "flex-start"
+          : styles.align === "center"
+            ? "center"
+            : styles.align === "right"
+              ? "flex-end"
+              : (block.type === "items_col_desc" ? "flex-start" : "flex-end");
+
+        if (isSingleItem) {
+          // Render ONLY this specific line item
+          const it = items[itemIndex] || (isInteractive ? {
+            description: `Line Item ${itemIndex + 1}`,
+            quantity: 1,
+            price: itemIndex === 0 ? 180000 : itemIndex === 1 ? 120000 : itemIndex === 2 ? 50000 : 0,
+            total: itemIndex === 0 ? 180000 : itemIndex === 1 ? 120000 : itemIndex === 2 ? 50000 : 0,
+          } : null);
+
+          if (!it) {
+            content = isInteractive ? (
+              <div className="text-[10px] text-gray-400 italic">Line Item {itemIndex + 1}</div>
+            ) : null;
+            break;
+          }
+
+          const qty = Number(it.quantity || it.qty) || 1;
+          const price = Number(it.price || it.rate) || 0;
+          const total = it.total !== undefined ? Number(it.total) : qty * price;
+
+          content = (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: alignStyle,
+                width: "100%",
+                height: "100%",
+                minHeight: `${rowHeight}mm`,
+              }}
+            >
+              {block.type === "items_col_desc" && (
+                <span style={itemTextStyle} className="w-full">
+                  {it.description || `Line Item ${itemIndex + 1}`}
+                </span>
+              )}
+              {block.type === "items_col_qty" && (
+                <span
+                  style={{
+                    ...itemTextStyle,
+                    width: "100%",
+                    textAlign: styles.align || "center",
+                  }}
+                  className="tabular-nums"
+                >
+                  {qty}
+                </span>
+              )}
+              {block.type === "items_col_price" && renderCurrencyCell(price, styles.align)}
+              {block.type === "items_col_amount" && renderCurrencyCell(total, styles.align)}
+            </div>
+          );
+          break;
+        }
+
+        // Grouped column mode
+        content = (
+          <div className="text-xs leading-normal w-full" style={{ width: "100%" }}>
+            {showHeader && Boolean(headerText) && (
+              <div
+                className="font-bold uppercase tracking-wider text-[11px] pb-1 mb-1 border-b border-gray-200"
+                style={{
+                  color: styles.color || primaryColor,
+                  textAlign: styles.align || (block.type === "items_col_desc" ? "left" : "right"),
+                  fontFamily: styles.fontFamily,
+                }}
+              >
+                {headerText}
+              </div>
+            )}
+            <div className="space-y-0 w-full" style={{ width: "100%" }}>
+              {items.length === 0 ? (
+                <div className="text-gray-400 italic py-1 text-center">No items</div>
+              ) : (
+                items.map((it: any, idx: number) => {
+                  const qty = Number(it.quantity || it.qty) || 1;
+                  const price = Number(it.price || it.rate) || 0;
+                  const total = it.total !== undefined ? Number(it.total) : qty * price;
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        minHeight: `${rowHeight}mm`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: alignStyle,
+                        width: "100%",
+                      }}
+                      className="py-0.5 w-full"
+                    >
+                      {block.type === "items_col_desc" && (
+                        <span style={itemTextStyle} className="w-full truncate">
+                          {it.description || `Line Item ${idx + 1}`}
+                        </span>
+                      )}
+                      {block.type === "items_col_qty" && (
+                        <span
+                          style={{
+                            ...itemTextStyle,
+                            width: "100%",
+                            textAlign: styles.align || "center",
+                          }}
+                          className="tabular-nums"
+                        >
+                          {qty}
+                        </span>
+                      )}
+                      {block.type === "items_col_price" && renderCurrencyCell(price, styles.align)}
+                      {block.type === "items_col_amount" && renderCurrencyCell(total, styles.align)}
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         );
         break;
@@ -365,33 +965,33 @@ export function InvoiceRenderer({
           <div className="space-y-1.5 text-xs ml-auto max-w-[260px]">
             <div className="flex justify-between">
               <span className="text-gray-500">Subtotal:</span>
-              <span className="font-semibold">{formatLKR(subtotal, invoice?.currency)}</span>
+              <span className="font-semibold tabular-nums" style={{ fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum"' }}>{formatLKR(subtotal, invoice?.currency)}</span>
             </div>
             {discount > 0 && (
               <div className="flex justify-between text-red-600">
                 <span>Discount:</span>
-                <span>− {formatLKR(discount, invoice?.currency)}</span>
+                <span className="tabular-nums" style={{ fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum"' }}>− {formatLKR(discount, invoice?.currency)}</span>
               </div>
             )}
             {taxRate > 0 && (
               <div className="flex justify-between">
                 <span className="text-gray-500">Tax ({taxRate}%):</span>
-                <span>+ {formatLKR((subtotal * taxRate) / 100, invoice?.currency)}</span>
+                <span className="tabular-nums" style={{ fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum"' }}>+ {formatLKR((subtotal * taxRate) / 100, invoice?.currency)}</span>
               </div>
             )}
             {advance > 0 && (
               <div className="flex justify-between text-emerald-600">
                 <span>Advance Paid:</span>
-                <span>− {formatLKR(advance, invoice?.currency)}</span>
+                <span className="tabular-nums" style={{ fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum"' }}>− {formatLKR(advance, invoice?.currency)}</span>
               </div>
             )}
-            <div className="border-t border-gray-300 dark:border-gray-700 pt-1 flex justify-between font-bold text-sm" style={{ color: primaryColor }}>
+            <div className="border-t border-gray-300 pt-1 flex justify-between font-bold text-sm" style={{ color: primaryColor }}>
               <span>Total:</span>
-              <span>{formatLKR(total, invoice?.currency)}</span>
+              <span className="tabular-nums" style={{ fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum"' }}>{formatLKR(total, invoice?.currency)}</span>
             </div>
             <div className="flex justify-between font-bold text-base pt-0.5" style={{ color: primaryColor }}>
               <span>Amount Due:</span>
-              <span>{formatLKR(totalDue, invoice?.currency)}</span>
+              <span className="tabular-nums" style={{ fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum"' }}>{formatLKR(totalDue, invoice?.currency)}</span>
             </div>
           </div>
         );
@@ -403,11 +1003,29 @@ export function InvoiceRenderer({
         const label = block.props?.label !== undefined ? block.props.label : "Subtotal: ";
         const showLabel = block.props?.showLabel !== false && Boolean(label);
         const showCurrency = block.props?.showCurrency !== false;
+        const valWeight = styles.fontWeight || "semibold";
+        const valStyle = styles.fontStyle || "normal";
 
         content = (
-          <div className="flex justify-between items-center text-xs w-full">
-            {showLabel && <span className="text-gray-500 mr-2">{label}</span>}
-            <span className="font-semibold ml-auto">{formatLKR(subtotal, invoice?.currency, showCurrency)}</span>
+          <div
+            className="flex justify-between items-center text-xs w-full"
+            style={{
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+              color: styles.color,
+            }}
+          >
+            {showLabel && <span className="text-gray-500 mr-2" style={{ fontStyle: "normal", fontWeight: "normal" }}>{label}</span>}
+            <span
+              className="ml-auto tabular-nums text-right"
+              style={{
+                fontWeight: valWeight,
+                fontStyle: valStyle,
+                fontVariantNumeric: "tabular-nums",
+                fontFeatureSettings: '"tnum"',
+              }}
+            >
+              {formatLKR(subtotal, invoice?.currency, showCurrency)}
+            </span>
           </div>
         );
         break;
@@ -419,11 +1037,29 @@ export function InvoiceRenderer({
         const showLabel = block.props?.showLabel !== false && Boolean(label);
         const showCurrency = block.props?.showCurrency !== false;
         const prefix = block.props?.showPrefix !== false ? (block.props?.prefix ?? "− ") : "";
+        const valWeight = styles.fontWeight || "semibold";
+        const valStyle = styles.fontStyle || "normal";
 
         content = (
-          <div className="flex justify-between items-center text-xs text-red-600 w-full">
-            {showLabel && <span className="mr-2">{label}</span>}
-            <span className="font-semibold ml-auto">{prefix}{formatLKR(discount, invoice?.currency, showCurrency)}</span>
+          <div
+            className="flex justify-between items-center text-xs text-red-600 w-full"
+            style={{
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+              color: styles.color || "#dc2626",
+            }}
+          >
+            {showLabel && <span className="mr-2" style={{ fontStyle: "normal", fontWeight: "normal" }}>{label}</span>}
+            <span
+              className="ml-auto tabular-nums text-right"
+              style={{
+                fontWeight: valWeight,
+                fontStyle: valStyle,
+                fontVariantNumeric: "tabular-nums",
+                fontFeatureSettings: '"tnum"',
+              }}
+            >
+              {prefix}{formatLKR(discount, invoice?.currency, showCurrency)}
+            </span>
           </div>
         );
         break;
@@ -437,11 +1073,29 @@ export function InvoiceRenderer({
         const showLabel = block.props?.showLabel !== false && Boolean(label);
         const showCurrency = block.props?.showCurrency !== false;
         const prefix = block.props?.showPrefix !== false ? (block.props?.prefix ?? "+ ") : "";
+        const valWeight = styles.fontWeight || "semibold";
+        const valStyle = styles.fontStyle || "normal";
 
         content = (
-          <div className="flex justify-between items-center text-xs w-full">
-            {showLabel && <span className="text-gray-500 mr-2">{label}</span>}
-            <span className="font-semibold ml-auto">{prefix}{formatLKR(taxAmount, invoice?.currency, showCurrency)}</span>
+          <div
+            className="flex justify-between items-center text-xs w-full"
+            style={{
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+              color: styles.color,
+            }}
+          >
+            {showLabel && <span className="text-gray-500 mr-2" style={{ fontStyle: "normal", fontWeight: "normal" }}>{label}</span>}
+            <span
+              className="ml-auto tabular-nums text-right"
+              style={{
+                fontWeight: valWeight,
+                fontStyle: valStyle,
+                fontVariantNumeric: "tabular-nums",
+                fontFeatureSettings: '"tnum"',
+              }}
+            >
+              {prefix}{formatLKR(taxAmount, invoice?.currency, showCurrency)}
+            </span>
           </div>
         );
         break;
@@ -453,11 +1107,29 @@ export function InvoiceRenderer({
         const showLabel = block.props?.showLabel !== false && Boolean(label);
         const showCurrency = block.props?.showCurrency !== false;
         const prefix = block.props?.showPrefix !== false ? (block.props?.prefix ?? "− ") : "";
+        const valWeight = styles.fontWeight || "semibold";
+        const valStyle = styles.fontStyle || "normal";
 
         content = (
-          <div className="flex justify-between items-center text-xs text-emerald-600 w-full">
-            {showLabel && <span className="mr-2">{label}</span>}
-            <span className="font-semibold ml-auto">{prefix}{formatLKR(advance, invoice?.currency, showCurrency)}</span>
+          <div
+            className="flex justify-between items-center text-xs text-emerald-600 w-full"
+            style={{
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+              color: styles.color || "#059669",
+            }}
+          >
+            {showLabel && <span className="mr-2" style={{ fontStyle: "normal", fontWeight: "normal" }}>{label}</span>}
+            <span
+              className="ml-auto tabular-nums text-right"
+              style={{
+                fontWeight: valWeight,
+                fontStyle: valStyle,
+                fontVariantNumeric: "tabular-nums",
+                fontFeatureSettings: '"tnum"',
+              }}
+            >
+              {prefix}{formatLKR(advance, invoice?.currency, showCurrency)}
+            </span>
           </div>
         );
         break;
@@ -468,11 +1140,33 @@ export function InvoiceRenderer({
         const label = block.props?.label !== undefined ? block.props.label : "Total: ";
         const showLabel = block.props?.showLabel !== false && Boolean(label);
         const showCurrency = block.props?.showCurrency !== false;
+        const valWeight = styles.fontWeight || "bold";
+        const valStyle = styles.fontStyle || "normal";
+        const fontSizePt = styles.fontSize ? `${styles.fontSize}pt` : undefined;
 
         content = (
-          <div className="flex justify-between items-center font-bold text-sm w-full" style={{ color: styles.color || primaryColor }}>
-            {showLabel && <span className="mr-2">{label}</span>}
-            <span className="ml-auto">{formatLKR(total, invoice?.currency, showCurrency)}</span>
+          <div
+            className="flex justify-between items-center w-full"
+            style={{
+              color: styles.color || primaryColor,
+              fontWeight: valWeight,
+              fontStyle: valStyle,
+              fontSize: fontSizePt,
+            }}
+          >
+            {showLabel && <span className="mr-2" style={{ fontStyle: "normal", fontWeight: "normal", fontSize: fontSizePt }}>{label}</span>}
+            <span
+              className={`tabular-nums ${showLabel ? "ml-auto" : ""}`}
+              style={{
+                fontSize: fontSizePt,
+                width: showLabel ? undefined : "100%",
+                textAlign: styles.align || "right",
+                fontVariantNumeric: "tabular-nums",
+                fontFeatureSettings: '"tnum"',
+              }}
+            >
+              {formatLKR(total, invoice?.currency, showCurrency)}
+            </span>
           </div>
         );
         break;
@@ -488,11 +1182,121 @@ export function InvoiceRenderer({
         const label = block.props?.label !== undefined ? block.props.label : "Balance Due: ";
         const showLabel = block.props?.showLabel !== false && Boolean(label);
         const showCurrency = block.props?.showCurrency !== false;
+        const valWeight = styles.fontWeight || "bold";
+        const valStyle = styles.fontStyle || "normal";
+        const fontSizePt = styles.fontSize ? `${styles.fontSize}pt` : undefined;
 
         content = (
-          <div className="flex justify-between items-center font-bold text-sm w-full" style={{ color: styles.color || primaryColor }}>
-            {showLabel && <span className="mr-2">{label}</span>}
-            <span className="ml-auto">{formatLKR(totalDue, invoice?.currency, showCurrency)}</span>
+          <div
+            className="flex justify-between items-center w-full"
+            style={{
+              color: styles.color || primaryColor,
+              fontWeight: valWeight,
+              fontStyle: valStyle,
+              fontSize: fontSizePt,
+            }}
+          >
+            {showLabel && <span className="mr-2" style={{ fontStyle: "normal", fontWeight: "normal", fontSize: fontSizePt }}>{label}</span>}
+            <span
+              className={`tabular-nums ${showLabel ? "ml-auto" : ""}`}
+              style={{
+                fontSize: fontSizePt,
+                width: showLabel ? undefined : "100%",
+                textAlign: styles.align || "right",
+                fontVariantNumeric: "tabular-nums",
+                fontFeatureSettings: '"tnum"',
+              }}
+            >
+              {formatLKR(totalDue, invoice?.currency, showCurrency)}
+            </span>
+          </div>
+        );
+        break;
+      }
+
+      case "bank_name": {
+        const label = block.props?.label !== undefined ? block.props.label : "Bank: ";
+        const showLabel = block.props?.showLabel !== false && Boolean(label);
+        const bankName = block.props?.bankName || invoice?.bank_acc_bank || (isInteractive ? "Commercial Bank" : "");
+        if (!bankName) {
+          content = null;
+          break;
+        }
+        const valWeight = styles.fontWeight || "semibold";
+        const valStyle = styles.fontStyle || "normal";
+        content = (
+          <div
+            className="text-xs leading-normal"
+            style={{ fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined, color: styles.color }}
+          >
+            {showLabel && <span className="text-gray-500 mr-1.5" style={{ fontStyle: "normal", fontWeight: "normal" }}>{label}</span>}
+            <span style={{ fontWeight: valWeight, fontStyle: valStyle }}>{bankName}</span>
+          </div>
+        );
+        break;
+      }
+
+      case "bank_acc_name": {
+        const label = block.props?.label !== undefined ? block.props.label : "A/C Name: ";
+        const showLabel = block.props?.showLabel !== false && Boolean(label);
+        const accName = block.props?.accName || invoice?.bank_acc_name || (isInteractive ? "My Business Ltd" : "");
+        if (!accName) {
+          content = null;
+          break;
+        }
+        const valWeight = styles.fontWeight || "normal";
+        const valStyle = styles.fontStyle || "normal";
+        content = (
+          <div
+            className="text-xs leading-normal"
+            style={{ fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined, color: styles.color }}
+          >
+            {showLabel && <span className="text-gray-500 mr-1.5" style={{ fontStyle: "normal", fontWeight: "normal" }}>{label}</span>}
+            <span style={{ fontWeight: valWeight, fontStyle: valStyle }}>{accName}</span>
+          </div>
+        );
+        break;
+      }
+
+      case "bank_acc_number": {
+        const label = block.props?.label !== undefined ? block.props.label : "A/C No: ";
+        const showLabel = block.props?.showLabel !== false && Boolean(label);
+        const accNumber = block.props?.accNumber || invoice?.bank_acc_number || (isInteractive ? "1000982345" : "");
+        if (!accNumber) {
+          content = null;
+          break;
+        }
+        const valWeight = styles.fontWeight || "semibold";
+        const valStyle = styles.fontStyle || "normal";
+        content = (
+          <div
+            className="text-xs leading-normal"
+            style={{ fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined, color: styles.color }}
+          >
+            {showLabel && <span className="text-gray-500 mr-1.5" style={{ fontStyle: "normal", fontWeight: "normal" }}>{label}</span>}
+            <span className="font-mono" style={{ fontWeight: valWeight, fontStyle: valStyle }}>{accNumber}</span>
+          </div>
+        );
+        break;
+      }
+
+      case "bank_branch": {
+        const label = block.props?.label !== undefined ? block.props.label : "Branch: ";
+        const showLabel = block.props?.showLabel !== false && Boolean(label);
+        const branch = block.props?.branch || invoice?.bank_acc_branch || (isInteractive ? "City Branch / CCEYLKLX" : "");
+        if (!branch) {
+          content = null;
+          break;
+        }
+        const valWeight = styles.fontWeight || "normal";
+        const valStyle = styles.fontStyle || "normal";
+        content = (
+          <div
+            className="text-xs leading-normal"
+            style={{ fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined, color: styles.color }}
+          >
+            {showLabel && <span className="text-gray-500 mr-1.5" style={{ fontStyle: "normal", fontWeight: "normal" }}>{label}</span>}
+            <span style={{ fontWeight: valWeight, fontStyle: valStyle }}>{branch}</span>
           </div>
         );
         break;
@@ -501,7 +1305,7 @@ export function InvoiceRenderer({
       case "bank_details": {
         const title = block.props?.title || "Bank Details";
         const isInteractive = Boolean(onSelectBlock);
-        const accName = block.props?.accName || invoice?.bank_acc_name || (isInteractive ? "ABC Company" : undefined);
+        const accName = block.props?.accName || invoice?.bank_acc_name || (isInteractive ? "Company Name" : undefined);
         const bankName = block.props?.bankName || invoice?.bank_acc_bank || (isInteractive ? "Bank Name" : undefined);
         const accNumber = block.props?.accNumber || invoice?.bank_acc_number || (isInteractive ? "123456789" : undefined);
         const branch = block.props?.branch || invoice?.bank_acc_branch || (isInteractive ? "City Branch" : undefined);
@@ -510,11 +1314,18 @@ export function InvoiceRenderer({
           break;
         }
         content = (
-          <div className="space-y-1 text-xs">
+          <div className="space-y-1 text-xs" style={{ fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined }}>
             <div style={{ color: primaryColor }} className="font-bold uppercase tracking-wider">
               {title}
             </div>
-            <div className="space-y-0.5 text-gray-600 dark:text-gray-400">
+            <div
+              className="space-y-0.5"
+              style={{
+                color: styles.color || "#4b5563",
+                fontWeight: styles.fontWeight,
+                fontStyle: styles.fontStyle,
+              }}
+            >
               {accName && <div>A/C Name: {accName}</div>}
               {bankName && <div>Bank: {bankName}</div>}
               {accNumber && <div>A/C No: {accNumber}</div>}
@@ -535,11 +1346,22 @@ export function InvoiceRenderer({
           break;
         }
         content = (
-          <div className="space-y-1 text-xs">
-            <div style={{ color: primaryColor }} className="font-bold uppercase tracking-wider">
-              {title}
+          <div className="space-y-1 text-xs" style={{ fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined }}>
+            {Boolean(title) && (
+              <div style={{ color: primaryColor }} className="font-bold uppercase tracking-wider">
+                {title}
+              </div>
+            )}
+            <div
+              className="whitespace-pre-line"
+              style={{
+                color: styles.color || "#4b5563",
+                fontWeight: styles.fontWeight,
+                fontStyle: styles.fontStyle,
+              }}
+            >
+              {noteText}
             </div>
-            <div className="text-gray-600 dark:text-gray-400 whitespace-pre-line">{noteText}</div>
           </div>
         );
         break;
@@ -555,11 +1377,22 @@ export function InvoiceRenderer({
           break;
         }
         content = (
-          <div className="space-y-1 text-xs">
-            <div style={{ color: primaryColor }} className="font-bold uppercase tracking-wider">
-              {title}
+          <div className="space-y-1 text-xs" style={{ fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined }}>
+            {Boolean(title) && (
+              <div style={{ color: primaryColor }} className="font-bold uppercase tracking-wider">
+                {title}
+              </div>
+            )}
+            <div
+              className="whitespace-pre-line"
+              style={{
+                color: styles.color || "#4b5563",
+                fontWeight: styles.fontWeight,
+                fontStyle: styles.fontStyle,
+              }}
+            >
+              {termsText}
             </div>
-            <div className="text-gray-600 dark:text-gray-400 whitespace-pre-line">{termsText}</div>
           </div>
         );
         break;
@@ -579,8 +1412,18 @@ export function InvoiceRenderer({
 
       case "text_block": {
         const text = block.props?.content || "Static text block. Double-click or select in inspector to edit this message.";
+        const textWeight = styles.fontWeight || "normal";
+        const textStyle = styles.fontStyle || "normal";
         content = (
-          <div className="text-xs whitespace-pre-line leading-relaxed" style={{ color: styles.color }}>
+          <div
+            className="whitespace-pre-line leading-relaxed text-xs"
+            style={{
+              color: styles.color,
+              fontWeight: textWeight,
+              fontStyle: textStyle,
+              fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined,
+            }}
+          >
             {text}
           </div>
         );
@@ -604,7 +1447,7 @@ export function InvoiceRenderer({
             }}
           />
         ) : (
-          <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-3 text-center text-xs text-gray-400">
+          <div className="border border-dashed border-gray-300 rounded-lg p-3 text-center text-xs text-gray-400">
             [ Custom Image / Stamp / QR ]
           </div>
         );
@@ -615,10 +1458,12 @@ export function InvoiceRenderer({
         const key = block.props?.fieldKey;
         const label = block.props?.label || key || "Custom Field";
         const val = invoice?.custom_field_values?.[key] || block.props?.defaultValue || "—";
+        const valWeight = styles.fontWeight || "semibold";
+        const valStyle = styles.fontStyle || "normal";
         content = (
-          <div className="text-xs">
-            <span className="text-gray-500 font-medium">{label}: </span>
-            <span className="font-semibold text-foreground">{String(val)}</span>
+          <div className="text-xs" style={{ fontSize: styles.fontSize ? `${styles.fontSize}pt` : undefined }}>
+            <span className="text-gray-500 font-medium" style={{ fontStyle: "normal" }}>{label}: </span>
+            <span style={{ color: styles.color || textColor, fontWeight: valWeight, fontStyle: valStyle }}>{String(val)}</span>
           </div>
         );
         break;
@@ -683,29 +1528,14 @@ export function InvoiceRenderer({
         }}
         style={wrapperStyle}
         className={`transition-shadow ${onSelectBlock
-            ? isAbsolute
-              ? "cursor-move hover:ring-2 hover:ring-brand-500/70 select-none"
-              : "cursor-pointer hover:ring-1 hover:ring-brand-500/50 rounded-sm select-none relative"
-            : isAbsolute
-              ? ""
-              : "relative"
+          ? isAbsolute
+            ? "cursor-move hover:ring-2 hover:ring-brand-500/70 select-none"
+            : "cursor-pointer hover:ring-1 hover:ring-brand-500/50 rounded-sm select-none relative"
+          : isAbsolute
+            ? ""
+            : "relative"
           } ${isSelected ? "ring-2 ring-brand-500 shadow-md" : ""}`}
       >
-        {/* Photoshop-like coordinate tag badge */}
-        {onSelectBlock && isSelected && isAbsolute && (
-          <div className="absolute -top-6 left-0 flex items-center gap-1.5 bg-brand-500 text-brand-950 font-bold text-[9px] px-2 py-0.5 rounded shadow-sm pointer-events-none whitespace-nowrap z-50">
-            <span>X: {Math.round(block.x!)}mm</span>
-            <span>•</span>
-            <span>Y: {Math.round(block.y!)}mm</span>
-            {block.width && (
-              <>
-                <span>•</span>
-                <span>W: {Math.round(block.width)}mm</span>
-              </>
-            )}
-          </div>
-        )}
-
         {/* Content */}
         {content}
 
@@ -729,8 +1559,9 @@ export function InvoiceRenderer({
       style={{
         transform: scale !== 1 ? `scale(${scale})` : undefined,
         transformOrigin: "top center",
+        color: theme.textColor || "#222222",
       }}
-      className={`relative bg-white text-gray-900 shadow-lg select-none transition-transform ${className}`}
+      className={`relative bg-white text-gray-900 shadow-lg select-none [color-scheme:light] ${className}`}
     >
       <div
         ref={paperRef}

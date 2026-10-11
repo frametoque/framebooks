@@ -5,7 +5,7 @@ import { requirePermission, checkTenantReadOnly } from "./rbac";
 import sql from "@/lib/db";
 import { auth } from '@/lib/auth';
 import { getTenantPlan } from "./plan";
-import { put, del } from '@vercel/blob';
+import { uploadToR2, deleteFromR2 } from '@/lib/r2';
 import { logSystemAction } from "@/lib/logger";
 import { getGravatarUrl } from "@/lib/gravatar";
 
@@ -41,13 +41,15 @@ export async function uploadReceipt(formData: FormData, type: 'income' | 'expens
   }
 
   try {
-    const filename = `admin/receipts/${type}/${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
-    const blob = await put(filename, file, {
-      access: 'public',
+    const cleanFileName = `${tenantId ? `tenant-${tenantId}-` : ''}${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
+    const result = await uploadToR2({
+      file,
+      fileName: cleanFileName,
+      folder: `receipts/${type}`,
     });
     
     await logSystemAction(`Uploaded ${type} receipt: "${file.name}"`);
-    return blob.url;
+    return result.url;
   } catch (err: any) {
     await logSystemAction(`Upload Error: Failed to upload ${type} receipt: "${file.name}" - ${err.message || String(err)}`);
     throw err;
@@ -1131,8 +1133,8 @@ export async function getInvoiceByIdAdmin(invoiceId: string) {
       i.layout_id,
       i.custom_field_values,
       i.layout_snapshot,
-      il.name as layout_name,
-      il.definition as active_layout_definition,
+      COALESCE(il.name, def_il.name) as layout_name,
+      COALESCE(i.layout_snapshot, il.definition, def_il.definition) as active_layout_definition,
       COALESCE((SELECT full_name FROM admin_clients ac WHERE LOWER(ac.email) = LOWER(i.user_email) AND ac.tenant_id = ${tenantId} LIMIT 1), i.user_email) as client_name,
       (SELECT address FROM admin_clients ac WHERE LOWER(ac.email) = LOWER(i.user_email) AND ac.tenant_id = ${tenantId} LIMIT 1) as billing_address,
       ba.name as bank_acc_name,
@@ -1142,6 +1144,13 @@ export async function getInvoiceByIdAdmin(invoiceId: string) {
     FROM invoices i
     LEFT JOIN accounts ba ON COALESCE(i.bank_account_id, (SELECT id FROM accounts WHERE (LOWER(type) = 'bank' OR LOWER(type) = 'bank account') AND tenant_id = ${tenantId} LIMIT 1)) = ba.id
     LEFT JOIN invoice_layouts il ON i.layout_id = il.id
+    LEFT JOIN LATERAL (
+      SELECT name, definition FROM invoice_layouts 
+      WHERE tenant_id = ${tenantId} 
+        AND is_active = true 
+        AND (document_type = 'invoice' OR document_type = 'both')
+      LIMIT 1
+    ) def_il ON true
     WHERE i.invoice_id = ${invoiceId} AND i.tenant_id = ${tenantId}
   `;
 
@@ -1454,12 +1463,21 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
   let assignedLayoutId: string | null = null;
   let layoutSnapshot: any = null;
 
-  if (plan === 'Pro Plus' && invoiceData.layoutId) {
-    const layoutRes = await sql`
-      SELECT id, definition FROM invoice_layouts 
-      WHERE id = ${invoiceData.layoutId} AND tenant_id = ${tenantId} AND is_active = true
-      LIMIT 1
-    `;
+  if (plan === 'Pro Plus') {
+    const targetLayoutId = invoiceData.layoutId;
+    const layoutRes = targetLayoutId
+      ? await sql`
+          SELECT id, definition FROM invoice_layouts 
+          WHERE id = ${targetLayoutId} AND tenant_id = ${tenantId} AND is_active = true
+          LIMIT 1
+        `
+      : await sql`
+          SELECT id, definition FROM invoice_layouts 
+          WHERE tenant_id = ${tenantId} AND is_active = true 
+            AND (document_type = 'invoice' OR document_type = 'both')
+          LIMIT 1
+        `;
+
     if (layoutRes.length > 0) {
       assignedLayoutId = layoutRes[0].id;
       const isIssuedOrPaid = ['issued', 'sent', 'paid', 'advance-paid', 'partially paid', 'fully paid'].includes(String(invoiceData.paymentStatus || '').toLowerCase());
@@ -1539,12 +1557,20 @@ export async function updateInvoice(invoiceId: string, invoiceData: any, lineIte
   let assignedLayoutId: string | null = null;
   let layoutSnapshotToFreeze: any = null;
 
-  if (plan === 'Pro Plus' && invoiceData.layoutId) {
-    const layoutRes = await sql`
-      SELECT id, definition FROM invoice_layouts 
-      WHERE id = ${invoiceData.layoutId} AND tenant_id = ${tenantId} AND is_active = true
-      LIMIT 1
-    `;
+  if (plan === 'Pro Plus') {
+    const targetLayoutId = invoiceData.layoutId;
+    const layoutRes = targetLayoutId
+      ? await sql`
+          SELECT id, definition FROM invoice_layouts 
+          WHERE id = ${targetLayoutId} AND tenant_id = ${tenantId} AND is_active = true
+          LIMIT 1
+        `
+      : await sql`
+          SELECT id, definition FROM invoice_layouts 
+          WHERE tenant_id = ${tenantId} AND is_active = true 
+            AND (document_type = 'quotation' OR document_type = 'both')
+          LIMIT 1
+        `;
     if (layoutRes.length > 0) {
       assignedLayoutId = layoutRes[0].id;
       const isIssuedOrPaid = ['issued', 'sent', 'paid', 'advance-paid', 'partially paid', 'fully paid'].includes(String(invoiceData.paymentStatus || '').toLowerCase());
@@ -1745,16 +1771,22 @@ export async function createQuotation(data: any, lineItems: any[] = []) {
 
   let assignedLayoutId: string | null = null;
   let layoutSnapshot: any = null;
-  if (data.layoutId) {
-    const layoutRes = await sql`
-      SELECT id, definition FROM invoice_layouts
-      WHERE id = ${data.layoutId} AND tenant_id = ${tenantId} AND is_active = true
-      LIMIT 1
-    `;
-    if (layoutRes.length > 0) {
-      assignedLayoutId = layoutRes[0].id;
-      layoutSnapshot = layoutRes[0].definition;
-    }
+  const qTargetLayoutId = data.layoutId;
+  const layoutRes = qTargetLayoutId
+    ? await sql`
+        SELECT id, definition FROM invoice_layouts
+        WHERE id = ${qTargetLayoutId} AND tenant_id = ${tenantId} AND is_active = true
+        LIMIT 1
+      `
+    : await sql`
+        SELECT id, definition FROM invoice_layouts
+        WHERE tenant_id = ${tenantId} AND is_active = true
+          AND (document_type = 'quotation' OR document_type = 'both')
+        LIMIT 1
+      `;
+  if (layoutRes.length > 0) {
+    assignedLayoutId = layoutRes[0].id;
+    layoutSnapshot = layoutRes[0].definition;
   }
 
   if (data.clientId && data.billingAddress) {
@@ -1810,16 +1842,22 @@ export async function updateQuotation(id: number, data: any, lineItems: any[] = 
 
     let assignedLayoutId: string | null = null;
     let layoutSnapshot: any = null;
-    if (data.layoutId) {
-      const layoutRes = await sql`
-        SELECT id, definition FROM invoice_layouts
-        WHERE id = ${data.layoutId} AND tenant_id = ${tenantId} AND is_active = true
-        LIMIT 1
-      `;
-      if (layoutRes.length > 0) {
-        assignedLayoutId = layoutRes[0].id;
-        layoutSnapshot = layoutRes[0].definition;
-      }
+    const qTargetLayoutId = data.layoutId;
+    const layoutRes = qTargetLayoutId
+      ? await sql`
+          SELECT id, definition FROM invoice_layouts
+          WHERE id = ${qTargetLayoutId} AND tenant_id = ${tenantId} AND is_active = true
+          LIMIT 1
+        `
+      : await sql`
+          SELECT id, definition FROM invoice_layouts
+          WHERE tenant_id = ${tenantId} AND is_active = true
+            AND (document_type = 'quotation' OR document_type = 'both')
+          LIMIT 1
+        `;
+    if (layoutRes.length > 0) {
+      assignedLayoutId = layoutRes[0].id;
+      layoutSnapshot = layoutRes[0].definition;
     }
 
     if (data.clientId && data.billingAddress) {
@@ -2026,11 +2064,21 @@ export async function getQuotationById(quotationId: string) {
              c.full_name as client_name, c.email, c.company, c.phone,
              c.address as billing_address,
              ba.name as bank_acc_name, ba.account_number as bank_acc_number,
-      ba.bank_name as bank_acc_bank,
-      ba.branch as bank_acc_branch
+             ba.bank_name as bank_acc_bank,
+             ba.branch as bank_acc_branch,
+             COALESCE(il.name, def_il.name) as layout_name,
+             COALESCE(q.layout_snapshot, il.definition, def_il.definition) as active_layout_definition
       FROM admin_quotations q
       LEFT JOIN admin_clients c ON q.client_id = c.id AND c.tenant_id = ${tenantId}
       LEFT JOIN accounts ba ON COALESCE(q.bank_account_id, (SELECT id FROM accounts WHERE (LOWER(type) = 'bank' OR LOWER(type) = 'bank account') AND tenant_id = ${tenantId} LIMIT 1)) = ba.id
+      LEFT JOIN invoice_layouts il ON q.layout_id = il.id
+      LEFT JOIN LATERAL (
+        SELECT name, definition FROM invoice_layouts 
+        WHERE tenant_id = ${tenantId} 
+          AND is_active = true 
+          AND (document_type = 'quotation' OR document_type = 'both')
+        LIMIT 1
+      ) def_il ON true
       WHERE q.id = ${parseInt(quotationId)} AND q.tenant_id = ${tenantId}
     `;
  
@@ -2076,6 +2124,8 @@ export async function getQuotationById(quotationId: string) {
       bank_acc_branch: q.bank_acc_branch,
       layout_id: q.layout_id || null,
       layout_snapshot: q.layout_snapshot || null,
+      layout_name: q.layout_name || null,
+      active_layout_definition: q.active_layout_definition || null,
       items: itemRows.map((i: any) => ({
         id: i.id,
         description: i.description,
@@ -2234,10 +2284,14 @@ export async function submitBankSlip(invoiceId: string, slipBase64: string, amou
       const base64Data = matches[2];
       const fileExtension = mimeType.split('/')[1].split('+')[0] || 'png';
       const binary = Buffer.from(base64Data, 'base64');
-      const filename = `admin/payment-slips/${Date.now()}-${invoiceId}.${fileExtension}`;
-      const { put } = await import('@vercel/blob');
-      const blob = await put(filename, binary, { access: 'public', contentType: mimeType });
-      slipUrl = blob.url;
+      const cleanFileName = `${Date.now()}-${invoiceId}.${fileExtension}`;
+      const result = await uploadToR2({
+        file: binary,
+        fileName: cleanFileName,
+        folder: 'payment-slips',
+        contentType: mimeType,
+      });
+      slipUrl = result.url;
     }
 
     await sql`
@@ -2299,18 +2353,13 @@ export async function declineBankSlip(invoiceId: string, slipId?: string | numbe
     const slip = slipRows[0];
     if (slip.status !== 'pending') return { success: false, error: "Slip already processed" };
 
-    // Delete the slip image from blob storage if it exists
+    // Delete the slip image from storage if it exists
     const slipUrl = slip.slip_url;
-    if (slipUrl && (slipUrl.includes('blob.vercel-storage.com') || slipUrl.includes('public.blob.vercel-storage.com'))) {
+    if (slipUrl) {
       try {
-        // Extract the blob path from the URL
-        const urlParts = slipUrl.split('.com/');
-        if (urlParts.length > 1) {
-          const blobPath = urlParts[1];
-          await del(blobPath);
-        }
-      } catch (blobErr) {
-        console.warn("Failed to delete slip image from blob storage:", blobErr);
+        await deleteFromR2(slipUrl);
+      } catch (storageErr) {
+        console.warn("Failed to delete slip image from storage:", storageErr);
       }
     }
 
@@ -2431,12 +2480,14 @@ export async function adminUploadPaymentSlip(invoiceId: string, slipBase64: stri
       const base64Data = matches[2];
       const fileExtension = mimeType.split('/')[1].split('+')[0] || 'png';
       const binary = Buffer.from(base64Data, 'base64');
-      const filename = `admin/payment-slips/${Date.now()}-${invoiceId}.${fileExtension}`;
-      const blob = await put(filename, binary, {
-        access: 'public',
+      const cleanFileName = `${Date.now()}-${invoiceId}.${fileExtension}`;
+      const result = await uploadToR2({
+        file: binary,
+        fileName: cleanFileName,
+        folder: 'payment-slips',
         contentType: mimeType,
       });
-      slipUrl = blob.url;
+      slipUrl = result.url;
     }
 
     // Insert the slip with 'approved' status and mark as admin-uploaded
@@ -2475,12 +2526,14 @@ export async function submitPaymentSlip(invoiceId: string, amount: number, slipB
       const base64Data = matches[2];
       const fileExtension = mimeType.split('/')[1].split('+')[0] || 'png';
       const binary = Buffer.from(base64Data, 'base64');
-      const filename = `admin/payment-slips/${Date.now()}-${invoiceId}.${fileExtension}`;
-      const blob = await put(filename, binary, {
-        access: 'public',
+      const cleanFileName = `${Date.now()}-${invoiceId}.${fileExtension}`;
+      const result = await uploadToR2({
+        file: binary,
+        fileName: cleanFileName,
+        folder: 'payment-slips',
         contentType: mimeType,
       });
-      slipUrl = blob.url;
+      slipUrl = result.url;
     }
 
     await sql`

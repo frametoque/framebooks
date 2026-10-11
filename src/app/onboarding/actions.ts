@@ -2,7 +2,7 @@
 
 import sql from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { put } from "@vercel/blob";
+import { uploadToR2 } from "@/lib/r2";
 import { getLandingPlansFormatted } from "@/lib/plans-db";
 
 export async function getOnboardingPlansAction() {
@@ -89,9 +89,13 @@ export async function completeOnboarding(formData: FormData) {
     let logoUrl = null;
     const logoFile = formData.get("logo") as File;
     if (logoFile && logoFile.size > 0) {
-      const filename = `admin/tenants/${Date.now()}-${logoFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      const blob = await put(filename, logoFile, { access: 'public' });
-      logoUrl = blob.url;
+      const cleanName = `${Date.now()}-${logoFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const result = await uploadToR2({
+        file: logoFile,
+        fileName: cleanName,
+        folder: "logos",
+      });
+      logoUrl = result.url;
     }
 
     const planName = (formData.get("plan") as string) || "Free";

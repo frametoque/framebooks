@@ -18,13 +18,13 @@ export async function getRoles() {
     {
       role: "Admin",
       granular_permissions: {
-        invoices: { read: true, insert: true, update: true, delete: true },
+        invoices: { read: true, insert: true, update: true, delete: true, customize: true },
         incomes: { read: true, insert: true, update: true, delete: true },
         expenses: { read: true, insert: true, update: true, delete: true },
         clients: { read: true, insert: true, update: true, delete: true },
         accounts: { read: true, insert: true, update: true, delete: true },
         inventory: { read: true, insert: true, update: true, delete: true },
-        settings: { manage: true },
+        settings: { manage: true, appearance: true },
         team: { manage: true },
         export: { data: true },
       }
@@ -32,23 +32,29 @@ export async function getRoles() {
     {
       role: "Editor",
       granular_permissions: {
-        invoices: { read: true, insert: true, update: true, delete: false },
+        invoices: { read: true, insert: true, update: true, delete: false, customize: false },
         incomes: { read: true, insert: true, update: true, delete: false },
         expenses: { read: true, insert: true, update: true, delete: false },
         clients: { read: true, insert: true, update: true, delete: false },
         accounts: { read: true, insert: false, update: false, delete: false },
         inventory: { read: true, insert: true, update: true, delete: false },
+        settings: { manage: false, appearance: false },
+        team: { manage: false },
+        export: { data: false },
       }
     },
     {
       role: "Viewer",
       granular_permissions: {
-        invoices: { read: true, insert: false, update: false, delete: false },
+        invoices: { read: true, insert: false, update: false, delete: false, customize: false },
         incomes: { read: true, insert: false, update: false, delete: false },
         expenses: { read: true, insert: false, update: false, delete: false },
         clients: { read: true, insert: false, update: false, delete: false },
         accounts: { read: true, insert: false, update: false, delete: false },
         inventory: { read: true, insert: false, update: false, delete: false },
+        settings: { manage: false, appearance: false },
+        team: { manage: false },
+        export: { data: false },
       }
     }
   ];
@@ -65,6 +71,9 @@ export async function getRoles() {
     if (typeof perms === 'string') {
       try { perms = JSON.parse(perms); } catch (e) {}
     }
+    if (perms?.invoices && perms.invoices.customize === undefined) {
+      perms.invoices.customize = r.role.toLowerCase() === 'admin' || r.role.toLowerCase() === 'super admin';
+    }
     rolesMap.set(r.role.toLowerCase(), { ...r, granular_permissions: perms, isCustom: false });
   }
 
@@ -72,6 +81,9 @@ export async function getRoles() {
     let perms = r.granular_permissions;
     if (typeof perms === 'string') {
       try { perms = JSON.parse(perms); } catch (e) {}
+    }
+    if (perms?.invoices && perms.invoices.customize === undefined) {
+      perms.invoices.customize = r.role.toLowerCase() === 'admin' || r.role.toLowerCase() === 'super admin';
     }
     rolesMap.set(r.role.toLowerCase(), { ...r, granular_permissions: perms, isCustom: true });
   }

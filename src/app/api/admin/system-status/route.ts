@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from '@/lib/auth';
 import sql from "@/lib/db";
-import { list } from "@vercel/blob";
+import { checkR2Health } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
 
@@ -27,22 +27,23 @@ export async function GET() {
       console.error("DB check failed:", e);
     }
 
-    // 2. Check Vercel Blob
-    let blobStatus = "Not Configured";
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
+    // 2. Check Storage (Cloudflare R2)
+    let storageStatus = "Not Configured";
+    if (process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY) {
       try {
-        await list({ limit: 1 });
-        blobStatus = "Connected";
+        const isHealthy = await checkR2Health();
+        storageStatus = isHealthy ? "Connected" : "Configuration Error";
       } catch (e) {
-        console.error("Vercel Blob verification failed:", e);
-        blobStatus = "Configuration Error";
+        console.error("Cloudflare R2 verification failed:", e);
+        storageStatus = "Configuration Error";
       }
     }
 
     return NextResponse.json({
       success: true,
       dbStatus,
-      blobStatus,
+      storageStatus,
+      blobStatus: storageStatus, // For backward compatibility
       env: process.env.NODE_ENV || "development",
     });
   } catch (error) {

@@ -1,7 +1,11 @@
-// src/app/(dashboard)/admin/analytics/page.tsx
 import React from "react";
+import { Metadata } from "next";
 import { AnalyticsClient } from "./AnalyticsClient";
 import { getPlatformAnalytics } from "./actions";
+
+export const metadata: Metadata = {
+  title: "Analytics",
+};
 
 export const dynamic = "force-dynamic";
 

@@ -1,5 +1,5 @@
-// src/app/(dashboard)/admin/users/[id]/page.tsx
 import React from "react";
+import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
@@ -7,6 +7,26 @@ import { UserDetailClient } from "./UserDetailClient";
 import { getUserDetails } from "../actions";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const userId = parseInt(id, 10);
+  if (!isNaN(userId)) {
+    try {
+      const data = await getUserDetails(userId);
+      if (data?.user?.email) {
+        return { title: data.user.name || data.user.email };
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return { title: "User Details" };
+}
 
 export default async function UserDetailPage({
   params,

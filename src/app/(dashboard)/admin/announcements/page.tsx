@@ -1,7 +1,11 @@
-// src/app/(dashboard)/admin/announcements/page.tsx
 import React from "react";
+import { Metadata } from "next";
 import { AnnouncementsClient } from "./AnnouncementsClient";
 import { getAnnouncementsList } from "./actions";
+
+export const metadata: Metadata = {
+  title: "Announcements",
+};
 
 export const dynamic = "force-dynamic";
 

@@ -4,25 +4,48 @@ export type PageSize = 'A4' | 'Letter';
 export type PageOrientation = 'portrait';
 
 export type BlockType =
+  // Business separate
   | 'business_header'
   | 'logo'
-  | 'business_info'
-  | 'invoice_meta'
+  | 'business_address'
+  | 'business_phone'
+  | 'business_email'
+  | 'business_website'
+  | 'business_info' // legacy grouped
+  // Invoice meta separate
   | 'document_title'
   | 'invoice_number'
   | 'invoice_date'
   | 'due_date'
-  | 'bill_to'
+  | 'invoice_meta' // legacy grouped
+  // Client separate
+  | 'client_header'
+  | 'client_name'
+  | 'client_address'
+  | 'client_email'
+  | 'client_phone'
+  | 'bill_to' // legacy grouped
+  // Items table & separate columns
   | 'items_table'
-  | 'totals_summary'
-  | 'amount_due_callout'
+  | 'items_col_desc'
+  | 'items_col_qty'
+  | 'items_col_price'
+  | 'items_col_amount'
+  // Totals separate
   | 'total_subtotal'
   | 'total_discount'
   | 'total_tax'
   | 'total_advance'
   | 'total_invoice'
   | 'total_due'
-  | 'bank_details'
+  | 'totals_summary' // legacy grouped
+  | 'amount_due_callout' // legacy grouped
+  // Payment / Bank separate
+  | 'bank_name'
+  | 'bank_acc_name'
+  | 'bank_acc_number'
+  | 'bank_branch'
+  | 'bank_details' // legacy grouped
   | 'notes'
   | 'terms'
   | 'signature'
@@ -35,6 +58,8 @@ export type BlockType =
 export interface BlockStyle {
   fontSize?: number; // pt (min 8)
   fontWeight?: 'normal' | 'medium' | 'semibold' | 'bold';
+  fontFamily?: string;
+  fontStyle?: 'normal' | 'italic';
   color?: string; // hex
   align?: 'left' | 'center' | 'right';
   paddingTop?: number;
@@ -95,6 +120,7 @@ export interface InvoiceLayoutDefinition {
   };
   theme: LayoutTheme;
   sections: SectionRow[];
+  lineItemsLimit?: number | null;
 }
 
 export interface CustomFieldDefinition {
@@ -112,7 +138,7 @@ export interface CustomFieldDefinition {
   updated_at?: string;
 }
 
-export type LayoutDocumentType = 'invoice' | 'quotation' | 'both';
+export type LayoutDocumentType = 'invoice' | 'quotation' | 'both' | 'off';
 
 export interface InvoiceLayoutRecord {
   id: string;

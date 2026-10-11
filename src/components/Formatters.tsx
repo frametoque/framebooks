@@ -1,5 +1,5 @@
 import React from 'react';
-import { Crown, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 export function formatLKR(amount: number | null | undefined, compact: boolean = false): string {
   if (amount === null || amount === undefined || isNaN(amount)) return "0 LKR";
@@ -43,8 +43,7 @@ export function RoleBadge({ role, className = "" }: { role: string | null | unde
   const r = (role || 'member').toLowerCase().trim();
   if (r === 'owner') {
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 ${className}`}>
-        <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 ${className}`}>
         Owner
       </span>
     );

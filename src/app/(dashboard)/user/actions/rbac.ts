@@ -4,7 +4,7 @@ const neon = postgres;
 
 export type Role = string;
 export type ResourceType = 'invoices' | 'incomes' | 'expenses' | 'clients' | 'accounts' | 'inventory' | 'settings' | 'team' | 'export' | 'billing';
-export type ActionType = 'read' | 'insert' | 'update' | 'delete' | 'manage' | 'data' | 'appearance';
+export type ActionType = 'read' | 'insert' | 'update' | 'delete' | 'manage' | 'data' | 'appearance' | 'customize' | 'invoice_customization';
 
 /**
  * Gets the current user's role and tenant ID.
@@ -45,6 +45,9 @@ export async function hasPermission(role: Role | null, resource: ResourceType, a
   
   // Owner has full access to everything
   if (role.toLowerCase() === 'owner') return true;
+
+  // Super Admin has full access to everything
+  if (role.toLowerCase() === 'super admin') return true;
   
   // Billing is owner-only, not in DB
   if (resource === 'billing') {
@@ -64,7 +67,10 @@ export async function hasPermission(role: Role | null, resource: ResourceType, a
     result = await sql`SELECT granular_permissions FROM role_permissions WHERE LOWER(role) = LOWER(${role})`;
   }
 
-  if (result.length === 0) return false;
+  if (result.length === 0) {
+    if (role.toLowerCase() === 'admin') return true;
+    return false;
+  }
 
   let perms = result[0].granular_permissions;
   if (typeof perms === 'string') {
@@ -73,11 +79,27 @@ export async function hasPermission(role: Role | null, resource: ResourceType, a
   if (!perms || typeof perms !== 'object') return false;
 
   const resourcePerms = perms[resource];
-  if (!resourcePerms) return false;
 
   if (resource === 'settings' && action === 'appearance') {
-    if (resourcePerms.manage === true || resourcePerms.appearance === true) return true;
+    if (resourcePerms && (resourcePerms.manage === true || resourcePerms.appearance === true)) return true;
   }
+
+  // Invoice layout customization permission check
+  if (
+    (resource === 'invoices' && (action === 'customize' || action === 'invoice_customization')) ||
+    (resource === 'settings' && (action === 'customize' || action === 'invoice_customization'))
+  ) {
+    if (perms.invoices?.customize === true) return true;
+    if (perms.invoices?.invoice_customization === true) return true;
+    if (perms.settings?.invoice_customization === true) return true;
+    if (perms.settings?.customize === true) return true;
+    if (perms.invoices?.customize === false || perms.settings?.invoice_customization === false) return false;
+    if (perms.settings?.manage === true) return true;
+    if (role.toLowerCase() === 'admin') return true;
+    return false;
+  }
+
+  if (!resourcePerms) return false;
 
   return resourcePerms[action] === true;
 }

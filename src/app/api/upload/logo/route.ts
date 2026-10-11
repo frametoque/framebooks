@@ -1,5 +1,5 @@
-import { put } from "@vercel/blob";
-import {  auth  } from '@/lib/auth';
+import { uploadToR2 } from "@/lib/r2";
+import { auth } from '@/lib/auth';
 import { NextResponse } from "next/server";
 import postgres from "postgres";
 const neon = postgres;
@@ -37,17 +37,19 @@ export async function POST(request: Request) {
     }
     const tenantId = userRows[0].tenant_id;
 
-    // Upload to Vercel Blob
+    // Upload to Cloudflare R2
     const ext = file.name.split(".").pop() || "png";
-    const blob = await put(`logos/tenant-${tenantId}.${ext}`, file, {
-      access: "public",
-      allowOverwrite: true,
+    const customKey = `logos/tenant-${tenantId}.${ext}`;
+    const result = await uploadToR2({
+      file,
+      customKey,
+      folder: "logos",
     });
 
     // Update logo_url in the database
-    await sql`UPDATE tenants SET logo_url = ${blob.url} WHERE id = ${tenantId}`;
+    await sql`UPDATE tenants SET logo_url = ${result.url} WHERE id = ${tenantId}`;
 
-    return NextResponse.json({ success: true, url: blob.url });
+    return NextResponse.json({ success: true, url: result.url });
   } catch (e: any) {
     console.error("Logo upload error:", e);
     return NextResponse.json({ error: e.message || "Upload failed" }, { status: 500 });

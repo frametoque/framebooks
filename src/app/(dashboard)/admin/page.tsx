@@ -1,7 +1,11 @@
-// src/app/(dashboard)/admin/page.tsx
 import React from "react";
+import { Metadata } from "next";
 import { OverviewClient } from "./OverviewClient";
 import { getOverviewStats } from "./actions";
+
+export const metadata: Metadata = {
+  title: "Admin Dashboard",
+};
 
 export const dynamic = "force-dynamic";
 

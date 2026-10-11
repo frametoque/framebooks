@@ -6,10 +6,10 @@ import { getActivePlans } from "@/lib/plans-db";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Settings",
+  title: "Settings | Framebooks",
   description: "Manage your account settings, profile details, and payment methods all in one place.",
   openGraph: {
-    title: "Settings",
+    title: "Settings | Framebooks",
     description: "Manage your account settings, profile details, and payment methods all in one place.",
     url: "https://framebooks.com/dashboard/settings", 
     siteName: "Framebooks",

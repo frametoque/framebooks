@@ -1,29 +1,53 @@
 // src/lib/invoice-layout/schema.ts
 import { InvoiceLayoutDefinition, LayoutBlock, BlockType } from "./types";
 
-const MAX_PAYLOAD_BYTES = 200 * 1024; // 200 KB
-const MAX_BLOCKS_PER_LAYOUT = 40;
+const MAX_PAYLOAD_BYTES = 500 * 1024; // 500 KB
+const MAX_BLOCKS_PER_LAYOUT = 100;
 
 const ALLOWED_BLOCK_TYPES: BlockType[] = [
+  // Business
   'business_header',
   'logo',
+  'business_address',
+  'business_phone',
+  'business_email',
+  'business_website',
   'business_info',
-  'invoice_meta',
+  // Invoice meta
   'document_title',
   'invoice_number',
   'invoice_date',
   'due_date',
+  'invoice_meta',
+  // Client
+  'client_header',
+  'client_name',
+  'client_address',
+  'client_email',
+  'client_phone',
   'bill_to',
+  // Items table & separate columns
   'items_table',
-  'totals_summary',
-  'amount_due_callout',
+  'items_col_desc',
+  'items_col_qty',
+  'items_col_price',
+  'items_col_amount',
+  // Totals
   'total_subtotal',
   'total_discount',
   'total_tax',
   'total_advance',
   'total_invoice',
   'total_due',
+  'totals_summary',
+  'amount_due_callout',
+  // Bank & payment
+  'bank_name',
+  'bank_acc_name',
+  'bank_acc_number',
+  'bank_branch',
   'bank_details',
+  // Additional
   'notes',
   'terms',
   'signature',

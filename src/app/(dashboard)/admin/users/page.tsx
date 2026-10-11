@@ -1,7 +1,11 @@
-// src/app/(dashboard)/admin/users/page.tsx
 import React from "react";
+import { Metadata } from "next";
 import { UsersClient } from "./UsersClient";
 import { getUsersList } from "./actions";
+
+export const metadata: Metadata = {
+  title: "Users",
+};
 
 export const dynamic = "force-dynamic";
 

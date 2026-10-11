@@ -1036,7 +1036,7 @@ export default function IncomePage() {
                   </object>
                 </div>
               ) : (
-                <Image src={viewingReceipt.receiptUrl} alt="Receipt" className="max-w-full max-h-full object-contain rounded-xl shadow-lg border border-border"  width={800} height={800} unoptimized={true} />
+                <Image src={viewingReceipt.receiptUrl} alt="Receipt" className="max-w-full max-h-full object-contain rounded-xl shadow-lg border border-border select-none" width={800} height={800} unoptimized={true} onContextMenu={(e) => e.preventDefault()} draggable={false} />
               )}
             </div>
           </div>

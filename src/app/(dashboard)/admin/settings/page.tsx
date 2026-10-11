@@ -1,8 +1,12 @@
-// src/app/(dashboard)/admin/settings/page.tsx
 import React from "react";
+import { Metadata } from "next";
 import { SettingsClient } from "./SettingsClient";
 import { getPlatformSettings } from "./actions";
 import { requireAdmin } from "@/app/(dashboard)/admin/_lib/auth";
+
+export const metadata: Metadata = {
+  title: "Admin Settings",
+};
 
 export const dynamic = "force-dynamic";
 

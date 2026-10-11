@@ -23,7 +23,6 @@ import {
   AlertCircle,
   X,
   Loader2,
-  Crown
 } from "lucide-react";
 import { PlanBadge, RoleBadge } from "@/components/Formatters";
 import { ConfirmModal } from "@/app/(dashboard)/admin/_components/ConfirmModal";
@@ -380,8 +379,7 @@ export function UserDetailClient({ data }: { data: any }) {
                         <span className="text-xs text-muted-foreground">Role:</span>
                         <RoleBadge role={biz.role} />
                         {biz.isOwner && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                            <Crown className="w-3 h-3" />
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20">
                             Owner
                           </span>
                         )}

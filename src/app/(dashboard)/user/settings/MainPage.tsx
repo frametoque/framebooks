@@ -1663,7 +1663,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
 
                 <div>
                   {/* Sub-tabs header for Appearance & Layouts */}
-                  <div className="flex items-center gap-2 border-b border-border pb-3 mb-6">
+                  <div className="flex items-center gap-2 mb-6">
                     <button
                       type="button"
                       onClick={() => setAppearanceSubTab("layouts")}

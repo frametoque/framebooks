@@ -7,33 +7,33 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Building2, 
-  Receipt, 
-  BarChart3, 
-  NotepadTextDashed, 
-  Layers, 
-  Repeat, 
-  Megaphone, 
-  Terminal, 
+import {
+  Building2,
+  Receipt,
+  BarChart3,
+  NotepadTextDashed,
+  Layers,
+  Repeat,
+  Megaphone,
+  Terminal,
   ShieldCheck,
   Search,
   LogOut,
   User as UserIcon,
   RefreshCw
 } from "lucide-react";
-import { 
-  MdDashboard, 
-  MdAccountBalanceWallet, 
-  MdInsertDriveFile, 
-  MdGroup, 
-  MdInventory2, 
-  MdClose, 
-  MdMenu, 
-  MdSettings, 
-  MdCalendarToday, 
-  MdLockOutline, 
-  MdAdd, 
+import {
+  MdDashboard,
+  MdAccountBalanceWallet,
+  MdInsertDriveFile,
+  MdGroup,
+  MdInventory2,
+  MdClose,
+  MdMenu,
+  MdSettings,
+  MdCalendarToday,
+  MdLockOutline,
+  MdAdd,
   MdLocalOffer,
   MdAccountBalance
 } from "react-icons/md";
@@ -147,7 +147,12 @@ export function DashboardShell({
     if (path.startsWith("/user/expenses")) return "Expenses";
     if (path.startsWith("/user/accounts")) return "Accounts";
     if (path.startsWith("/user/reports")) return "Reports";
-    if (path.startsWith("/user/settings")) return "Settings";
+    if (path.startsWith("/user/settings")) {
+      if (path.includes("/invoice-layout/builder") || path.includes("/invoice-layout")) {
+        return "Invoice Layout";
+      }
+      return "Settings";
+    }
     return "Dashboard";
   };
 

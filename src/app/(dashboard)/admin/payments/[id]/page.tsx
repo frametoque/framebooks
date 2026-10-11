@@ -1,5 +1,5 @@
-// src/app/(dashboard)/admin/payments/[id]/page.tsx
 import React from "react";
+import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
@@ -7,6 +7,17 @@ import { PaymentDetailClient } from "./PaymentDetailClient";
 import { getPaymentDetail } from "../actions";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  return {
+    title: id ? `Payment #${id} Details` : "Payment Details",
+  };
+}
 
 export default async function AdminPaymentDetailPage({
   params,

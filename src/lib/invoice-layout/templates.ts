@@ -23,7 +23,7 @@ export const STANDARD_LAYOUT_DEFINITION: InvoiceLayoutDefinition = {
     backgroundColor: "#ffffff",
   },
   sections: [
-    // Header Row: Business Info / Logo on left, Invoice Meta on right
+    // Header Row: Business Info / Logo on left, Invoice Details on right
     {
       id: "header_section",
       name: "Header",
@@ -53,10 +53,27 @@ export const STANDARD_LAYOUT_DEFINITION: InvoiceLayoutDefinition = {
           widthRatio: 5,
           blocks: [
             {
-              id: "b_meta",
-              type: "invoice_meta",
-              isCompulsory: true,
-              props: { title: "INVOICE", showDueDate: true },
+              id: "b_doc_title",
+              type: "document_title",
+              props: { title: "INVOICE" },
+              styles: { align: "right", fontSize: 20, fontWeight: "bold" },
+            },
+            {
+              id: "b_inv_num",
+              type: "invoice_number",
+              props: { label: "Invoice No: ", showLabel: true },
+              styles: { align: "right" },
+            },
+            {
+              id: "b_inv_date",
+              type: "invoice_date",
+              props: { label: "Date: ", showLabel: true },
+              styles: { align: "right" },
+            },
+            {
+              id: "b_due_date",
+              type: "due_date",
+              props: { label: "Due Date: ", showLabel: true },
               styles: { align: "right" },
             },
           ],
@@ -75,11 +92,28 @@ export const STANDARD_LAYOUT_DEFINITION: InvoiceLayoutDefinition = {
           widthRatio: 7,
           blocks: [
             {
-              id: "b_bill_to",
-              type: "bill_to",
-              isCompulsory: true,
+              id: "b_client_hdr",
+              type: "client_header",
               props: { label: "Bill To:" },
-              styles: { fontSize: 10 },
+              styles: { fontSize: 9 },
+            },
+            {
+              id: "b_client_name",
+              type: "client_name",
+              props: { label: "" },
+              styles: { fontSize: 11, fontWeight: "bold" },
+            },
+            {
+              id: "b_client_addr",
+              type: "client_address",
+              props: { label: "" },
+              styles: { fontSize: 9 },
+            },
+            {
+              id: "b_client_email",
+              type: "client_email",
+              props: { label: "Email: ", showLabel: true },
+              styles: { fontSize: 9 },
             },
           ],
         },
@@ -89,9 +123,9 @@ export const STANDARD_LAYOUT_DEFINITION: InvoiceLayoutDefinition = {
           blocks: [
             {
               id: "b_amount_due",
-              type: "amount_due_callout",
-              props: { label: "Amount Due" },
-              styles: { align: "right" },
+              type: "total_due",
+              props: { label: "Balance Due: ", showLabel: true, showCurrency: true },
+              styles: { align: "right", fontSize: 13, fontWeight: "bold" },
             },
           ],
         },
@@ -147,11 +181,40 @@ export const STANDARD_LAYOUT_DEFINITION: InvoiceLayoutDefinition = {
           widthRatio: 6,
           blocks: [
             {
-              id: "b_totals",
-              type: "totals_summary",
-              isCompulsory: true,
-              props: {},
+              id: "b_subtotal",
+              type: "total_subtotal",
+              props: { label: "Subtotal: ", showLabel: true, showCurrency: true },
               styles: { align: "right" },
+            },
+            {
+              id: "b_discount",
+              type: "total_discount",
+              props: { label: "Discount: ", showLabel: true, showCurrency: true, showPrefix: true, prefix: "− " },
+              styles: { align: "right" },
+            },
+            {
+              id: "b_tax",
+              type: "total_tax",
+              props: { label: "Tax (8%): ", showLabel: true, showCurrency: true, showPrefix: true, prefix: "+ " },
+              styles: { align: "right" },
+            },
+            {
+              id: "b_advance",
+              type: "total_advance",
+              props: { label: "Advance Paid: ", showLabel: true, showCurrency: true, showPrefix: true, prefix: "− " },
+              styles: { align: "right" },
+            },
+            {
+              id: "b_total_inv",
+              type: "total_invoice",
+              props: { label: "Total: ", showLabel: true, showCurrency: true },
+              styles: { align: "right", fontWeight: "bold" },
+            },
+            {
+              id: "b_total_due",
+              type: "total_due",
+              props: { label: "Balance Due: ", showLabel: true, showCurrency: true },
+              styles: { align: "right", fontWeight: "bold" },
             },
           ],
         },
@@ -192,7 +255,9 @@ export const MODERN_MINIMAL_DEFINITION: InvoiceLayoutDefinition = {
           id: "col_m2",
           widthRatio: 6,
           blocks: [
-            { id: "b_meta_m", type: "invoice_meta", isCompulsory: true, props: { title: "Tax Invoice" }, styles: { align: "right" } },
+            { id: "b_m_title", type: "document_title", props: { title: "TAX INVOICE" }, styles: { align: "right", fontSize: 18, fontWeight: "bold" } },
+            { id: "b_m_num", type: "invoice_number", props: { label: "Invoice No: ", showLabel: true }, styles: { align: "right" } },
+            { id: "b_m_date", type: "invoice_date", props: { label: "Issue Date: ", showLabel: true }, styles: { align: "right" } },
           ],
         },
       ],
@@ -219,12 +284,17 @@ export const MODERN_MINIMAL_DEFINITION: InvoiceLayoutDefinition = {
         {
           id: "col_mbill",
           widthRatio: 6,
-          blocks: [{ id: "b_bill_m", type: "bill_to", isCompulsory: true, props: { label: "Invoiced To" } }],
+          blocks: [
+            { id: "b_m_cl_hdr", type: "client_header", props: { label: "Invoiced To" } },
+            { id: "b_m_cl_name", type: "client_name", props: { label: "" }, styles: { fontWeight: "bold" } },
+            { id: "b_m_cl_addr", type: "client_address", props: { label: "" } },
+            { id: "b_m_cl_email", type: "client_email", props: { label: "Email: ", showLabel: true } },
+          ],
         },
         {
           id: "col_mdue",
           widthRatio: 6,
-          blocks: [{ id: "b_due_m", type: "amount_due_callout", props: { label: "Total Balance Due" }, styles: { align: "right" } }],
+          blocks: [{ id: "b_m_due", type: "total_due", props: { label: "Total Balance Due: ", showLabel: true, showCurrency: true }, styles: { align: "right", fontSize: 13, fontWeight: "bold" } }],
         },
       ],
     },
@@ -258,7 +328,11 @@ export const MODERN_MINIMAL_DEFINITION: InvoiceLayoutDefinition = {
         {
           id: "col_mtotals",
           widthRatio: 6,
-          blocks: [{ id: "b_tot_m", type: "totals_summary", isCompulsory: true, props: {}, styles: { align: "right" } }],
+          blocks: [
+            { id: "b_m_sub", type: "total_subtotal", props: { label: "Subtotal: ", showLabel: true, showCurrency: true }, styles: { align: "right" } },
+            { id: "b_m_tax", type: "total_tax", props: { label: "Tax: ", showLabel: true, showCurrency: true, showPrefix: true, prefix: "+ " }, styles: { align: "right" } },
+            { id: "b_m_tot", type: "total_invoice", props: { label: "Total Amount: ", showLabel: true, showCurrency: true }, styles: { align: "right", fontWeight: "bold" } },
+          ],
         },
       ],
     },
