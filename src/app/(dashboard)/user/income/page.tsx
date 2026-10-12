@@ -101,7 +101,7 @@ export default function IncomePage() {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const { role } = useRole();
-  const { startDate, endDate } = useAdminDateRange();
+  const { dateRange, startDate, endDate, setDateRange } = useAdminDateRange();
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [convertingPdf, setConvertingPdf] = useState(false);
   const [viewingReceipt, setViewingReceipt] = useState<any | null>(null);
@@ -253,6 +253,12 @@ export default function IncomePage() {
       if (editingId) { res = await updateIncome(editingId, payload); } 
       else { res = await createIncome(payload); }
       if (res?.error) throw new Error(res.error);
+
+      // If the income date is outside current view date range, automatically switch to Lifetime so the user sees it
+      const incDate = formData.date;
+      if (incDate && (incDate < startDate || incDate > endDate)) {
+        setDateRange("lifetime");
+      }
 
       setIsModalOpen(false);
       setEditingId(null);
@@ -566,7 +572,37 @@ export default function IncomePage() {
                 </tr>
               ))}
               {filteredIncome.length === 0 && (
-                <tr><td colSpan={7} className="p-6 text-center text-gray-500">No income records found.</td></tr>
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-gray-500">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <p>
+                        {activeFilter !== "All"
+                          ? `No income records found in category "${activeFilter}".`
+                          : (data?.totalCount || 0) > 0 && dateRange !== "lifetime"
+                          ? `No income records found for the selected period (${dateRange === "this year" ? "This Year" : dateRange}).`
+                          : "No income records found."}
+                      </p>
+                      {activeFilter !== "All" && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveFilter("All")}
+                          className="mt-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-black/5 dark:bg-white/10 hover:bg-black/10 text-foreground transition-colors cursor-pointer"
+                        >
+                          Show All Categories
+                        </button>
+                      )}
+                      {activeFilter === "All" && (data?.totalCount || 0) > 0 && dateRange !== "lifetime" && (
+                        <button
+                          type="button"
+                          onClick={() => setDateRange("lifetime")}
+                          className="mt-1 text-xs font-semibold px-3.5 py-1.5 rounded-lg bg-brand-500/10 hover:bg-brand-500/20 text-brand-700 dark:text-brand-400 border border-brand-500/20 transition-colors cursor-pointer"
+                        >
+                          Switch to Lifetime (View {data.totalCount} record{data.totalCount > 1 ? "s" : ""})
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

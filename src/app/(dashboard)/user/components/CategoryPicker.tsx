@@ -41,7 +41,10 @@ export default function CategoryPicker({
       try {
         setLoading(true);
         const res = await getCategories();
-        setServerCategories(res);
+        setServerCategories(prev => {
+          const merged = Array.from(new Set([...prev, ...res, ...initialCategories])).filter(Boolean);
+          return merged.sort();
+        });
       } catch (e) {
         console.error(e);
       } finally {
@@ -51,23 +54,40 @@ export default function CategoryPicker({
     load();
   }, []);
 
+  useEffect(() => {
+    if (initialCategories.length > 0) {
+      setServerCategories(prev => {
+        const merged = Array.from(new Set([...prev, ...initialCategories])).filter(Boolean);
+        return merged.sort();
+      });
+    }
+  }, [initialCategories]);
+
   const updatePosition = () => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
-    const dropdownHeight = Math.min(serverCategories.length * 44 + 80, 400);
+    const spaceAbove = rect.top;
+    const estimatedHeight = Math.min(serverCategories.length * 44 + 80, 400);
 
-    if (spaceBelow >= dropdownHeight) {
+    const openAbove = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+    const maxHeight = Math.min(openAbove ? spaceAbove - 16 : spaceBelow - 16, 400);
+
+    if (openAbove) {
       setDropdownStyle({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
+        top: "auto",
+        bottom: window.innerHeight - rect.top + 4,
+        left: rect.left,
         width: rect.width,
+        maxHeight: `${Math.max(120, maxHeight)}px`,
       });
     } else {
       setDropdownStyle({
-        top: rect.top + window.scrollY - dropdownHeight - 4,
-        left: rect.left + window.scrollX,
+        top: rect.bottom + 4,
+        bottom: "auto",
+        left: rect.left,
         width: rect.width,
+        maxHeight: `${Math.max(120, maxHeight)}px`,
       });
     }
   };
@@ -87,12 +107,20 @@ export default function CategoryPicker({
       ) return;
       setOpen(false);
     };
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("keydown", keyHandler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", keyHandler);
+    };
   }, [open]);
 
   useEffect(() => {
     if (!open) return;
+    updatePosition();
     const handler = () => updatePosition();
     window.addEventListener("scroll", handler, true);
     window.addEventListener("resize", handler);
@@ -100,7 +128,7 @@ export default function CategoryPicker({
       window.removeEventListener("scroll", handler, true);
       window.removeEventListener("resize", handler);
     };
-  }, [open]);
+  }, [open, serverCategories.length]);
 
   const toggle = (cat: string) => {
     onChange(value.includes(cat) ? value.filter((c) => c !== cat) : [...value, cat]);
@@ -140,15 +168,15 @@ export default function CategoryPicker({
   const dropdown = open ? (
     <div
       ref={dropdownRef}
-      style={{ ...dropdownStyle, position: "absolute", zIndex: 9999 }}
-      className="bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[400px]"
+      style={{ ...dropdownStyle, position: "fixed", zIndex: 9999 }}
+      className="bg-popover border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col"
     >
-      <div className="p-2 border-b border-border flex gap-2 shrink-0 bg-card">
+      <div className="p-2 border-b border-border flex gap-2 shrink-0 bg-popover">
         <input
           type="text"
           placeholder="New category..."
           disabled={adding}
-          className="w-full bg-black/5 dark:bg-transparent border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500 text-foreground disabled:opacity-50 placeholder:text-gray-400"
+          className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500 text-foreground disabled:opacity-50 placeholder:text-gray-400"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -178,7 +206,7 @@ export default function CategoryPicker({
         </button>
       </div>
       
-      <div className="overflow-y-auto flex-1 py-1 bg-card">
+      <div className="overflow-y-auto flex-1 py-1 bg-popover">
         {loading ? (
           <div className="p-4 flex justify-center"><Loader size="sm" /></div>
         ) : serverCategories.length === 0 ? (
@@ -197,7 +225,7 @@ export default function CategoryPicker({
                 <div className="flex items-center gap-3">
                   <span
                     className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
-                      selected ? "bg-brand-500 border-brand-500" : "border-border bg-card"
+                      selected ? "bg-brand-500 border-brand-500" : "border-border bg-black/5 dark:bg-white/5"
                     }`}
                   >
                     {selected && (

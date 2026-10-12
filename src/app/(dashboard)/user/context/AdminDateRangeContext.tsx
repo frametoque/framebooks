@@ -15,12 +15,12 @@ const AdminDateRangeContext = createContext<AdminDateRangeContextType | undefine
 
 export function AdminDateRangeProvider({ children }: { children: React.ReactNode }) {
   const currentYear = new Date().getFullYear();
-  const [dateRange, setDateRange] = useState("this year");
+  const [dateRange, setDateRangeState] = useState("this year");
   const [startDate, setStartDate] = useState(`${currentYear}-01-01`);
   const [endDate, setEndDate] = useState(`${currentYear}-12-31`);
 
-  const applyRangeDates = (range: string) => {
-    setDateRange(range);
+  const setDateRange = (range: string) => {
+    setDateRangeState(range);
     const today = new Date();
     const todayStr = today.toISOString().split("T")[0];
     const year = today.getFullYear();
@@ -52,13 +52,13 @@ export function AdminDateRangeProvider({ children }: { children: React.ReactNode
   React.useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("framebooks_default_range") : null;
     if (saved && saved !== "this year") {
-      applyRangeDates(saved);
+      setDateRange(saved);
     } else {
       fetch("/api/admin/preferences")
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           if (data?.success && data?.prefs?.defaultViewRange) {
-            applyRangeDates(data.prefs.defaultViewRange);
+            setDateRange(data.prefs.defaultViewRange);
             localStorage.setItem("framebooks_default_range", data.prefs.defaultViewRange);
           }
         })

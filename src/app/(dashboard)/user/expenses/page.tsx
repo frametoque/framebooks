@@ -101,7 +101,7 @@ export default function ExpensesPage() {
   const { role } = useRole();
   
   // Date context
-  const { startDate, endDate } = useAdminDateRange();
+  const { dateRange, startDate, endDate, setDateRange } = useAdminDateRange();
   
   // Receipt processing state
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -203,6 +203,13 @@ export default function ExpensesPage() {
         res = await createExpense(payload);
       }
       if (res?.error) throw new Error(res.error);
+
+      // If the expense date is outside current view date range, automatically switch to Lifetime so the user sees it
+      const expDate = formData.date;
+      if (expDate && (expDate < startDate || expDate > endDate)) {
+        setDateRange("lifetime");
+      }
+
       setIsModalOpen(false);
       setEditingId(null);
       setReceiptFile(null);
@@ -491,7 +498,35 @@ export default function ExpensesPage() {
               ))}
               {filteredExpenses.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-6 text-center text-gray-500">No expense records found.</td>
+                  <td colSpan={6} className="p-8 text-center text-gray-500">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <p>
+                        {activeFilter !== "All"
+                          ? `No expense records found in category "${activeFilter}".`
+                          : (data?.totalCount || 0) > 0 && dateRange !== "lifetime"
+                          ? `No expense records found for the selected period (${dateRange === "this year" ? "This Year" : dateRange}).`
+                          : "No expense records found."}
+                      </p>
+                      {activeFilter !== "All" && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveFilter("All")}
+                          className="mt-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-black/5 dark:bg-white/10 hover:bg-black/10 text-foreground transition-colors cursor-pointer"
+                        >
+                          Show All Categories
+                        </button>
+                      )}
+                      {activeFilter === "All" && (data?.totalCount || 0) > 0 && dateRange !== "lifetime" && (
+                        <button
+                          type="button"
+                          onClick={() => setDateRange("lifetime")}
+                          className="mt-1 text-xs font-semibold px-3.5 py-1.5 rounded-lg bg-brand-500/10 hover:bg-brand-500/20 text-brand-700 dark:text-brand-400 border border-brand-500/20 transition-colors cursor-pointer"
+                        >
+                          Switch to Lifetime (View {data.totalCount} record{data.totalCount > 1 ? "s" : ""})
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               )}
             </tbody>

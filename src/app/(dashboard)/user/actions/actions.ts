@@ -420,10 +420,11 @@ export async function getIncomes(startDate?: string, endDate?: string) {
   const end = endDate || '2099-12-31';
 
   const tenantId = await getTenantId();
-  const [statsThisMonth, statsLastMonth, statsYtd, rows] = await Promise.all([
+  const [statsThisMonth, statsLastMonth, statsYtd, totalCountRows, rows] = await Promise.all([
     sql`SELECT SUM(amount) as total FROM admin_incomes WHERE date_trunc('month', date) = date_trunc('month', current_date) AND tenant_id = ${tenantId}`,
     sql`SELECT SUM(amount) as total FROM admin_incomes WHERE date_trunc('month', date) = date_trunc('month', current_date - interval '1 month') AND tenant_id = ${tenantId}`,
     sql`SELECT SUM(amount) as total FROM admin_incomes WHERE date_trunc('year', date) = date_trunc('year', current_date) AND tenant_id = ${tenantId}`,
+    sql`SELECT COUNT(*)::int as count FROM admin_incomes WHERE tenant_id = ${tenantId}`,
     sql`
       SELECT 
         i.id, i.date, TO_CHAR(i.date, 'YYYY-MM-DD') as "rawDate", i.amount, c.full_name as client, i.client_id as "clientId", 
@@ -447,6 +448,7 @@ export async function getIncomes(startDate?: string, endDate?: string) {
     thisMonth: parseFloat(statsThisMonth[0]?.total || 0),
     lastMonth: parseFloat(statsLastMonth[0]?.total || 0),
     ytd: parseFloat(statsYtd[0]?.total || 0),
+    totalCount: parseInt(totalCountRows[0]?.count || 0, 10),
     items: rows.map(r => ({
       ...r,
       rawDate: r.rawDate,
@@ -710,10 +712,11 @@ export async function getExpenses(startDate?: string, endDate?: string) {
     };
   }
 
-  const [statsThisMonth, statsLastMonth, statsYtd, rows] = await Promise.all([
+  const [statsThisMonth, statsLastMonth, statsYtd, totalCountRows, rows] = await Promise.all([
     sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date_trunc('month', date) = date_trunc('month', current_date)`,
     sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date_trunc('month', date) = date_trunc('month', current_date - interval '1 month')`,
     sql`SELECT SUM(amount) as total FROM admin_expenses WHERE tenant_id = ${tenantId} AND date_trunc('year', date) = date_trunc('year', current_date)`,
+    sql`SELECT COUNT(*)::int as count FROM admin_expenses WHERE tenant_id = ${tenantId}`,
     sql`
       SELECT id, date, TO_CHAR(date, 'YYYY-MM-DD') as "rawDate", amount, description as desc, category, payment_method as "paidVia", receipt_url as "receiptUrl", account_id as "accountId", created_at
       FROM admin_expenses
@@ -726,6 +729,7 @@ export async function getExpenses(startDate?: string, endDate?: string) {
     thisMonth: parseFloat(statsThisMonth[0]?.total || 0),
     lastMonth: parseFloat(statsLastMonth[0]?.total || 0),
     ytd: parseFloat(statsYtd[0]?.total || 0),
+    totalCount: parseInt(totalCountRows[0]?.count || 0, 10),
     items: rows.map(r => ({
       ...r,
       rawDate: r.rawDate,
