@@ -2262,7 +2262,7 @@ function BillingView({
   };
 
   const copyBankInfo = () => {
-    navigator.clipboard.writeText("N/A");
+    navigator.clipboard.writeText("4833004");
     setCopiedBank(true);
     setTimeout(() => setCopiedBank(false), 2500);
   };
@@ -2522,19 +2522,19 @@ function BillingView({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div>
                   <span className="text-muted-foreground block text-[11px]">Bank:</span>
-                  <span className="font-semibold text-foreground">N/A</span>
+                  <span className="font-semibold text-foreground">Bank of Ceylon</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[11px]">Account Name:</span>
-                  <span className="font-semibold text-foreground">N/A</span>
+                  <span className="font-semibold text-foreground">B.N.V.P. Fernando</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[11px]">Account Number:</span>
-                  <span className="font-mono font-bold text-foreground">N/A</span>
+                  <span className="font-mono font-bold text-foreground">4833004</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[11px]">Branch / Currency:</span>
-                  <span className="font-semibold text-foreground">N/A</span>
+                  <span className="font-semibold text-foreground">Moratuwa / LKR</span>
                 </div>
               </div>
             </div>

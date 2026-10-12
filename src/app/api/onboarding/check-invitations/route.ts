@@ -12,21 +12,16 @@ export async function GET() {
 
     const sql = neon(process.env.DATABASE_URL!);
 
-    // Check if user is already in admin_users
-    const existingUser = await sql`
-      SELECT id, tenant_id FROM admin_users 
-      WHERE id = ${Number(userId) || 0} OR (email IS NOT NULL AND LOWER(email) = ${email})
+    // Check if user already owns a business profile
+    const ownedTenantRows = await sql`
+      SELECT id, plan, payment_status FROM tenants 
+      WHERE LOWER(owner_email) = ${email}
       LIMIT 1
     `;
-    if (existingUser.length > 0 && existingUser[0].tenant_id) {
-      const tenantRows = await sql`
-        SELECT plan, payment_status FROM tenants 
-        WHERE id = ${existingUser[0].tenant_id} 
-        LIMIT 1
-      `;
-      const tenant = tenantRows[0];
+    if (ownedTenantRows.length > 0) {
+      const tenant = ownedTenantRows[0];
       if (tenant && tenant.payment_status === 'pending_payment') {
-        return NextResponse.json({ hasInvitation: false, isPendingPayment: true, tenantId: existingUser[0].tenant_id });
+        return NextResponse.json({ hasInvitation: false, isPendingPayment: true, tenantId: tenant.id });
       }
       return NextResponse.json({ hasInvitation: false, redirect: '/user/dashboard' });
     }

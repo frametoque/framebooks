@@ -99,9 +99,10 @@ export function PaymentDetailClient({ data }: { data: any }) {
                 setRefundReason("");
                 setRefundOpen(true);
               }}
-              className="px-4 py-2.5 bg-purple-600/15 hover:bg-purple-600/25 text-purple-700 dark:text-purple-300 border border-purple-500/30 font-bold rounded-xl text-sm transition-all"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600/15 hover:bg-purple-600/25 text-purple-700 dark:text-purple-300 border border-purple-500/30 font-bold rounded-lg text-xs transition-all cursor-pointer"
             >
-              Issue Refund
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>REFUND PAYMENT</span>
             </button>
           )}
         </div>

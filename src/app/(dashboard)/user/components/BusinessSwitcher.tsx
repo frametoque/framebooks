@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { 
   Building2, 
   Check, 
@@ -17,8 +18,7 @@ import TenantLogo from "@/components/TenantLogo";
 import { 
   getUserBusinesses, 
   switchActiveTenant, 
-  respondToTeamInvitation, 
-  createOwnedBusinessProfile 
+  respondToTeamInvitation 
 } from "@/app/(dashboard)/user/actions/tenants";
 
 interface TenantInfoProps {
@@ -49,6 +49,7 @@ interface PendingInvite {
 }
 
 export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInfoProps }) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [businesses, setBusinesses] = useState<UserBusiness[]>([]);
@@ -58,13 +59,6 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
   // Actions loading states
   const [switchingId, setSwitchingId] = useState<number | null>(null);
   const [respondingId, setRespondingId] = useState<{ id: number; action: "accept" | "decline" } | null>(null);
-  
-  // Create profile modal state
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newBizName, setNewBizName] = useState("");
-  const [newBizCurrency, setNewBizCurrency] = useState("LKR");
-  const [createLoading, setCreateLoading] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
   const [generalMessage, setGeneralMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -100,13 +94,11 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
-        setShowCreateModal(false);
       }
     }
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsOpen(false);
-        setShowCreateModal(false);
       }
     }
     if (isOpen) {
@@ -120,7 +112,7 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
   }, [isOpen]);
 
   const handleSwitchTenant = async (targetId: number) => {
-    if (switchingId || respondingId || createLoading) return;
+    if (switchingId || respondingId) return;
     setSwitchingId(targetId);
     setGeneralMessage(null);
     try {
@@ -138,7 +130,7 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
   };
 
   const handleRespondInvite = async (invitationId: number, action: "accept" | "decline") => {
-    if (respondingId || switchingId || createLoading) return;
+    if (respondingId || switchingId) return;
     setRespondingId({ id: invitationId, action });
     setGeneralMessage(null);
     try {
@@ -158,28 +150,6 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
     } catch (err: any) {
       setGeneralMessage({ type: "error", text: err?.message || "Failed to respond to invitation" });
       setRespondingId(null);
-    }
-  };
-
-  const handleCreateBusiness = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newBizName.trim()) {
-      setFormError("Business name is required");
-      return;
-    }
-    setFormError(null);
-    setCreateLoading(true);
-    try {
-      const res = await createOwnedBusinessProfile(newBizName, newBizCurrency);
-      if (res.success) {
-        window.location.reload();
-      } else {
-        setFormError(res.error || "Failed to create business profile");
-        setCreateLoading(false);
-      }
-    } catch (err: any) {
-      setFormError(err?.message || "Failed to create business profile");
-      setCreateLoading(false);
     }
   };
 
@@ -206,7 +176,6 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
         type="button"
         onClick={() => {
           setIsOpen((prev) => !prev);
-          setShowCreateModal(false);
           setGeneralMessage(null);
         }}
         className="flex items-center gap-3 pl-4 ml-2 border-l border-border hover:opacity-90 transition-all text-left group focus:outline-none cursor-pointer"
@@ -439,89 +408,17 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
           {/* Create Business Profile Section */}
           {!hasOwnedBusiness && (
             <div className="p-3 border-t border-border/60 bg-black/[0.02] dark:bg-white/[0.02]">
-              {!showCreateModal ? (
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(true)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-dashed border-brand-500/40 hover:border-brand-500 hover:bg-brand-500/10 text-brand-500 text-xs font-semibold transition-all group/btn"
-                >
-                  <Plus className="w-4 h-4 transition-transform group-hover/btn:scale-110" />
-                  <span>Create Your Business Profile</span>
-                </button>
-              ) : (
-                <form onSubmit={handleCreateBusiness} className="space-y-2.5 pt-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-foreground">
-                      Create Owned Business
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowCreateModal(false);
-                        setFormError(null);
-                      }}
-                      className="text-muted-foreground hover:text-foreground p-1"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {formError && (
-                    <p className="text-[11px] text-red-500 bg-red-500/10 p-2 rounded-lg border border-red-500/20">
-                      {formError}
-                    </p>
-                  )}
-
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Business Name (e.g. Acme Corp)"
-                      value={newBizName}
-                      onChange={(e) => setNewBizName(e.target.value)}
-                      required
-                      disabled={createLoading}
-                      className="w-full px-3 py-2 text-xs rounded-xl bg-background border border-border focus:border-brand-500 focus:outline-none text-foreground placeholder:text-muted-foreground"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={newBizCurrency}
-                      onChange={(e) => setNewBizCurrency(e.target.value)}
-                      disabled={createLoading}
-                      className="px-2 py-1.5 text-xs rounded-xl bg-background border border-border focus:border-brand-500 focus:outline-none text-foreground"
-                    >
-                      <option value="LKR">LKR (Rs)</option>
-                      <option value="USD">USD ($)</option>
-                      <option value="EUR">EUR (€)</option>
-                      <option value="GBP">GBP (£)</option>
-                      <option value="AUD">AUD ($)</option>
-                      <option value="CAD">CAD ($)</option>
-                      <option value="INR">INR (₹)</option>
-                      <option value="AED">AED</option>
-                    </select>
-
-                    <button
-                      type="submit"
-                      disabled={createLoading || !newBizName.trim()}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors disabled:opacity-50"
-                    >
-                      {createLoading ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Creating...</span>
-                        </>
-                      ) : (
-                        <span>Create Profile</span>
-                      )}
-                    </button>
-                  </div>
-
-                  <p className="text-[10px] text-muted-foreground">
-                    * Each personal account can create 1 owned business profile.
-                  </p>
-                </form>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  router.push("/onboarding?create=true");
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-dashed border-brand-500/40 hover:border-brand-500 hover:bg-brand-500/10 text-brand-500 text-xs font-semibold transition-all group/btn cursor-pointer"
+              >
+                <Plus className="w-4 h-4 transition-transform group-hover/btn:scale-110" />
+                <span>Create Your Business Profile</span>
+              </button>
             </div>
           )}
         </motion.div>

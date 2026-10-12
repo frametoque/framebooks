@@ -72,10 +72,10 @@ export default function OnboardingPage() {
   const [uploadingSlip, setUploadingSlip] = useState(false);
   const [copiedBank, setCopiedBank] = useState(false);
   const [bankDetails, setBankDetails] = useState({
-    bank: "Commercial Bank",
-    accountName: "FrameBooks (Pvt) Ltd",
-    accountNumber: "8012345678",
-    branch: "Colombo / LKR",
+    bank: "Bank of Ceylon",
+    accountName: "B.N.V.P. Fernando",
+    accountNumber: "4833004",
+    branch: "Moratuwa / LKR",
   });
 
   // Awaiting approval state
@@ -137,14 +137,20 @@ export default function OnboardingPage() {
         }
 
         // 2. Check for invitations
+        const isCreateMode = typeof window !== 'undefined' &&
+          (new URLSearchParams(window.location.search).get('create') === 'true' ||
+            new URLSearchParams(window.location.search).get('mode') === 'create');
+
         const res = await fetch('/api/onboarding/check-invitations');
         const data = await res.json();
         if (data.redirect && !data.isPendingPayment) {
           router.push(data.redirect);
           return;
         } else if (data.hasInvitation && data.invite) {
-          setPendingInvite(data.invite);
-          setStep(0); // Step 0: Invitation
+          if (!isCreateMode) {
+            setPendingInvite(data.invite);
+            setStep(0); // Step 0: Invitation
+          }
         }
       } catch (e) {
         console.error("Initial onboarding check failed", e);
@@ -222,7 +228,7 @@ export default function OnboardingPage() {
   };
 
   const handleCopyAccountNo = () => {
-    navigator.clipboard.writeText(bankDetails.accountNumber || "8012345678");
+    navigator.clipboard.writeText(bankDetails.accountNumber || "4833004");
     setCopiedBank(true);
     setTimeout(() => setCopiedBank(false), 2000);
   };
@@ -629,22 +635,20 @@ export default function OnboardingPage() {
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("slip")}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    paymentMethod === "slip"
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${paymentMethod === "slip"
                       ? "bg-[#082830] text-white shadow-xs"
                       : "text-gray-600 hover:text-black"
-                  }`}
+                    }`}
                 >
                   Upload Bank Slip
                 </button>
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("online")}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    paymentMethod === "online"
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${paymentMethod === "online"
                       ? "bg-[#082830] text-white shadow-xs"
                       : "text-gray-600 hover:text-black"
-                  }`}
+                    }`}
                 >
                   <span>Pay Online</span>
                   <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-800 font-semibold">
@@ -662,7 +666,7 @@ export default function OnboardingPage() {
                     <div className="flex items-center gap-2">
                       <Building className="w-4 h-4 text-[#00C750]" />
                       <span className="text-xs font-bold uppercase tracking-wider text-gray-600">
-                        FrameBooks Official Bank Account
+                        Bank Account
                       </span>
                     </div>
                     <button
@@ -706,22 +710,20 @@ export default function OnboardingPage() {
                       <button
                         type="button"
                         onClick={() => setBillingCycle("monthly")}
-                        className={`text-xs px-3 py-1 rounded-lg font-bold border transition-colors cursor-pointer ${
-                          billingCycle === "monthly"
+                        className={`text-xs px-3 py-1 rounded-lg font-bold border transition-colors cursor-pointer ${billingCycle === "monthly"
                             ? "bg-[#082830] text-white border-[#082830]"
                             : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
-                        }`}
+                          }`}
                       >
                         Monthly
                       </button>
                       <button
                         type="button"
                         onClick={() => setBillingCycle("yearly")}
-                        className={`text-xs px-3 py-1 rounded-lg font-bold border transition-colors cursor-pointer ${
-                          billingCycle === "yearly"
+                        className={`text-xs px-3 py-1 rounded-lg font-bold border transition-colors cursor-pointer ${billingCycle === "yearly"
                             ? "bg-[#082830] text-white border-[#082830]"
                             : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
-                        }`}
+                          }`}
                       >
                         Yearly (Save)
                       </button>
@@ -848,17 +850,7 @@ export default function OnboardingPage() {
                   </button>
                 </form>
 
-                {/* Footer Switch Option */}
-                <div className="text-center pt-2">
-                  <button
-                    type="button"
-                    onClick={handleSwitchToFree}
-                    disabled={submitting}
-                    className="text-xs text-gray-500 hover:text-gray-800 transition-colors cursor-pointer underline underline-offset-4"
-                  >
-                    Don't want to upgrade right now? Continue with Free Plan instead
-                  </button>
-                </div>
+
               </div>
             ) : (
               /* Online Payments (Currently Disabled) */
@@ -964,13 +956,12 @@ export default function OnboardingPage() {
                 <div
                   key={p.name || i}
                   onClick={() => setSelectedPlan(p.name)}
-                  className={`bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-7 border relative shadow-xs hover:shadow-lg transition-all flex flex-col h-full cursor-pointer ${
-                    isSelected
+                  className={`bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-7 border relative shadow-xs hover:shadow-lg transition-all flex flex-col h-full cursor-pointer ${isSelected
                       ? "border-[#00E35B] ring-2 ring-[#00E35B] shadow-md bg-[#E6FDF0]/10"
                       : p.highlight
                         ? "border-[#00E35B]/50 ring-1 ring-[#00E35B]/20"
                         : "border-[#E5E7EB]"
-                  }`}
+                    }`}
                 >
                   {/* Badge */}
                   {p.badge && (
@@ -1043,13 +1034,12 @@ export default function OnboardingPage() {
                       e.stopPropagation();
                       setSelectedPlan(p.name);
                     }}
-                    className={`w-full py-3 sm:py-3.5 rounded-xl font-bold text-center mt-auto transition-all cursor-pointer text-xs sm:text-sm flex items-center justify-center gap-2 ${
-                      isSelected
+                    className={`w-full py-3 sm:py-3.5 rounded-xl font-bold text-center mt-auto transition-all cursor-pointer text-xs sm:text-sm flex items-center justify-center gap-2 ${isSelected
                         ? "bg-[#00E35B] text-[#041418] hover:bg-[#00C750] shadow-md shadow-[#00E35B]/20"
                         : p.highlight
                           ? "bg-[#082830] text-white hover:bg-black"
                           : "bg-white hover:bg-gray-50 border border-[#E5E7EB] text-[#082830]"
-                    }`}
+                      }`}
                   >
                     {isSelected ? (
                       <>

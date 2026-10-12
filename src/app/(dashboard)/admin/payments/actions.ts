@@ -123,7 +123,7 @@ export async function approvePayment(
       FROM payments p
       LEFT JOIN plans pl ON p.plan_id = pl.id
       WHERE p.id = ${paymentId}
-      FOR UPDATE
+      FOR UPDATE OF p
     `;
     if (payRows.length === 0) throw new Error("Payment record not found");
     const pay = payRows[0];

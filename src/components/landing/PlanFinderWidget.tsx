@@ -106,23 +106,20 @@ export default function PlanFinderWidget() {
               background: `linear-gradient(to right, #00E35B 0%, #00E35B ${(invoices / 200) * 100}%, #E5E7EB ${(invoices / 200) * 100}%, #E5E7EB 100%)`,
             }}
           />
-          <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-100 gap-2">
-            <span className="text-[11px] font-medium text-gray-400 shrink-0">Presets:</span>
-            <div className="flex flex-wrap gap-1.5 justify-end">
-              {[10, 25, 50, 100, 200].map((val) => (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => setInvoices(val)}
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-all ${invoices === val
-                    ? 'bg-[#082830] text-white shadow-xs'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                >
-                  {val === 200 ? '200+' : val}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-wrap items-center justify-end mt-3 pt-2 border-t border-gray-100 gap-1.5">
+            {[10, 25, 50, 100, 200].map((val) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => setInvoices(val)}
+                className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-all ${invoices === val
+                  ? 'bg-[#082830] text-white shadow-xs'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+              >
+                {val === 200 ? '200+' : val}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -154,23 +151,20 @@ export default function PlanFinderWidget() {
               background: `linear-gradient(to right, #00E35B 0%, #00E35B ${(clients / 100) * 100}%, #E5E7EB ${(clients / 100) * 100}%, #E5E7EB 100%)`,
             }}
           />
-          <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-100 gap-2">
-            <span className="text-[11px] font-medium text-gray-400 shrink-0">Presets:</span>
-            <div className="flex flex-wrap gap-1.5 justify-end">
-              {[10, 25, 50, 75, 100].map((val) => (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => setClients(val)}
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-all ${clients === val
-                    ? 'bg-[#082830] text-white shadow-xs'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                >
-                  {val === 100 ? '100+' : val}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-wrap items-center justify-end mt-3 pt-2 border-t border-gray-100 gap-1.5">
+            {[10, 25, 50, 75, 100].map((val) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => setClients(val)}
+                className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-all ${clients === val
+                  ? 'bg-[#082830] text-white shadow-xs'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+              >
+                {val === 100 ? '100+' : val}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -201,23 +195,20 @@ export default function PlanFinderWidget() {
               background: `linear-gradient(to right, #00E35B 0%, #00E35B ${((accounts - 1) / 9) * 100}%, #E5E7EB ${((accounts - 1) / 9) * 100}%, #E5E7EB 100%)`,
             }}
           />
-          <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-100 gap-2">
-            <span className="text-[11px] font-medium text-gray-400 shrink-0">Presets:</span>
-            <div className="flex flex-wrap gap-1.5 justify-end">
-              {[1, 2, 3, 5, 10].map((val) => (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => setAccounts(val)}
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-all ${accounts === val
-                    ? 'bg-[#082830] text-white shadow-xs'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                >
-                  {val === 10 ? '10+' : val}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-wrap items-center justify-end mt-3 pt-2 border-t border-gray-100 gap-1.5">
+            {[1, 2, 3, 5, 10].map((val) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => setAccounts(val)}
+                className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-all ${accounts === val
+                  ? 'bg-[#082830] text-white shadow-xs'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+              >
+                {val === 10 ? '10+' : val}
+              </button>
+            ))}
           </div>
         </div>
 

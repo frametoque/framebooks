@@ -104,6 +104,17 @@ export async function completeOnboarding(formData: FormData) {
     const email = session?.user?.email?.trim().toLowerCase() || "";
     const fullName = session?.user?.name || "";
 
+    // Enforce rule: each account can create at most 1 owned business profile
+    const alreadyOwns = await sql`
+      SELECT id, name FROM tenants WHERE LOWER(owner_email) = ${email} LIMIT 1
+    `;
+    if (alreadyOwns.length > 0) {
+      return { 
+        success: false, 
+        error: `You have already created your business profile ("${alreadyOwns[0].name}"). Each account can create at most 1 owned business profile.` 
+      };
+    }
+
     // Validate coupon if provided
     let validatedCoupon: any = null;
     if (couponCode) {
@@ -214,10 +225,10 @@ export async function getCompanyBankDetailsAction() {
   return {
     success: true,
     bankDetails: {
-      bank: "Commercial Bank",
-      accountName: "FrameBooks (Pvt) Ltd",
-      accountNumber: "8012345678",
-      branch: "Colombo / LKR",
+      bank: "Bank of Ceylon",
+      accountName: "B.N.V.P. Fernando",
+      accountNumber: "4833004",
+      branch: "Moratuwa / LKR",
     }
   };
 }
@@ -230,31 +241,25 @@ export async function getOnboardingStatusAction() {
     }
 
     const email = session?.user?.email?.trim().toLowerCase() || "";
-    const numId = Number(userId) || 0;
-
-    const userRows = await sql`
-      SELECT id, tenant_id FROM admin_users 
-      WHERE (id = ${numId} AND ${numId} > 0) OR (email IS NOT NULL AND LOWER(email) = ${email})
-      LIMIT 1
-    `;
-
-    if (userRows.length === 0 || !userRows[0].tenant_id) {
+    if (!email) {
       return { success: true, hasTenant: false };
     }
 
-    const tenantId = userRows[0].tenant_id;
-    const tenantRows = await sql`
+    // Check if the user owns a business profile
+    const ownedTenantRows = await sql`
       SELECT id, name, plan, payment_status, logo_url, plan_expires_at 
       FROM tenants 
-      WHERE id = ${tenantId} 
+      WHERE LOWER(owner_email) = ${email}
+      ORDER BY id DESC 
       LIMIT 1
     `;
 
-    if (tenantRows.length === 0) {
+    if (ownedTenantRows.length === 0) {
       return { success: true, hasTenant: false };
     }
 
-    const tenant = tenantRows[0];
+    const tenant = ownedTenantRows[0];
+    const tenantId = tenant.id;
     const isFree = (tenant.plan || "").toLowerCase() === "free";
 
     // If tenant is on Free plan or explicitly marked as paid
