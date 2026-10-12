@@ -1505,6 +1505,13 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
     ? invoiceData.customFieldValues
     : {};
 
+  const subtotal = parseFloat(invoiceData.subtotal) || 0;
+  const discount = parseFloat(invoiceData.discount) || 0;
+  const total = parseFloat(invoiceData.total) || 0;
+  const advance = parseFloat(invoiceData.advance) || 0;
+  const totalDue = parseFloat(invoiceData.totalDue ?? (total - advance)) || 0;
+  const taxRate = parseFloat(invoiceData.taxRate) || 0;
+
   const invoiceId = await generateUniqueInvoiceId();
   await sql`
   INSERT INTO invoices (
@@ -1514,25 +1521,27 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
     layout_id, custom_field_values, layout_snapshot
   ) VALUES (
     ${invoiceId}, ${invoiceData.clientId || null}, ${invoiceData.userEmail || null},
-    ${invoiceData.projectName}, ${invoiceData.date},
-    ${invoiceData.subtotal}, ${invoiceData.discount}, ${invoiceData.total}, ${invoiceData.advance}, ${invoiceData.totalDue},
-    ${invoiceData.workStatus}, ${invoiceData.paymentStatus}, ${invoiceData.currency}, ${invoiceData.category || null},
-    ${invoiceData.bankAccountId || null}, ${parseFloat(invoiceData.taxRate) || 0}, ${invoiceData.legalName || null}, ${tenantId},
-    ${assignedLayoutId}, ${sql.json(customFieldValues)}, ${layoutSnapshot ? sql.json(layoutSnapshot) : null}
+    ${invoiceData.projectName || ''}, ${invoiceData.date || new Date().toISOString().split('T')[0]},
+    ${subtotal}, ${discount}, ${total}, ${advance}, ${totalDue},
+    ${invoiceData.workStatus || 'pending'}, ${invoiceData.paymentStatus || 'unpaid'}, ${invoiceData.currency || 'LKR'}, ${invoiceData.category || null},
+    ${invoiceData.bankAccountId || null}, ${taxRate}, ${invoiceData.legalName || null}, ${tenantId},
+    ${assignedLayoutId || null}, ${sql.json(customFieldValues || {})}, ${layoutSnapshot ? sql.json(layoutSnapshot) : null}
   )
 `;
 
   for (const item of lineItems) {
     if (item.description) {
+      const qty = parseFloat(item.quantity) || 1;
+      const price = parseFloat(item.rate ?? item.price) || 0;
       await sql`
         INSERT INTO invoice_items (invoice_id, description, quantity, price, total, tenant_id)
-        VALUES (${invoiceId}, ${item.description}, ${item.quantity}, ${item.rate}, ${item.quantity * item.rate}, ${tenantId})
+        VALUES (${invoiceId}, ${item.description}, ${qty}, ${price}, ${qty * price}, ${tenantId})
       `;
     }
   }
 
   await incrementLifetimeUsage(Number(tenantId), 'invoices');
-  await logSystemAction(`Created invoice: "${invoiceData.projectName}" (${invoiceId}) for LKR ${invoiceData.total}`);
+  await logSystemAction(`Created invoice: "${invoiceData.projectName}" (${invoiceId}) for LKR ${total}`);
   return { success: true, invoiceId };
 }
 
@@ -1582,7 +1591,7 @@ export async function updateInvoice(invoiceId: string, invoiceData: any, lineIte
       : await sql`
           SELECT id, definition FROM invoice_layouts 
           WHERE tenant_id = ${tenantId} AND is_active = true 
-            AND (document_type = 'quotation' OR document_type = 'both')
+            AND (document_type = 'invoice' OR document_type = 'both')
           LIMIT 1
         `;
     if (layoutRes.length > 0) {
@@ -1601,23 +1610,23 @@ export async function updateInvoice(invoiceId: string, invoiceData: any, lineIte
   await sql`
   UPDATE invoices SET
     client_id = COALESCE(${invoiceData.clientId || null}, client_id),
-    user_email = ${invoiceData.userEmail},
-    project_name = ${invoiceData.projectName},
-    date = ${invoiceData.date},
-    subtotal = ${invoiceData.subtotal},
-    discount = ${invoiceData.discount},
-    total = ${invoiceData.total},
-    advance = ${invoiceData.advance},
+    user_email = ${invoiceData.userEmail || null},
+    project_name = ${invoiceData.projectName || ''},
+    date = ${invoiceData.date || new Date().toISOString().split('T')[0]},
+    subtotal = ${subtotalVal},
+    discount = ${discountVal},
+    total = ${totalVal},
+    advance = ${advanceVal},
     total_due = ${calculatedTotalDue},
-    
-    payment_status = ${invoiceData.paymentStatus},
-    currency = ${invoiceData.currency},
+    work_status = COALESCE(${invoiceData.workStatus || null}, work_status),
+    payment_status = ${invoiceData.paymentStatus || 'unpaid'},
+    currency = ${invoiceData.currency || 'LKR'},
     category = ${invoiceData.category || null},
     bank_account_id = ${invoiceData.bankAccountId || null},
-    tax_rate = ${parseFloat(invoiceData.taxRate) || 0},
+    tax_rate = ${taxRateVal},
     legal_name = ${invoiceData.legalName || null},
-    layout_id = ${assignedLayoutId},
-    custom_field_values = ${sql.json(customFieldValues)},
+    layout_id = ${assignedLayoutId || null},
+    custom_field_values = ${sql.json(customFieldValues || {})},
     layout_snapshot = COALESCE(${layoutSnapshotToFreeze ? sql.json(layoutSnapshotToFreeze) : null}, layout_snapshot)
   WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId}
 `;
@@ -1626,9 +1635,11 @@ export async function updateInvoice(invoiceId: string, invoiceData: any, lineIte
 
   for (const item of lineItems) {
     if (item.description) {
+      const qty = parseFloat(item.quantity) || 1;
+      const price = parseFloat(item.rate ?? item.price) || 0;
       await sql`
         INSERT INTO invoice_items (invoice_id, description, quantity, price, total, tenant_id)
-        VALUES (${invoiceId}, ${item.description}, ${item.quantity}, ${item.rate}, ${item.quantity * item.rate}, ${tenantId})
+        VALUES (${invoiceId}, ${item.description}, ${qty}, ${price}, ${qty * price}, ${tenantId})
       `;
     }
   }

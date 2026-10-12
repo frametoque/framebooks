@@ -27,7 +27,7 @@ export async function getInventoryItems() {
     FROM admin_inventory i
     LEFT JOIN admin_expenses e ON i.expense_id = e.id AND e.tenant_id = ${tenantId}
     WHERE i.tenant_id = ${tenantId}
-    ORDER BY i.created_at DESC
+    ORDER BY i.purchase_date DESC NULLS LAST, i.created_at DESC
   `;
   return items;
 }

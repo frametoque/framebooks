@@ -3,7 +3,7 @@ import { Loader } from "@/components/ui/Loader";
 
 
 import { useEffect, useState, useMemo } from "react";
-import { Edit2, Loader2, CheckCircle2, Box, Link2 } from "lucide-react";
+import { Edit2, Loader2, CheckCircle2, Box, Link2, ArrowDown, ArrowUp } from "lucide-react";
 import { MdSearch, MdAdd, MdDelete, MdClose, MdInventory2, MdInfoOutline, MdDownload, MdInsertDriveFile, MdRemoveRedEye, MdUpload } from "react-icons/md";
 import { getInventoryItems, createInventoryItem, updateInventoryItem, deleteInventoryItem, uploadInventoryDocument, getExpensesForLinking } from "../actions/inventory";
 import AnimatedNumber from "../components/AnimatedNumber";
@@ -23,6 +23,11 @@ const formatLKR = (amount: number) => {
   return `${num} LKR`;
 };
 
+const parseCategories = (catStr: string | null | undefined): string[] => {
+  if (!catStr) return [];
+  return catStr.split(',').map(s => s.trim()).filter(Boolean);
+};
+
 const emptyForm = { item_name: '', category: '', serial_number: '', quantity: 1, status: 'Available', purchase_date: '', purchase_price: '', notes: '', warranty_letter_url: '', expense_id: '' };
 
 export default function InventoryPage() {
@@ -39,6 +44,8 @@ export default function InventoryPage() {
   const [viewingItemTab, setViewingItemTab] = useState<'invoice' | 'warranty'>('invoice');
   const [expenses, setExpenses] = useState<any[]>([]);
   const [plan, setPlan] = useState<PlanType>('Free');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [activeCategory, setActiveCategory] = useState("All");
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -171,19 +178,61 @@ export default function InventoryPage() {
     }
   };
 
+  const dynamicCategories = useMemo(() => {
+    const cats = new Set<string>();
+    data.forEach((item) => {
+      const parsed = parseCategories(item.category);
+      if (parsed.length > 0) {
+        parsed.forEach(c => cats.add(c));
+      } else if (item.category && item.category.trim()) {
+        cats.add(item.category.trim());
+      }
+    });
+    return ["All", ...Array.from(cats).sort()];
+  }, [data]);
+
   const filteredData = useMemo(() => {
-    if (!searchTerm) return data;
-    const lower = searchTerm.toLowerCase();
-    return data.filter(d => 
-      (d.item_name || '').toLowerCase().includes(lower) ||
-      (d.category || '').toLowerCase().includes(lower) ||
-      (d.serial_number || '').toLowerCase().includes(lower)
-    );
-  }, [data, searchTerm]);
+    let list = data;
+    if (activeCategory !== "All") {
+      list = list.filter(d => {
+        const cats = parseCategories(d.category);
+        return cats.length > 0 ? cats.includes(activeCategory) : d.category === activeCategory;
+      });
+    }
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
+      list = list.filter(d => 
+        (d.item_name || '').toLowerCase().includes(lower) ||
+        (d.category || '').toLowerCase().includes(lower) ||
+        (d.serial_number || '').toLowerCase().includes(lower)
+      );
+    }
+    return [...list].sort((a, b) => {
+      const timeA = a.purchase_date ? new Date(a.purchase_date).getTime() : null;
+      const timeB = b.purchase_date ? new Date(b.purchase_date).getTime() : null;
+
+      if (timeA === null && timeB === null) {
+        const cA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const cB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return cB - cA;
+      }
+      if (timeA === null) return 1;
+      if (timeB === null) return -1;
+
+      if (timeA !== timeB) {
+        return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+      }
+      const cA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const cB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return cB - cA;
+    });
+  }, [data, activeCategory, searchTerm, sortOrder]);
 
   const totalItems = data.length;
-  const availableItems = data.filter(d => d.status === 'Available').length;
-  const totalValue = data.reduce((acc, curr) => acc + (parseFloat(curr.purchase_price) || 0), 0);
+  const availableItems = data.filter(d => (d.status || '').toLowerCase() === 'available').length;
+  const totalValue = data
+    .filter(d => (d.status || '').toLowerCase() !== 'sold')
+    .reduce((acc, curr) => acc + (parseFloat(curr.purchase_price) || 0), 0);
   const categories = new Set(data.map(d => d.category)).size;
 
   if (loading) {
@@ -265,16 +314,41 @@ export default function InventoryPage() {
         </div>
       </div>
 
+      {/* Category Filters */}
+      <div className="flex flex-wrap gap-2">
+        {dynamicCategories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setActiveCategory(cat)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer border ${
+              activeCategory === cat
+                ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs"
+                : "bg-card text-foreground/80 hover:text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
       {/* List */}
       <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-xs">
-        <div className="p-6 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Inventory List</h2>
-        </div>
-        
         {filteredData.length === 0 ? (
           <div className="p-12 text-center text-gray-500">
             <MdInventory2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No inventory items found.</p>
+            <p>
+              {activeCategory !== "All"
+                ? `No inventory items found in category "${activeCategory}".`
+                : "No inventory items found."}
+            </p>
+            {activeCategory !== "All" && (
+              <button
+                onClick={() => setActiveCategory("All")}
+                className="mt-3 text-xs font-semibold text-brand-500 hover:underline cursor-pointer"
+              >
+                Clear category filter
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -284,7 +358,20 @@ export default function InventoryPage() {
                   <th className="text-left py-4 px-6 font-medium text-gray-600 dark:text-gray-400 text-sm">Item</th>
                   <th className="text-left py-4 px-6 font-medium text-gray-600 dark:text-gray-400 text-sm">Category</th>
                   <th className="text-left py-4 px-6 font-medium text-gray-600 dark:text-gray-400 text-sm">Status</th>
-                  <th className="text-left py-4 px-6 font-medium text-gray-600 dark:text-gray-400 text-sm hidden sm:table-cell">Purchase Info</th>
+                  <th
+                    onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                    className="text-left py-4 px-6 font-medium text-gray-600 dark:text-gray-400 text-sm hidden sm:table-cell cursor-pointer select-none hover:text-foreground transition-colors group"
+                    title={`Sort by Purchase Date (${sortOrder === 'desc' ? 'Newest first' : 'Oldest first'})`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Purchase Info</span>
+                      {sortOrder === 'desc' ? (
+                        <ArrowDown className="w-3.5 h-3.5 text-brand-500" />
+                      ) : (
+                        <ArrowUp className="w-3.5 h-3.5 text-brand-500" />
+                      )}
+                    </div>
+                  </th>
                   <th className="text-left py-4 px-6 font-medium text-gray-600 dark:text-gray-400 text-sm hidden lg:table-cell">Expense</th>
                   <th className="text-right py-4 px-6 font-medium text-gray-600 dark:text-gray-400 text-sm">Actions</th>
                 </tr>
@@ -292,10 +379,12 @@ export default function InventoryPage() {
               <tbody className="divide-y divide-border">
                 {filteredData.map((item) => {
                   let statusColor = "bg-slate-100 text-slate-700 border-slate-200/80 dark:bg-gray-500/10 dark:text-gray-400 dark:border-gray-500/20";
-                  if (item.status === 'Available') statusColor = "bg-emerald-100/70 text-emerald-700 border-emerald-200/60 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/20";
-                  if (item.status === 'Maintenance') statusColor = "bg-amber-100/70 text-amber-700 border-amber-200/60 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/20";
-                  if (item.status === 'Lost') statusColor = "bg-red-100/70 text-red-700 border-red-200/60 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/20";
-                  if (item.status === 'Broken') statusColor = "bg-red-100/70 text-red-700 border-red-200/60 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/20";
+                  const st = (item.status || '').toLowerCase();
+                  if (st === 'available') statusColor = "bg-emerald-100/70 text-emerald-700 border-emerald-200/60 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/20";
+                  if (st === 'maintenance') statusColor = "bg-amber-100/70 text-amber-700 border-amber-200/60 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/20";
+                  if (st === 'lost') statusColor = "bg-red-100/70 text-red-700 border-red-200/60 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/20";
+                  if (st === 'broken') statusColor = "bg-red-100/70 text-red-700 border-red-200/60 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/20";
+                  if (st === 'sold') statusColor = "bg-blue-100/70 text-blue-700 border-blue-200/60 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/20";
                   const hasDocs = item.expense_receipt_url || item.warranty_letter_url;
 
                   return (
@@ -443,6 +532,7 @@ export default function InventoryPage() {
                     <option value="Maintenance" className="bg-card text-foreground">Maintenance</option>
                     <option value="Lost" className="bg-card text-foreground">Lost</option>
                     <option value="Broken" className="bg-card text-foreground">Broken</option>
+                    <option value="Sold" className="bg-card text-foreground">Sold</option>
                   </select>
                 </div>
               </div>

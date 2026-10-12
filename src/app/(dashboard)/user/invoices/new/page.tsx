@@ -50,6 +50,7 @@ export default function NewInvoicePage() {
     discount: 0,
     advance: 0,
     paymentStatus: "unpaid",
+    workStatus: "pending",
     bankAccountId: "",
     legalName: "",
   });
