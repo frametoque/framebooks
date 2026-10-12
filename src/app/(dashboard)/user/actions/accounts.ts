@@ -111,14 +111,20 @@ export async function createAccount(data: { name: string; type: string; bankName
   await logSystemAction(`Created account "${data.name}"`);
 }
 
-export async function updateAccount(id: number, data: { name: string; type: string; bankName?: string; accountNumber?: string; branch?: string; }) {
+export async function updateAccount(id: number, data: { name: string; type: string; bankName?: string; accountNumber?: string; branch?: string; initialBalance?: number; }) {
   const { error: rbacError } = await requirePermission('accounts', 'update');
   if (rbacError) throw new Error(rbacError);
 
   const tenantId = await getTenantId();
   await sql`
     UPDATE accounts 
-    SET name = ${data.name}, type = ${data.type}, bank_name = ${data.bankName || null}, account_number = ${data.accountNumber || null}, branch = ${data.branch || null}
+    SET name = ${data.name},
+        type = ${data.type},
+        bank_name = ${data.bankName || null},
+        account_number = ${data.accountNumber || null},
+        branch = ${data.branch || null},
+        initial_balance = ${data.initialBalance != null ? data.initialBalance : 0},
+        updated_at = NOW()
     WHERE id = ${id} AND tenant_id = ${tenantId}
   `;
   await logSystemAction(`Updated account "${data.name}"`);
