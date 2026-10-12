@@ -263,6 +263,7 @@ export default function EditQuotationPage() {
       }, lineItems);
       
       router.push("/user/quotations");
+      router.refresh();
     } catch (e) {
       console.error(e);
       alert("Failed to update quotation");

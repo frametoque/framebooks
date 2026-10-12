@@ -257,6 +257,7 @@ export default function NewInvoicePage() {
       }, lineItems);
       if (res?.error) throw new Error(res.error);
       router.push("/user/invoices");
+      router.refresh();
     } catch (e: any) {
       console.error(e);
       if (e?.message?.includes("LIMIT_EXCEEDED")) {

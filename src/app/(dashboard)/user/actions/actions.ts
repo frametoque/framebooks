@@ -56,7 +56,7 @@ export async function uploadReceipt(formData: FormData, type: 'income' | 'expens
   }
 }
 
-import { unstable_cache, revalidateTag } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 export async function getDashboardData(startDate?: string, endDate?: string) {
   const currentYear = new Date().getFullYear();
@@ -998,20 +998,17 @@ export async function payScheduledExpense(id: number) {
 }
 
 // -- INVOICES --
-import { cachedQuery } from '@/lib/db';
-
 export async function getInvoices() {
   const tenantId = await getTenantId();
-  if (!tenantId) return { invoices: [], totalIssued: 0, totalRevenue: 0, totalOutstanding: 0 };
+  if (!tenantId) return { invoices: [], items: [], totalIssued: 0, totalRevenue: 0, totalOutstanding: 0, paid: 0, pending: 0, totalDue: 0 };
 
-  const [totalIssuedCount, rows, nonAdvancePaymentsRows] = await cachedQuery(
-    () => Promise.all([
-      sql`SELECT COUNT(*) as count FROM invoices WHERE tenant_id = ${tenantId}`,
+  const [totalIssuedCount, rows, nonAdvancePaymentsRows] = await Promise.all([
+    sql`SELECT COUNT(*) as count FROM invoices WHERE tenant_id = ${tenantId}`,
     sql`
       SELECT 
         i.invoice_id as id, 
         i.user_email as client_email, 
-        COALESCE((SELECT full_name FROM admin_clients c WHERE (c.id = i.client_id OR (i.user_email IS NOT NULL AND LOWER(c.email) = LOWER(i.user_email))) AND c.tenant_id = ${tenantId} LIMIT 1), i.user_email, 'Client') as client_name, 
+        COALESCE((SELECT full_name FROM admin_clients c WHERE (c.id = i.client_id OR c.id::text = i.client_id::text OR (i.user_email IS NOT NULL AND LOWER(c.email) = LOWER(i.user_email))) AND c.tenant_id = ${tenantId} LIMIT 1), i.user_email, 'Client') as client_name, 
         i.project_name as service, i.subtotal, i.total, i.discount, i.advance, i.tax_rate, i.total_due, i.date as due_date, i.payment_status as status, i.legal_name, i.created_at
       FROM invoices i
       WHERE i.tenant_id = ${tenantId}
@@ -1023,8 +1020,7 @@ export async function getInvoices() {
       WHERE tenant_id = ${tenantId} AND invoice_id IS NOT NULL AND LOWER(description) NOT LIKE 'advance:%' AND LOWER(description) NOT LIKE 'advance payment%'
       GROUP BY invoice_id
     `
-    ])
-  , [`invoices-v2-${tenantId}`], 3600);
+  ]);
   
   const paymentsMap: Record<string, number> = {};
   nonAdvancePaymentsRows.forEach((p: any) => {
@@ -1110,6 +1106,13 @@ export async function deleteInvoice(id: string) {
   await sql`DELETE FROM invoices WHERE invoice_id = ${id} AND tenant_id = ${tenantId}`;
   
   await logSystemAction(`Deleted invoice: "${projectName}" (${id})`);
+
+  try {
+    revalidatePath('/user/invoices');
+    revalidatePath('/user/dashboard');
+  } catch (e) {
+    console.warn("revalidatePath error:", e);
+  }
 }
 
 export async function getInvoiceByIdAdmin(invoiceId: string) {
@@ -1421,15 +1424,25 @@ export async function getClientById(clientId: string) {
   };
 }
 
-async function generateUniqueInvoiceId(): Promise<string> {
-  while (true) {
-    const num = Math.floor(100000 + Math.random() * 900000);
-    const invoiceId = `INV-${num}`;
-    const existing = await sql`SELECT 1 FROM invoices WHERE invoice_id = ${invoiceId}`;
-    if (existing.length === 0) {
-      return invoiceId;
+async function generateUniqueInvoiceId(tenantId: string | number): Promise<string> {
+  const existingRows = await sql`
+    SELECT invoice_id FROM invoices WHERE tenant_id = ${tenantId}
+  `;
+
+  const existingNumbers = new Set<number>();
+  for (const row of existingRows) {
+    const match = row.invoice_id?.match(/^INV-(\d+)$/i);
+    if (match) {
+      existingNumbers.add(parseInt(match[1], 10));
     }
   }
+
+  let nextNum = 1;
+  while (existingNumbers.has(nextNum)) {
+    nextNum++;
+  }
+
+  return `INV-${String(nextNum).padStart(4, '0')}`;
 }
 
 export async function createInvoice(invoiceData: any, lineItems: any[]) {
@@ -1441,17 +1454,20 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
 
   const tenantId = await getTenantId();
   // Upsert client — also save billing address if provided
-  const existingClient = await sql`SELECT id FROM admin_clients WHERE LOWER(email) = LOWER(${invoiceData.userEmail}) AND tenant_id = ${tenantId}`;
+  let resolvedClientId = invoiceData.clientId || null;
+  const existingClient = invoiceData.userEmail
+    ? await sql`SELECT id FROM admin_clients WHERE LOWER(email) = LOWER(${invoiceData.userEmail}) AND tenant_id = ${tenantId}`
+    : [];
   
-  if (existingClient.length === 0 && invoiceData.userEmail) {
+  if (existingClient.length === 0 && (invoiceData.userEmail || invoiceData.clientName)) {
     const clientId = 'C-' + Date.now();
     await sql`
       INSERT INTO admin_clients (id, full_name, company, email, phone, address, active, legal_name, tenant_id)
       VALUES (
         ${clientId},
-        ${invoiceData.clientName || invoiceData.userEmail.split('@')[0]},
+        ${invoiceData.clientName || (invoiceData.userEmail ? invoiceData.userEmail.split('@')[0] : 'Client')},
         ${invoiceData.company || null},
-        ${invoiceData.userEmail},
+        ${invoiceData.userEmail || null},
         ${invoiceData.phone || null},
         ${invoiceData.billingAddress || null},
         true,
@@ -1460,7 +1476,13 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
       )
     `;
     await incrementLifetimeUsage(Number(tenantId), 'clients');
+    if (!resolvedClientId) {
+      resolvedClientId = clientId;
+    }
   } else if (existingClient.length > 0) {
+    if (!resolvedClientId) {
+      resolvedClientId = existingClient[0].id;
+    }
     // Update name/address on existing client whenever new values were entered
     await sql`
       UPDATE admin_clients
@@ -1512,7 +1534,7 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
   const totalDue = parseFloat(invoiceData.totalDue ?? (total - advance)) || 0;
   const taxRate = parseFloat(invoiceData.taxRate) || 0;
 
-  const invoiceId = await generateUniqueInvoiceId();
+  const invoiceId = await generateUniqueInvoiceId(tenantId);
   await sql`
   INSERT INTO invoices (
     invoice_id, client_id, user_email, project_name, date, 
@@ -1520,7 +1542,7 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
     work_status, payment_status, currency, category, bank_account_id, tax_rate, legal_name, tenant_id,
     layout_id, custom_field_values, layout_snapshot
   ) VALUES (
-    ${invoiceId}, ${invoiceData.clientId || null}, ${invoiceData.userEmail || null},
+    ${invoiceId}, ${resolvedClientId || null}, ${invoiceData.userEmail || null},
     ${invoiceData.projectName || ''}, ${invoiceData.date || new Date().toISOString().split('T')[0]},
     ${subtotal}, ${discount}, ${total}, ${advance}, ${totalDue},
     ${invoiceData.workStatus || 'pending'}, ${invoiceData.paymentStatus || 'unpaid'}, ${invoiceData.currency || 'LKR'}, ${invoiceData.category || null},
@@ -1542,6 +1564,14 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
 
   await incrementLifetimeUsage(Number(tenantId), 'invoices');
   await logSystemAction(`Created invoice: "${invoiceData.projectName}" (${invoiceId}) for LKR ${total}`);
+
+  try {
+    revalidatePath('/user/invoices');
+    revalidatePath('/user/dashboard');
+  } catch (e) {
+    console.warn("revalidatePath error:", e);
+  }
+
   return { success: true, invoiceId };
 }
 
@@ -1646,8 +1676,13 @@ export async function updateInvoice(invoiceId: string, invoiceData: any, lineIte
 
   await logSystemAction(`Updated invoice: "${invoiceData.projectName}" (${invoiceId})`);
   
-  revalidateTag(`invoices-${tenantId}`, {});
-  revalidateTag(`dashboard-${tenantId}`, {});
+  try {
+    revalidatePath('/user/invoices');
+    revalidatePath(`/user/invoice/${invoiceId}`);
+    revalidatePath('/user/dashboard');
+  } catch (e) {
+    console.warn("revalidatePath error:", e);
+  }
 
   return { success: true };
 }
@@ -1744,13 +1779,35 @@ export async function getReports(startDate?: string, endDate?: string) {
 }
 
 // -- QUOTATIONS --
+async function generateUniqueQuotationNumber(tenantId: string | number): Promise<string> {
+  const existingRows = await sql`
+    SELECT quotation_number, id FROM admin_quotations WHERE tenant_id = ${tenantId}
+  `;
+
+  const existingNumbers = new Set<number>();
+  for (const row of existingRows) {
+    const rawVal = row.quotation_number || `QT-${String(row.id).padStart(4, '0')}`;
+    const match = rawVal?.match(/^QT-(\d+)$/i);
+    if (match) {
+      existingNumbers.add(parseInt(match[1], 10));
+    }
+  }
+
+  let nextNum = 1;
+  while (existingNumbers.has(nextNum)) {
+    nextNum++;
+  }
+
+  return `QT-${String(nextNum).padStart(4, '0')}`;
+}
+
 export async function getQuotations(startDate?: string, endDate?: string) {
   const start = startDate || '1970-01-01';
   const end = endDate || '2099-12-31';
   const tenantId = await getTenantId();
   
   const rows = await sql`
-    SELECT q.id, q.date, q.amount, q.advance, q.total_due as "totalDue", q.discount, q.bank_account_id as "bankAccountId",
+    SELECT q.id, q.quotation_number, q.date, q.amount, q.advance, q.total_due as "totalDue", q.discount, q.bank_account_id as "bankAccountId",
            c.full_name as client, c.email as "clientEmail", q.client_id as "clientId", q.description as desc, q.category,
            q.invoice_id as invoice, q.receipt_url as "receiptUrl", q.status, q.project_confirmed as "projectConfirmed", q.legal_name as "legalName", q.created_at
     FROM admin_quotations q
@@ -1767,6 +1824,7 @@ export async function getQuotations(startDate?: string, endDate?: string) {
     totalValue,
     items: rows.map(r => ({
       ...r,
+      quotationNumber: r.quotation_number || `QT-${String(r.id).padStart(4, '0')}`,
       created_at: r.created_at,
       date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       amount: parseFloat(r.amount),
@@ -1825,19 +1883,21 @@ export async function createQuotation(data: any, lineItems: any[] = []) {
     `;
   }
 
+  const quotationNumber = await generateUniqueQuotationNumber(tenantId);
+
   const result = await sql`
     INSERT INTO admin_quotations (
-      date, amount, advance, total_due, discount,
+      quotation_number, date, amount, advance, total_due, discount,
       description, category, payment_method, invoice_id, client_id, receipt_url, status, bank_account_id, notes, legal_name, tenant_id,
       layout_id, layout_snapshot
     )
     VALUES (
-      ${data.date}, ${data.amount}, ${advance}, ${totalDue}, ${discount},
+      ${quotationNumber}, ${data.date}, ${data.amount}, ${advance}, ${totalDue}, ${discount},
       ${data.description}, ${data.category}, ${data.paymentMethod},
       ${data.invoiceId || null}, ${data.clientId || null}, ${data.receiptUrl || null}, 'draft', ${data.bankAccountId || null}, ${data.notes || null}, ${data.legalName || null}, ${tenantId},
       ${assignedLayoutId}, ${layoutSnapshot ? sql.json(layoutSnapshot) : null}
     )
-    RETURNING id
+    RETURNING id, quotation_number
   `;
 
   const quotationId = result[0].id;
@@ -1852,7 +1912,16 @@ export async function createQuotation(data: any, lineItems: any[] = []) {
   }
 
   await incrementLifetimeUsage(tenantId, 'quotations');
-  await logSystemAction(`Created quotation for "${data.description || 'Quotation'}" (ID: ${quotationId}) for LKR ${data.amount}`);
+  await logSystemAction(`Created quotation for "${data.description || 'Quotation'}" (${quotationNumber}) for LKR ${data.amount}`);
+
+  try {
+    revalidatePath('/user/quotations');
+    revalidatePath('/user/dashboard');
+  } catch (e) {
+    console.warn("revalidatePath error:", e);
+  }
+
+  return { success: true, id: quotationId, quotationNumber };
 }
 
 // ─── REPLACE updateQuotation in actions.ts ───────────────────────────────────
@@ -1928,6 +1997,14 @@ export async function updateQuotation(id: number, data: any, lineItems: any[] = 
       }
     }
     await logSystemAction(`Updated quotation ID ${id} ("${data.description || 'Quotation'}")`);
+
+    try {
+      revalidatePath('/user/quotations');
+      revalidatePath(`/user/quotations/${id}/edit`);
+      revalidatePath('/user/dashboard');
+    } catch (e) {
+      console.warn("revalidatePath error:", e);
+    }
   } catch (e) {
     console.error("Failed to update quotation:", e);
     throw new Error("Failed to update quotation");
@@ -1958,6 +2035,13 @@ export async function deleteQuotation(id: number) {
 
   await sql`DELETE FROM admin_quotations WHERE id = ${id} AND tenant_id = ${tenantId}`;
   await logSystemAction(`Deleted quotation ID ${id} ("${quoteDesc}")`);
+
+  try {
+    revalidatePath('/user/quotations');
+    revalidatePath('/user/dashboard');
+  } catch (e) {
+    console.warn("revalidatePath error:", e);
+  }
 }
  
 export async function confirmQuotation(quotationId: number, quotationData: any, projectName: string, bankAccountId: number | null = null) {
@@ -2018,7 +2102,7 @@ export async function confirmQuotation(quotationId: number, quotationData: any, 
     resolvedClientId = existingClient[0].id;
   }
 
-  const invoiceId = await generateUniqueInvoiceId();
+  const invoiceId = await generateUniqueInvoiceId(tenantId);
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -2026,11 +2110,12 @@ export async function confirmQuotation(quotationId: number, quotationData: any, 
     
     await sql`
       INSERT INTO invoices (
-        invoice_id, user_email, project_name, date,
+        invoice_id, client_id, user_email, project_name, date,
         subtotal, discount, total, advance, total_due,
-         payment_status, currency, bank_account_id, tenant_id
+        work_status, payment_status, currency, bank_account_id, tenant_id
       ) VALUES (
         ${invoiceId},
+        ${resolvedClientId || null},
         ${userEmail},
         ${projectName},
         ${todayStr},
@@ -2073,6 +2158,14 @@ export async function confirmQuotation(quotationId: number, quotationData: any, 
     `;
 
     await logSystemAction(`Confirmed quotation ID ${quotationId} for "${projectName}" (Linked Invoice: ${invoiceId})`);
+
+    try {
+      revalidatePath('/user/invoices');
+      revalidatePath('/user/quotations');
+      revalidatePath('/user/dashboard');
+    } catch (e) {
+      console.warn("revalidatePath error:", e);
+    }
 
     return { success: true, invoiceId };
 
@@ -2119,8 +2212,12 @@ export async function getQuotationById(quotationId: string) {
       ORDER BY id ASC
     `;
  
+    const qNum = q.quotation_number || `QT-${String(q.id).padStart(4, '0')}`;
+
     return {
       id: q.id,
+      quotation_number: qNum,
+      quotationNumber: qNum,
       date: q.date,
       amount: parseFloat(q.amount),
       advance: parseFloat(q.advance || 0),
@@ -2277,6 +2374,14 @@ export async function recordInvoicePayment(
     `;
 
     await logSystemAction(`Recorded payment of LKR ${paidAmount} via ${paymentMethod} for invoice ${invoiceId}`);
+
+    try {
+      revalidatePath('/user/invoices');
+      revalidatePath(`/user/invoice/${invoiceId}`);
+      revalidatePath('/user/dashboard');
+    } catch (e) {
+      console.warn("revalidatePath error:", e);
+    }
 
     if (newStatus === "fully paid") {
       // Logic for domain reactivation was removed

@@ -355,9 +355,13 @@ export default function InvoicesPage() {
     } else {
       statusMatch = rowStatus === activeFilter.toLowerCase();
     }
+    const search = (searchTerm || '').trim().toLowerCase();
     const searchMatch =
-      row.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      row.id.toLowerCase().includes(searchTerm.toLowerCase());
+      !search ||
+      (row.client || '').toLowerCase().includes(search) ||
+      (row.id || '').toLowerCase().includes(search) ||
+      (row.service || '').toLowerCase().includes(search) ||
+      (row.clientEmail || '').toLowerCase().includes(search);
     return statusMatch && searchMatch;
   }) ?? [], [data, activeFilter, searchTerm]);
 

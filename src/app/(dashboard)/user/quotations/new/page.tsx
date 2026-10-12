@@ -284,6 +284,7 @@ export default function NewQuotationPage() {
 
       alert("Quotation created successfully!");
       router.push("/user/quotations");
+      router.refresh();
     } catch (e: any) {
       console.error(e);
       alert(e?.message || "Failed to create quotation");

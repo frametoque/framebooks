@@ -73,18 +73,20 @@ export default function QuotationsPage() {
       }
 
       const layoutDef = q.layout_snapshot || q.active_layout_definition;
+      const qNum = q.quotation_number || q.quotationNumber || `QT-${String(q.id).padStart(4, "0")}`;
       if (layoutDef) {
         await downloadInvoiceWithLayout({
           invoice: {
             ...q,
-            invoice_id: `QT-${String(q.id).padStart(5, "0")}`,
+            invoice_id: qNum,
+            quotation_id: qNum,
             subtotal: q.amount,
             total: q.total_due || q.amount,
           },
           tenantInfo: tInfo,
           plan: tInfo?.plan || "Free",
           layoutDef,
-          fileName: `QT-${String(q.id).padStart(5, "0")}.pdf`,
+          fileName: `${qNum}.pdf`,
         });
         return;
       }
@@ -102,7 +104,7 @@ export default function QuotationsPage() {
       
       // Basic HTML for the quotation
       element.innerHTML = `
-        <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 20px;">Quotation QT-${String(q.id).padStart(5, "0")}</h1>
+        <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 20px;">Quotation ${qNum}</h1>
         <p><strong>Project:</strong> ${q.description || "Project"}</p>
         <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
         <p><strong>Client Name:</strong> ${q.client_name || ""}</p>
@@ -157,7 +159,7 @@ export default function QuotationsPage() {
       const pdfHeight = (element.offsetHeight * 2 * pdfWidth) / (800 * 2);
       
       pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`QT-${String(q.id).padStart(5, "0")}.pdf`);
+      pdf.save(`${qNum}.pdf`);
     } catch (err) {
       console.error("PDF generation failed:", err);
       alert("Failed to generate PDF. Please try again.");
@@ -185,11 +187,13 @@ export default function QuotationsPage() {
       }
 
       const layoutDef = q.layout_snapshot || q.active_layout_definition;
+      const qNum = q.quotation_number || q.quotationNumber || `QT-${String(q.id).padStart(4, "0")}`;
       if (layoutDef) {
         await printInvoiceWithLayout({
           invoice: {
             ...q,
-            invoice_id: `QT-${String(q.id).padStart(5, "0")}`,
+            invoice_id: qNum,
+            quotation_id: qNum,
             subtotal: q.amount,
             total: q.total_due || q.amount,
           },
@@ -491,6 +495,7 @@ const handleDelete = async (id: number) => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-black/[0.02] dark:bg-white/[0.02] border-b border-border text-gray-600 dark:text-gray-400 text-sm">
+                <th className="p-4 font-medium">Quotation #</th>
                 <th className="p-4 font-medium">Date</th>
                 <th className="p-4 font-medium">Amount</th>
                 <th className="p-4 font-medium">Client</th>
@@ -503,6 +508,9 @@ const handleDelete = async (id: number) => {
             <tbody className="divide-y divide-border">
               {filteredQuotations.map((row: any) => (
                 <tr key={row.id} className="hover:bg-black/[0.02] dark:hover:bg-card transition-colors">
+                  <td className="p-4 font-semibold text-brand-700 dark:text-brand-400">
+                    {row.quotationNumber || `QT-${String(row.id).padStart(4, '0')}`}
+                  </td>
                   <td className="p-4 text-sm">{row.date}</td>
                   <td className="p-4 font-semibold text-blue-600 dark:text-blue-400">{formatLKR(row.amount)}</td>
                   <td className="p-4">
@@ -597,7 +605,7 @@ const handleDelete = async (id: number) => {
               ))}
               {filteredQuotations.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-gray-500">No quotations found.</td>
+                  <td colSpan={8} className="p-6 text-center text-gray-500">No quotations found.</td>
                 </tr>
               )}
             </tbody>
