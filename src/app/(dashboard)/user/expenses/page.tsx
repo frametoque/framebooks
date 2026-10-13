@@ -131,7 +131,7 @@ export default function ExpensesPage() {
         getScheduledExpenses().catch(() => []),
         getAccounts(),
         getTenantInfo(),
-        getCategories().catch(() => [])
+        getCategories('expense').catch(() => [])
       ]);
       setAccounts(accs);
       setData(res);
@@ -155,7 +155,7 @@ export default function ExpensesPage() {
           getScheduledExpenses().catch(() => []),
           getAccounts(),
           getTenantInfo(),
-          getCategories().catch(() => [])
+          getCategories('expense').catch(() => [])
         ]);
         setAccounts(accs);
         if (!cancelled) {
@@ -610,6 +610,7 @@ export default function ExpensesPage() {
                   value={selectedCategories} 
                   onChange={setSelectedCategories} 
                   placeholder="Select categories..."
+                  type="expense"
                 />
               </div>
 

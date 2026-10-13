@@ -10,6 +10,7 @@ import { useAdminDateRange } from "../context/AdminDateRangeContext";
 import ExpenseBreakdownWidget from "../components/ExpenseBreakdownWidget";
 import TopClientsWidget from "../components/TopClientsWidget";
 import AnimatedNumber from "../components/AnimatedNumber";
+import AutoFitStatNumber from "../components/AutoFitStatNumber";
 import { useAccentTheme } from "@/lib/theme/useAccentTheme";
 
 const formatLKR = (amount: number) => {
@@ -232,23 +233,22 @@ export default function DashboardPage() {
           <motion.div 
             variants={itemVariants} 
             key={i} 
-            className="bg-card border border-border rounded-3xl p-4 sm:p-5 xl:p-6 flex items-center gap-3.5 hover:shadow-md transition-all shadow-xs min-w-0"
+            className="bg-card border border-border rounded-3xl p-4 sm:p-5 xl:p-6 flex items-center gap-3.5 hover:shadow-md transition-all shadow-xs min-w-0 h-full"
           >
             <div className={`p-2.5 sm:p-3 rounded-2xl shrink-0 ${stat.bg}`}>
               <stat.icon className={`w-5 h-5 sm:w-5 sm:h-5 ${stat.color}`} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium truncate" title={stat.label}>
+              <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium truncate mb-1" title={stat.label}>
                 {stat.label}
               </p>
-              <p 
-                className="text-xl sm:text-xl lg:text-lg xl:text-2xl font-bold text-foreground tracking-tight whitespace-nowrap overflow-visible" 
-                title={stat.value}
-              >
-                <AnimatedNumber value={stat.value} />
-              </p>
+              <AutoFitStatNumber 
+                value={stat.value} 
+                maxFontSize={28}
+                minFontSize={13}
+              />
               {stat.subtext && (
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate" title={stat.subtext}>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 truncate" title={stat.subtext}>
                   {stat.subtext}
                 </p>
               )}
@@ -257,7 +257,7 @@ export default function DashboardPage() {
         ))}
         <motion.div 
           variants={itemVariants} 
-          className="bg-card border border-border rounded-3xl p-4 sm:p-5 xl:p-6 flex items-center gap-3.5 hover:shadow-md transition-all shadow-xs relative group min-w-0 sm:col-span-2 lg:col-span-2 xl:col-span-1"
+          className="bg-card border border-border rounded-3xl p-4 sm:p-5 xl:p-6 flex items-center gap-3.5 hover:shadow-md transition-all shadow-xs relative group min-w-0 sm:col-span-2 lg:col-span-2 xl:col-span-1 h-full"
         >
           <div className="w-10 h-10 rounded-2xl bg-amber-100/80 dark:bg-amber-400/10 flex items-center justify-center shrink-0">
             <span className="text-base font-bold text-amber-700 dark:text-amber-400">
@@ -265,15 +265,15 @@ export default function DashboardPage() {
             </span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium truncate" title="Unpaid Invoices">
+            <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium truncate mb-1" title="Unpaid Invoices">
               Unpaid Invoices
             </p>
-            <p 
-              className="text-xl sm:text-xl lg:text-lg xl:text-2xl font-bold text-amber-600 dark:text-amber-400 tracking-tight whitespace-nowrap overflow-visible" 
-              title={formatLKR(data.unpaidAmount || 0)}
-            >
-              <AnimatedNumber value={formatLKR(data.unpaidAmount || 0)} />
-            </p>
+            <AutoFitStatNumber 
+              value={formatLKR(data.unpaidAmount || 0)} 
+              maxFontSize={28}
+              minFontSize={13}
+              colorClass="text-amber-600 dark:text-amber-400"
+            />
           </div>
 
           {data.unpaidClients && data.unpaidClients.length > 0 && (
@@ -314,15 +314,16 @@ export default function DashboardPage() {
           else if (pct < 0) pctColor = stat.invertColors ? "text-emerald-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
 
           return (
-            <motion.div variants={itemVariants} key={i} className="bg-card border border-border rounded-3xl p-5 sm:p-6 hover:shadow-md transition-all shadow-xs flex flex-col justify-between min-w-0">
+            <motion.div variants={itemVariants} key={i} className="bg-card border border-border rounded-3xl p-5 sm:p-6 hover:shadow-md transition-all shadow-xs flex flex-col justify-between min-w-0 h-full">
               <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium mb-2 truncate" title={stat.label}>{stat.label}</p>
-              <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 min-w-0">
-                <p 
-                  className="text-xl sm:text-xl xl:text-2xl font-bold text-foreground tracking-tight whitespace-nowrap overflow-visible"
-                  title={stat.isCurrency ? formatLKR(stat.value) : String(stat.value)}
-                >
-                  <AnimatedNumber value={stat.isCurrency ? formatLKR(stat.value) : stat.value} />
-                </p>
+              <div className="flex items-baseline justify-between gap-2 min-w-0">
+                <div className="flex-1 min-w-0 pr-1">
+                  <AutoFitStatNumber 
+                    value={stat.isCurrency ? formatLKR(stat.value) : stat.value} 
+                    maxFontSize={30}
+                    minFontSize={13}
+                  />
+                </div>
                 <div className={`flex items-center gap-1 text-xs xl:text-sm font-semibold shrink-0 ${pctColor}`}>
                   {isPositive ? <MdCallMade className="w-3.5 h-3.5" /> : <MdCallReceived className="w-3.5 h-3.5" />}
                   <span><AnimatedNumber value={displayPct + "%"} /></span>
@@ -391,7 +392,11 @@ export default function DashboardPage() {
           </div>
         </motion.div>
         <motion.div variants={itemVariants}>
-          <ExpenseBreakdownWidget initialData={data.expenseBreakdown} />
+          <ExpenseBreakdownWidget 
+            initialData={data.expenseBreakdown} 
+            initialExpenseData={data.expenseBreakdown} 
+            initialIncomeData={data.incomeBreakdown} 
+          />
         </motion.div>
       </div>
 

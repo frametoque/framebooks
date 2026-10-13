@@ -377,7 +377,7 @@ export default function EditQuotationPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-sm text-gray-400">Categories</label>
-                <CategoryPicker  value={selectedCategories} onChange={setSelectedCategories} disabled={isConfirmed} />
+                <CategoryPicker value={selectedCategories} onChange={setSelectedCategories} disabled={isConfirmed} type="income" />
               </div>
               <div className="space-y-1">
                 <label className="text-sm text-gray-400">Payment Method</label>

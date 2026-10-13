@@ -163,7 +163,7 @@ export default function IncomePage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [res, cls, accs, invsData, cats, tInfo] = await Promise.all([getIncomes(startDate, endDate), getClients(), getAccounts(), getInvoices(), getCategories(), getTenantInfo()]);
+      const [res, cls, accs, invsData, cats, tInfo] = await Promise.all([getIncomes(startDate, endDate), getClients(), getAccounts(), getInvoices(), getCategories('income'), getTenantInfo()]);
       setServerCategories(cats);
       setData(res);
       setClients(cls);
@@ -655,7 +655,7 @@ export default function IncomePage() {
 
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Categories</label>
-                <CategoryPicker categories={dynamicCategories} value={selectedCategories} onChange={setSelectedCategories} placeholder="Select categories..." />
+                <CategoryPicker categories={dynamicCategories} value={selectedCategories} onChange={setSelectedCategories} placeholder="Select categories..." type="income" />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

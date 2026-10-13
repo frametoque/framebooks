@@ -419,7 +419,7 @@ export default function EditInvoicePage() {
             {/* Categories — full width */}
             <div className="space-y-1">
               <label className="text-sm text-gray-400">Categories</label>
-              <CategoryPicker  value={selectedCategories} onChange={setSelectedCategories} />
+              <CategoryPicker value={selectedCategories} onChange={setSelectedCategories} type="income" />
             </div>
 
             <div className="grid grid-cols-3 gap-4">

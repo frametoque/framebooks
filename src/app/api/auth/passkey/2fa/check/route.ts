@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import sql from '@/lib/db';
 import { auth } from '@/lib/auth';
-import { cookies } from 'next/headers';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -28,18 +27,11 @@ export async function GET(req: Request) {
     }
   }
 
-  const cookieStore = await cookies();
-  const deviceId = cookieStore.get('device_id')?.value;
-
-  if (!deviceId) {
-    return NextResponse.json({ hasPasskeys: false });
-  }
-
   try {
     const count = await sql`
       SELECT COUNT(*) as count 
       FROM passkeys 
-      WHERE user_id = ${userId} AND device_id = ${deviceId}
+      WHERE user_id = ${userId}
     `;
     
     return NextResponse.json({ 

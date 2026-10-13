@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import sql from '@/lib/db';
 import { cookies } from 'next/headers';
-import {  auth  } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 
 export async function POST(req: Request) {
   const rpID = new URL(req.url).hostname;
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
   try {
     // Find the passkey in our database
-    const dbPasskeys = await sql`SELECT public_key, counter FROM passkeys WHERE id = ${body.id} AND user_id = ${userId}`;
+    const dbPasskeys = await sql`SELECT public_key, counter, transports FROM passkeys WHERE id = ${body.id} AND user_id = ${userId}`;
     
     if (dbPasskeys.length === 0) {
       return NextResponse.json({ error: "Passkey not found" }, { status: 404 });
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
         id: body.id,
         publicKey: publicKeyBuffer,
         counter: authenticator.counter,
-        transports: ['internal'],
+        transports: (authenticator.transports && authenticator.transports.length > 0) ? authenticator.transports : ['internal', 'hybrid'],
       },
     });
 
@@ -54,8 +54,20 @@ export async function POST(req: Request) {
       
       cookieStore.delete('currentChallenge');
       cookieStore.delete('current2FAUser');
+
+      let deviceId = cookieStore.get('device_id')?.value;
+      if (!deviceId) {
+        deviceId = crypto.randomUUID();
+      }
       
-      return NextResponse.json({ verified: true });
+      const response = NextResponse.json({ verified: true });
+      response.cookies.set('device_id', deviceId, {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 60 * 60 * 24 * 365 * 10 // 10 years
+      });
+      return response;
     }
     
     return NextResponse.json({ verified: false }, { status: 400 });

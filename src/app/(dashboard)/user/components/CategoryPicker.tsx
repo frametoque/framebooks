@@ -14,6 +14,7 @@ interface CategoryPickerProps {
   onChange: (selected: string[]) => void;
   disabled?: boolean;
   placeholder?: string;
+  type?: 'expense' | 'income' | 'all';
   // Kept for backward compatibility, but we fetch our own now
   categories?: string[];
 }
@@ -23,6 +24,7 @@ export default function CategoryPicker({
   onChange,
   disabled = false,
   placeholder = "Select categories...",
+  type = 'expense',
   categories: initialCategories = [],
 }: CategoryPickerProps) {
   const { confirm } = useConfirm();
@@ -40,7 +42,7 @@ export default function CategoryPicker({
     async function load() {
       try {
         setLoading(true);
-        const res = await getCategories();
+        const res = await getCategories(type);
         setServerCategories(prev => {
           const merged = Array.from(new Set([...prev, ...res, ...initialCategories])).filter(Boolean);
           return merged.sort();
@@ -52,7 +54,7 @@ export default function CategoryPicker({
       }
     }
     load();
-  }, []);
+  }, [type]);
 
   useEffect(() => {
     if (initialCategories.length > 0) {
@@ -143,7 +145,7 @@ export default function CategoryPicker({
     if (!catName || serverCategories.includes(catName)) return;
     try {
       setAdding(true);
-      await createCategory(catName);
+      await createCategory(catName, type);
       setServerCategories(prev => [...prev, catName].sort());
       onChange([...value, catName]);
     } catch (e) {
@@ -157,7 +159,7 @@ export default function CategoryPicker({
     e.stopPropagation();
     if (!await confirm(`Delete category "${catName}"?`)) return;
     try {
-      await deleteCategory(catName);
+      await deleteCategory(catName, type);
       setServerCategories(prev => prev.filter(c => c !== catName));
       onChange(value.filter(c => c !== catName));
     } catch (e) {

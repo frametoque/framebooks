@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
 
-export async function POST() {
+export async function POST(req: Request) {
   const { userId } = await auth();
   
   if (!userId) {
@@ -10,6 +10,12 @@ export async function POST() {
   }
 
   try {
+    const body = await req.json().catch(() => ({}));
+    if (body?.id) {
+      await sql`DELETE FROM passkeys WHERE id = ${body.id} AND user_id = ${userId}`;
+      return NextResponse.json({ success: true });
+    }
+
     await sql`DELETE FROM passkeys WHERE user_id = ${userId}`;
     return NextResponse.json({ success: true });
   } catch (error) {

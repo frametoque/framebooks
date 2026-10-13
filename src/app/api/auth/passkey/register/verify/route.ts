@@ -1,8 +1,28 @@
 import { verifyRegistrationResponse } from '@simplewebauthn/server';
 import { NextResponse } from 'next/server';
-import {  auth  } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
 import { cookies } from 'next/headers';
+
+function getDeviceName(ua: string | null, customName?: string): string {
+  if (customName && customName.trim()) return customName.trim();
+  if (!ua) return 'Passkey Device';
+  if (/iPhone/i.test(ua)) return 'iPhone';
+  if (/iPad/i.test(ua)) return 'iPad';
+  if (/Macintosh|Mac OS X/i.test(ua)) {
+    if (/Chrome/i.test(ua) && !/Edg/i.test(ua)) return 'Mac (Chrome)';
+    if (/Safari/i.test(ua)) return 'Mac (Safari)';
+    return 'Mac';
+  }
+  if (/Windows/i.test(ua)) {
+    if (/Edg/i.test(ua)) return 'Windows (Edge)';
+    if (/Chrome/i.test(ua)) return 'Windows (Chrome)';
+    return 'Windows PC';
+  }
+  if (/Android/i.test(ua)) return 'Android Device';
+  if (/Linux/i.test(ua)) return 'Linux Device';
+  return 'Personal Device';
+}
 
 export async function POST(req: Request) {
   const rpID = new URL(req.url).hostname;
@@ -41,13 +61,23 @@ export async function POST(req: Request) {
       if (!deviceId) {
         deviceId = crypto.randomUUID();
       }
+
+      const userAgent = req.headers.get('user-agent');
+      const deviceName = getDeviceName(userAgent, body.deviceName);
+      const transports = body.response?.transports || ['internal', 'hybrid'];
       
       await sql`
         INSERT INTO passkeys (
-          id, user_id, public_key, counter, device_type, backed_up, name, device_id
+          id, user_id, public_key, counter, device_type, backed_up, name, device_id, transports
         ) VALUES (
-          ${id}, ${userId}, ${publicKeyHex}, ${counter}, ${credentialDeviceType}, ${credentialBackedUp}, 'My Device', ${deviceId}
+          ${id}, ${userId}, ${publicKeyHex}, ${counter}, ${credentialDeviceType}, ${credentialBackedUp}, ${deviceName}, ${deviceId}, ${transports}
         )
+        ON CONFLICT (id) DO UPDATE SET
+          counter = EXCLUDED.counter,
+          device_type = EXCLUDED.device_type,
+          backed_up = EXCLUDED.backed_up,
+          device_id = EXCLUDED.device_id,
+          transports = EXCLUDED.transports
       `;
       
       cookieStore.delete('currentChallenge');

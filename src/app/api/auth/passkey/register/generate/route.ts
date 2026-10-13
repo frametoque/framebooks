@@ -1,6 +1,6 @@
 import { generateRegistrationOptions } from '@simplewebauthn/server';
 import { NextResponse } from 'next/server';
-import {  auth, currentUser  } from '@/lib/auth';
+import { auth, currentUser } from '@/lib/auth';
 import sql from '@/lib/db';
 
 const rpName = 'Framebooks';
@@ -14,8 +14,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Get user's existing passkeys
-  const existingPasskeys = await sql`SELECT public_key FROM passkeys WHERE user_id = ${userId}`;
+  // Get user's existing passkeys using credential ID
+  const existingPasskeys = await sql`SELECT id FROM passkeys WHERE user_id = ${userId}`;
   
   const options = await generateRegistrationOptions({
     rpName,
@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     userName: user.primaryEmailAddress?.emailAddress || userId,
     attestationType: 'none',
     excludeCredentials: existingPasskeys.map((pk: any) => ({
-      id: pk.public_key,
+      id: pk.id,
       type: 'public-key',
     })),
     authenticatorSelection: {

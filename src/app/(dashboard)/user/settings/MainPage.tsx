@@ -1996,7 +1996,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                   </div>
                   <div className="flex-1 flex flex-col items-start gap-1">
                     <h3 className="text-xl font-bold">{user?.name || "No name provided"}</h3>
-                    <p className="text-brand-400 font-mono text-sm mb-2">{user?.email || "No email provided"}</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">{user?.email || "No email provided"}</p>
                     <label className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 border border-border rounded-3xl hover:bg-white/20 transition-colors cursor-pointer text-sm font-semibold text-gray-300 mt-1">
                       <MdUpload className="w-4 h-4" />
                       Change Photo
@@ -2076,7 +2076,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                       }}
                       className="px-4 py-2 bg-white/10 hover:bg-white/20 text-foreground rounded-3xl font-semibold transition-colors text-sm whitespace-nowrap shrink-0 cursor-pointer"
                     >
-                      {hasCurrentDevicePasskey ? "Register Another Device" : "Enable App Lock on this Device"}
+                      {customPasskeys.length > 0 ? "Add Another Passkey" : "Enable App Lock with Passkey"}
                     </button>
                   </div>
 
@@ -2107,7 +2107,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                   )}
 
                   <div className="space-y-3">
-                    {!hasCurrentDevicePasskey && customPasskeys.length > 0 && (
+                    {!hasCurrentDevicePasskey && customPasskeys.length > 0 && !customPasskeys.some((pk: any) => pk.device_type === 'multiDevice') && (
                       <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl mb-4">
                         <p className="text-orange-400 font-medium text-sm">App Lock is not enabled on this device.</p>
                       </div>
@@ -2127,13 +2127,38 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                                 <p className="text-xs text-gray-400">Added on {new Date(pk.created_at).toLocaleDateString()}</p>
                                 <span className="w-1 h-1 rounded-full bg-white/20"></span>
                                 <p className="text-xs text-gray-400">
-                                  {pk.device_type === 'singleDevice' ? 'Single Device' : 'Multi Device'}
-                                  {pk.backed_up ? ' (Backed up)' : ''}
-                                  {pk.is_current_device ? ' (This Device)' : ''}
+                                  {pk.device_type === 'singleDevice' ? 'Single Device Key' : 'Multi-Device Passkey'}
+                                  {pk.backed_up ? ' • Backed up' : ''}
+                                  {pk.is_current_device ? ' • Ready on this Device' : ''}
                                 </p>
                               </div>
                             </div>
                           </div>
+                          <button
+                            type="button"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (!confirm(`Delete passkey "${pk.name}"?`)) return;
+                              try {
+                                const res = await fetch('/api/auth/passkey/remove', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ id: pk.id })
+                                });
+                                if (res.ok) {
+                                  setCustomPasskeys((prev: any[]) => prev.filter((p: any) => p.id !== pk.id));
+                                } else {
+                                  alert("Failed to delete passkey.");
+                                }
+                              } catch (e) {
+                                alert("Error deleting passkey.");
+                              }
+                            }}
+                            className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-xl hover:bg-red-500/10 cursor-pointer"
+                            title="Delete this passkey"
+                          >
+                            <MdDelete className="w-5 h-5" />
+                          </button>
                         </div>
                       ))
                     )}

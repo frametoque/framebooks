@@ -2773,6 +2773,49 @@ export async function getExpenseBreakdownByMode(mode: string) {
   });
 }
 
+export async function getIncomeBreakdownByMode(mode: string) {
+  const tenantId = await getTenantId();
+  if (!tenantId) return [];
+
+  let start = '1970-01-01';
+  let end = '2099-12-31';
+
+  const now = new Date();
+  if (mode === 'This Month') {
+    start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  } else if (mode === 'Last Month') {
+    start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+    end = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+  } else if (mode === 'This Year') {
+    start = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+    end = new Date(now.getFullYear(), 11, 31).toISOString().split('T')[0];
+  } else if (mode === 'Last Year') {
+    start = new Date(now.getFullYear() - 1, 0, 1).toISOString().split('T')[0];
+    end = new Date(now.getFullYear() - 1, 11, 31).toISOString().split('T')[0];
+  } // Lifetime is default
+
+  const rows = await sql`
+    SELECT 
+      category as name,
+      SUM(amount) as value
+    FROM admin_incomes
+    WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp
+    GROUP BY category
+    ORDER BY value DESC
+  `;
+
+  const total = rows.reduce((sum, r) => sum + parseFloat(r.value), 0);
+  return rows.map(r => {
+    const val = parseFloat(r.value);
+    return {
+      name: r.name || 'Other',
+      value: val,
+      percentage: total > 0 ? parseFloat(((val / total) * 100).toFixed(1)) : 0
+    };
+  });
+}
+
 export async function getTopClients() {
   const tenantId = await getTenantId();
   if (!tenantId) return [];

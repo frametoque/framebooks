@@ -30,7 +30,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const passkeys = await sql`SELECT public_key, id FROM passkeys WHERE user_id = ${userId}`;
+    const passkeys = await sql`SELECT public_key, id, transports FROM passkeys WHERE user_id = ${userId}`;
     
     if (passkeys.length === 0) {
       return NextResponse.json({ error: "No passkeys configured" }, { status: 400 });
@@ -41,7 +41,7 @@ export async function GET(req: Request) {
       allowCredentials: passkeys.map(pk => ({
         id: pk.id,
         type: 'public-key',
-        transports: ['internal'],
+        transports: (pk.transports && pk.transports.length > 0) ? pk.transports : ['internal', 'hybrid'],
       })),
       userVerification: 'preferred',
     });

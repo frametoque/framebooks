@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import {  auth  } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
 import { cookies } from 'next/headers';
 
@@ -23,7 +23,10 @@ export async function GET() {
 
     const enrichedPasskeys = passkeys.map(pk => ({
       ...pk,
-      is_current_device: currentDeviceId && pk.device_id === currentDeviceId
+      is_current_device: Boolean(
+        (currentDeviceId && pk.device_id === currentDeviceId) || 
+        pk.device_type === 'multiDevice'
+      )
     }));
 
     return NextResponse.json({ passkeys: enrichedPasskeys });
