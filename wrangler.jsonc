@@ -17,7 +17,7 @@
     "ADMIN_EMAIL": "admin@frametoque.com",
     "BLOB_READ_WRITE_TOKEN": "vercel_blob_rw_4I7ycNPmRkAVWCN7_CfusYHEyucJspaKFwu1EEuoltkTiaH",
     "BLOB_STORE_ID": "store_4I7ycNPmRkAVWCN7",
-    "DATABASE_URL": "postgres://postgres.vpdmtnnxhivtzdyzhuji:2OgoWhWicGueRKBc@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require&supa=base-pooler.x",
+    "DATABASE_URL": "postgres://postgres.vpdmtnnxhivtzdyzhuji:2OgoWhWicGueRKBc@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require",
     "GOOGLE_CLIENT_ID": "702795297878-6v4fbvf57kj8n1dpkogsmvbj9q6451tm.apps.googleusercontent.com",
     "GOOGLE_CLIENT_SECRET": "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",
     "NEXTAUTH_SECRET": "9214a1e944b0254247565ef050b81b8d",
