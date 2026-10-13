@@ -12,5 +12,8 @@
   },
   "observability": {
     "enabled": true
+  },
+  "vars": {
+    "NEXTAUTH_URL": "https://books.frametoque.com"
   }
 }
