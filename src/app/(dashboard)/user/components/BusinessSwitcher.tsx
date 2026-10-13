@@ -11,7 +11,8 @@ import {
   Loader2, 
   MailCheck, 
   X, 
-  AlertCircle
+  AlertCircle,
+  Play
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import TenantLogo from "@/components/TenantLogo";

@@ -134,6 +134,14 @@ export const authOptions: NextAuthOptions = {
         }
         if (token?.name) session.user.name = token.name as string;
 
+        // Keep last_login_at updated on active user sessions (throttled to 1 hour)
+        sql`
+          UPDATE admin_users 
+          SET last_login_at = NOW() 
+          WHERE LOWER(email) = ${email} 
+            AND (last_login_at IS NULL OR last_login_at < NOW() - INTERVAL '1 hour')
+        `.catch(() => {});
+
         try {
           const dbUser = await sql`
             SELECT id, tenant_id, role, system_role, is_banned, full_name 
@@ -171,6 +179,12 @@ export const authOptions: NextAuthOptions = {
         if ((user as any).isBanned !== undefined) token.isBanned = (user as any).isBanned;
         if ((user as any).tenantId) token.tenantId = (user as any).tenantId;
         if ((user as any).role) token.role = (user as any).role;
+
+        // Ensure last_login_at is marked when a token is issued for user
+        const loginEmail = (user.email || '').trim().toLowerCase();
+        if (loginEmail) {
+          sql`UPDATE admin_users SET last_login_at = NOW() WHERE LOWER(email) = ${loginEmail}`.catch(() => {});
+        }
       }
       if (profile) {
         if ((profile as any).picture) token.picture = (profile as any).picture;

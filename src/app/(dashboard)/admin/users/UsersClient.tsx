@@ -16,7 +16,8 @@ import {
   Loader2,
   AlertCircle,
   Trash2,
-  Mail
+  Mail,
+  KeyRound
 } from "lucide-react";
 import ClientAvatar from "@/components/ClientAvatar";
 import { AdminStatCard } from "@/app/(dashboard)/admin/_components/AdminStatCard";
@@ -25,7 +26,8 @@ import {
   banUser, 
   unbanUser, 
   softDeleteUser,
-  adminUpdateUserEmail 
+  adminUpdateUserEmail,
+  adminRemoveUserPasskeys
 } from "./actions";
 
 export function UsersClient({
@@ -50,6 +52,10 @@ export function UsersClient({
   const [newEmailInput, setNewEmailInput] = useState("");
   const [emailSubmitting, setEmailSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
+
+  // Remove passkeys state
+  const [removePasskeysTarget, setRemovePasskeysTarget] = useState<{ id: number; email: string; name?: string } | null>(null);
+  const [submittingRemovePasskeys, setSubmittingRemovePasskeys] = useState(false);
 
   const { users, totalCount, totalPages, page } = initialData;
 
@@ -78,6 +84,21 @@ export function UsersClient({
       setEmailError(err.message || "Failed to update email");
     } finally {
       setEmailSubmitting(false);
+    }
+  };
+
+  const handleRemovePasskeysConfirm = async () => {
+    if (!removePasskeysTarget) return;
+    setSubmittingRemovePasskeys(true);
+    try {
+      const res = await adminRemoveUserPasskeys({ userId: removePasskeysTarget.id });
+      showToast(`Removed ${res.count} passkey(s) for ${removePasskeysTarget.email}.`);
+      setRemovePasskeysTarget(null);
+      router.refresh();
+    } catch (err: any) {
+      alert("Failed to remove passkeys: " + err.message);
+    } finally {
+      setSubmittingRemovePasskeys(false);
     }
   };
 
@@ -291,6 +312,9 @@ export function UsersClient({
               <tbody className="divide-y divide-border">
                 {users.map((u: any) => {
                   const linked = u.linked_businesses || [];
+                  const hasLinkedBusiness = linked.length > 0 || Boolean(u.tenant_id);
+                  const isSuperAdmin = u.system_role === 'super_admin';
+                  const hasPasskeys = Number(u.passkeys_count || 0) > 0;
                   return (
                     <tr
                       key={u.id}
@@ -316,23 +340,14 @@ export function UsersClient({
                               >
                                 {u.full_name || "Unnamed"}
                               </Link>
-                              <span className="text-[10px] text-muted-foreground font-mono">#{u.id}</span>
                               {u.is_banned && (
                                 <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                                   Banned
                                 </span>
                               )}
                             </div>
-                            <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                              <span className="truncate max-w-[200px]">{u.email}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleOpenChangeEmail(u)}
-                                className="text-brand-600 dark:text-brand-400 hover:underline text-[11px] font-semibold cursor-pointer shrink-0"
-                                title="Change user email address"
-                              >
-                                Change
-                              </button>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              <span className="truncate max-w-[220px]">{u.email}</span>
                             </div>
                           </div>
                         </div>
@@ -402,50 +417,114 @@ export function UsersClient({
                       </td>
 
                       {/* Actions Column */}
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="p-4 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center justify-end gap-1">
+                          {/* 1. Email */}
                           <button
                             type="button"
                             onClick={() => handleOpenChangeEmail(u)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-brand-600 hover:bg-brand-500/10 transition-colors cursor-pointer"
+                            className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-brand-600 hover:bg-brand-500/10 transition-colors cursor-pointer"
                             title="Change email address"
                           >
-                            <Mail className="w-4 h-4" />
+                            <Mail className="w-4 h-4 shrink-0" />
                           </button>
 
+                          {/* 2. View details */}
                           <Link
                             href={`/admin/users/${u.id}`}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                            className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                             title="View user details"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-4 h-4 shrink-0" />
                           </Link>
 
-                          {u.is_banned ? (
+                          {/* 3. Passkey */}
+                          {hasPasskeys ? (
                             <button
-                              onClick={() => setUnbanModalUser(u)}
-                              className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-500/10 transition-colors cursor-pointer"
-                              title="Unban user"
+                              type="button"
+                              onClick={() => setRemovePasskeysTarget({ id: u.id, email: u.email, name: u.full_name || u.email })}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                              title="Remove passkeys / reset App Lock"
                             >
-                              <ShieldCheck className="w-4 h-4" />
+                              <KeyRound className="w-4 h-4 shrink-0" />
                             </button>
                           ) : (
                             <button
-                              onClick={() => setBanModalUser(u)}
-                              className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                              title="Ban user"
+                              type="button"
+                              disabled
+                              className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground/30 cursor-not-allowed"
+                              title="No passkeys enrolled"
                             >
-                              <ShieldBan className="w-4 h-4" />
+                              <KeyRound className="w-4 h-4 shrink-0" />
                             </button>
                           )}
 
-                          {u.system_role !== 'super_admin' && (
+                          {/* 4. Suspend / Ban */}
+                          {u.is_banned ? (
                             <button
+                              type="button"
+                              onClick={() => setUnbanModalUser(u)}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-500/10 transition-colors cursor-pointer"
+                              title="Unban user"
+                            >
+                              <ShieldCheck className="w-4 h-4 shrink-0" />
+                            </button>
+                          ) : isSuperAdmin ? (
+                            <button
+                              type="button"
+                              disabled
+                              className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground/30 cursor-not-allowed"
+                              title="Super Admin cannot be suspended"
+                            >
+                              <ShieldBan className="w-4 h-4 shrink-0" />
+                            </button>
+                          ) : hasLinkedBusiness ? (
+                            <button
+                              type="button"
+                              onClick={() => setBanModalUser(u)}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg text-rose-600 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                              title="Suspend user"
+                            >
+                              <ShieldBan className="w-4 h-4 shrink-0" />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled
+                              className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground/30 cursor-not-allowed"
+                              title="Direct users cannot be suspended (delete user instead)"
+                            >
+                              <ShieldBan className="w-4 h-4 shrink-0" />
+                            </button>
+                          )}
+
+                          {/* 5. Delete */}
+                          {isSuperAdmin ? (
+                            <button
+                              type="button"
+                              disabled
+                              className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground/30 cursor-not-allowed"
+                              title="Super Admin cannot be deleted"
+                            >
+                              <Trash2 className="w-4 h-4 shrink-0" />
+                            </button>
+                          ) : hasLinkedBusiness ? (
+                            <button
+                              type="button"
+                              disabled
+                              className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground/30 cursor-not-allowed"
+                              title="Cannot delete user with linked businesses (suspend instead)"
+                            >
+                              <Trash2 className="w-4 h-4 shrink-0" />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
                               onClick={() => setDeleteUserTarget({ id: u.id, email: u.email, name: u.full_name || u.email })}
-                              className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                              className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
                               title="Delete user account"
                             >
-                              <Trash2 className="w-4 h-4 text-rose-500" />
+                              <Trash2 className="w-4 h-4 text-rose-500 shrink-0" />
                             </button>
                           )}
                         </div>
@@ -630,6 +709,19 @@ export function UsersClient({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Remove Passkeys Confirmation Modal */}
+      {removePasskeysTarget && (
+        <ConfirmModal
+          isOpen={true}
+          onClose={() => setRemovePasskeysTarget(null)}
+          onConfirm={handleRemovePasskeysConfirm}
+          title={`Remove passkeys for ${removePasskeysTarget.email}?`}
+          description={`Are you sure you want to remove all passkeys for ${removePasskeysTarget.name || removePasskeysTarget.email}? This will immediately disable App Lock for this account so the customer can access their dashboard if they are locked out.`}
+          confirmText="Remove Passkeys"
+          isDestructive={true}
+        />
       )}
     </div>
   );

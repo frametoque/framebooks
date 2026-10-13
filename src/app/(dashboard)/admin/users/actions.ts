@@ -63,7 +63,12 @@ export async function getUsersList({
       ), 0) AS lifetime_paid,
       cp.coupon_code,
       cp.coupon_type,
-      cp.coupon_value
+      cp.coupon_value,
+      COALESCE((
+        SELECT COUNT(*)
+        FROM passkeys pk
+        WHERE pk.user_id = u.id::text OR LOWER(pk.user_id) = LOWER(u.email)
+      ), 0) AS passkeys_count
     FROM admin_users u
     LEFT JOIN tenants t ON u.tenant_id = t.id
     LEFT JOIN LATERAL (
@@ -212,6 +217,7 @@ export async function getUsersList({
     return {
       ...u,
       lifetime_paid: parseInt(u.lifetime_paid) || 0,
+      passkeys_count: parseInt(u.passkeys_count) || 0,
       linked_businesses: Array.from(bizMap.values())
     };
   });
@@ -330,7 +336,17 @@ export async function softDeleteUser(userId: number) {
     throw new Error("Super Admin accounts cannot be deleted.");
   }
 
-  const userEmail = existing[0].email;
+  const userEmail = (existing[0].email || '').trim().toLowerCase();
+
+  // Prevent deleting users with linked businesses
+  const [ownedBiz, teamInvites] = await Promise.all([
+    sql`SELECT id FROM tenants WHERE LOWER(owner_email) = ${userEmail} LIMIT 1`,
+    sql`SELECT id FROM team_invitations WHERE LOWER(email) = ${userEmail} LIMIT 1`
+  ]);
+
+  if (existing[0].tenant_id || ownedBiz.length > 0 || teamInvites.length > 0) {
+    throw new Error("Cannot delete user with linked businesses. Please suspend the user instead.");
+  }
 
   // Clean up non-financial records
   await sql`DELETE FROM user_notes WHERE user_id = ${userId}`.catch(() => {});
@@ -366,6 +382,85 @@ export async function softDeleteUser(userId: number) {
 
 export async function adminDeleteUser({ userId, reason = "" }: { userId: number; reason?: string }) {
   return softDeleteUser(userId);
+}
+
+export async function adminRemoveUserPasskeys({
+  userId,
+  reason = "",
+}: {
+  userId: number;
+  reason?: string;
+}) {
+  const actor = await requireAdmin("edit_users");
+
+  const userRows = await sql`SELECT id, email, full_name FROM admin_users WHERE id = ${userId} LIMIT 1`;
+  if (userRows.length === 0) throw new Error("User not found");
+  const user = userRows[0];
+
+  const countRows = await sql`SELECT COUNT(*) as count FROM passkeys WHERE user_id = ${String(userId)}`;
+  const count = parseInt(countRows[0]?.count || "0", 10);
+
+  if (count > 0) {
+    await sql`DELETE FROM passkeys WHERE user_id = ${String(userId)}`;
+  }
+
+  await logAdminAction({
+    actor,
+    action: "REMOVE_USER_PASSKEYS",
+    targetType: "user",
+    targetId: userId,
+    before: { passkeysCount: count, email: user.email },
+    after: { passkeysCount: 0, reason: reason || "Admin removed passkeys per customer request" },
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${userId}`);
+  return { success: true, count };
+}
+
+export async function adminRemoveBusinessPasskeys({
+  tenantId,
+  reason = "",
+}: {
+  tenantId: number;
+  reason?: string;
+}) {
+  const actor = await requireAdmin("edit_users");
+
+  const tenantRows = await sql`SELECT id, name FROM tenants WHERE id = ${tenantId} LIMIT 1`;
+  if (tenantRows.length === 0) throw new Error("Business not found");
+  const tenant = tenantRows[0];
+
+  const countRows = await sql`
+    SELECT COUNT(*) as count 
+    FROM passkeys 
+    WHERE user_id IN (
+      SELECT id::text FROM admin_users WHERE tenant_id = ${tenantId} AND deleted_at IS NULL
+    )
+  `;
+  const count = parseInt(countRows[0]?.count || "0", 10);
+
+  if (count > 0) {
+    await sql`
+      DELETE FROM passkeys 
+      WHERE user_id IN (
+        SELECT id::text FROM admin_users WHERE tenant_id = ${tenantId} AND deleted_at IS NULL
+      )
+    `;
+  }
+
+  await logAdminAction({
+    actor,
+    action: "REMOVE_BUSINESS_PASSKEYS",
+    targetType: "tenant",
+    targetId: tenantId,
+    before: { passkeysCount: count, businessName: tenant.name },
+    after: { passkeysCount: 0, reason: reason || "Admin removed business passkeys per customer request" },
+  });
+
+  revalidatePath(`/admin/businesses/${tenantId}`);
+  revalidatePath("/admin/users");
+  return { success: true, count };
 }
 
 export async function addUserNote(userId: number, body: string) {
@@ -568,6 +663,14 @@ export async function getUserDetails(userId: number) {
     linkedBusinesses = Array.from(bizMap.values());
   }
 
+  // Passkeys & App Lock
+  const passkeys = await sql`
+    SELECT id, name, created_at, device_type, backed_up, device_id 
+    FROM passkeys 
+    WHERE user_id = ${String(userId)}
+    ORDER BY created_at DESC
+  `;
+
   return {
     user,
     plan,
@@ -580,6 +683,8 @@ export async function getUserDetails(userId: number) {
     appliedCoupon: appliedCoupons[0] || null,
     appliedCoupons,
     linkedBusinesses,
+    passkeys,
+    passkeysCount: passkeys.length,
   };
 }
 
@@ -776,6 +881,14 @@ export async function getBusinessDetails(tenantId: number) {
     ORDER BY cr.redeemed_at DESC
   `;
 
+  const businessPasskeys = await sql`
+    SELECT COUNT(*) as count 
+    FROM passkeys 
+    WHERE user_id IN (
+      SELECT id::text FROM admin_users WHERE tenant_id = ${tenantId} AND deleted_at IS NULL
+    )
+  `;
+
   return {
     tenant,
     members,
@@ -790,6 +903,7 @@ export async function getBusinessDetails(tenantId: number) {
     activity,
     appliedCoupon: appliedCoupons[0] || null,
     appliedCoupons,
+    passkeysCount: parseInt(businessPasskeys[0]?.count || '0', 10),
   };
 }
 

@@ -134,6 +134,15 @@ export async function getTenantInfo() {
          OR (email IS NOT NULL AND LOWER(email) = ${email || ''})
       LIMIT 1
     `;
+
+    // Keep user's last_login_at up to date on active workspace sessions (throttled to 1 hour)
+    sql`
+      UPDATE admin_users 
+      SET last_login_at = NOW() 
+      WHERE ((id = ${safeId} AND ${safeId} > 0) OR (email IS NOT NULL AND LOWER(email) = ${email || ''}))
+        AND (last_login_at IS NULL OR last_login_at < NOW() - INTERVAL '1 hour')
+    `.catch(() => {});
+
     if (!userRows || userRows.length === 0 || !userRows[0].tenant_id) {
       return {
         plan: "Free",
@@ -166,6 +175,8 @@ export async function getTenantInfo() {
     if (tenants.length > 0) {
       const grace = await resolveGraceAndReadOnly(tenants[0].plan || "Free", tenants[0].plan_expires_at, tenants[0].id, tenants[0].payment_status);
       return { 
+        id: tenantId,
+        tenantId: tenantId,
         plan: tenants[0].plan || "Free",
         payment_status: tenants[0].payment_status || "paid",
         ...grace,

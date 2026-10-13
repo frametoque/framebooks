@@ -124,6 +124,8 @@ function LayoutContent({ children }) {
   const router = useRouter();
 
   const [tenantInfo, setTenantInfo] = useState<{
+    id?: number;
+    tenantId?: number;
     plan: string;
     name: string;
     logo_url: string | null;
@@ -319,22 +321,6 @@ function LayoutContent({ children }) {
                         </Link>
                       </div>
                     )}
-                    {!hasAppLock && isMainDashboard && (
-                      <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-yellow-500/20 rounded-lg text-yellow-500">
-                            <MdLockOutline className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h3 className="text-foreground font-semibold">App Lock Not Configured</h3>
-                            <p className="text-gray-600 dark:text-gray-400 text-sm">Enable App Lock (Passkeys/Biometrics) to secure your dashboard from unauthorized access.</p>
-                          </div>
-                        </div>
-                        <Link href="/user/settings/profile" className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-yellow-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
-                          Set up App Lock
-                        </Link>
-                      </div>
-                    )}
                     <GracePeriodBanner />
                     <AnnouncementBanner userPlan={tenantInfo.plan} />
                     {children}
@@ -388,22 +374,6 @@ function LayoutContent({ children }) {
                         </div>
                         <Link href="/user/settings/billing" className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
                           Upgrade Now
-                        </Link>
-                      </div>
-                    )}
-                    {!hasAppLock && isMainDashboard && (
-                      <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-yellow-500/20 rounded-lg text-yellow-500">
-                            <MdLockOutline className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h3 className="text-foreground font-semibold">App Lock Not Configured</h3>
-                            <p className="text-gray-600 dark:text-gray-400 text-sm">Enable App Lock (Passkeys/Biometrics) to secure your dashboard from unauthorized access.</p>
-                          </div>
-                        </div>
-                        <Link href="/user/settings/profile" className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-yellow-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
-                          Set up App Lock
                         </Link>
                       </div>
                     )}
@@ -733,8 +703,13 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
             <span className="font-medium text-sm">{currentDate || "Loading..."}</span>
           </div>
 
-          <NotificationBell />
-          <ThemeToggle />
+          <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
+
+          {/* Action Icons */}
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <ThemeToggle />
+          </div>
 
           {/* Business Profile Switcher & Info */}
           <BusinessSwitcher tenantInfo={tenantInfo} />
@@ -889,7 +864,7 @@ const Sidebar = ({
               const Icon = item.icon;
               const active = isActive(item.href);
               return (
-                <div key={item.href} className="relative flex justify-center w-full">
+                <div key={item.href} data-tour={item.name.toLowerCase()} className="relative flex justify-center w-full">
                   {active && (
                     <motion.div
                       layoutId="active-sidebar-tab"

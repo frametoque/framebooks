@@ -30,6 +30,7 @@ import {
   Ban,
   Calendar,
   Edit3,
+  KeyRound,
 } from "lucide-react";
 import { PlanBadge, RoleBadge, StatusPill, Money, formatLKR } from "@/components/Formatters";
 import { TenantLogo } from "@/components/TenantLogo";
@@ -40,7 +41,8 @@ import {
   adminAddBusinessMember, 
   adminUpdateMemberRole, 
   adminRemoveBusinessMember, 
-  addBusinessNote 
+  addBusinessNote,
+  adminRemoveBusinessPasskeys
 } from "@/app/(dashboard)/admin/users/actions";
 import { 
   adminRevokeTenantCoupon,
@@ -113,6 +115,11 @@ export function BusinessDetailView({
   // Delete Business state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingBusiness, setDeletingBusiness] = useState(false);
+
+  // Business Passkeys removal state
+  const [isRemoveBusinessPasskeysModalOpen, setIsRemoveBusinessPasskeysModalOpen] = useState(false);
+  const [removingBusinessPasskeys, setRemovingBusinessPasskeys] = useState(false);
+  const [currentBusinessPasskeysCount, setCurrentBusinessPasskeysCount] = useState<number>(businessData.passkeysCount ?? 0);
 
   const {
     tenant,
@@ -212,6 +219,24 @@ export function BusinessDetailView({
       alert(err.message || "Failed to remove member");
     } finally {
       setRemovingMember(false);
+    }
+  };
+
+  const handleRemoveBusinessPasskeys = async () => {
+    try {
+      setRemovingBusinessPasskeys(true);
+      const res = await adminRemoveBusinessPasskeys({ tenantId: tenant.id });
+      if (res.success) {
+        setCurrentBusinessPasskeysCount(0);
+        setIsRemoveBusinessPasskeysModalOpen(false);
+        alert(`Successfully removed ${res.count} passkey(s) for business "${tenant.name}". App Lock reset.`);
+        if (onRefresh) onRefresh();
+        router.refresh();
+      }
+    } catch (err: any) {
+      alert("Failed to remove business passkeys: " + err.message);
+    } finally {
+      setRemovingBusinessPasskeys(false);
     }
   };
 
@@ -957,6 +982,39 @@ export function BusinessDetailView({
               </button>
             </div>
 
+            {/* Reset All Business Passkeys / App Lock */}
+            <div className="py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-foreground text-sm flex items-center gap-1.5">
+                    <KeyRound className="w-4 h-4 text-amber-500" />
+                    <span>Reset Business Passkeys & App Locks</span>
+                  </p>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      currentBusinessPasskeysCount > 0
+                        ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+                        : "bg-black/5 dark:bg-white/10 text-muted-foreground border border-border"
+                    }`}
+                  >
+                    {currentBusinessPasskeysCount} {currentBusinessPasskeysCount === 1 ? "passkey active" : "passkeys active"}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1 max-w-xl">
+                  Permanently removes all registered device passkeys across all team members of "{tenant.name}". Use this when users are locked out or requesting a company-wide security reset.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRemoveBusinessPasskeysModalOpen(true)}
+                disabled={currentBusinessPasskeysCount === 0 || removingBusinessPasskeys}
+                className="px-4 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold rounded-xl text-xs transition-colors shrink-0 disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center gap-1.5"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>{removingBusinessPasskeys ? "Removing..." : "Remove All Business Passkeys"}</span>
+              </button>
+            </div>
+
             {/* Delete Business Workspace */}
             <div className="py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -1254,6 +1312,19 @@ export function BusinessDetailView({
             if (onRefresh) onRefresh();
             router.refresh();
           }}
+        />
+      )}
+
+      {/* Remove Business Passkeys Modal */}
+      {isRemoveBusinessPasskeysModalOpen && (
+        <ConfirmModal
+          isOpen={true}
+          onClose={() => setIsRemoveBusinessPasskeysModalOpen(false)}
+          onConfirm={handleRemoveBusinessPasskeys}
+          title={`Reset passkeys for "${tenant.name}"?`}
+          description={`Are you sure you want to remove all ${currentBusinessPasskeysCount} passkey(s) across all team members of "${tenant.name}"? This will disable App Lock on all member accounts and allow them to access their dashboard without biometric locks.`}
+          confirmText="Remove Business Passkeys"
+          isDestructive={true}
         />
       )}
     </div>

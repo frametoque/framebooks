@@ -11,6 +11,8 @@ import ExpenseBreakdownWidget from "../components/ExpenseBreakdownWidget";
 import TopClientsWidget from "../components/TopClientsWidget";
 import AnimatedNumber from "../components/AnimatedNumber";
 import AutoFitStatNumber from "../components/AutoFitStatNumber";
+import GettingStartedCard from "../components/GettingStartedCard";
+import { getTenantInfo } from "../actions/tenants";
 import { useAccentTheme } from "@/lib/theme/useAccentTheme";
 
 const formatLKR = (amount: number) => {
@@ -27,6 +29,7 @@ export default function DashboardPage() {
   const { accent } = useAccentTheme();
   const { startDate, endDate } = useAdminDateRange();
   const [data, setData] = useState<any>(null);
+  const [tenantInfo, setTenantInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [chartYear, setChartYear] = useState<number>(new Date().getFullYear());
   const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
@@ -44,6 +47,15 @@ export default function DashboardPage() {
           .then((inv) => {
             if (!cancelled && inv?.pending) {
               setPendingInvitations(inv.pending);
+            }
+          })
+          .catch(() => null);
+
+        // Fetch tenant info
+        getTenantInfo()
+          .then((info) => {
+            if (!cancelled && info) {
+              setTenantInfo(info);
             }
           })
           .catch(() => null);
@@ -333,6 +345,13 @@ export default function DashboardPage() {
           );
         })}
       </div>
+
+      {/* Getting Started Guide / Tour Checklist */}
+      <GettingStartedCard
+        tenantId={data?.tenantId || tenantInfo?.id}
+        tenantInfo={tenantInfo}
+        dashboardData={data}
+      />
 
       {analyticsStats.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

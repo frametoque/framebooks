@@ -254,6 +254,7 @@ export async function _getDashboardData(tenantId: string, start: string, end: st
       (SELECT count FROM clients_cnt) as clients_count,
       (SELECT COALESCE(json_agg(unpaid_clients), '[]'::json) FROM unpaid_clients) as unpaid_clients,
       (SELECT COALESCE(SUM(initial_balance + total_inc + total_tr_in - total_exp - total_tr_out), 0) FROM acc_summary) as total_assets,
+      (SELECT COUNT(*) FROM accounts WHERE tenant_id = ${tenantId} AND is_hidden IS NOT TRUE) as accounts_count,
       (SELECT COALESCE(json_agg(top_clients), '[]'::json) FROM top_clients) as top_clients
   `;
 
@@ -379,9 +380,11 @@ export async function _getDashboardData(tenantId: string, start: string, end: st
   const totalClients = parseInt(result?.clients_count || 0, 10);
 
   return {
+    tenantId: tenantId ? Number(tenantId) : null,
     totalIncome,
     totalExpenses,
     totalAssets,
+    accountsCount: parseInt(result?.accounts_count || 0, 10),
     totalAfterDebts,
     totalCapital,
     netProfit,

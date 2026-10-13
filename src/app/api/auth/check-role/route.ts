@@ -30,6 +30,9 @@ export async function GET() {
     const dbUser = userRows[0];
     const isAdmin = dbUser.system_role === 'super_admin' || dbUser.system_role === 'admin' || dbUser.role === 'admin';
 
+    // Update last_login_at on authentication verification
+    sql`UPDATE admin_users SET last_login_at = NOW() WHERE id = ${dbUser.id}`.catch(() => {});
+
     return NextResponse.json({
       role: dbUser.role,
       systemRole: dbUser.system_role,

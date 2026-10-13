@@ -27,7 +27,7 @@ import {
 import { PlanBadge, RoleBadge } from "@/components/Formatters";
 import ClientAvatar from "@/components/ClientAvatar";
 import { ConfirmModal } from "@/app/(dashboard)/admin/_components/ConfirmModal";
-import { banUser, unbanUser, softDeleteUser, addUserNote, adminUpdateUserEmail } from "../actions";
+import { banUser, unbanUser, softDeleteUser, addUserNote, adminUpdateUserEmail, adminRemoveUserPasskeys } from "../actions";
 
 export function UserDetailClient({ data }: { data: any }) {
   const router = useRouter();
@@ -44,6 +44,12 @@ export function UserDetailClient({ data }: { data: any }) {
   const [emailSubmitting, setEmailSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [statusToast, setStatusToast] = useState("");
+
+  // Passkeys removal state
+  const [confirmRemovePasskeys, setConfirmRemovePasskeys] = useState(false);
+  const [isRemovingPasskeys, setIsRemovingPasskeys] = useState(false);
+  const [currentPasskeysCount, setCurrentPasskeysCount] = useState<number>(data.passkeysCount ?? 0);
+  const [currentPasskeys, setCurrentPasskeys] = useState<any[]>(data.passkeys ?? []);
 
   const { user, notes = [], linkedBusinesses = [] } = data;
 
@@ -87,6 +93,24 @@ export function UserDetailClient({ data }: { data: any }) {
       alert(err.message || "Failed to add note");
     } finally {
       setSavingNote(false);
+    }
+  };
+
+  const handleRemovePasskeys = async () => {
+    try {
+      setIsRemovingPasskeys(true);
+      const res = await adminRemoveUserPasskeys({ userId: user.id });
+      if (res.success) {
+        setCurrentPasskeysCount(0);
+        setCurrentPasskeys([]);
+        setConfirmRemovePasskeys(false);
+        showToast(`Successfully removed ${res.count} passkey(s) for ${user.email}. App Lock reset.`);
+        router.refresh();
+      }
+    } catch (err: any) {
+      alert("Failed to remove passkeys: " + err.message);
+    } finally {
+      setIsRemovingPasskeys(false);
     }
   };
 
@@ -456,6 +480,50 @@ export function UserDetailClient({ data }: { data: any }) {
                 </p>
               </div>
             )}
+
+            {/* Passkeys & App Lock Administration */}
+            <div className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground">Passkeys & App Lock</span>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                      currentPasskeysCount > 0
+                        ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+                        : "bg-black/5 dark:bg-white/10 text-muted-foreground border border-border"
+                    }`}
+                  >
+                    {currentPasskeysCount} {currentPasskeysCount === 1 ? "passkey registered" : "passkeys registered"}
+                  </span>
+                </div>
+                <span className="text-xs text-gray-500 mt-1 block max-w-lg">
+                  Reset registered biometric passkeys for this user if they are locked out or requesting App Lock removal.
+                </span>
+                {currentPasskeys.length > 0 && (
+                  <div className="mt-3 space-y-1.5">
+                    {currentPasskeys.map((pk: any) => (
+                      <div key={pk.id} className="text-xs text-muted-foreground flex items-center gap-2">
+                        <KeyRound className="w-3.5 h-3.5 text-blue-500" />
+                        <span className="font-medium text-foreground">{pk.name}</span>
+                        <span>•</span>
+                        <span>{pk.device_type === "multiDevice" ? "Multi-Device Passkey" : "Single Device Key"}</span>
+                        <span>•</span>
+                        <span>Added {new Date(pk.created_at).toLocaleDateString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfirmRemovePasskeys(true)}
+                disabled={currentPasskeysCount === 0 || isRemovingPasskeys}
+                className="flex items-center gap-1.5 px-4 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold rounded-xl text-xs transition-colors shrink-0 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>{isRemovingPasskeys ? "Removing..." : "Remove All Passkeys"}</span>
+              </button>
+            </div>
           </div>
 
           <div className="pt-2 flex items-center gap-3">
@@ -550,6 +618,30 @@ export function UserDetailClient({ data }: { data: any }) {
                 >
                   Unban User
                 </button>
+              ) : user.system_role === 'super_admin' ? (
+                <div className="text-right">
+                  <button
+                    disabled
+                    className="px-4 py-2 bg-muted text-muted-foreground/40 font-bold rounded-xl text-xs cursor-not-allowed"
+                  >
+                    Ban User
+                  </button>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Super Admin accounts cannot be suspended.
+                  </p>
+                </div>
+              ) : !(linkedBusinesses.length > 0 || Boolean(user.tenant_id)) ? (
+                <div className="text-right">
+                  <button
+                    disabled
+                    className="px-4 py-2 bg-muted text-muted-foreground/40 font-bold rounded-xl text-xs cursor-not-allowed"
+                  >
+                    Ban User
+                  </button>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Direct user without business. Delete account instead.
+                  </p>
+                </div>
               ) : (
                 <button
                   onClick={() => setConfirmBan(true)}
@@ -568,12 +660,38 @@ export function UserDetailClient({ data }: { data: any }) {
                   Archive this user account and remove it from active user lists. Data can be recovered if needed.
                 </p>
               </div>
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs transition-colors shrink-0 cursor-pointer"
-              >
-                Delete Account
-              </button>
+              {user.system_role === 'super_admin' ? (
+                <div className="text-right">
+                  <button
+                    disabled
+                    className="px-4 py-2 bg-muted text-muted-foreground/40 font-bold rounded-xl text-xs cursor-not-allowed"
+                  >
+                    Delete Account
+                  </button>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Super Admin accounts cannot be deleted.
+                  </p>
+                </div>
+              ) : (linkedBusinesses.length > 0 || Boolean(user.tenant_id)) ? (
+                <div className="text-right">
+                  <button
+                    disabled
+                    className="px-4 py-2 bg-muted text-muted-foreground/40 font-bold rounded-xl text-xs cursor-not-allowed"
+                  >
+                    Delete Account
+                  </button>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Cannot delete user with linked businesses. Suspend them instead.
+                  </p>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs transition-colors shrink-0 cursor-pointer"
+                >
+                  Delete Account
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -693,6 +811,18 @@ export function UserDetailClient({ data }: { data: any }) {
             </form>
           </div>
         </div>
+      )}
+      {/* Confirm Remove Passkeys Modal */}
+      {confirmRemovePasskeys && (
+        <ConfirmModal
+          isOpen={true}
+          onClose={() => setConfirmRemovePasskeys(false)}
+          onConfirm={handleRemovePasskeys}
+          title={`Remove all passkeys for ${user.email}?`}
+          description={`Are you sure you want to remove all ${currentPasskeysCount} passkey(s) and reset App Lock for this user? They will be able to access their dashboard immediately without biometric lock.`}
+          confirmText="Remove Passkeys"
+          isDestructive={true}
+        />
       )}
     </div>
   );

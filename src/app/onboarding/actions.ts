@@ -146,16 +146,16 @@ export async function completeOnboarding(formData: FormData) {
     if (existing.length > 0) {
       const updated = await sql`
         UPDATE admin_users 
-        SET tenant_id = ${tenantId}, role = 'owner', full_name = COALESCE(full_name, ${fullName})
+        SET tenant_id = ${tenantId}, role = 'owner', full_name = COALESCE(full_name, ${fullName}), last_login_at = NOW()
         WHERE id = ${existing[0].id}
         RETURNING id
       `;
       dbUserId = updated[0].id;
     } else {
       const inserted = await sql`
-        INSERT INTO admin_users (email, full_name, tenant_id, role)
-        VALUES (${email}, ${fullName}, ${tenantId}, 'owner')
-        ON CONFLICT (email) DO UPDATE SET tenant_id = EXCLUDED.tenant_id, role = 'owner'
+        INSERT INTO admin_users (email, full_name, tenant_id, role, last_login_at)
+        VALUES (${email}, ${fullName}, ${tenantId}, 'owner', NOW())
+        ON CONFLICT (email) DO UPDATE SET tenant_id = EXCLUDED.tenant_id, role = 'owner', last_login_at = NOW()
         RETURNING id
       `;
       dbUserId = inserted[0].id;

@@ -2,9 +2,9 @@
 
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { MdDarkMode, MdLightMode } from "react-icons/md";
+import { Sun, Moon } from "lucide-react";
 
-export function ThemeToggle() {
+export function ThemeToggle({ className = "" }: { className?: string }) {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
 
@@ -14,16 +14,16 @@ export function ThemeToggle() {
   }, []);
 
   if (!mounted) {
-    return <div className="w-9 h-9 opacity-0" />;
+    return <div className={`w-8 h-8 opacity-0 ${className}`} />;
   }
 
   return (
     <button
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="p-2 rounded-full bg-card border border-border text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/20 shadow-xs transition-colors cursor-pointer"
+      className={`p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center justify-center ${className}`}
       aria-label="Toggle Dark Mode"
     >
-      {theme === "dark" ? <MdLightMode size={20} /> : <MdDarkMode size={20} />}
+      {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
     </button>
   );
 }

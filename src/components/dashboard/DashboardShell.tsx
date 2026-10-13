@@ -379,8 +379,13 @@ export function DashboardShell({
                 <span className="font-medium text-xs sm:text-sm">{currentDate || "Loading..."}</span>
               </div>
 
-              <NotificationBell />
-              <ThemeToggle />
+              <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
+
+              {/* Action Icons */}
+              <div className="flex items-center gap-1">
+                <NotificationBell />
+                <ThemeToggle />
+              </div>
 
               {/* Profile pill on top bar (User only) */}
               {variant !== "admin" && (

@@ -5,6 +5,7 @@ import { Loader } from "@/components/ui/Loader";
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { MdLockOutline, MdLockOpen } from "react-icons/md";
 import { Loader2 } from "lucide-react";
+import { signOut } from "next-auth/react";
 
 type AppLockContextType = {
   isLocked: boolean;
@@ -81,6 +82,10 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
           } else {
             setIsLocked(false);
           }
+        } else {
+          setHasAppLock(false);
+          setIsLocked(false);
+          localStorage.removeItem("app-lock-unlocked");
         }
       } catch (e) {
         console.error("Failed to check app lock status", e);
@@ -369,6 +374,35 @@ export function LockScreen() {
           "Unlock Dashboard"
         )}
       </button>
+
+      <div className="flex flex-col items-center gap-3 mt-6">
+        <button
+          type="button"
+          onClick={async () => {
+            if (!confirm("Are you having trouble authenticating? This will disable App Lock on your account so you can access your dashboard.")) return;
+            try {
+              const res = await fetch('/api/auth/passkey/remove', { method: 'POST' });
+              if (res.ok) {
+                unlock();
+                window.location.reload();
+              }
+            } catch (e) {
+              alert("Failed to remove App Lock.");
+            }
+          }}
+          className="text-xs text-gray-400 hover:text-red-400 underline underline-offset-4 transition-colors cursor-pointer"
+        >
+          Can't authenticate? Disable App Lock
+        </button>
+
+        <button
+          type="button"
+          onClick={() => signOut()}
+          className="text-xs text-gray-500 hover:text-foreground transition-colors cursor-pointer"
+        >
+          Sign out
+        </button>
+      </div>
     </motion.div>
   );
 }
