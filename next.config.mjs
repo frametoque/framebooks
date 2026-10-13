@@ -3,7 +3,11 @@ const nextConfig = {
   turbopack: {
     root: process.cwd(),
   },
-
+  serverExternalPackages: [
+    'puppeteer',
+    'puppeteer-core',
+    '@sparticuz/chromium',
+  ],
   experimental: {
     serverActions: {
       bodySizeLimit: '100mb',
