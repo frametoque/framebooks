@@ -205,6 +205,9 @@ export default function AdminInvoicePage() {
         setInvoice(data);
         setTenantPlan(tInfo?.plan || "Free");
         setTenantInfo(tInfo);
+        if (data.layout_snapshot || data.active_layout_definition) {
+          setActiveViewTab("layout");
+        }
       } catch (err: any) {
         setError(err.message);
       } finally {

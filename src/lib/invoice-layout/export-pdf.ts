@@ -18,6 +18,146 @@ interface DownloadInvoiceOptions {
 }
 
 /**
+ * Converts any image URL (remote CDN / S3 / R2) to a base64 Data URL
+ * to ensure 100% reliable SVG foreignObject rendering without CORS or cache drops.
+ */
+async function convertUrlToDataUrl(url?: string | null): Promise<string | undefined> {
+  if (!url || typeof url !== "string") return undefined;
+  if (url.startsWith("data:")) return url;
+
+  // 1. Direct client fetch with CORS
+  try {
+    const res = await fetch(url, { cache: "no-store", mode: "cors" });
+    if (res.ok) {
+      const blob = await res.blob();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      if (dataUrl && dataUrl.startsWith("data:")) {
+        return dataUrl;
+      }
+    }
+  } catch {
+    // Direct fetch failed (e.g. CORS restrictions on remote CDN)
+  }
+
+  // 2. Next.js image proxy fallback (bypasses browser CORS completely via same-origin)
+  try {
+    const proxyUrl = `/api/invoice-layout/proxy-image?url=${encodeURIComponent(url)}`;
+    const res = await fetch(proxyUrl);
+    if (res.ok) {
+      const blob = await res.blob();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      if (dataUrl && dataUrl.startsWith("data:")) {
+        return dataUrl;
+      }
+    }
+  } catch {
+    // Proxy fallback failed
+  }
+
+  // 3. HTML5 Canvas draw fallback
+  try {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth || 800;
+          canvas.height = img.naturalHeight || 1100;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return reject(new Error("No canvas context"));
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL("image/png"));
+        } catch (e) {
+          reject(e);
+        }
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+    if (dataUrl && dataUrl.startsWith("data:")) {
+      return dataUrl;
+    }
+  } catch {
+    // Canvas fallback failed
+  }
+
+  return url;
+}
+
+/**
+ * Pre-processes layout definition and tenant info to inline all image assets as base64 Data URLs.
+ */
+async function prepareLayoutWithInlinedImages(
+  layout: InvoiceLayoutDefinition,
+  tenantInfo?: any
+): Promise<{ layout: InvoiceLayoutDefinition; tenantInfo?: any }> {
+  const clonedLayout: InvoiceLayoutDefinition = JSON.parse(JSON.stringify(layout));
+  const clonedTenantInfo = tenantInfo ? JSON.parse(JSON.stringify(tenantInfo)) : tenantInfo;
+
+  const tasks: Promise<any>[] = [];
+
+  // Theme background image
+  if (clonedLayout.theme?.backgroundImage) {
+    tasks.push(
+      convertUrlToDataUrl(clonedLayout.theme.backgroundImage).then((dataUrl) => {
+        if (dataUrl) clonedLayout.theme.backgroundImage = dataUrl;
+      })
+    );
+  }
+
+  // Tenant logo
+  if (clonedTenantInfo?.logo_url) {
+    tasks.push(
+      convertUrlToDataUrl(clonedTenantInfo.logo_url).then((dataUrl) => {
+        if (dataUrl) clonedTenantInfo.logo_url = dataUrl;
+      })
+    );
+  }
+
+  // Section blocks (logo, image blocks, signature blocks)
+  if (Array.isArray(clonedLayout.sections)) {
+    for (const section of clonedLayout.sections) {
+      if (Array.isArray(section.columns)) {
+        for (const col of section.columns) {
+          if (Array.isArray(col.blocks)) {
+            for (const block of col.blocks) {
+              if (block.props?.url && typeof block.props.url === "string") {
+                tasks.push(
+                  convertUrlToDataUrl(block.props.url).then((dataUrl) => {
+                    if (dataUrl && block.props) block.props.url = dataUrl;
+                  })
+                );
+              }
+              if (block.props?.signatureImageUrl && typeof block.props.signatureImageUrl === "string") {
+                tasks.push(
+                  convertUrlToDataUrl(block.props.signatureImageUrl).then((dataUrl) => {
+                    if (dataUrl && block.props) block.props.signatureImageUrl = dataUrl;
+                  })
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  await Promise.all(tasks);
+  return { layout: clonedLayout, tenantInfo: clonedTenantInfo };
+}
+
+/**
  * Downloads an invoice as a PDF.
  * If an active layout is configured in settings or attached to the invoice,
  * it renders and exports that bespoke layout.
@@ -30,11 +170,19 @@ export async function downloadInvoiceWithLayout({
   layoutDef,
   fileName,
 }: DownloadInvoiceOptions): Promise<void> {
-  const resolvedLayout =
+  let resolvedLayout =
     layoutDef ||
     invoice?.layout_snapshot ||
     invoice?.active_layout_definition ||
     null;
+
+  if (typeof resolvedLayout === "string") {
+    try {
+      resolvedLayout = JSON.parse(resolvedLayout);
+    } catch {
+      resolvedLayout = null;
+    }
+  }
 
   const defaultFilename = `${
     invoice.invoice_number || invoice.invoice_id || "invoice"
@@ -58,14 +206,24 @@ export async function downloadInvoiceWithLayout({
     return;
   }
 
-  // Render the active layout in an off-screen container to capture exact styles
+  // Pre-inline all background and block images to base64 Data URLs
+  const { layout: inlinedLayout, tenantInfo: inlinedTenantInfo } =
+    await prepareLayoutWithInlinedImages(resolvedLayout, tenantInfo);
+
+  const isLetter = inlinedLayout.pageSize === "Letter";
+  const paperWidthMm = isLetter ? 215.9 : 210;
+  const minPaperHeightMm = isLetter ? 279.4 : 297;
+
+  // Render the active layout in an off-screen container with explicit paper bounds
   const container = document.createElement("div");
   container.style.position = "fixed";
   container.style.left = "-9999px";
   container.style.top = "-9999px";
+  container.style.width = `${paperWidthMm}mm`;
+  container.style.minHeight = `${minPaperHeightMm}mm`;
   container.style.zIndex = "-9999";
   container.style.pointerEvents = "none";
-  container.style.background = "#ffffff";
+  container.style.background = inlinedLayout.theme?.backgroundColor || "#ffffff";
   document.body.appendChild(container);
 
   const root = createRoot(container);
@@ -74,24 +232,45 @@ export async function downloadInvoiceWithLayout({
     await new Promise<void>((resolve) => {
       root.render(
         React.createElement(InvoiceRenderer, {
-          layout: resolvedLayout,
+          layout: inlinedLayout,
           invoice,
-          tenantInfo,
+          tenantInfo: inlinedTenantInfo,
           plan,
         })
       );
-      // Allow DOM repaint and fonts/images to resolve
-      setTimeout(resolve, 300);
+
+      // Ensure images in DOM are fully loaded and decoded before rasterizing
+      setTimeout(async () => {
+        try {
+          const imgs = Array.from(container.querySelectorAll("img"));
+          await Promise.all(
+            imgs.map(async (img) => {
+              if (img.complete && img.naturalWidth > 0) {
+                if (typeof img.decode === "function") {
+                  try {
+                    await img.decode();
+                  } catch {}
+                }
+                return;
+              }
+              await new Promise<void>((imgRes) => {
+                img.onload = () => imgRes();
+                img.onerror = () => imgRes();
+                setTimeout(imgRes, 3000);
+              });
+            })
+          );
+        } catch {}
+        setTimeout(resolve, 150);
+      }, 80);
     });
 
     const targetEl = (container.firstElementChild || container) as HTMLElement;
-    const isLetter = resolvedLayout.pageSize === "Letter";
-    const paperWidthMm = isLetter ? 215.9 : 210;
-    const minPaperHeightMm = isLetter ? 279.4 : 297;
 
     const imgData = await domtoimage.toPng(targetEl, {
-      bgcolor: resolvedLayout.theme?.backgroundColor || "#ffffff",
+      bgcolor: inlinedLayout.theme?.backgroundColor || "#ffffff",
       quality: 1.0,
+      cacheBust: true,
       width: targetEl.offsetWidth * 2,
       height: targetEl.offsetHeight * 2,
       style: {
@@ -183,11 +362,19 @@ export async function printInvoiceWithLayout({
   plan = "Free",
   layoutDef,
 }: Omit<DownloadInvoiceOptions, "fileName">): Promise<void> {
-  const resolvedLayout =
+  let resolvedLayout =
     layoutDef ||
     invoice?.layout_snapshot ||
     invoice?.active_layout_definition ||
     null;
+
+  if (typeof resolvedLayout === "string") {
+    try {
+      resolvedLayout = JSON.parse(resolvedLayout);
+    } catch {
+      resolvedLayout = null;
+    }
+  }
 
   if (!resolvedLayout) {
     const pdfBytes = await generateInvoicePDF(invoice, plan, tenantInfo);
@@ -196,13 +383,23 @@ export async function printInvoiceWithLayout({
     return;
   }
 
+  // Pre-inline all background and block images to base64 Data URLs
+  const { layout: inlinedLayout, tenantInfo: inlinedTenantInfo } =
+    await prepareLayoutWithInlinedImages(resolvedLayout, tenantInfo);
+
+  const isLetter = inlinedLayout.pageSize === "Letter";
+  const paperWidthMm = isLetter ? 215.9 : 210;
+  const minPaperHeightMm = isLetter ? 279.4 : 297;
+
   const container = document.createElement("div");
   container.style.position = "fixed";
   container.style.left = "-9999px";
   container.style.top = "-9999px";
+  container.style.width = `${paperWidthMm}mm`;
+  container.style.minHeight = `${minPaperHeightMm}mm`;
   container.style.zIndex = "-9999";
   container.style.pointerEvents = "none";
-  container.style.background = "#ffffff";
+  container.style.background = inlinedLayout.theme?.backgroundColor || "#ffffff";
   document.body.appendChild(container);
 
   const root = createRoot(container);
@@ -211,23 +408,45 @@ export async function printInvoiceWithLayout({
     await new Promise<void>((resolve) => {
       root.render(
         React.createElement(InvoiceRenderer, {
-          layout: resolvedLayout,
+          layout: inlinedLayout,
           invoice,
-          tenantInfo,
+          tenantInfo: inlinedTenantInfo,
           plan,
         })
       );
-      setTimeout(resolve, 300);
+
+      // Ensure images in DOM are fully loaded and decoded before rasterizing
+      setTimeout(async () => {
+        try {
+          const imgs = Array.from(container.querySelectorAll("img"));
+          await Promise.all(
+            imgs.map(async (img) => {
+              if (img.complete && img.naturalWidth > 0) {
+                if (typeof img.decode === "function") {
+                  try {
+                    await img.decode();
+                  } catch {}
+                }
+                return;
+              }
+              await new Promise<void>((imgRes) => {
+                img.onload = () => imgRes();
+                img.onerror = () => imgRes();
+                setTimeout(imgRes, 3000);
+              });
+            })
+          );
+        } catch {}
+        setTimeout(resolve, 150);
+      }, 80);
     });
 
     const targetEl = (container.firstElementChild || container) as HTMLElement;
-    const isLetter = resolvedLayout.pageSize === "Letter";
-    const paperWidthMm = isLetter ? 215.9 : 210;
-    const minPaperHeightMm = isLetter ? 279.4 : 297;
 
     const imgData = await domtoimage.toPng(targetEl, {
-      bgcolor: resolvedLayout.theme?.backgroundColor || "#ffffff",
+      bgcolor: inlinedLayout.theme?.backgroundColor || "#ffffff",
       quality: 1.0,
+      cacheBust: true,
       width: targetEl.offsetWidth * 2,
       height: targetEl.offsetHeight * 2,
       style: {

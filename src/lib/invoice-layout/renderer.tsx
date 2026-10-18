@@ -132,6 +132,7 @@ export function InvoiceRenderer({
           <img
             src={logoUrl}
             alt="Business Logo"
+            crossOrigin="anonymous"
             style={{ maxHeight: `${maxHeight}px`, objectFit: "contain" }}
             className="block"
           />
@@ -1482,6 +1483,7 @@ export function InvoiceRenderer({
           <img
             src={url}
             alt={alt}
+            crossOrigin="anonymous"
             style={{
               maxHeight: `${maxHeight}px`,
               maxWidth: `${maxWidth}px`,
@@ -1521,6 +1523,7 @@ export function InvoiceRenderer({
               <img
                 src={signUrl}
                 alt="Signature"
+                crossOrigin="anonymous"
                 style={{ maxHeight: "40px", objectFit: "contain" }}
                 className="mx-auto mb-1"
               />
@@ -1627,15 +1630,28 @@ export function InvoiceRenderer({
         {/* Background Stationery / Letterhead Template Image */}
         {theme.backgroundImage && (
           <div
-            className="absolute inset-0 pointer-events-none z-0"
+            className="absolute inset-0 pointer-events-none z-0 overflow-hidden"
             style={{
-              backgroundImage: `url(${theme.backgroundImage})`,
+              backgroundImage: `url("${theme.backgroundImage}")`,
               backgroundSize: theme.backgroundFit === 'fill' ? '100% 100%' : theme.backgroundFit || 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
               opacity: theme.backgroundOpacity !== undefined ? theme.backgroundOpacity : 1,
             }}
-          />
+          >
+            <img
+              src={theme.backgroundImage}
+              alt=""
+              crossOrigin="anonymous"
+              className="w-full h-full pointer-events-none"
+              style={{
+                objectFit: theme.backgroundFit === 'fill' ? 'fill' : theme.backgroundFit === 'contain' ? 'contain' : 'cover',
+                objectPosition: 'center',
+                opacity: theme.backgroundOpacity !== undefined ? theme.backgroundOpacity : 1,
+                display: 'block',
+              }}
+            />
+          </div>
         )}
 
         {/* Freeform Absolute Blocks Layer (Photoshop layers) */}

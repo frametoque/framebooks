@@ -86,9 +86,13 @@ export default function NewInvoicePage() {
 
       // Pre-select default layout if Pro Plus
       if (plan === "Pro Plus") {
-        const defLayout = lyts.find(
-          (l) => l.document_type === "invoice" || l.document_type === "both"
-        );
+        const defLayout =
+          lyts.find(
+            (l) => l.is_default && (l.document_type === "invoice" || l.document_type === "both")
+          ) ||
+          lyts.find(
+            (l) => l.document_type === "invoice" || l.document_type === "both"
+          );
         if (defLayout) {
           setSelectedLayoutId(defLayout.id);
         }
