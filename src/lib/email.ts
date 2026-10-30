@@ -43,13 +43,44 @@ function getTransporter() {
   return transporter;
 }
 
+function getFromAndEnvelope(to: string): { from: string; envelope?: { from: string; to: string } } {
+  const user = process.env.SMTP_USER || "noreply@framebooks.io";
+  const rawFrom = process.env.SMTP_FROM || "";
+
+  // Strip extraneous backslashes and quotes
+  const cleanFrom = rawFrom.replace(/\\"/g, '"').replace(/^"|"$/g, "").trim();
+
+  let displayName = "Framebooks";
+  let displayEmail = user;
+
+  const match = cleanFrom.match(/^(.*?)\s*<([^>]+)>$/);
+  if (match) {
+    displayName = match[1].replace(/^"|"$/g, "").trim() || "Framebooks";
+    displayEmail = match[2].trim() || user;
+  } else if (cleanFrom) {
+    displayEmail = cleanFrom;
+  }
+
+  const host = (process.env.SMTP_HOST || "").toLowerCase();
+  const isGmail = host.includes("gmail");
+
+  return {
+    from: `"${displayName}" <${displayEmail}>`,
+    envelope: isGmail
+      ? {
+          from: user,
+          to: to,
+        }
+      : undefined,
+  };
+}
+
 /**
  * Send an email using configured SMTP transport.
  * Falls back to logging to server console in development if SMTP is unconfigured.
  */
 export async function sendEmail({ to, subject, text, html }: SendEmailOptions): Promise<{ success: boolean; simulated?: boolean }> {
   const mailer = getTransporter();
-  const from = process.env.SMTP_FROM || `"Framebooks Security" <${process.env.SMTP_USER || "noreply@framebooks.io"}>`;
 
   if (!mailer) {
     // In development or if SMTP is not configured, log to server console
@@ -65,8 +96,10 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions): 
   }
 
   try {
+    const { from, envelope } = getFromAndEnvelope(to);
     await mailer.sendMail({
       from,
+      envelope,
       to,
       subject,
       text,
