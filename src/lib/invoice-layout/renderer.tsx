@@ -513,7 +513,7 @@ export function InvoiceRenderer({
           invoice?.client_email ||
           invoice?.user_email ||
           invoice?.client?.email ||
-          (isInteractive ? "accounts@acme.com" : "");
+          (isInteractive ? "billing@company.com" : "");
         if (!clientEmail) {
           content = null;
           break;

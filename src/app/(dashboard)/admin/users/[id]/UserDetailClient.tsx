@@ -784,7 +784,7 @@ export function UserDetailClient({ data }: { data: any }) {
                 <input
                   type="email"
                   required
-                  placeholder="new-email@example.com"
+                  placeholder="name@company.com"
                   value={newEmailInput}
                   onChange={(e) => setNewEmailInput(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm outline-none focus:border-brand-500"

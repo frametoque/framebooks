@@ -674,7 +674,7 @@ export function SubscriptionsClient({
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. John Doe"
+                  placeholder="e.g. Customer Name"
                   value={addMemberName}
                   onChange={(e) => setAddMemberName(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm outline-none focus:border-brand-500"

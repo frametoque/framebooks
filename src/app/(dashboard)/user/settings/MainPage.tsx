@@ -1821,7 +1821,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                                 type="email" 
                                 value={inviteEmail}
                                 onChange={(e) => setInviteEmail(e.target.value)}
-                                placeholder="colleague@example.com"
+                                placeholder="teammember@domain.com"
                                 className="w-full bg-card border border-border hover:border-black/20 dark:border-white/20 rounded-2xl px-4 py-3 outline-none focus:border-brand-500 transition-colors text-sm text-foreground mb-4 shadow-2xs placeholder:text-gray-500 dark:placeholder:text-gray-400"
                                 required
                               />

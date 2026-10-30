@@ -1052,7 +1052,7 @@ export function BusinessDetailView({
                   required
                   value={addEmail}
                   onChange={(e) => setAddEmail(e.target.value)}
-                  placeholder="user@example.com"
+                  placeholder="name@company.com"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand-500"
                 />
               </div>
@@ -1062,7 +1062,7 @@ export function BusinessDetailView({
                   type="text"
                   value={addName}
                   onChange={(e) => setAddName(e.target.value)}
-                  placeholder="John Doe"
+                  placeholder="Contact Name"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand-500"
                 />
               </div>
