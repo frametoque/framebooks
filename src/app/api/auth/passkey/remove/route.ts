@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   const { userId } = await auth();
   
@@ -16,10 +18,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true });
     }
 
-    await sql`DELETE FROM passkeys WHERE user_id = ${userId}`;
-    return NextResponse.json({ success: true });
+    // Direct bulk wipe without verifying identity is blocked to prevent App Lock bypass.
+    // Bulk removal requires the verified recovery route: /api/auth/passkey/recovery/verify-otp
+    return NextResponse.json(
+      { error: "Passkey ID is required. To disable App Lock, use the verified email OTP recovery flow." },
+      { status: 400 }
+    );
   } catch (error) {
-    console.error("Failed to remove passkeys:", error);
-    return NextResponse.json({ error: "Failed to remove passkeys" }, { status: 500 });
+    console.error("Failed to remove passkey:", error);
+    return NextResponse.json({ error: "Failed to remove passkey" }, { status: 500 });
   }
 }

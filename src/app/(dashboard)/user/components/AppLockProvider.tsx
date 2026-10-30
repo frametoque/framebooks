@@ -4,7 +4,8 @@ import { Loader } from "@/components/ui/Loader";
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { MdLockOutline, MdLockOpen } from "react-icons/md";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail, ArrowLeft, CheckCircle2, ShieldAlert } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { signOut } from "next-auth/react";
 
 type AppLockContextType = {
@@ -267,13 +268,28 @@ function PasskeyAuthModal({ onSuccess, onCancel }: { onSuccess: () => void, onCa
   );
 }
 
-import { motion, AnimatePresence } from 'framer-motion';
-
 export function LockScreen() {
   const { unlock } = useAppLock();
+  const [mode, setMode] = useState<"passkey" | "otp_request" | "otp_verify">("passkey");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+
+  // OTP recovery state
+  const [maskedEmail, setMaskedEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   const handleUnlock = async () => {
     if (submitting) return;
@@ -315,12 +331,62 @@ export function LockScreen() {
     }
   };
 
+  const handleSendOtp = async () => {
+    setOtpLoading(true);
+    setOtpError("");
+    try {
+      const res = await fetch("/api/auth/passkey/recovery/send-otp", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send verification code.");
+      }
+      setMaskedEmail(data.maskedEmail || "your email");
+      setMode("otp_verify");
+      setResendCooldown(60);
+    } catch (err: any) {
+      setOtpError(err.message || "Failed to send verification code.");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanCode = otpCode.trim().replace(/\D/g, "");
+    if (cleanCode.length !== 6) {
+      setOtpError("Please enter the complete 6-digit verification code.");
+      return;
+    }
+    setOtpLoading(true);
+    setOtpError("");
+    try {
+      const res = await fetch("/api/auth/passkey/recovery/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: cleanCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Verification failed.");
+      }
+      setSuccess(true);
+      setTimeout(() => {
+        unlock();
+        window.location.reload();
+      }, 1000);
+    } catch (err: any) {
+      setOtpError(err.message || "Verification failed. Please check the code.");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className="flex-1 flex flex-col items-center justify-center min-h-[60vh]"
+      className="flex-1 flex flex-col items-center justify-center min-h-[60vh] px-4"
     >
       <motion.div 
         className="w-24 h-24 bg-brand-500/10 rounded-full flex items-center justify-center mb-8 border border-brand-500/20 shadow-[0_0_40px_rgba(0,227,91,0.1)] relative"
@@ -335,74 +401,195 @@ export function LockScreen() {
             >
               <MdLockOpen className="w-10 h-10 text-brand-500" />
             </motion.div>
-          ) : (
+          ) : mode === "passkey" ? (
             <motion.div
               key="locked"
               exit={{ scale: 0, opacity: 0 }}
             >
               <MdLockOutline className="w-10 h-10 text-brand-500" />
             </motion.div>
+          ) : (
+            <motion.div
+              key="otp"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            >
+              <Mail className="w-10 h-10 text-brand-500" />
+            </motion.div>
           )}
         </AnimatePresence>
       </motion.div>
       
-      <h2 className="text-3xl font-bold text-foreground mb-3 text-center">Dashboard Locked</h2>
-      <p className="text-gray-600 dark:text-gray-400 mb-10 max-w-sm text-center leading-relaxed">
-        App Lock is enabled. Please authenticate using your passkey to continue your session securely.
-      </p>
+      {/* PASSKEY MODE */}
+      {mode === "passkey" && (
+        <>
+          <h2 className="text-3xl font-bold text-foreground mb-3 text-center">Dashboard Locked</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-10 max-w-sm text-center leading-relaxed">
+            App Lock is enabled. Please authenticate using your passkey to continue your session securely.
+          </p>
 
-      {error && (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-red-400 bg-red-400/10 border border-red-400/20 px-4 py-3 rounded-2xl text-sm mb-6 text-center max-w-sm w-full"
-        >
-          {error}
-        </motion.div>
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-red-400 bg-red-400/10 border border-red-400/20 px-4 py-3 rounded-2xl text-sm mb-6 text-center max-w-sm w-full"
+            >
+              {error}
+            </motion.div>
+          )}
+
+          <button
+            onClick={handleUnlock}
+            disabled={submitting}
+            className="w-full max-w-sm h-14 rounded-2xl bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-brand-500/20 cursor-pointer"
+          >
+            {submitting ? (
+              <>
+                <Loader size="sm" /> Verifying...
+              </>
+            ) : (
+              "Unlock Dashboard"
+            )}
+          </button>
+
+          <div className="flex flex-col items-center gap-3 mt-6">
+            <button
+              type="button"
+              onClick={() => {
+                setOtpError("");
+                setMode("otp_request");
+              }}
+              className="text-xs text-gray-400 hover:text-brand-500 underline underline-offset-4 transition-colors cursor-pointer"
+            >
+              Can't authenticate? Unlock via Email OTP
+            </button>
+
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="text-xs text-gray-500 hover:text-foreground transition-colors cursor-pointer"
+            >
+              Sign out
+            </button>
+          </div>
+        </>
       )}
 
-      <button
-        onClick={handleUnlock}
-        disabled={submitting}
-        className="w-full max-w-sm h-14 rounded-2xl bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-brand-500/20"
-      >
-        {submitting ? (
-          <>
-            <Loader size="sm" /> Verifying...
-          </>
-        ) : (
-          "Unlock Dashboard"
-        )}
-      </button>
+      {/* OTP REQUEST MODE */}
+      {mode === "otp_request" && (
+        <div className="max-w-sm w-full text-center">
+          <h2 className="text-2xl font-bold text-foreground mb-2">Verify Your Identity</h2>
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-6 leading-relaxed">
+            To securely bypass App Lock, we will send a 6-digit one-time verification code to your verified account email address.
+          </p>
 
-      <div className="flex flex-col items-center gap-3 mt-6">
-        <button
-          type="button"
-          onClick={async () => {
-            if (!confirm("Are you having trouble authenticating? This will disable App Lock on your account so you can access your dashboard.")) return;
-            try {
-              const res = await fetch('/api/auth/passkey/remove', { method: 'POST' });
-              if (res.ok) {
-                unlock();
-                window.location.reload();
-              }
-            } catch (e) {
-              alert("Failed to remove App Lock.");
-            }
-          }}
-          className="text-xs text-gray-400 hover:text-red-400 underline underline-offset-4 transition-colors cursor-pointer"
-        >
-          Can't authenticate? Disable App Lock
-        </button>
+          {otpError && (
+            <div className="text-red-400 bg-red-400/10 border border-red-400/20 px-4 py-3 rounded-2xl text-sm mb-6 text-center">
+              {otpError}
+            </div>
+          )}
 
-        <button
-          type="button"
-          onClick={() => signOut()}
-          className="text-xs text-gray-500 hover:text-foreground transition-colors cursor-pointer"
-        >
-          Sign out
-        </button>
-      </div>
+          <button
+            onClick={handleSendOtp}
+            disabled={otpLoading}
+            className="w-full h-14 rounded-2xl bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-brand-500/20 cursor-pointer mb-3"
+          >
+            {otpLoading ? (
+              <>
+                <Loader size="sm" /> Sending Code...
+              </>
+            ) : (
+              "Send Verification Code"
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOtpError("");
+              setMode("passkey");
+            }}
+            className="text-xs text-gray-400 hover:text-foreground transition-colors cursor-pointer flex items-center justify-center gap-1.5 mx-auto mt-4"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Passkey
+          </button>
+        </div>
+      )}
+
+      {/* OTP VERIFY MODE */}
+      {mode === "otp_verify" && (
+        <form onSubmit={handleVerifyOtp} className="max-w-sm w-full text-center">
+          <h2 className="text-2xl font-bold text-foreground mb-2">Enter Verification Code</h2>
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-6 leading-relaxed">
+            We sent a 6-digit code to <strong className="text-foreground">{maskedEmail}</strong>. Enter it below to unlock your dashboard.
+          </p>
+
+          {otpError && (
+            <div className="text-red-400 bg-red-400/10 border border-red-400/20 px-4 py-3 rounded-2xl text-sm mb-6 text-center">
+              {otpError}
+            </div>
+          )}
+
+          <div className="mb-6">
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              autoFocus
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="000000"
+              className="w-full h-16 text-center font-mono text-3xl tracking-[0.5em] rounded-2xl bg-card border border-border focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none text-foreground transition-all shadow-2xs"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={otpLoading || otpCode.length !== 6}
+            className="w-full h-14 rounded-2xl bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-brand-500/20 cursor-pointer mb-3"
+          >
+            {otpLoading ? (
+              <>
+                <Loader size="sm" /> Verifying...
+              </>
+            ) : success ? (
+              <>
+                <CheckCircle2 className="w-5 h-5" /> Verified!
+              </>
+            ) : (
+              "Verify & Unlock Dashboard"
+            )}
+          </button>
+
+          <div className="flex items-center justify-between mt-4 px-2">
+            <button
+              type="button"
+              onClick={() => {
+                setOtpError("");
+                setMode("passkey");
+              }}
+              className="text-xs text-gray-400 hover:text-foreground transition-colors cursor-pointer flex items-center gap-1"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Back
+            </button>
+
+            {resendCooldown > 0 ? (
+              <span className="text-xs text-gray-500">Resend code in {resendCooldown}s</span>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSendOtp}
+                disabled={otpLoading}
+                className="text-xs text-brand-500 hover:underline cursor-pointer"
+              >
+                Resend Code
+              </button>
+            )}
+          </div>
+        </form>
+      )}
     </motion.div>
   );
 }
