@@ -65,9 +65,9 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
           className="flex items-center justify-center pointer-events-none"
         >
           {isDark ? (
-            <Sun className="w-4 h-4 text-amber-400" />
+            <Sun className="w-4 h-4" />
           ) : (
-            <Moon className="w-4 h-4 text-slate-700" />
+            <Moon className="w-4 h-4" />
           )}
         </motion.div>
       </AnimatePresence>
