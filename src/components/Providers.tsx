@@ -23,7 +23,7 @@ if (typeof console !== "undefined" && !(console as unknown as { __scriptTagFilte
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange={false}>
         {children}
       </ThemeProvider>
     </SessionProvider>
