@@ -1,9 +1,8 @@
 import Link from "next/link";
-import Image from "next/image";
 
 export const metadata = {
-  title: "404 Not Found",
-  description: "Oops! The page you're looking for doesn't exist.",
+  title: "404 Not Found - Framebooks",
+  description: "The page you're looking for doesn't exist.",
   robots: "noindex, follow",
 };
 
@@ -23,7 +22,7 @@ export default function NotFound() {
             href="/user/dashboard"
             className="flex-1 px-5 py-3 bg-[#00E35B] hover:bg-[#00C750] text-[#041418] rounded-xl font-bold text-sm transition-all shadow-md text-center"
           >
-            Go to Dashboard
+            Dashboard
           </Link>
           <Link
             href="/"
