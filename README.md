@@ -1,8 +1,8 @@
 # Framebooks
 
-**Modern Invoicing, Accounting & Business Management Platform**
+**Modern Invoicing, Accounting & Enterprise Business Management Platform**
 
-Framebooks is a full-featured bookkeeping and invoicing platform designed for small businesses, freelancers, and growing teams. It features multi-tenant workspace isolation, professional invoice & quotation generation, financial reporting, client management, passkey biometric authentication, and an isolated administrative control center.
+Framebooks is a high-performance bookkeeping, financial reporting, and invoicing platform built for small-to-medium businesses, agencies, and growing teams. It features multi-tenant workspace isolation, professional invoice and quotation generation, automated financial reporting, client management, passkey biometric authentication, and an isolated administrative control center.
 
 ---
 
@@ -12,10 +12,11 @@ Framebooks is a full-featured bookkeeping and invoicing platform designed for sm
 - **Digital Wallet Passes**: Export invoices to Apple Wallet (`.pkpass`) and Google Wallet passes.
 - **Income & Expense Tracking**: Track income streams, business expenses, bank transfers, and generate profit & loss summaries.
 - **Client & Inventory Management**: Manage client contacts, transaction histories, and product/service catalogs.
-- **Multi-Tenant Workspaces**: Role-based access control (Owner, Admin, Member) with granular permissions and team invitations.
-- **Biometric Passkey Authentication**: Modern WebAuthn/FIDO2 passkey support for passwordless 2FA login.
+- **Multi-Tenant Workspaces**: Role-based access control (`Owner`, `Admin`, `Member`) with granular permissions and team invitations.
+- **Biometric Passkey Authentication**: WebAuthn/FIDO2 passkey support for passwordless 2FA login.
 - **Administrative Portal (`/admin`)**: Strict separation between tenant data and platform-level administration (user management, subscription management, platform audit logs).
 - **Audit Logs**: Immutable activity trails for critical financial operations.
+- **Field-Level Data Encryption**: AES-256-GCM application-level encryption for sensitive client and financial data.
 
 ---
 
@@ -25,7 +26,7 @@ Framebooks is a full-featured bookkeeping and invoicing platform designed for sm
 - **Database**: [PostgreSQL](https://www.postgresql.org/) / [Neon Serverless](https://neon.tech/)
 - **Authentication**: NextAuth.js (Google OAuth & Credentials) + WebAuthn Passkeys (`@simplewebauthn`)
 - **Styling**: Tailwind CSS v4 + Framer Motion
-- **Storage**: Vercel Blob (receipt attachments, logos)
+- **Object Storage**: Cloudflare R2 (S3-compatible bucket for receipts and logos)
 - **PDF Generation**: `jspdf` & `pdf-lib`
 
 ---
@@ -34,8 +35,9 @@ Framebooks is a full-featured bookkeeping and invoicing platform designed for sm
 
 ### 1. Prerequisites
 
-- Node.js 18.17+ or 20+
-- PostgreSQL database (e.g., Neon serverless)
+- **Node.js**: `>=20.0.0`
+- **PostgreSQL**: PostgreSQL 14+ or Neon Serverless
+- **Cloudflare R2**: Bucket for file storage
 
 ### 2. Environment Setup
 
@@ -46,14 +48,17 @@ cp .env.example .env.local
 ```
 
 Key required variables:
-- `DATABASE_URL`: Connection string for PostgreSQL
-- `NEXTAUTH_URL`: Canonical URL (`http://localhost:3000` in dev)
-- `NEXTAUTH_SECRET`: Random 32+ character string
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: Google OAuth credentials
+- `DATABASE_URL`: PostgreSQL connection string with SSL enabled
+- `NEXTAUTH_URL`: Canonical site URL (e.g., `http://localhost:3000` in development)
+- `NEXTAUTH_SECRET`: Strong 32+ character random secret
+- `APP_SECRET_KEY`: 32-byte hex key for application-level AES-256-GCM field encryption
+- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`: Cloudflare R2 credentials
+
+See [`.env.example`](file:///.env.example) for the complete reference.
 
 ### 3. Database Migration & Seeding
 
-Apply the initial database schema and seed default subscription tiers and admin roles:
+Apply database schema migrations and seed platform administrator roles and subscription tiers:
 
 ```bash
 node scripts/seed_admin.js
@@ -69,40 +74,49 @@ Visit [http://localhost:3000](http://localhost:3000) to view the application.
 
 ---
 
-## Scripts
+## Available Scripts
 
 | Command | Description |
 |---|---|
 | `npm run dev` | Starts local Next.js dev server with Turbopack |
 | `npm run build` | Compiles optimized production build |
 | `npm run start` | Starts Next.js production server |
-| `npm run lint` | Runs ESLint |
+| `npm run typecheck` | Validates TypeScript types across the entire project |
+| `npm run lint` | Runs ESLint checks |
+| `npm run format:check` | Verifies code style compliance with ESLint |
 | `node scripts/seed_admin.js` | Runs database migrations and seeds admin / plans |
 | `node scripts/remove-demo-data.js` | Utility script to safely clean demo/test tenants |
 | `node scripts/restore-backup.js <file>` | Restores data snapshot from a JSON backup |
 
 ---
 
+## Health & Monitoring
+
+- **Health Check Route**: `GET /api/health`
+  Returns `{"status": "ok", "timestamp": "..."}` for uptime monitoring and container orchestration health checks without exposing internal infrastructure details.
+
+---
+
 ## Production Deployment
 
-### Vercel
-1. Connect your repository to Vercel.
-2. Configure environment variables matching `.env.example`.
-3. Set build command to `npm run build` and output directory to default.
+### Vercel / Cloudflare
+1. Connect your repository.
+2. Configure all required environment variables in project settings.
+3. Set build command to `npm run build` and output directory to default (`.next`).
 
-### Self-Hosted (PM2 / Node.js)
+### Node.js / Docker
 ```bash
+npm ci
 npm run build
-pm2 start ecosystem.config.js
+NODE_ENV=production npm run start
 ```
 
 ---
 
-## Security
+## Documentation
 
-- Role separation: Workspace permissions (`admin_users.role`) are strictly separated from platform admin access (`admin_users.system_role`).
-- Admin routes (`/admin/*`) enforce strict caching directives (`no-store`) and frame protection headers (`X-Frame-Options: DENY`).
-- Server actions and API routes perform user authentication and workspace authorization checks before mutating tenant records.
+- [SECURITY.md](file:///SECURITY.md) - Security architecture, encryption model, and vulnerability reporting.
+- [ADMIN_README.md](file:///ADMIN_README.md) - Platform administration portal documentation and operations guide.
 
 ---
 
