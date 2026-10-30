@@ -24,7 +24,7 @@ export default function Footer() {
                 rel="noopener noreferrer"
                 className="text-[#00C750] hover:underline"
               >
-                FrameToque Digital Media
+                FrameToque Digital
               </a>
             </p>
           </div>
@@ -57,7 +57,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="border-t border-[#E5E7EB] pt-6 sm:pt-8 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs sm:text-sm text-gray-500 text-center sm:text-left">
-          <p>© {new Date().getFullYear()} FrameToque Digital Media. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} FrameToque Digital. All rights reserved.</p>
         </div>
       </div>
     </footer>

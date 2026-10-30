@@ -1049,7 +1049,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                 <MdLock className="w-4 h-4 text-brand-500" />
               </div>
               <p className="text-[11px] leading-relaxed">
-                Your data stays secure with <span className="text-brand-500 font-medium">enterprise-grade encryption</span>. &copy; {new Date().getFullYear()}. <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a>. All rights reserved.
+                Your data stays secure with <span className="text-brand-500 font-medium">enterprise-grade encryption</span>. &copy; {new Date().getFullYear()}. <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors hover:underline">FrameToque Digital</a>. All rights reserved.
               </p>
             </div>
 
@@ -1494,7 +1494,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                               value={tenantFormData.name}
                               onChange={handleTenantChange}
                               disabled={currentUserRole === 'Viewer'}
-                              placeholder="e.g. FrameToque Digital Media"
+                              placeholder="e.g. FrameToque Digital"
                               className="w-full pl-10 pr-4 py-2.5 bg-card/60 hover:bg-card border border-border focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-foreground text-sm transition-all outline-none disabled:opacity-50"
                               required
                             />

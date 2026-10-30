@@ -575,7 +575,7 @@ export const guideGroups: GuideGroup[] = [
             title: '2. Entering Business Identity & Industry',
             content: 'Specify your company\'s operational name and primary sector so Framebooks can format your documentation appropriately.',
             bullets: [
-              'Business Name: Enter your official registered or trading name (e.g. FrameToque Digital Media)',
+              'Business Name: Enter your official registered or trading name (e.g. FrameToque Digital)',
               'Industry: Select your business domain (e.g. Technology, Retail, Hospitality, Services)',
               'Updates synchronize automatically to all future PDF headers, quotations, and client portals'
             ]
