@@ -147,10 +147,10 @@ export async function GET(req: Request) {
       <a href="?template=${templateKey}&theme=${themeMode}&width=${widthMode}&view=html" class="btn ${viewMode === "html" ? "active" : ""}">HTML</a>
       <a href="?template=${templateKey}&theme=${themeMode}&width=${widthMode}&view=text" class="btn ${viewMode === "text" ? "active" : ""}">Plain Text</a>
 
-      <form method="POST" style="margin: 0; display: inline-flex; gap: 6px;">
-        <input type="hidden" name="template" value="${templateKey}" />
-        <input type="email" name="to" placeholder="your@email.com" required style="width: 160px;" />
-        <button type="submit" class="btn" style="background: #00E35B; color: #041418; border-color: #00E35B;">Send Test</button>
+      <form method="POST" style="margin: 0; display: inline-flex; gap: 6px; align-items: center;">
+        <input type="email" name="to" value="itsnelitha@gmail.com" placeholder="your@email.com" required style="width: 170px;" />
+        <button type="submit" name="template" value="${templateKey}" class="btn" style="background: #00E35B; color: #041418; border-color: #00E35B;">Send Test</button>
+        <button type="submit" name="template" value="all" class="btn" style="background: #1E293B; color: #00E35B; border-color: #00E35B;" title="Send all 8 email templates sequentially">Send All (8)</button>
       </form>
     </div>
   </div>
@@ -188,6 +188,33 @@ export async function POST(req: Request) {
 
   if (!toEmail) {
     return new NextResponse("Missing email", { status: 400 });
+  }
+
+  if (templateKey === "all") {
+    const sentList: string[] = [];
+    const keys = Object.keys(SAMPLE_TEMPLATES);
+    for (const key of keys) {
+      const rendered = SAMPLE_TEMPLATES[key]();
+      await sendEmail({
+        to: toEmail,
+        subject: `[TEST PREVIEW] ${rendered.subject}`,
+        text: rendered.text,
+        html: rendered.html,
+        category: `test-${key}`,
+      });
+      sentList.push(key);
+      // Delay between SMTP dispatches to avoid throttling
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    }
+
+    return new NextResponse(
+      `<!DOCTYPE html><html><body style="font-family: sans-serif; background: #0A0F1D; color: #fff; padding: 40px; text-align: center;">
+        <h2 style="color: #00E35B;">All 8 Test Emails Sent Successfully!</h2>
+        <p>Sent all templates (${sentList.join(", ")}) to <strong>${toEmail}</strong>.</p>
+        <a href="/api/dev/email-preview" style="color: #00E35B; text-decoration: underline;">Back to Preview</a>
+      </body></html>`,
+      { headers: { "Content-Type": "text/html; charset=utf-8" } }
+    );
   }
 
   const templateBuilder = SAMPLE_TEMPLATES[templateKey] || SAMPLE_TEMPLATES["verification-code"];
