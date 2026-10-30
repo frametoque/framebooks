@@ -50,7 +50,7 @@ If this wasn't you, you can ignore this email. Your account stays locked. If you
 Framebooks
 --
 Sent by Framebooks, a product of FrameToque Digital.
-Need help? info@frametoque.com`;
+Need help? framebooks@frametoque.com`;
 
   return { subject, html, text };
 }

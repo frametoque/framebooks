@@ -11,7 +11,7 @@ export interface EmailLayoutOptions {
   isFreePlan?: boolean;
 }
 
-const DEFAULT_SUPPORT_EMAIL = process.env.SMTP_USER || "info@frametoque.com";
+export const DEFAULT_SUPPORT_EMAIL = process.env.SMTP_REPLY_TO || "framebooks@frametoque.com";
 const BASE_APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://framebooks.lk";
 
 /**

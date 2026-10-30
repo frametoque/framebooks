@@ -77,7 +77,7 @@ ${buttonText}: ${updateUrl}
 Framebooks
 --
 Sent by Framebooks, a product of FrameToque Digital.
-Need help? info@frametoque.com`;
+Need help? framebooks@frametoque.com`;
 
   return { subject, html, text };
 }

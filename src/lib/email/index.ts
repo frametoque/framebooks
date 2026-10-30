@@ -120,7 +120,10 @@ export async function sendEmail({
       subject,
       text,
       html,
-      replyTo: replyTo || process.env.SMTP_USER,
+      replyTo:
+        replyTo ||
+        process.env.SMTP_REPLY_TO ||
+        "framebooks@frametoque.com",
       headers: {
         "X-Entity-Ref-ID": `${category}-${Date.now()}`,
       },

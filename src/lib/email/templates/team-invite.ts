@@ -50,7 +50,7 @@ If you don't recognize this business, you can safely ignore this email.
 Framebooks
 --
 Sent by Framebooks, a product of FrameToque Digital.
-Need help? info@frametoque.com`;
+Need help? framebooks@frametoque.com`;
 
   return { subject, html, text };
 }

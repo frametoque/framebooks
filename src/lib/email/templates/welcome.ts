@@ -56,7 +56,7 @@ If you need anything or have feedback, just reply to this email.
 Framebooks
 --
 Sent by Framebooks, a product of FrameToque Digital.
-Need help? info@frametoque.com`;
+Need help? framebooks@frametoque.com`;
 
   return { subject, html, text };
 }
