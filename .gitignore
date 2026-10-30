@@ -30,8 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -44,8 +45,10 @@ src/app/layout.js
 # clerk configuration (can include secrets)
 /.clerk/
 
-# database backups
+# database backups, exports and migration dumps
 /backups/
-/migrations/db_export.sql
-/scripts/import-island-spares/state/
-/scripts/import-island-spares/reports/
+/migrations/
+/scripts/
+*.sql
+*.dump
+/exports/
