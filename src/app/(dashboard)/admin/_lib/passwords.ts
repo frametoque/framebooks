@@ -17,16 +17,9 @@ export function hashPassword(password: string): string {
 export function verifyPassword(password: string, storedHash: string | null | undefined): boolean {
   if (!storedHash || !password) return false;
 
-  // If the stored hash does not contain a salt delimiter ':', handle as legacy/plain text match
+  // Stored password hash must follow "<salt>:<hex-key>" format
   if (!storedHash.includes(":")) {
-    try {
-      const a = Buffer.from(password);
-      const b = Buffer.from(storedHash);
-      if (a.length !== b.length) return false;
-      return crypto.timingSafeEqual(a, b);
-    } catch {
-      return password === storedHash;
-    }
+    return false;
   }
 
   try {

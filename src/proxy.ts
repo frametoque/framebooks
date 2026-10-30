@@ -16,12 +16,9 @@ export default function middleware(req: NextRequest) {
     });
   }
 
-  // Admin routes: protected by framebooks-admin-token (or fallback next-auth session)
+  // Admin routes: protected strictly by framebooks-admin-token
   if (pathname.startsWith("/admin")) {
-    const adminSession =
-      req.cookies.get("framebooks-admin-token")?.value ||
-      req.cookies.get("next-auth.session-token")?.value ||
-      req.cookies.get("__Secure-next-auth.session-token")?.value;
+    const adminSession = req.cookies.get("framebooks-admin-token")?.value;
 
     if (!adminSession) {
       const loginUrl = new URL("/admin/login", req.url);

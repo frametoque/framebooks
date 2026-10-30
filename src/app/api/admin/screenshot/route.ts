@@ -25,12 +25,20 @@ function getLocalChromePath(): string | undefined {
   return undefined;
 }
 
+import { getAdminUser } from "@/app/(dashboard)/admin/_lib/auth";
+import { validateSafeUrl } from "@/lib/security/ssrf";
+
 export async function GET(req: NextRequest) {
+  const admin = await getAdminUser();
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized. Staff access required." }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const targetUrl = searchParams.get("url");
-  const delayMs = parseInt(searchParams.get("delay") || "2000", 10);
-  const width = parseInt(searchParams.get("width") || "1920", 10);
-  const height = parseInt(searchParams.get("height") || "1080", 10);
+  const delayMs = Math.min(Math.max(0, parseInt(searchParams.get("delay") || "2000", 10)), 5000);
+  const width = Math.min(Math.max(320, parseInt(searchParams.get("width") || "1920", 10)), 2560);
+  const height = Math.min(Math.max(240, parseInt(searchParams.get("height") || "1080", 10)), 1440);
 
   if (!targetUrl) {
     return NextResponse.json({ error: "Missing required 'url' parameter" }, { status: 400 });
@@ -39,6 +47,11 @@ export async function GET(req: NextRequest) {
   let formattedUrl = targetUrl.trim();
   if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
     formattedUrl = "https://" + formattedUrl;
+  }
+
+  const ssrfCheck = await validateSafeUrl(formattedUrl);
+  if (!ssrfCheck.safe) {
+    return NextResponse.json({ error: ssrfCheck.error || "Destination URL not permitted." }, { status: 400 });
   }
 
   let browser = null;

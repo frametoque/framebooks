@@ -72,10 +72,10 @@ export default function OnboardingPage() {
   const [uploadingSlip, setUploadingSlip] = useState(false);
   const [copiedBank, setCopiedBank] = useState(false);
   const [bankDetails, setBankDetails] = useState({
-    bank: "Bank of Ceylon",
-    accountName: "B.N.V.P. Fernando",
-    accountNumber: "4833004",
-    branch: "Moratuwa / LKR",
+    bank: "",
+    accountName: "",
+    accountNumber: "",
+    branch: "",
   });
 
   // Awaiting approval state
@@ -228,9 +228,11 @@ export default function OnboardingPage() {
   };
 
   const handleCopyAccountNo = () => {
-    navigator.clipboard.writeText(bankDetails.accountNumber || "4833004");
-    setCopiedBank(true);
-    setTimeout(() => setCopiedBank(false), 2000);
+    if (bankDetails.accountNumber) {
+      navigator.clipboard.writeText(bankDetails.accountNumber);
+      setCopiedBank(true);
+      setTimeout(() => setCopiedBank(false), 2000);
+    }
   };
 
   const handleApplyCoupon = async () => {

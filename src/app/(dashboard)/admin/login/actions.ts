@@ -6,6 +6,7 @@ import { verifyPassword } from "@/app/(dashboard)/admin/_lib/passwords";
 import { isStaffRole } from "@/app/(dashboard)/admin/_lib/permissions";
 import { createAdminToken, setAdminSessionCookie, clearAdminSessionCookie } from "@/app/(dashboard)/admin/_lib/session";
 import { redirect } from "next/navigation";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 
 export async function adminLoginAction({
   email,
@@ -19,6 +20,14 @@ export async function adminLoginAction({
   }
 
   const cleanEmail = email.trim().toLowerCase();
+
+  const rateCheck = checkRateLimit("admin-login", cleanEmail, { windowMs: 15 * 60 * 1000, max: 5 });
+  if (!rateCheck.allowed) {
+    return {
+      success: false,
+      error: `Too many failed login attempts. Please wait ${Math.ceil(rateCheck.retryAfterSeconds / 60)} minute(s) before trying again.`
+    };
+  }
 
   const rows = await sql`
     SELECT id, email, password_hash, full_name, system_role, is_banned, deleted_at

@@ -86,28 +86,48 @@ export async function submitSubscriptionPayment(formData: FormData) {
       return { success: false, error: "Please upload a photo of the payment slip." };
     }
 
-    // 1. Upload to Cloudflare R2
-    const cleanFileName = `${tenantId}-${Date.now()}-${slipFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    // Validate slip file type and size (max 10MB, raster images and PDF only)
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (slipFile.size > MAX_SIZE) {
+      return { success: false, error: "Payment slip must be smaller than 10MB." };
+    }
+
+    const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!ALLOWED_MIME.includes(slipFile.type)) {
+      return { success: false, error: "Invalid file type. Only JPG, PNG, WebP, and PDF are allowed." };
+    }
+
+    // 1. Lookup and verify plan
+    let planId: number | null = null;
+    let verifiedAmount = amount;
+    if (planName) {
+      const p = await sql`
+        SELECT id, price_monthly, price_yearly, currency, is_active FROM plans 
+        WHERE LOWER(name) = LOWER(${planName}) OR key = LOWER(${planName}) 
+        LIMIT 1
+      `;
+      if (p.length > 0) {
+        planId = p[0].id;
+        const catalogPrice = billingCycle === "yearly" ? p[0].price_yearly : p[0].price_monthly;
+        if (catalogPrice && catalogPrice > 0) {
+          verifiedAmount = catalogPrice;
+        }
+      }
+    }
+
+    // 2. Upload to Cloudflare R2
+    const safeExt = slipFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'bin';
+    const cleanFileName = `${tenantId}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${safeExt}`;
     const result = await uploadToR2({
       file: slipFile,
       fileName: cleanFileName,
       folder: "subscriptions",
+      contentType: slipFile.type,
     });
     const slipUrl = result.url;
 
-    // 2. Lookup plan ID
-    let planId: number | null = null;
-    if (planName) {
-      const p = await sql`
-        SELECT id FROM plans 
-        WHERE LOWER(name) = LOWER(${planName}) OR key = LOWER(${planName}) 
-        LIMIT 1
-      `;
-      if (p.length > 0) planId = p[0].id;
-    }
-
     const ref = `SLIP-${tenantId}-${Date.now().toString().slice(-6)}`;
-    const fullNotes = `Bank slip uploaded for ${planName} (${billingCycle})${customerNotes ? ` | Ref: ${customerNotes}` : ''}`;
+    const fullNotes = `Bank slip uploaded for ${planName} (${billingCycle})${customerNotes ? ` | Customer note: ${customerNotes}` : ''}${amount !== verifiedAmount ? ` | Claimed amount: LKR ${amount}` : ''}`;
 
     // 3. Insert into payments table (for admin review, approval & tracking)
     await sql`
@@ -129,7 +149,7 @@ export async function submitSubscriptionPayment(formData: FormData) {
         ${tenantId},
         ${dbUserId},
         ${planId},
-        ${amount},
+        ${verifiedAmount},
         'LKR',
         'bank_transfer',
         'bank_slip',
@@ -144,7 +164,7 @@ export async function submitSubscriptionPayment(formData: FormData) {
     // 4. Also insert into tenant_subscriptions for backward compatibility
     await sql`
       INSERT INTO tenant_subscriptions (tenant_id, plan_name, billing_cycle, amount, slip_url, status)
-      VALUES (${tenantId}, ${planName}, ${billingCycle}, ${amount}, ${slipUrl}, 'pending')
+      VALUES (${tenantId}, ${planName}, ${billingCycle}, ${verifiedAmount}, ${slipUrl}, 'pending')
     `;
 
     return { success: true };

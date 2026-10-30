@@ -1,24 +1,28 @@
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { logSystemAction } from '@/lib/logger';
+import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(request) {
+export async function POST(request: Request) {
   try {
-    const body = await request.json();
-
-    const userId = body.userId || body.id;
-    const { email, fullName, phone, company, website, address } = body;
-
-    if (!email) {
+    const { userId, session } = await auth();
+    if (!userId || !session?.user?.email) {
       return NextResponse.json(
-        { success: false, error: 'Email is required' },
-        { status: 400 }
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
-    // Update admin_users if user exists
+    const email = session.user.email.trim().toLowerCase();
+    const dbUserId = (session.user as any).dbId || Number(userId) || 0;
+    const tenantId = (session.user as any).tenantId;
+
+    const body = await request.json();
+    const { fullName, phone, company, website, address } = body;
+
+    // Update admin_users strictly for the authenticated user
     await sql`
       UPDATE admin_users
       SET
@@ -28,14 +32,17 @@ export async function POST(request) {
         website    = COALESCE(${website || null}, website),
         address    = COALESCE(${address || null}, address),
         updated_at = NOW()
-      WHERE id = ${Number(userId) || 0} OR LOWER(email) = LOWER(${email})
+      WHERE id = ${dbUserId} OR LOWER(email) = ${email}
     `;
 
-    // Check if client exists by email
-    const byEmail = await sql`
-      SELECT id FROM admin_clients WHERE LOWER(email) = LOWER(${email})
-      LIMIT 1
-    `;
+    // Check if client exists by email strictly scoped to tenant
+    const byEmail = tenantId
+      ? await sql`
+          SELECT id FROM admin_clients 
+          WHERE LOWER(email) = ${email} AND tenant_id = ${tenantId}
+          LIMIT 1
+        `
+      : [];
 
     let result;
     if (byEmail.length > 0) {
@@ -63,7 +70,7 @@ export async function POST(request) {
         INSERT INTO admin_clients (
           id, email, full_name,
           phone, company, website, address,
-          active, created_at, updated_at
+          active, created_at, updated_at, tenant_id
         ) VALUES (
           ${clientId},
           ${email},
@@ -74,7 +81,8 @@ export async function POST(request) {
           ${address || null},
           true,
           NOW(),
-          NOW()
+          NOW(),
+          ${tenantId || null}
         )
         RETURNING
           email,

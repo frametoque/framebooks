@@ -3,19 +3,15 @@ import { auth } from '@/lib/auth';
 import sql from "@/lib/db";
 import { checkR2Health } from "@/lib/r2";
 
+import { getAdminUser } from "@/app/(dashboard)/admin/_lib/auth";
+
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const { userId, session } = await auth();
-    if (!userId && !session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const user = session?.user as any;
-    const isAdmin = user?.systemRole === "super_admin" || user?.systemRole === "admin" || user?.role === "admin";
-    if (!isAdmin) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const admin = await getAdminUser();
+    if (!admin || !["super_admin", "admin"].includes(admin.systemRole)) {
+      return NextResponse.json({ error: "Forbidden. Administrative access required." }, { status: 403 });
     }
 
     // 1. Check DB

@@ -138,7 +138,7 @@ export default function AdminLoginClient() {
           </form>
 
           <p className="mt-8 text-center text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-            Admin Portal &bull; End-to-end encrypted
+            Admin Portal &bull; Enterprise-grade encryption
           </p>
         </div>
       </div>

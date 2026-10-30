@@ -1,48 +1,73 @@
 import { NextResponse } from 'next/server';
 import sql from "@/lib/db";
+import { auth } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request) {
+export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const user_email = searchParams.get('user_email');
-    
-    if (!user_email) {
+    const { userId, session } = await auth();
+    if (!userId || !session?.user?.email) {
       return NextResponse.json(
-        { error: 'user_email is required' },
-        { status: 400 }
+        { error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
-    const rows = await sql`
-      SELECT 
-        invoice_id,
-        user_email,
-        project_name,
-        date,
-        subtotal,
-        discount,
-        advance,
-        tax_rate,
-        total,
-        total_due,
-        
-        payment_status,
-        currency,
-        category,
-        created_at
-      FROM public.invoices
-      WHERE LOWER(user_email) = LOWER(${user_email}) 
-      ORDER BY created_at DESC
-    `;
+    const sessionEmail = session.user.email.trim().toLowerCase();
+    const tenantId = (session.user as any).tenantId;
+
+    const rows = tenantId
+      ? await sql`
+          SELECT 
+            invoice_id,
+            user_email,
+            project_name,
+            date,
+            subtotal,
+            discount,
+            advance,
+            tax_rate,
+            total,
+            total_due,
+            payment_status,
+            currency,
+            category,
+            created_at
+          FROM public.invoices
+          WHERE tenant_id = ${tenantId} OR LOWER(user_email) = ${sessionEmail}
+          ORDER BY created_at DESC
+        `
+      : await sql`
+          SELECT 
+            invoice_id,
+            user_email,
+            project_name,
+            date,
+            subtotal,
+            discount,
+            advance,
+            tax_rate,
+            total,
+            total_due,
+            payment_status,
+            currency,
+            category,
+            created_at
+          FROM public.invoices
+          WHERE LOWER(user_email) = ${sessionEmail}
+          ORDER BY created_at DESC
+        `;
     
-    const nonAdvancePaymentsRows = await sql`
-      SELECT invoice_id, SUM(amount) as paid_sum
-      FROM public.admin_incomes
-      WHERE invoice_id IS NOT NULL AND LOWER(description) NOT LIKE 'advance:%' AND LOWER(description) NOT LIKE 'advance payment%'
-      GROUP BY invoice_id
-    `;
+    const invoiceIds = rows.map((r: any) => r.invoice_id).filter(Boolean);
+    const nonAdvancePaymentsRows = invoiceIds.length > 0
+      ? await sql`
+          SELECT invoice_id, SUM(amount) as paid_sum
+          FROM public.admin_incomes
+          WHERE invoice_id = ANY(${invoiceIds}) AND LOWER(description) NOT LIKE 'advance:%' AND LOWER(description) NOT LIKE 'advance payment%'
+          GROUP BY invoice_id
+        `
+      : [];
     const paymentsMap: Record<string, number> = {};
     nonAdvancePaymentsRows.forEach((p: any) => {
       paymentsMap[p.invoice_id] = parseFloat(p.paid_sum || '0');

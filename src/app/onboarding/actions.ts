@@ -226,9 +226,9 @@ export async function getCompanyBankDetailsAction() {
     success: true,
     bankDetails: {
       bank: "Bank of Ceylon",
-      accountName: "B.N.V.P. Fernando",
-      accountNumber: "4833004",
-      branch: "Moratuwa / LKR",
+      accountName: "Framebooks Official",
+      accountNumber: "Official Bank Account",
+      branch: "Colombo / LKR",
     }
   };
 }

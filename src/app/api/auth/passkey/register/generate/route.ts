@@ -2,6 +2,7 @@ import { generateRegistrationOptions } from '@simplewebauthn/server';
 import { NextResponse } from 'next/server';
 import { auth, currentUser } from '@/lib/auth';
 import sql from '@/lib/db';
+import { checkRateLimit } from '@/lib/security/rate-limit';
 
 const rpName = 'Framebooks';
 
@@ -33,8 +34,22 @@ export async function GET(req: Request) {
     },
   });
 
+  const rateLimitResult = checkRateLimit(req, { limit: 10, windowMs: 60 * 1000, prefix: 'passkey-reg' });
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(
+      { error: "Too many passkey requests. Please wait before trying again." },
+      { status: 429, headers: { 'Retry-After': String(rateLimitResult.retryAfterSeconds) } }
+    );
+  }
+
   const response = NextResponse.json(options);
-  response.cookies.set('currentChallenge', options.challenge, { httpOnly: true, secure: false, maxAge: 60 * 5 });
+  response.cookies.set('currentChallenge', options.challenge, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 5,
+  });
   
   return response;
 }

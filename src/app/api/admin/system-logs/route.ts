@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import {  auth  } from '@/lib/auth';
-import { getSystemLogs, logSystemAction, clearSystemLogs } from "@/lib/logger";
+import { getAdminUser } from "@/app/(dashboard)/admin/_lib/auth";
+import { hasPermission } from "@/app/(dashboard)/admin/_lib/permissions";
+import { getSystemLogs, logSystemAction } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const admin = await getAdminUser();
+    if (!admin || !hasPermission(admin.systemRole, "view_audit_logs")) {
+      return NextResponse.json({ error: "Forbidden. Administrative access required." }, { status: 403 });
     }
 
     const logs = await getSystemLogs();
@@ -25,18 +25,17 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const admin = await getAdminUser();
+    if (!admin) {
+      return NextResponse.json({ error: "Forbidden. Administrative access required." }, { status: 403 });
     }
 
     const { task } = await request.json();
-    if (!task) {
+    if (!task || typeof task !== "string") {
       return NextResponse.json({ error: "Task description is required" }, { status: 400 });
     }
 
-    await logSystemAction(task);
+    await logSystemAction(`[Admin ${admin.email}] ${task.slice(0, 500)}`);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error logging system action via API:", error);
@@ -48,24 +47,10 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE() {
-  try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const cleared = await clearSystemLogs();
-    if (cleared) {
-      return NextResponse.json({ success: true });
-    } else {
-      return NextResponse.json({ success: false, error: "Failed to clear logs" }, { status: 500 });
-    }
-  } catch (error) {
-    console.error("Error clearing logs via API:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to clear logs" },
-      { status: 500 }
-    );
-  }
+  // System audit logs are append-only and tamper-resistant; programmatic deletion is prohibited
+  return NextResponse.json(
+    { error: "Audit logs are append-only and cannot be deleted." },
+    { status: 405 }
+  );
 }
+

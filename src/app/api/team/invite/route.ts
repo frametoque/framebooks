@@ -3,16 +3,37 @@ import {  auth  } from '@/lib/auth';
 import sql from '@/lib/db';
 import { checkLimit } from '@/lib/plans';
 
+import { getUserContext, hasPermission } from '@/app/(dashboard)/user/actions/rbac';
+
 export async function POST(req: Request) {
-  const { userId } = await auth();
+  const { userId, role: userRole, tenantId } = await getUserContext();
   
-  if (!userId) {
+  if (!userId || !tenantId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { email, role } = await req.json();
-  if (!email || !email.includes('@')) {
-    return NextResponse.json({ error: "Invalid email" }, { status: 400 });
+  const canManageTeam = await hasPermission(userRole, 'team', 'manage', tenantId);
+  if (!canManageTeam) {
+    return NextResponse.json({ error: "Forbidden: You do not have permission to manage team members" }, { status: 403 });
+  }
+
+  const body = await req.json();
+  const email = (body.email || '').trim().toLowerCase();
+  const inviteRole = (body.role || 'Viewer').trim();
+
+  // Validate email format
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+  }
+
+  // Only Owner can invite another Owner
+  const validRoles = ['Viewer', 'Editor', 'Accountant', 'Admin', 'Owner'];
+  if (!validRoles.includes(inviteRole)) {
+    return NextResponse.json({ error: "Invalid role specified" }, { status: 400 });
+  }
+
+  if (inviteRole.toLowerCase() === 'owner' && userRole?.toLowerCase() !== 'owner') {
+    return NextResponse.json({ error: "Only the organization owner can invite another owner" }, { status: 403 });
   }
 
   try {
@@ -20,14 +41,6 @@ export async function POST(req: Request) {
     if (!limitCheck.allowed) {
       return NextResponse.json({ error: "Your current plan does not allow adding more team members." }, { status: 403 });
     }
-
-    // 1. Get the current user's tenant_id
-    const userRows = await sql`SELECT tenant_id FROM admin_users WHERE id = ${Number(userId) || 0}`;
-    if (!userRows || userRows.length === 0) {
-      return NextResponse.json({ error: "User not found or no tenant assigned" }, { status: 403 });
-    }
-    
-    const tenantId = userRows[0].tenant_id;
 
     // 2. Check if user already exists in the system
     const targetUserRows = await sql`SELECT id FROM admin_users WHERE email = ${email}`;
@@ -48,14 +61,14 @@ export async function POST(req: Request) {
       }
       // If declined, we can recreate or just update the status to pending and update the role
       await sql`
-        UPDATE team_invitations SET status = 'pending', role = ${role || 'Viewer'}
+        UPDATE team_invitations SET status = 'pending', role = ${inviteRole}
         WHERE id = ${existingInvite[0].id}
       `;
     } else {
       // 4. Create new invitation
       await sql`
         INSERT INTO team_invitations (tenant_id, email, status, role) 
-        VALUES (${tenantId}, ${email}, 'pending', ${role || 'Viewer'})
+        VALUES (${tenantId}, ${email}, 'pending', ${inviteRole})
       `;
     }
 

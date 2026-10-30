@@ -3,20 +3,14 @@
 import sql from "@/lib/db";
 import { auth } from '@/lib/auth';
 import { requirePermission } from "./rbac";
+import { sanitizeCsvValue } from "@/lib/security/csv";
 
 function jsonToCsv(items: any[]) {
   if (!items || items.length === 0) return "";
   
   const header = Object.keys(items[0]).join(",");
   const rows = items.map(item => {
-    return Object.values(item).map(val => {
-      if (val === null || val === undefined) return "";
-      const str = String(val).replace(/"/g, '""');
-      if (str.search(/("|,|\n)/g) >= 0) {
-        return `"${str}"`;
-      }
-      return str;
-    }).join(",");
+    return Object.values(item).map(val => sanitizeCsvValue(val)).join(",");
   });
 
   return [header, ...rows].join("\n");

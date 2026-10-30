@@ -7,32 +7,17 @@ import { logSystemAction } from "@/lib/logger";
 import { getTenantId } from "./actions";
 
 // Fetch all accounts and calculate running balances
-export async function getAccounts(startDate?: string, endDate?: string, providedTenantId?: string) {
+export async function getAccounts(startDate?: string, endDate?: string) {
   const start = startDate || '1970-01-01';
   const end = endDate || '2099-12-31';
 
-  const tenantId = providedTenantId || await getTenantId();
-  let rows;
-  try {
-    rows = await sql`
-      SELECT id, name, type, bank_name, account_number, branch, initial_balance, created_at, is_default, is_hidden
-      FROM accounts
-      WHERE is_hidden IS NOT TRUE AND tenant_id = ${tenantId}
-      ORDER BY created_at ASC
-    `;
-  } catch (e: any) {
-    if (e.message?.includes('does not exist') || String(e).includes('does not exist')) {
-      await sql`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT FALSE`;
-      rows = await sql`
-        SELECT id, name, type, bank_name, account_number, branch, initial_balance, created_at, is_default, is_hidden
-        FROM accounts
-        WHERE is_hidden IS NOT TRUE AND tenant_id = ${tenantId}
-        ORDER BY created_at ASC
-      `;
-    } else {
-      throw e;
-    }
-  }
+  const tenantId = await getTenantId();
+  const rows = await sql`
+    SELECT id, name, type, bank_name, account_number, branch, initial_balance, created_at, is_default, is_hidden
+    FROM accounts
+    WHERE is_hidden IS NOT TRUE AND tenant_id = ${tenantId}
+    ORDER BY created_at ASC
+  `;
 
   const accounts = rows.map((r: any) => ({
     id: r.id,
@@ -135,20 +120,31 @@ export async function deleteAccount(id: number) {
   if (rbacError) throw new Error(rbacError);
 
   const tenantId = await getTenantId();
-  // Soft delete by hiding it from the UI.
-  // Add 'is_hidden' column if it doesn't exist.
-  try {
-    await sql`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT FALSE`;
-  } catch (e) {
-    console.error("Failed to add is_hidden column", e);
-  }
-
   await sql`UPDATE accounts SET is_hidden = TRUE WHERE id = ${id} AND tenant_id = ${tenantId}`;
   await logSystemAction(`Deleted account`);
 }
 
 export async function transferCash(data: { date: string; sourceAccountId: number; destinationAccountId: number; amount: number; description: string }) {
+  const { error: rbacError } = await requirePermission('accounts', 'update');
+  if (rbacError) throw new Error(rbacError);
+
   const tenantId = await getTenantId();
+  if (data.sourceAccountId === data.destinationAccountId) {
+    throw new Error("Source and destination accounts must be different");
+  }
+  if (!data.amount || data.amount <= 0) {
+    throw new Error("Transfer amount must be positive");
+  }
+
+  // Verify both accounts belong to this tenant
+  const accounts = await sql`
+    SELECT id FROM accounts 
+    WHERE id IN (${data.sourceAccountId}, ${data.destinationAccountId}) AND tenant_id = ${tenantId}
+  `;
+  if (accounts.length !== 2) {
+    throw new Error("One or both accounts do not exist or access is denied");
+  }
+
   await sql`
     INSERT INTO admin_transfers (date, source_account_id, destination_account_id, amount, description, tenant_id)
     VALUES (${data.date}, ${data.sourceAccountId}, ${data.destinationAccountId}, ${data.amount}, ${data.description}, ${tenantId})
@@ -264,6 +260,9 @@ export async function getLedger(accountId: number | null, startDate?: string, en
 }
 
 export async function setDefaultAccount(id: number) {
+  const { error: rbacError } = await requirePermission('accounts', 'update');
+  if (rbacError) throw new Error(rbacError);
+
   const tenantId = await getTenantId();
   await sql`UPDATE accounts SET is_default = FALSE WHERE tenant_id = ${tenantId}`;
   await sql`UPDATE accounts SET is_default = TRUE WHERE id = ${id} AND tenant_id = ${tenantId}`;

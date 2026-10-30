@@ -2683,32 +2683,40 @@ export async function submitPaymentSlip(invoiceId: string, amount: number, slipB
   }
 }
 
-export async function reviewPaymentSlip(id: number, approved: boolean, reviewerId: string, note?: string) {
+export async function reviewPaymentSlip(id: number, approved: boolean, _reviewerId?: string, note?: string) {
   try {
-    const slipRows = await sql`SELECT * FROM invoice_payment_slips WHERE id = ${id}`;
-    if (slipRows.length === 0) return { success: false, error: "Slip not found" };
+    const { error: rbacError } = await requirePermission('invoices', 'update');
+    if (rbacError) return { success: false, error: rbacError };
+
+    const tenantId = await getTenantId();
+    const slipRows = await sql`
+      SELECT id, invoice_id, amount 
+      FROM invoice_payment_slips 
+      WHERE id = ${id} AND tenant_id = ${tenantId}
+    `;
+    if (slipRows.length === 0) return { success: false, error: "Slip not found or access denied" };
     const slip = slipRows[0];
 
     const invoiceId = slip.invoice_id;
-    const amount = slip.amount;
+    const amount = Number(slip.amount) || 0;
 
     if (approved) {
-      // On approval, find the corresponding invoice and update its payment status
-      const invoiceRows = await sql`SELECT * FROM invoices WHERE invoice_id = ${invoiceId}`;
-           if (invoiceRows.length > 0) {
+      // On approval, find the corresponding invoice scoped to tenant and update its payment status
+      const invoiceRows = await sql`
+        SELECT invoice_id, total_due 
+        FROM invoices 
+        WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId}
+      `;
+      if (invoiceRows.length > 0) {
         const invoice = invoiceRows[0];
-        const newTotalDue = Math.max(0, parseFloat(invoice.total_due) - amount);
-        let newStatus = 'partially paid';
-
-        if (newTotalDue < 0.01) {
-          newStatus = 'fully paid';
-        }
+        const newTotalDue = Math.max(0, parseFloat(invoice.total_due || "0") - amount);
+        const newStatus = newTotalDue < 0.01 ? 'fully paid' : 'partially paid';
 
         await sql`
           UPDATE invoices
           SET payment_status = ${newStatus},
               total_due = ${newTotalDue}
-          WHERE invoice_id = ${invoiceId}
+          WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId}
         `;
       }
 
@@ -2721,9 +2729,8 @@ export async function reviewPaymentSlip(id: number, approved: boolean, reviewerI
       UPDATE invoice_payment_slips
       SET status = ${approved ? 'approved' : 'declined'},
           reviewed_at = CURRENT_TIMESTAMP,
-          reviewed_by = ${reviewerId},
           review_note = ${note || null}
-      WHERE id = ${id}
+      WHERE id = ${id} AND tenant_id = ${tenantId}
     `;
 
     return { success: true };

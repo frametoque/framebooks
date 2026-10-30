@@ -67,18 +67,17 @@ export async function uploadInvoiceLayoutAsset(
     return { success: false, error: "No file provided." };
   }
 
-  // Validate file type
+  // Validate file type (raster images only to prevent Stored XSS via SVG scripts)
   const validTypes = [
     "image/jpeg",
     "image/png",
     "image/webp",
     "image/gif",
-    "image/svg+xml",
   ];
   if (!validTypes.includes(file.type)) {
     return {
       success: false,
-      error: "Invalid file type. Please upload a JPG, PNG, WebP, GIF, or SVG image.",
+      error: "Invalid file type. Please upload a JPG, PNG, WebP, or GIF image.",
     };
   }
 

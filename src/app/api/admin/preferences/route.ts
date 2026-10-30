@@ -1,40 +1,21 @@
 import { NextResponse } from "next/server";
-import {  auth  } from '@/lib/auth';
+import { getAdminUser } from "@/app/(dashboard)/admin/_lib/auth";
 import sql from "@/lib/db";
 import { logSystemAction } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
-async function ensurePrefsTable() {
-  await sql`
-    CREATE TABLE IF NOT EXISTS public.admin_preferences (
-      id SERIAL PRIMARY KEY,
-      user_id VARCHAR(255) UNIQUE,
-      tenant_id INTEGER,
-      currency VARCHAR(10) DEFAULT 'USD',
-      invoice_prefix VARCHAR(50) DEFAULT 'INV',
-      auto_refresh VARCHAR(20) DEFAULT '30',
-      max_upload_size VARCHAR(20) DEFAULT '5',
-      default_view_range VARCHAR(50) DEFAULT 'this year',
-      created_at TIMESTAMP DEFAULT NOW(),
-      updated_at TIMESTAMP DEFAULT NOW()
-    );
-  `;
-}
-
 export async function GET() {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const admin = await getAdminUser();
+    if (!admin) {
+      return NextResponse.json({ error: "Forbidden. Administrative access required." }, { status: 403 });
     }
-
-    await ensurePrefsTable();
 
     const rows = await sql`
       SELECT currency, invoice_prefix, auto_refresh, max_upload_size, default_view_range 
       FROM admin_preferences 
-      WHERE user_id = ${userId}
+      WHERE user_id = ${String(admin.id)}
     `;
 
     if (rows.length === 0) {
@@ -69,17 +50,16 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const admin = await getAdminUser();
+    if (!admin) {
+      return NextResponse.json({ error: "Forbidden. Administrative access required." }, { status: 403 });
     }
 
-    await ensurePrefsTable();
     const { currency, invoicePrefix, autoRefresh, maxUploadSize, defaultViewRange } = await request.json();
 
     await sql`
       INSERT INTO admin_preferences (user_id, currency, invoice_prefix, auto_refresh, max_upload_size, default_view_range, updated_at)
-      VALUES (${userId}, ${currency}, ${invoicePrefix}, ${autoRefresh}, ${maxUploadSize}, ${defaultViewRange || 'this year'}, NOW())
+      VALUES (${String(admin.id)}, ${currency}, ${invoicePrefix}, ${autoRefresh}, ${maxUploadSize}, ${defaultViewRange || 'this year'}, NOW())
       ON CONFLICT (user_id) 
       DO UPDATE SET 
         currency = EXCLUDED.currency,

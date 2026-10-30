@@ -1043,13 +1043,13 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-brand-500 transition-colors shrink-0" />
             </a>
 
-            {/* End-to-end encryption & security info */}
+            {/* Enterprise-grade encryption & security info */}
             <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed pt-2 flex flex-row items-center gap-3 text-left px-1">
               <div className="p-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 shrink-0">
                 <MdLock className="w-4 h-4 text-brand-500" />
               </div>
               <p className="text-[11px] leading-relaxed">
-                Your data stays secure with <span className="text-brand-500 font-medium">end-to-end encryption</span>. &copy; {new Date().getFullYear()}. <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a>. All rights reserved.
+                Your data stays secure with <span className="text-brand-500 font-medium">enterprise-grade encryption</span>. &copy; {new Date().getFullYear()}. <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors hover:underline">FrameToque Digital Media</a>. All rights reserved.
               </p>
             </div>
 
@@ -2257,6 +2257,20 @@ function BillingView({
 
   const [usage, setUsage] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState<"slip" | "online">("slip");
+  const [bankDetails, setBankDetails] = useState({
+    bank: "Bank of Ceylon",
+    accountName: "",
+    accountNumber: "",
+    branch: "",
+  });
+
+  useEffect(() => {
+    import("@/app/onboarding/actions").then(m => m.getCompanyBankDetailsAction()).then(res => {
+      if (res?.success && res.bankDetails) {
+        setBankDetails(res.bankDetails);
+      }
+    }).catch(() => {});
+  }, []);
 
   // Keep entered amount aligned when plan or cycle changes, unless custom
   useEffect(() => {
@@ -2287,9 +2301,11 @@ function BillingView({
   };
 
   const copyBankInfo = () => {
-    navigator.clipboard.writeText("4833004");
-    setCopiedBank(true);
-    setTimeout(() => setCopiedBank(false), 2500);
+    if (bankDetails.accountNumber) {
+      navigator.clipboard.writeText(bankDetails.accountNumber);
+      setCopiedBank(true);
+      setTimeout(() => setCopiedBank(false), 2500);
+    }
   };
 
   const fetchHistoryAndUsage = async () => {
@@ -2547,19 +2563,19 @@ function BillingView({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div>
                   <span className="text-muted-foreground block text-[11px]">Bank:</span>
-                  <span className="font-semibold text-foreground">Bank of Ceylon</span>
+                  <span className="font-semibold text-foreground">{bankDetails.bank || "Bank of Ceylon"}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[11px]">Account Name:</span>
-                  <span className="font-semibold text-foreground">B.N.V.P. Fernando</span>
+                  <span className="font-semibold text-foreground">{bankDetails.accountName || "Official Account"}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[11px]">Account Number:</span>
-                  <span className="font-mono font-bold text-foreground">4833004</span>
+                  <span className="font-mono font-bold text-foreground">{bankDetails.accountNumber || "—"}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[11px]">Branch / Currency:</span>
-                  <span className="font-semibold text-foreground">Moratuwa / LKR</span>
+                  <span className="font-semibold text-foreground">{bankDetails.branch || "LKR"}</span>
                 </div>
               </div>
             </div>

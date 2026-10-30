@@ -1,22 +1,23 @@
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
+import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request) {
+export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const email = searchParams.get('email');
-
-    if (!userId && !email) {
+    const { userId, session } = await auth();
+    if (!userId || !session?.user?.email) {
       return NextResponse.json(
-        { success: false, error: 'User ID or Email is required' },
-        { status: 400 }
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
-    // Fetch user profile from admin_users or admin_clients
+    const sessionEmail = session.user.email.trim().toLowerCase();
+    const dbUserId = (session.user as any).dbId || Number(userId) || 0;
+
+    // Fetch user profile strictly for the authenticated user
     let rows = await sql`
       SELECT
         email,
@@ -26,11 +27,11 @@ export async function GET(request) {
         website,
         address
       FROM admin_users
-      WHERE id = ${Number(userId) || 0} OR (email IS NOT NULL AND LOWER(email) = LOWER(${email || ''}))
+      WHERE id = ${dbUserId} OR LOWER(email) = ${sessionEmail}
       LIMIT 1
     `;
 
-    if (rows.length === 0 && email) {
+    if (rows.length === 0 && sessionEmail) {
       rows = await sql`
         SELECT
           email,
@@ -40,7 +41,7 @@ export async function GET(request) {
           website,
           address
         FROM admin_clients
-        WHERE LOWER(email) = LOWER(${email})
+        WHERE LOWER(email) = LOWER(${sessionEmail})
         LIMIT 1
       `;
     }

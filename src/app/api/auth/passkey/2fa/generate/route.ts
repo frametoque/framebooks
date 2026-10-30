@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
+import { checkRateLimit } from '@/lib/security/rate-limit';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -46,9 +47,29 @@ export async function GET(req: Request) {
       userVerification: 'preferred',
     });
 
+    const rateLimitResult = checkRateLimit(req, { limit: 10, windowMs: 60 * 1000, prefix: 'passkey-2fa-gen' });
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please wait before requesting another challenge." },
+        { status: 429, headers: { 'Retry-After': String(rateLimitResult.retryAfterSeconds) } }
+      );
+    }
+
     const response = NextResponse.json(options);
-    response.cookies.set('currentChallenge', options.challenge, { httpOnly: true, secure: false, maxAge: 60 * 5 });
-    response.cookies.set('current2FAUser', userId, { httpOnly: true, secure: false, maxAge: 60 * 5 });
+    response.cookies.set('currentChallenge', options.challenge, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 5,
+    });
+    response.cookies.set('current2FAUser', userId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 5,
+    });
     
     return response;
   } catch (error) {

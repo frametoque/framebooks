@@ -4,7 +4,13 @@ import { cookies } from "next/headers";
 
 export const ADMIN_COOKIE_NAME = "framebooks-admin-token";
 
-const SECRET = process.env.NEXTAUTH_SECRET || "framebooks-admin-secret-key-2026";
+function getSecret(): string {
+  const secret = process.env.ADMIN_AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error("Missing required authentication secret (ADMIN_AUTH_SECRET or NEXTAUTH_SECRET)");
+  }
+  return secret;
+}
 
 export interface AdminTokenPayload {
   id: number;
@@ -33,7 +39,7 @@ export function createAdminToken(user: { id: number; email: string; systemRole: 
   ).toString("base64url");
 
   const signature = crypto
-    .createHmac("sha256", SECRET)
+    .createHmac("sha256", getSecret())
     .update(`${header}.${payload}`)
     .digest("base64url");
 
@@ -50,7 +56,7 @@ export function verifyAdminToken(token: string): AdminTokenPayload | null {
     const [header, payload, signature] = parts;
 
     const expectedSignature = crypto
-      .createHmac("sha256", SECRET)
+      .createHmac("sha256", getSecret())
       .update(`${header}.${payload}`)
       .digest("base64url");
 

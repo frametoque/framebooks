@@ -91,7 +91,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
             >
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#00C750]" />
-                End-to-end encryption
+                Enterprise-grade encryption
               </span>
               <span className="hidden sm:inline text-gray-300">•</span>
               <span className="flex items-center gap-1.5">

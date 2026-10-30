@@ -76,7 +76,7 @@ export const modulesData = [
   {
     id: 'security',
     title: 'Security & Logs',
-    benefits: ['Review comprehensive system audit logs.', 'Protect accounts with two-factor authentication.', 'Data is secured with end-to-end encryption.'],
+    benefits: ['Review comprehensive system audit logs.', 'Protect accounts with two-factor authentication.', 'Data is secured with enterprise-grade encryption in transit and at rest.'],
     align: 'left'
   }
 ];
@@ -95,7 +95,7 @@ export const securityFeatures = [
   'App lock',
   'Two-factor authentication',
   'Data Export to CSV',
-  'End-to-end encryption'
+  'Enterprise-grade encryption'
 ];
 
 export const plans = [
@@ -193,7 +193,7 @@ export const faqs = [
   { q: 'Can I manage multiple bank accounts?', a: 'Absolutely. You can track multiple bank accounts, petty cash, and even transfer funds between them with full history.' },
   { q: 'How do quotations become invoices?', a: 'Once a client accepts a quote, you can convert it to an invoice with a single click, carrying over all line items and details automatically.' },
   { q: 'Can my team have different permissions?', a: 'Yes, our Roles & Permissions feature allows you to customize exactly what each team member can see and edit.' },
-  { q: 'Is my data safe?', a: 'Your data stays secure with end-to-end encryption, regular backups, and features like two-factor authentication on higher plans.' },
+  { q: 'Is my data safe?', a: 'Your data stays secure with enterprise-grade encryption in transit and at rest, regular backups, and features like two-factor authentication on higher plans.' },
   { q: 'Can I export my data?', a: 'You can export all your financial data to CSV at any time for your accountant or your own records.' },
   { q: 'Can I upgrade or downgrade later?', a: 'Of course! You can change your plan at any time to fit your growing business needs.' },
 ];
