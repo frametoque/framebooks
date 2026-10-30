@@ -14,7 +14,7 @@ export function buildPlanChangeEmail({
   workspaceName,
   effectiveDate,
   firstName,
-  dashboardUrl = "https://framebooks.lk/user/dashboard",
+  dashboardUrl = "https://books.frametoque.com/user/dashboard",
 }: PlanChangeEmailData): {
   subject: string;
   html: string;

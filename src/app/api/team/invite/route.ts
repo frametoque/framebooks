@@ -78,7 +78,7 @@ export async function POST(req: Request) {
       const userRows = await sql`SELECT full_name, email FROM admin_users WHERE id = ${userId} LIMIT 1`;
       const businessName = tenantRows[0]?.name || "their workspace";
       const inviterName = userRows[0]?.full_name || "A team member";
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://framebooks.lk";
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://books.frametoque.com";
 
       const { sendTeamInviteEmail } = await import("@/lib/email");
       await sendTeamInviteEmail(email, {

@@ -22,19 +22,19 @@ const SAMPLE_TEMPLATES: Record<string, () => { subject: string; html: string; te
   "welcome": () =>
     buildWelcomeEmail({
       firstName: "Nelitha",
-      loginUrl: "https://framebooks.lk/login",
+      loginUrl: "https://books.frametoque.com/login",
     }),
   "password-reset": () =>
     buildPasswordResetEmail({
       firstName: "Nelitha",
-      resetUrl: "https://framebooks.lk/reset-password?token=sample_test_token_12345",
+      resetUrl: "https://books.frametoque.com/reset-password?token=sample_test_token_12345",
     }),
   "team-invite": () =>
     buildTeamInviteEmail({
       inviterName: "Nelitha Kulasiri",
       businessName: "Acme Studio",
       role: "Editor",
-      acceptUrl: "https://framebooks.lk/accept-invite?token=sample_invite_token_123",
+      acceptUrl: "https://books.frametoque.com/accept-invite?token=sample_invite_token_123",
     }),
   "payment-receipt": () =>
     buildPaymentReceiptEmail({
@@ -42,7 +42,7 @@ const SAMPLE_TEMPLATES: Record<string, () => { subject: string; html: string; te
       planName: "Pro",
       activeUntilDate: "30 Nov 2026",
       referenceId: "PAY-882194",
-      receiptUrl: "https://framebooks.lk/api/receipt/PAY-882194",
+      receiptUrl: "https://books.frametoque.com/api/receipt/PAY-882194",
       firstName: "Nelitha",
     }),
   "plan-change": () =>
@@ -58,7 +58,7 @@ const SAMPLE_TEMPLATES: Record<string, () => { subject: string; html: string; te
       planName: "Pro",
       amount: 2500,
       date: "30 Oct 2026",
-      updateUrl: "https://framebooks.lk/user/settings/billing",
+      updateUrl: "https://books.frametoque.com/user/settings/billing",
       firstName: "Nelitha",
     }),
   "client-invoice": () =>
@@ -68,7 +68,7 @@ const SAMPLE_TEMPLATES: Record<string, () => { subject: string; html: string; te
       clientName: "Jane Silva",
       amount: 180000,
       dueDate: "15 Nov 2026",
-      viewInvoiceUrl: "https://framebooks.lk/api/invoice/sample-inv-0042",
+      viewInvoiceUrl: "https://books.frametoque.com/api/invoice/sample-inv-0042",
       notes: "Payment due within 14 business days.",
       isFreePlan: false,
     }),

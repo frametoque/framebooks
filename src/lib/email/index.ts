@@ -54,7 +54,7 @@ function getTransporter() {
 }
 
 function getFromAndEnvelope(to: string): { from: string; envelope?: { from: string; to: string } } {
-  const user = process.env.SMTP_USER || "noreply@framebooks.io";
+  const user = process.env.SMTP_USER || "framebooks@frametoque.com";
   const rawFrom = process.env.SMTP_FROM || "";
 
   // Strip extraneous backslashes and surrounding quotes

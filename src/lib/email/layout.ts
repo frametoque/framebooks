@@ -12,7 +12,7 @@ export interface EmailLayoutOptions {
 }
 
 export const DEFAULT_SUPPORT_EMAIL = process.env.SMTP_REPLY_TO || "framebooks@frametoque.com";
-const BASE_APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://framebooks.lk";
+const BASE_APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://books.frametoque.com";
 
 /**
  * Shared bulletproof table layout for all Framebooks transactional emails.

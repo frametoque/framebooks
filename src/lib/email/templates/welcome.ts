@@ -9,7 +9,7 @@ export interface WelcomeEmailData {
 
 export function buildWelcomeEmail({
   firstName,
-  loginUrl = "https://framebooks.lk/login",
+  loginUrl = "https://books.frametoque.com/login",
   verificationUrl,
 }: WelcomeEmailData): {
   subject: string;

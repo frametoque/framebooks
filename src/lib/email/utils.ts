@@ -18,7 +18,7 @@ export function escapeHtml(str: unknown): string {
 /**
  * Validates that an outbound link is a safe, absolute HTTPS URL.
  */
-export function sanitizeUrl(url: string, fallback = "https://framebooks.lk"): string {
+export function sanitizeUrl(url: string, fallback = "https://books.frametoque.com"): string {
   if (!url || typeof url !== "string") return fallback;
   const trimmed = url.trim();
   if (trimmed.startsWith("https://") || trimmed.startsWith("http://localhost")) {
