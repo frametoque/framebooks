@@ -44,8 +44,10 @@ export async function POST(req: Request) {
     const otp = generateOtp();
     const challengeCookieValue = createOtpChallenge(String(userId), otp, userEmail);
 
+    const firstName = user?.name ? user.name.split(" ")[0] : undefined;
+
     // Send the email with the OTP code
-    await sendAppLockOtpEmail(userEmail, otp);
+    await sendAppLockOtpEmail(userEmail, otp, firstName);
 
     const response = NextResponse.json({
       success: true,

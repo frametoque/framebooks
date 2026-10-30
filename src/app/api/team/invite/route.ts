@@ -72,16 +72,35 @@ export async function POST(req: Request) {
       `;
     }
 
-    // 5. Return appropriate message
+    // 5. Send team invitation email
+    try {
+      const tenantRows = await sql`SELECT name FROM tenants WHERE id = ${tenantId} LIMIT 1`;
+      const userRows = await sql`SELECT full_name, email FROM admin_users WHERE id = ${userId} LIMIT 1`;
+      const businessName = tenantRows[0]?.name || "their workspace";
+      const inviterName = userRows[0]?.full_name || "A team member";
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://framebooks.lk";
+
+      const { sendTeamInviteEmail } = await import("@/lib/email");
+      await sendTeamInviteEmail(email, {
+        inviterName,
+        businessName,
+        role: inviteRole,
+        acceptUrl: `${baseUrl}/onboarding`,
+      });
+    } catch (emailErr) {
+      console.warn("Failed to dispatch team invite email:", emailErr);
+    }
+
+    // 6. Return appropriate message
     if (userExists) {
       return NextResponse.json({ 
         success: true, 
-        message: "User invited successfully. They will receive a notification on their dashboard." 
+        message: "User invited successfully. They will receive an invitation email and dashboard notice." 
       });
     } else {
       return NextResponse.json({ 
         success: true, 
-        message: "User not on this system. Business profile will be auto-assigned after they register." 
+        message: "Invitation sent. Business profile will be auto-assigned after they register." 
       });
     }
 
