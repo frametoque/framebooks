@@ -8,10 +8,10 @@ const REQUIRED_SERVER_VARS = [
   "DATABASE_URL",
   "NEXTAUTH_SECRET",
   "NEXTAUTH_URL",
-  "APP_SECRET_KEY",
 ] as const;
 
 const OPTIONAL_SERVER_VARS = [
+  "APP_MASTER_KEY",
   "R2_ACCOUNT_ID",
   "R2_ACCESS_KEY_ID",
   "R2_SECRET_ACCESS_KEY",
@@ -31,6 +31,10 @@ export function validateServerEnv(): { valid: boolean; missing: string[] } {
     if (!process.env[varName]) {
       missing.push(varName);
     }
+  }
+
+  if (!process.env.APP_MASTER_KEY && !process.env.APP_SECRET_KEY) {
+    missing.push("APP_MASTER_KEY");
   }
 
   if (missing.length > 0 && process.env.NODE_ENV === "production") {
