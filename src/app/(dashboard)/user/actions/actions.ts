@@ -771,9 +771,13 @@ export async function createExpense(data: any) {
     } else if (data.frequency === 'yearly') {
       nextDate.setFullYear(nextDate.getFullYear() + 1);
     }
+    const scheduledAccountId = data.scheduledAccountId !== undefined && data.scheduledAccountId !== ''
+      ? (data.scheduledAccountId ? parseInt(data.scheduledAccountId, 10) : null)
+      : accountId;
+    await ensureScheduledExpensesTable();
     await sql`
-      INSERT INTO admin_scheduled_expenses (title, amount, category, frequency, next_due_date, payment_method, status, tenant_id)
-      VALUES (${data.description}, ${data.amount}, ${data.category}, ${data.frequency}, ${nextDate.toISOString().split('T')[0]}, ${data.paymentMethod}, 'active', ${tenantId})
+      INSERT INTO admin_scheduled_expenses (title, amount, category, frequency, next_due_date, payment_method, account_id, status, tenant_id)
+      VALUES (${data.description}, ${data.amount}, ${data.category}, ${data.frequency}, ${nextDate.toISOString().split('T')[0]}, ${data.paymentMethod}, ${scheduledAccountId}, 'active', ${tenantId})
     `;
   }
   await logSystemAction(`Created expense: Recorded LKR ${data.amount} for "${data.description}"`);
@@ -828,11 +832,15 @@ async function ensureScheduledExpensesTable() {
       next_due_date DATE NOT NULL,
       payment_method VARCHAR(255),
       status VARCHAR(50) DEFAULT 'active',
-      tenant_id INTEGER
+      tenant_id INTEGER,
+      account_id INTEGER
     )
   `;
   try {
     await sql`ALTER TABLE admin_scheduled_expenses ADD COLUMN IF NOT EXISTS tenant_id INTEGER`;
+  } catch (e) {}
+  try {
+    await sql`ALTER TABLE admin_scheduled_expenses ADD COLUMN IF NOT EXISTS account_id INTEGER`;
   } catch (e) {}
 }
 
@@ -849,7 +857,7 @@ export async function processRecurringExpenses() {
     const todayStr = today.toISOString().split('T')[0];
 
     const rows = await sql`
-      SELECT id, title, amount, category, frequency, next_due_date, payment_method
+      SELECT id, title, amount, category, frequency, next_due_date, payment_method, account_id
       FROM admin_scheduled_expenses
       WHERE status = 'active' AND next_due_date <= ${todayStr} AND tenant_id = ${tenantId}
     `;
@@ -861,8 +869,8 @@ export async function processRecurringExpenses() {
 
         // 1. Insert into actual expenses
         await sql`
-          INSERT INTO admin_expenses (date, amount, description, category, payment_method, tenant_id)
-          VALUES (${occurrenceDate}, ${item.amount}, ${item.title + ' (Recurring)'}, ${item.category}, ${item.payment_method}, ${tenantId})
+          INSERT INTO admin_expenses (date, amount, description, category, payment_method, account_id, tenant_id)
+          VALUES (${occurrenceDate}, ${item.amount}, ${item.title + ' (Recurring)'}, ${item.category}, ${item.payment_method}, ${item.account_id || null}, ${tenantId})
         `;
 
         // 2. Roll date forward
@@ -896,10 +904,22 @@ export async function getScheduledExpenses() {
   await ensureScheduledExpensesTable();
   try {
     const rows = await sql`
-      SELECT id, title, amount, category, frequency, next_due_date, payment_method as "paymentMethod", status
-      FROM admin_scheduled_expenses
-      WHERE tenant_id = ${tenantId}
-      ORDER BY next_due_date ASC
+      SELECT 
+        s.id, 
+        s.title, 
+        s.amount, 
+        s.category, 
+        s.frequency, 
+        s.next_due_date, 
+        s.payment_method as "paymentMethod", 
+        s.status,
+        s.account_id as "accountId",
+        a.name as "accountName",
+        a.bank_name as "bankName"
+      FROM admin_scheduled_expenses s
+      LEFT JOIN accounts a ON a.id = s.account_id AND a.tenant_id = ${tenantId}
+      WHERE s.tenant_id = ${tenantId}
+      ORDER BY s.next_due_date ASC
     `;
     return rows.map((r: any) => {
       let dueStr = '';
@@ -916,7 +936,10 @@ export async function getScheduledExpenses() {
       return {
         ...r,
         amount: parseFloat(r.amount),
-        next_due_date: dueStr
+        next_due_date: dueStr,
+        accountId: r.accountId ? String(r.accountId) : '',
+        accountName: r.accountName || '',
+        bankName: r.bankName || ''
       };
     });
   } catch (error) {
@@ -931,10 +954,12 @@ export async function createScheduledExpense(data: any) {
 
   const tenantId = await getTenantId();
   await ensureScheduledExpensesTable();
+  const accountId = data.accountId ? parseInt(data.accountId, 10) : null;
   await sql`
-    INSERT INTO admin_scheduled_expenses (title, amount, category, frequency, next_due_date, payment_method, status, tenant_id)
-    VALUES (${data.title}, ${data.amount}, ${data.category}, ${data.frequency}, ${data.next_due_date}, ${data.paymentMethod}, 'active', ${tenantId})
+    INSERT INTO admin_scheduled_expenses (title, amount, category, frequency, next_due_date, payment_method, account_id, status, tenant_id)
+    VALUES (${data.title}, ${data.amount}, ${data.category}, ${data.frequency}, ${data.next_due_date}, ${data.paymentMethod || 'Bank Transfer'}, ${accountId}, ${data.status || 'active'}, ${tenantId})
   `;
+  await logSystemAction(`Created scheduled expense: "${data.title}" (${data.frequency}) - LKR ${data.amount}`);
 }
 
 export async function updateScheduledExpense(id: number, data: any) {
@@ -943,11 +968,20 @@ export async function updateScheduledExpense(id: number, data: any) {
 
   const tenantId = await getTenantId();
   await ensureScheduledExpensesTable();
+  const accountId = data.accountId ? parseInt(data.accountId, 10) : null;
   await sql`
     UPDATE admin_scheduled_expenses
-    SET title = ${data.title}, amount = ${data.amount}, category = ${data.category}, frequency = ${data.frequency}, next_due_date = ${data.next_due_date}, payment_method = ${data.paymentMethod}, status = ${data.status}
+    SET title = ${data.title}, 
+        amount = ${data.amount}, 
+        category = ${data.category}, 
+        frequency = ${data.frequency}, 
+        next_due_date = ${data.next_due_date}, 
+        payment_method = ${data.paymentMethod}, 
+        account_id = ${accountId}, 
+        status = ${data.status || 'active'}
     WHERE id = ${id} AND tenant_id = ${tenantId}
   `;
+  await logSystemAction(`Updated scheduled expense ID ${id}: "${data.title}" - LKR ${data.amount}`);
 }
 
 export async function deleteScheduledExpense(id: number) {
@@ -957,6 +991,7 @@ export async function deleteScheduledExpense(id: number) {
   const tenantId = await getTenantId();
   await ensureScheduledExpensesTable();
   await sql`DELETE FROM admin_scheduled_expenses WHERE id = ${id} AND tenant_id = ${tenantId}`;
+  await logSystemAction(`Deleted scheduled expense ID ${id}`);
 }
 
 export async function payScheduledExpense(id: number) {
@@ -973,13 +1008,20 @@ export async function payScheduledExpense(id: number) {
 
   // 1. Insert into actual expenses
   await sql`
-    INSERT INTO admin_expenses (date, amount, description, category, payment_method, tenant_id)
-    VALUES (CURRENT_DATE, ${item.amount}, ${item.title + ' (Scheduled Payment)'}, ${item.category}, ${item.payment_method}, ${tenantId})
+    INSERT INTO admin_expenses (date, amount, description, category, payment_method, account_id, tenant_id)
+    VALUES (CURRENT_DATE, ${item.amount}, ${item.title + ' (Scheduled Payment)'}, ${item.category}, ${item.payment_method}, ${item.account_id || null}, ${tenantId})
   `;
 
   // 2. Roll date forward
   let nextDate = new Date(item.next_due_date);
-  if (item.frequency === 'monthly') {
+  if (item.frequency === 'weekly') {
+    nextDate.setDate(nextDate.getDate() + 7);
+    await sql`
+      UPDATE admin_scheduled_expenses
+      SET next_due_date = ${nextDate.toISOString().split('T')[0]}
+      WHERE id = ${id} AND tenant_id = ${tenantId}
+    `;
+  } else if (item.frequency === 'monthly') {
     nextDate.setMonth(nextDate.getMonth() + 1);
     await sql`
       UPDATE admin_scheduled_expenses

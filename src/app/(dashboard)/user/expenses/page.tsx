@@ -8,7 +8,7 @@ import { Receipt, Edit2, UploadCloud, Loader2, RefreshCw } from "lucide-react";
 import { MdCalendarToday, MdCreditCard, MdAdd, MdDelete, MdClose, MdRemoveRedEye } from "react-icons/md";
 import { 
   getExpenses, createExpense, deleteExpense, updateExpense, uploadReceipt,
-  getScheduledExpenses, deleteScheduledExpense, getLimitStatus
+  getScheduledExpenses, createScheduledExpense, updateScheduledExpense, deleteScheduledExpense, getLimitStatus
 } from "../actions/actions";
 import { useRole } from "../context/RoleContext";
 import { getAccounts } from "../actions/accounts";
@@ -120,7 +120,23 @@ export default function ExpensesPage() {
     receiptUrl: '',
     accountId: '',
     isScheduled: false,
-    frequency: 'monthly'
+    frequency: 'monthly',
+    scheduledAccountId: ''
+  });
+
+  // Scheduled Expense Modal states
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null);
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [selectedScheduleCategories, setSelectedScheduleCategories] = useState<string[]>([]);
+  const [scheduleFormData, setScheduleFormData] = useState({
+    title: '',
+    amount: '',
+    frequency: 'monthly',
+    next_due_date: new Date().toISOString().split('T')[0],
+    paymentMethod: 'Bank Transfer',
+    accountId: '',
+    status: 'active'
   });
 
   const loadData = async () => {
@@ -221,7 +237,8 @@ export default function ExpensesPage() {
         receiptUrl: '',
         accountId: '',
         isScheduled: false,
-        frequency: 'monthly'
+        frequency: 'monthly',
+        scheduledAccountId: ''
       });
       setSelectedCategories([]);
       await loadData();
@@ -234,6 +251,82 @@ export default function ExpensesPage() {
       }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleNewScheduled = () => {
+    const defaultAccId = accounts.find((a: any) => a.isDefault)?.id?.toString() || (accounts[0]?.id?.toString() || '');
+    setEditingScheduleId(null);
+    setScheduleFormData({
+      title: '',
+      amount: '',
+      frequency: 'monthly',
+      next_due_date: new Date().toISOString().split('T')[0],
+      paymentMethod: 'Bank Transfer',
+      accountId: defaultAccId,
+      status: 'active'
+    });
+    setSelectedScheduleCategories([]);
+    setIsScheduleModalOpen(true);
+  };
+
+  const handleEditScheduled = (item: any) => {
+    setEditingScheduleId(item.id);
+    setScheduleFormData({
+      title: item.title || '',
+      amount: item.amount ? item.amount.toString() : '',
+      frequency: item.frequency || 'monthly',
+      next_due_date: item.next_due_date || new Date().toISOString().split('T')[0],
+      paymentMethod: item.paymentMethod || 'Bank Transfer',
+      accountId: item.accountId ? String(item.accountId) : '',
+      status: item.status || 'active'
+    });
+    setSelectedScheduleCategories(parseCategories(item.category));
+    setIsScheduleModalOpen(true);
+  };
+
+  const handleSaveScheduled = async () => {
+    if (!scheduleFormData.title.trim()) {
+      alert("Please enter a title or description for the scheduled expense.");
+      return;
+    }
+    const amt = parseFloat(scheduleFormData.amount);
+    if (isNaN(amt) || amt <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
+    if (!scheduleFormData.next_due_date) {
+      alert("Please select the next due date.");
+      return;
+    }
+
+    setSavingSchedule(true);
+    try {
+      const payload = {
+        title: scheduleFormData.title.trim(),
+        amount: amt,
+        category: selectedScheduleCategories.join(", "),
+        frequency: scheduleFormData.frequency,
+        next_due_date: scheduleFormData.next_due_date,
+        paymentMethod: scheduleFormData.paymentMethod,
+        accountId: scheduleFormData.accountId || null,
+        status: scheduleFormData.status
+      };
+
+      if (editingScheduleId) {
+        await updateScheduledExpense(editingScheduleId, payload);
+      } else {
+        await createScheduledExpense(payload);
+      }
+
+      setIsScheduleModalOpen(false);
+      setEditingScheduleId(null);
+      await loadData();
+    } catch (e: any) {
+      console.error(e);
+      alert("Failed to save scheduled expense: " + (e?.message || "Unknown error"));
+    } finally {
+      setSavingSchedule(false);
     }
   };
 
@@ -265,7 +358,8 @@ export default function ExpensesPage() {
       receiptUrl: row.receiptUrl || '',
       accountId: row.accountId || '',
       isScheduled: false,
-      frequency: 'monthly'
+      frequency: 'monthly',
+      scheduledAccountId: ''
     });
     setSelectedCategories(parseCategories(row.category).length ? parseCategories(row.category) : []);
     setReceiptFile(null);
@@ -374,28 +468,69 @@ export default function ExpensesPage() {
       {/* Active Recurring Schedules Panel */}
       {scheduledExpenses.length > 0 && (
         <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
-          <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-            <RefreshCw className="w-5 h-5 animate-[spin_10s_linear_infinite]" />
-            <h2 className="text-lg font-semibold text-foreground">Active Recurring Schedules</h2>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+              <RefreshCw className="w-5 h-5 animate-[spin_10s_linear_infinite]" />
+              <h2 className="text-lg font-semibold text-foreground">Active Recurring Schedules</h2>
+            </div>
+            {role !== 'Viewer' && (
+              <button
+                onClick={handleNewScheduled}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20 rounded-xl transition-colors cursor-pointer"
+              >
+                <MdAdd className="w-4 h-4" />
+                Schedule Expense
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {scheduledExpenses.map((item) => (
               <div key={item.id} className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-4 flex items-center justify-between gap-4">
-                <div className="space-y-1 min-w-0">
-                  <p className="font-semibold text-sm text-foreground truncate">{item.title}</p>
+                <div className="space-y-1 min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-sm text-foreground truncate">{item.title}</p>
+                    {item.status === 'paused' && (
+                      <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                        Paused
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     {formatLKR(item.amount)} • <span className="capitalize">{item.frequency}</span>
+                    {item.category ? ` • ${item.category}` : ''}
                   </p>
-                  <p className="text-[10px] text-indigo-600 dark:text-indigo-300 font-medium">Next Auto-Pay: {item.next_due_date}</p>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+                    <span className="text-indigo-600 dark:text-indigo-300 font-medium">
+                      Next Auto-Pay: {item.next_due_date}
+                    </span>
+                    {item.accountName ? (
+                      <span className="text-gray-500 dark:text-gray-400">
+                        • 🏦 {item.accountName} {item.bankName ? `(${item.bankName})` : ''}
+                      </span>
+                    ) : item.paymentMethod ? (
+                      <span className="text-gray-500 dark:text-gray-400">
+                        • {item.paymentMethod}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 {role !== 'Viewer' && (
-                  <button
-                    onClick={() => handleDeleteScheduled(item.id)}
-                    className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all cursor-pointer flex-shrink-0"
-                    title="Remove Schedule"
-                  >
-                    <MdDelete className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={() => handleEditScheduled(item)}
+                      className="p-2 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 hover:text-foreground rounded-xl transition-all cursor-pointer"
+                      title="Edit Schedule"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteScheduled(item.id)}
+                      className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all cursor-pointer"
+                      title="Remove Schedule"
+                    >
+                      <MdDelete className="w-4 h-4" />
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
@@ -422,28 +557,38 @@ export default function ExpensesPage() {
         </div>
 
         {role !== 'Viewer' && (
-          <button 
-            onClick={() => {
-              setEditingId(null);
-              setFormData({
-                date: new Date().toISOString().split('T')[0],
-                amount: '',
-                description: '',
-                paymentMethod: 'Corporate Card',
-                receiptUrl: '',
-                accountId: accounts.find((a: any) => a.isDefault)?.id?.toString() || '',
-                isScheduled: false,
-                frequency: 'monthly'
-              });
-              setSelectedCategories([]);
-              setReceiptFile(null);
-              setIsModalOpen(true);
-            }}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-950 rounded-3xl font-bold transition-colors cursor-pointer w-full sm:w-auto shadow-xs"
-          >
-            <MdAdd className="w-5 h-5" />
-            Record Expense
-          </button>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <button 
+              onClick={handleNewScheduled}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-card hover:bg-black/5 dark:hover:bg-white/5 text-foreground border border-border rounded-3xl font-semibold transition-colors cursor-pointer w-full sm:w-auto shadow-2xs text-sm"
+            >
+              <RefreshCw className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              Schedule Expense
+            </button>
+            <button 
+              onClick={() => {
+                setEditingId(null);
+                setFormData({
+                  date: new Date().toISOString().split('T')[0],
+                  amount: '',
+                  description: '',
+                  paymentMethod: 'Corporate Card',
+                  receiptUrl: '',
+                  accountId: accounts.find((a: any) => a.isDefault)?.id?.toString() || '',
+                  isScheduled: false,
+                  frequency: 'monthly',
+                  scheduledAccountId: accounts.find((a: any) => a.isDefault)?.id?.toString() || ''
+                });
+                setSelectedCategories([]);
+                setReceiptFile(null);
+                setIsModalOpen(true);
+              }}
+              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-950 rounded-3xl font-bold transition-colors cursor-pointer w-full sm:w-auto shadow-xs text-sm"
+            >
+              <MdAdd className="w-5 h-5" />
+              Record Expense
+            </button>
+          </div>
         )}
       </div>
 
@@ -551,10 +696,18 @@ export default function ExpensesPage() {
                   <div className="flex items-center justify-between p-4 bg-black/5 dark:bg-card border border-border rounded-2xl">
                     <div>
                       <p className="text-sm font-semibold text-foreground">Mark as Scheduled Recurring Expense</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Record this expense now and schedule future automated recurrences</p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => setFormData({...formData, isScheduled: !formData.isScheduled})}
+                      onClick={() => {
+                        const nextScheduled = !formData.isScheduled;
+                        setFormData({
+                          ...formData, 
+                          isScheduled: nextScheduled,
+                          scheduledAccountId: nextScheduled ? (formData.scheduledAccountId || formData.accountId) : formData.scheduledAccountId
+                        });
+                      }}
                       className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                         formData.isScheduled ? "bg-brand-500" : "bg-black/20 dark:bg-white/10"
                       }`}
@@ -567,7 +720,7 @@ export default function ExpensesPage() {
                     </button>
                   </div>
                   {formData.isScheduled && (
-                    <div className="grid grid-cols-2 gap-4 p-4 bg-black/5 dark:bg-card border border-border rounded-2xl animate-fade-in">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-brand-500/5 dark:bg-card border border-brand-500/20 dark:border-border rounded-2xl animate-fade-in">
                       <div className="space-y-1">
                         <label className="text-xs text-gray-600 dark:text-gray-400 font-semibold uppercase">Repeat Interval</label>
                         <select 
@@ -580,8 +733,23 @@ export default function ExpensesPage() {
                           <option value="yearly" className="bg-card text-foreground">Every Year</option>
                         </select>
                       </div>
-                      <div className="flex items-end text-xs text-gray-500 dark:text-gray-400 pb-2">
-                        Next transaction date will calculate from the selected expense date.
+                      <div className="space-y-1">
+                        <label className="text-xs text-gray-600 dark:text-gray-400 font-semibold uppercase">Bank Account for Recurring</label>
+                        <select 
+                          value={formData.scheduledAccountId || formData.accountId} 
+                          onChange={e => setFormData({...formData, scheduledAccountId: e.target.value})}
+                          className="w-full bg-card border border-border rounded-xl px-3 py-2 text-xs text-foreground outline-none focus:border-brand-500 transition-colors appearance-none cursor-pointer shadow-2xs"
+                        >
+                          <option value="" className="bg-card text-foreground">Use Expense Account / Unlinked</option>
+                          {accounts.map(a => (
+                            <option key={a.id} value={a.id} className="bg-card text-foreground">
+                              {a.name} {a.bankName ? `(${a.bankName})` : ''} - {formatLKR(a.currentBalance || 0)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="sm:col-span-2 text-xs text-gray-500 dark:text-gray-400">
+                        Future recurring transactions will automatically be assigned to the selected bank account. Next transaction date will calculate from the selected expense date.
                       </div>
                     </div>
                   )}
@@ -752,6 +920,149 @@ export default function ExpensesPage() {
                width={800} height={800} unoptimized={true}
                onContextMenu={(e) => e.preventDefault()}
                draggable={false} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule / Edit Recurring Expense Modal */}
+      {isScheduleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-border bg-card">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <h2 className="text-xl font-semibold text-foreground">
+                  {editingScheduleId ? 'Edit Scheduled Expense' : 'Schedule Recurring Expense'}
+                </h2>
+              </div>
+              <button 
+                onClick={() => setIsScheduleModalOpen(false)} 
+                className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+              >
+                <MdClose className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Expense Title / Description</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Office Rent, Cloud Server Subscription..." 
+                  value={scheduleFormData.title} 
+                  onChange={e => setScheduleFormData({...scheduleFormData, title: e.target.value})} 
+                  className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground placeholder:text-gray-400" 
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Amount (LKR)</label>
+                  <input 
+                    type="number" 
+                    placeholder="0.00" 
+                    value={scheduleFormData.amount} 
+                    onChange={e => setScheduleFormData({...scheduleFormData, amount: e.target.value})} 
+                    className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground placeholder:text-gray-400" 
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Repeat Frequency</label>
+                  <select 
+                    value={scheduleFormData.frequency} 
+                    onChange={e => setScheduleFormData({...scheduleFormData, frequency: e.target.value})} 
+                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs cursor-pointer"
+                  >
+                    <option value="weekly" className="bg-card text-foreground">Weekly</option>
+                    <option value="monthly" className="bg-card text-foreground">Monthly</option>
+                    <option value="yearly" className="bg-card text-foreground">Yearly</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Next Due Date</label>
+                  <input 
+                    type="date" 
+                    value={scheduleFormData.next_due_date} 
+                    onChange={e => setScheduleFormData({...scheduleFormData, next_due_date: e.target.value})} 
+                    className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground" 
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Schedule Status</label>
+                  <select 
+                    value={scheduleFormData.status} 
+                    onChange={e => setScheduleFormData({...scheduleFormData, status: e.target.value})} 
+                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs cursor-pointer"
+                  >
+                    <option value="active" className="bg-card text-foreground">Active (Auto-processed)</option>
+                    <option value="paused" className="bg-card text-foreground">Paused</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Categories</label>
+                <CategoryPicker 
+                  categories={dynamicCategories} 
+                  value={selectedScheduleCategories} 
+                  onChange={setSelectedScheduleCategories} 
+                  placeholder="Select categories..."
+                  type="expense"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method</label>
+                  <select 
+                    value={scheduleFormData.paymentMethod} 
+                    onChange={e => setScheduleFormData({ ...scheduleFormData, paymentMethod: e.target.value })} 
+                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs cursor-pointer"
+                  >
+                    <option className="bg-card text-foreground">Bank Transfer</option>
+                    <option className="bg-card text-foreground">Corporate Card</option>
+                    <option className="bg-card text-foreground">Personal Card</option>
+                    <option className="bg-card text-foreground">Cash</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Bank / Source Account</label>
+                  <select 
+                    value={scheduleFormData.accountId} 
+                    onChange={e => setScheduleFormData({ ...scheduleFormData, accountId: e.target.value })}
+                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs cursor-pointer"
+                  >
+                    <option value="" className="bg-card text-foreground">No Account (Unlinked)</option>
+                    {accounts.map(a => (
+                      <option key={a.id} value={a.id} className="bg-card text-foreground">
+                        {a.name} {a.bankName ? `(${a.bankName})` : ''} ({formatLKR(a.currentBalance || 0)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-border flex justify-end gap-3 bg-card">
+              <button 
+                onClick={() => setIsScheduleModalOpen(false)} 
+                className="px-6 py-2.5 rounded-full font-medium hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer text-foreground" 
+                disabled={savingSchedule}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveScheduled} 
+                disabled={savingSchedule} 
+                className="flex items-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-950 rounded-full font-bold transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+              >
+                {savingSchedule && <Loader size="sm" />}
+                {savingSchedule ? "Saving..." : (editingScheduleId ? "Update Schedule" : "Create Schedule")}
+              </button>
             </div>
           </div>
         </div>
