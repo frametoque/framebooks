@@ -505,7 +505,7 @@ export default function ExpensesPage() {
                     </span>
                     {item.accountName ? (
                       <span className="text-gray-500 dark:text-gray-400">
-                        • 🏦 {item.accountName} {item.bankName ? `(${item.bankName})` : ''}
+                        • {item.accountName} {item.bankName ? `(${item.bankName})` : ''}
                       </span>
                     ) : item.paymentMethod ? (
                       <span className="text-gray-500 dark:text-gray-400">
