@@ -555,10 +555,7 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
                 return (
                   <div className="p-3.5 rounded-2xl bg-brand-500/5 border border-brand-500/20 space-y-2.5">
                     <div className="flex items-center justify-between text-xs font-bold text-foreground">
-                      <span className="flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-brand-500" />
-                        Client Covering Price (Auto-Calculated)
-                      </span>
+                      <span>Client Covering Price (Auto-Calculated)</span>
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500 font-semibold">
                         +2.29% Payments.lk Fee Covered
                       </span>
@@ -899,10 +896,7 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
                 return (
                   <div className="p-3.5 rounded-2xl bg-brand-500/5 border border-brand-500/20 space-y-2.5">
                     <div className="flex items-center justify-between text-xs font-bold text-foreground">
-                      <span className="flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-brand-500" />
-                        Client Covering Price (Auto-Calculated)
-                      </span>
+                      <span>Client Covering Price (Auto-Calculated)</span>
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500 font-semibold">
                         +2.29% Payments.lk Fee Covered
                       </span>
