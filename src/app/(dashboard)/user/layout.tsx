@@ -16,6 +16,7 @@ import {
 } from "framer-motion";
 import DateRangeSelector from "./components/DateRangeSelector";
 import { AdminDateRangeProvider, useAdminDateRange } from "./context/AdminDateRangeContext";
+import { TaxEstimatorProvider, useTaxEstimator } from "./context/TaxEstimatorContext";
 import { RoleProvider } from "./context/RoleContext";
 import { User as UserIcon, Building2, Receipt, Droplets, BarChart3, NotepadTextDashed, FolderOpenDot, Layers, FilePenLine, ChartLine, CalendarPlus, ExternalLink, Globe, RefreshCw, Server, Cloud, Megaphone, Terminal, Printer } from "lucide-react";
 import { MdCreditCard, MdNotifications, MdMenu, MdSearch, MdDashboard, MdAccountBalanceWallet, MdInsertDriveFile, MdGroup, MdInventory2, MdLogout, MdClose, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdWorkOutline, MdKeyboardDoubleArrowLeft, MdKeyboardDoubleArrowRight, MdCalendarToday, MdAdd, MdAccessTime, MdSettings, MdAttachMoney, MdDownload, MdMenuBook, MdAccountBalance, MdLockOutline, MdLock, MdWarning } from "react-icons/md";
@@ -211,10 +212,11 @@ function LayoutContent({ children }) {
 
   return (
     <AdminDateRangeProvider>
-      <style
-        id="tenant-accent-theme-client"
-        dangerouslySetInnerHTML={{ __html: generateTenantThemeCss(tenantInfo.accent_color || DEFAULT_ACCENT_HEX) }}
-      />
+      <TaxEstimatorProvider>
+        <style
+          id="tenant-accent-theme-client"
+          dangerouslySetInnerHTML={{ __html: generateTenantThemeCss(tenantInfo.accent_color || DEFAULT_ACCENT_HEX) }}
+        />
 
       {/* Maintenance screen – full viewport takeover, no sidebar/header */}
       {showMaintenanceScreen && (
@@ -388,11 +390,114 @@ function LayoutContent({ children }) {
           <IdleTimer />
         </PlanLockProvider>
       </RoleProvider>
+      </TaxEstimatorProvider>
     </AdminDateRangeProvider>
   );
 }
 
 // ------------------ Header ------------------
+const TaxTopBarControls = () => {
+  const {
+    taxEntityType,
+    setTaxEntityType,
+    taxProfitBasis,
+    setTaxProfitBasis,
+    customProfit,
+    setCustomProfit,
+    customRate,
+    setCustomRate,
+  } = useTaxEstimator();
+  const { setDateRange, setStartDate, setEndDate } = useAdminDateRange();
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {/* Business Entity Structure */}
+      <div className="relative">
+        <select
+          value={taxEntityType}
+          onChange={(e) => setTaxEntityType(e.target.value as any)}
+          aria-label="Business Entity Structure"
+          className="bg-card border border-border hover:border-black/20 dark:border-white/20 active:bg-black/5 dark:active:bg-white/10 rounded-xl px-3 py-2 text-xs font-semibold text-foreground focus:outline-hidden focus:border-brand-500 cursor-pointer shadow-2xs transition-all appearance-none pr-7 select-none"
+        >
+          <option value="corporate" className="bg-popover text-foreground">Company / Pvt Ltd (30% CIT)</option>
+          <option value="individual" className="bg-popover text-foreground">Sole Proprietor (0% - 36%)</option>
+          <option value="custom" className="bg-popover text-foreground">Concessionary / Custom %</option>
+        </select>
+        <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Custom Tax Rate (if custom entity selected) */}
+      {taxEntityType === "custom" && (
+        <div className="flex items-center gap-1 bg-card border border-border rounded-xl px-2.5 py-1.5 shadow-2xs">
+          <span className="text-[11px] font-medium text-gray-500">Rate:</span>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={customRate}
+            onChange={(e) => setCustomRate(e.target.value)}
+            className="w-10 text-xs font-bold text-foreground bg-transparent outline-none text-right"
+            placeholder="30"
+          />
+          <span className="text-xs text-gray-500 font-bold">%</span>
+        </div>
+      )}
+
+      {/* Profit Basis / Period Selector */}
+      <div className="relative">
+        <select
+          value={taxProfitBasis}
+          onChange={(e) => {
+            const val = e.target.value as any;
+            setTaxProfitBasis(val);
+            const yr = new Date().getFullYear();
+            if (val === "this year") {
+              setDateRange("this year");
+              setStartDate(`${yr}-01-01`);
+              setEndDate(`${yr}-12-31`);
+            } else if (val === "last year") {
+              setDateRange("last year");
+              setStartDate(`${yr - 1}-01-01`);
+              setEndDate(`${yr - 1}-12-31`);
+            }
+          }}
+          aria-label="Annual Net Profit Source"
+          className="bg-card border border-border hover:border-black/20 dark:border-white/20 active:bg-black/5 dark:active:bg-white/10 rounded-xl px-3 py-2 text-xs font-semibold text-foreground focus:outline-hidden focus:border-brand-500 cursor-pointer shadow-2xs transition-all appearance-none pr-7 select-none"
+        >
+          <option value="this year" className="bg-popover text-foreground">Annual Profit (This Year)</option>
+          <option value="last year" className="bg-popover text-foreground">Last Year's Profit</option>
+          <option value="custom" className="bg-popover text-foreground">Custom Target Profit</option>
+        </select>
+        <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Custom Target Profit input (if custom profit selected) */}
+      {taxProfitBasis === "custom" && (
+        <div className="flex items-center gap-1.5 bg-card border border-border rounded-xl px-2.5 py-1.5 shadow-2xs">
+          <span className="text-[11px] font-medium text-gray-500">Target:</span>
+          <input
+            type="number"
+            min="0"
+            value={customProfit}
+            onChange={(e) => setCustomProfit(e.target.value)}
+            className="w-24 text-xs font-bold text-foreground bg-transparent outline-none text-right"
+            placeholder="5000000"
+          />
+          <span className="text-[10px] text-gray-500 font-bold">LKR</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
   const pathname = usePathname();
   const isClients = pathname === "/user/clients";
@@ -405,7 +510,14 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
   const isLogs = pathname.startsWith("/user/logs");
   const isReports = pathname.startsWith("/user/reports");
   const [reportsActiveTab, setReportsActiveTab] = useState("overview");
-  const hideSelector = isInvoiceDetail || isInvoiceNewOrEdit || isAccounts || isSettings || isLogs || (isInventory && tenantInfo.plan !== 'Pro Plus') || (isReports && tenantInfo.plan !== 'Pro Plus' && reportsActiveTab !== 'overview' && reportsActiveTab !== 'profit_loss');
+  const isTaxEstimator = isReports && (
+    reportsActiveTab === "tax_summary" ||
+    pathname.includes("tax-summary") ||
+    pathname.includes("tax_summary") ||
+    pathname.includes("tax-estimator") ||
+    pathname.includes("tax_estimator")
+  );
+  const hideSelector = isInvoiceDetail || isInvoiceNewOrEdit || isAccounts || isSettings || isLogs || (isInventory && tenantInfo.plan !== 'Pro Plus') || (isReports && tenantInfo.plan !== 'Pro Plus' && reportsActiveTab !== 'overview' && reportsActiveTab !== 'profit_loss' && !isTaxEstimator);
   const { dateRange, startDate, endDate, setDateRange, setStartDate, setEndDate } = useAdminDateRange();
   const [currentTime, setCurrentTime] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
@@ -472,7 +584,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
       if (sub === "profit-loss" || sub === "profit_loss") return "Profit & Loss";
       if (sub === "cash-flow" || sub === "cash_flow") return "Cash Flow";
       if (sub === "balance-sheet" || sub === "balance_sheet") return "Balance Sheet";
-      if (sub === "tax-summary" || sub === "tax_summary") return "Tax Summary";
+      if (sub === "tax-summary" || sub === "tax_summary" || sub === "tax-estimator" || sub === "tax_estimator") return "Tax Estimator";
       if (sub === "trial-balance" || sub === "trial_balance") return "Trial Balance";
       if (sub === "general-ledger" || sub === "general_ledger") return "General Ledger";
       if (sub === "account-ledger" || sub === "account_ledger") return "Account Ledger";
@@ -658,6 +770,8 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
                     <span className="font-semibold text-gray-500 dark:text-gray-400">As of:</span>
                     <span className="font-bold">{reportsFormattedDate || "Select Date"}</span>
                   </button>
+                ) : isTaxEstimator ? (
+                  <TaxTopBarControls />
                 ) : (
                   <DateRangeSelector
                     dateRange={dateRange}

@@ -1,8 +1,7 @@
 import { uploadToR2 } from "@/lib/r2";
 import { auth } from '@/lib/auth';
 import { NextResponse } from "next/server";
-import postgres from "postgres";
-const neon = postgres;
+import sql from "@/lib/db";
 
 export async function POST(request: Request) {
   try {
@@ -30,7 +29,6 @@ export async function POST(request: Request) {
     }
 
     // Get tenant ID
-    const sql = neon(process.env.DATABASE_URL!);
     const userRows = await sql`SELECT tenant_id FROM admin_users WHERE id = ${Number(userId) || 0} LIMIT 1`;
     if (!userRows || userRows.length === 0) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });

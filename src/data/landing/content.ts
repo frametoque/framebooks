@@ -10,7 +10,7 @@ export const kpis = [
   { label: 'Modules', value: '10' },
   { label: 'LKR-first', value: 'accounting' },
   { label: 'Financial reports', value: '8' },
-  { label: 'Encrypted data', value: '100%' },
+  { label: 'Data encryption', value: 'AES-256' },
 ];
 
 export const features = [
@@ -76,7 +76,7 @@ export const modulesData = [
   {
     id: 'security',
     title: 'Security & Logs',
-    benefits: ['Review comprehensive system audit logs.', 'Protect accounts with two-factor authentication.', 'Data is secured with enterprise-grade encryption in transit and at rest.'],
+    benefits: ['Review comprehensive system audit logs.', 'Protect accounts with two-factor authentication.', 'Data is secured with TLS in transit and AES-256 encryption at rest.'],
     align: 'left'
   }
 ];
@@ -95,7 +95,7 @@ export const securityFeatures = [
   'App lock',
   'Two-factor authentication',
   'Data Export to CSV',
-  'Enterprise-grade encryption'
+  'AES-256 & TLS Encryption'
 ];
 
 export const plans = [
@@ -125,8 +125,8 @@ export const plans = [
   {
     name: 'Pro',
     description: 'Advanced tools to manage finances and grow faster.',
-    monthlyPrice: 2500,
-    yearlyPrice: 25000,
+    monthlyPrice: 2600,
+    yearlyPrice: 26000,
     features: [
       { label: 'Invoices Limit', value: 'Unlimited', icon: 'MdCallMade' },
       { label: 'Quotations Limit', value: 'Unlimited', icon: 'MdCallMade' },
@@ -147,8 +147,8 @@ export const plans = [
   {
     name: 'Pro Plus',
     description: 'For Power Users and large teams',
-    monthlyPrice: 5000,
-    yearlyPrice: 50000,
+    monthlyPrice: 5200,
+    yearlyPrice: 52000,
     features: [
       { label: 'Invoices Limit', value: 'Unlimited', icon: 'MdCallMade' },
       { label: 'Quotations Limit', value: 'Unlimited', icon: 'MdCallMade' },

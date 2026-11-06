@@ -6,7 +6,7 @@ import RolesConfigurator from "../components/RolesConfigurator";
 import { useState, useEffect, useRef } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 import { useSession, signOut } from 'next-auth/react';
-import { IdCard, Globe, Save, Building, Copy, Terminal, Sliders, Upload, FileText, CheckCircle2, AlertCircle, X, ExternalLink, ArrowUp, Palette, ChevronDown, Clock, ShieldOff, Sparkles, Info, Loader2 } from "lucide-react";
+import { IdCard, Globe, Save, Building, Copy, Terminal, Sliders, Upload, FileText, CheckCircle2, AlertCircle, X, ExternalLink, ArrowUp, ArrowDown, Palette, ChevronDown, Clock, ShieldOff, ShieldCheck, Sparkles, Info, Loader2, CreditCard, Plus, Repeat, Wallet, AlertTriangle, Tag, RefreshCw } from "lucide-react";
 import { MdPerson, MdMailOutline, MdKeyboardArrowRight, MdKeyboardArrowLeft, MdLocationOn, MdPhone, MdUpload, MdDownload, MdCheck, MdShowChart, MdCreditCard, MdGroup, MdBusiness, MdHistory, MdLogout, MdWarning, MdSecurity, MdDelete, MdLock } from "react-icons/md";
 import AppearanceTab from "./AppearanceTab";
 import InvoiceLayoutTab from "./invoice-layout/InvoiceLayoutTab";
@@ -48,65 +48,65 @@ export function formatDBPlanToDashboardPlan(p: any): PlanViewItem {
     description: p.description || "",
     popular: !!p.is_popular,
     features: [
-      { 
-        label: "Invoices Limit", 
-        value: (p.name === 'Pro' || p.name === 'Pro Plus' || p.key === 'pro' || p.key === 'pro_plus' || limits.invoices === -1) ? "Unlimited" : String(limits.invoices ?? 50), 
-        icon: MdUpload 
+      {
+        label: "Invoices Limit",
+        value: (p.name === 'Pro' || p.name === 'Pro Plus' || p.key === 'pro' || p.key === 'pro_plus' || limits.invoices === -1) ? "Unlimited" : String(limits.invoices ?? 50),
+        icon: MdUpload
       },
-      { 
-        label: "Quotations Limit", 
-        value: (p.name === 'Pro' || p.name === 'Pro Plus' || p.key === 'pro' || p.key === 'pro_plus' || limits.quotations === -1) ? "Unlimited" : String(limits.quotations ?? 50), 
-        icon: MdUpload 
+      {
+        label: "Quotations Limit",
+        value: (p.name === 'Pro' || p.name === 'Pro Plus' || p.key === 'pro' || p.key === 'pro_plus' || limits.quotations === -1) ? "Unlimited" : String(limits.quotations ?? 50),
+        icon: MdUpload
       },
-      { 
-        label: "Income Limit", 
-        value: limits.incomes === -1 ? "Unlimited" : String(limits.incomes ?? 100), 
-        icon: MdUpload 
+      {
+        label: "Income Limit",
+        value: limits.incomes === -1 ? "Unlimited" : String(limits.incomes ?? 100),
+        icon: MdUpload
       },
-      { 
-        label: "Expense Limit", 
-        value: limits.expenses === -1 ? "Unlimited" : String(limits.expenses ?? 100), 
-        icon: MdDownload 
+      {
+        label: "Expense Limit",
+        value: limits.expenses === -1 ? "Unlimited" : String(limits.expenses ?? 100),
+        icon: MdDownload
       },
-      { 
-        label: "Client Limit", 
-        value: limits.clients === -1 ? "Unlimited" : String(limits.clients ?? 50), 
-        icon: MdGroup 
+      {
+        label: "Client Limit",
+        value: limits.clients === -1 ? "Unlimited" : String(limits.clients ?? 50),
+        icon: MdGroup
       },
-      { 
-        label: "Bank Accounts", 
-        value: limits.accounts === -1 ? "Unlimited" : String(limits.accounts ?? 2), 
-        icon: MdBusiness 
+      {
+        label: "Bank Accounts",
+        value: limits.accounts === -1 ? "Unlimited" : String(limits.accounts ?? 2),
+        icon: MdBusiness
       },
-      { 
-        label: "Team Members", 
-        value: limits.team_members === -1 ? "Unlimited" : (limits.team_members > 0 ? String(limits.team_members) : "No"), 
-        icon: MdGroup 
+      {
+        label: "Team Members",
+        value: limits.team_members === -1 ? "Unlimited" : (limits.team_members > 0 ? String(limits.team_members) : "No"),
+        icon: MdGroup
       },
-      { 
-        label: "Customized Invoices & Quotations", 
-        value: (p.name === 'Pro Plus' || p.key === 'pro_plus' || (features.custom_invoice_layout && p.key !== 'pro' && p.name !== 'Pro')) ? "Yes" : "No", 
-        icon: MdCheck 
+      {
+        label: "Customized Invoices & Quotations",
+        value: (p.name === 'Pro Plus' || p.key === 'pro_plus' || (features.custom_invoice_layout && p.key !== 'pro' && p.name !== 'Pro')) ? "Yes" : "No",
+        icon: MdCheck
       },
-      { 
-        label: "Inventory Management", 
-        value: features.inventory ? "Yes" : "No", 
-        icon: MdCheck 
+      {
+        label: "Inventory Management",
+        value: features.inventory ? "Yes" : "No",
+        icon: MdCheck
       },
-      { 
-        label: "Advanced Reports", 
-        value: features.advanced_reports ? "Yes" : "No", 
-        icon: MdShowChart 
+      {
+        label: "Advanced Reports",
+        value: features.advanced_reports ? "Yes" : "No",
+        icon: MdShowChart
       },
-      { 
-        label: "Security Level", 
-        value: features.audit_logs ? "High + Audit Logs" : (features.two_factor ? "High + 2FA" : "Standard"), 
-        icon: MdSecurity 
+      {
+        label: "Security Level",
+        value: features.audit_logs ? "High + Audit Logs" : (features.two_factor ? "High + 2FA" : "Standard"),
+        icon: MdSecurity
       },
-      { 
-        label: "Customize Workspace Appearance", 
-        value: p.name === 'Pro Plus' || p.name === 'Pro' || p.key === 'pro' || p.key === 'pro_plus' || features.appearance ? "Yes" : "No", 
-        icon: Palette 
+      {
+        label: "Customize Workspace Appearance",
+        value: p.name === 'Pro Plus' || p.name === 'Pro' || p.key === 'pro' || p.key === 'pro_plus' || features.appearance ? "Yes" : "No",
+        icon: Palette
       },
     ],
   };
@@ -136,8 +136,8 @@ const defaultPlans: PlanViewItem[] = [
   },
   {
     name: "Pro",
-    price: "2,500",
-    yearlyPrice: "25,000",
+    price: "2,600",
+    yearlyPrice: "26,000",
     popular: true,
     description: "Advanced tools to manage finances and grow faster.",
     features: [
@@ -157,8 +157,8 @@ const defaultPlans: PlanViewItem[] = [
   },
   {
     name: "Pro Plus",
-    price: "5,000",
-    yearlyPrice: "50,000",
+    price: "5,200",
+    yearlyPrice: "52,000",
     description: "For Power Users and large teams",
     popular: false,
     features: [
@@ -178,45 +178,18 @@ const defaultPlans: PlanViewItem[] = [
   }
 ];
 
-export const SETTINGS_SLUG_TO_TAB: Record<string, string> = {
-  "profile": "profile",
-  "business": "business",
-  "appearance": "appearance",
-  "invoice-layout": "appearance",
-  "invoice_layout": "appearance",
-  "billing": "billing",
-  "team": "team",
-  "roles": "team",
-  "audit-logs": "audit_logs",
-  "audit_logs": "audit_logs",
-  "export": "export",
-  "danger": "danger",
-  "preferences": "prefs",
-  "prefs": "prefs",
-};
+import {
+  SETTINGS_SLUG_TO_TAB,
+  SETTINGS_TAB_TO_SLUG,
+  SETTINGS_TAB_TITLES,
+  isSettingsSectionAllowed
+} from "./settings-permissions";
 
-export const SETTINGS_TAB_TO_SLUG: Record<string, string> = {
-  "profile": "profile",
-  "business": "business",
-  "appearance": "appearance",
-  "billing": "billing",
-  "team": "team",
-  "audit_logs": "audit-logs",
-  "export": "export",
-  "danger": "danger",
-  "prefs": "preferences",
-};
-
-export const SETTINGS_TAB_TITLES: Record<string, string> = {
-  profile: "Account & Security",
-  business: "Business Profile",
-  appearance: "Appearance & Layouts",
-  billing: "Billing & Plans",
-  team: "Team & Permissions",
-  audit_logs: "Audit Logs",
-  export: "Data Export",
-  danger: "Danger Zone",
-  prefs: "Admin Preferences",
+export {
+  SETTINGS_SLUG_TO_TAB,
+  SETTINGS_TAB_TO_SLUG,
+  SETTINGS_TAB_TITLES,
+  isSettingsSectionAllowed
 };
 
 interface SettingsMemoryCache {
@@ -283,11 +256,10 @@ function AutoLockDurationSelect({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full bg-card border rounded-2xl px-4 py-3 text-sm text-foreground flex items-center justify-between transition-all cursor-pointer shadow-2xs ${
-          isOpen
+        className={`w-full bg-card border rounded-2xl px-4 py-3 text-sm text-foreground flex items-center justify-between transition-all cursor-pointer shadow-2xs ${isOpen
             ? "border-brand-500 ring-2 ring-brand-500/20"
             : "border-border hover:border-black/20 dark:hover:border-white/20"
-        }`}
+          }`}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
@@ -298,9 +270,8 @@ function AutoLockDurationSelect({
           <span className="font-medium text-foreground truncate">{selectedOption.label}</span>
         </div>
         <ChevronDown
-          className={`w-4 h-4 text-muted-foreground transition-transform duration-200 shrink-0 ml-2 ${
-            isOpen ? "rotate-180 text-brand-500" : ""
-          }`}
+          className={`w-4 h-4 text-muted-foreground transition-transform duration-200 shrink-0 ml-2 ${isOpen ? "rotate-180 text-brand-500" : ""
+            }`}
         />
       </button>
 
@@ -316,11 +287,10 @@ function AutoLockDurationSelect({
                   onChange(option.value);
                   setIsOpen(false);
                 }}
-                className={`w-full px-3 py-2.5 rounded-xl text-sm font-medium flex items-center justify-between transition-all cursor-pointer text-left ${
-                  isSelected
+                className={`w-full px-3 py-2.5 rounded-xl text-sm font-medium flex items-center justify-between transition-all cursor-pointer text-left ${isSelected
                     ? "bg-brand-500/10 text-brand-500 font-semibold dark:bg-brand-500/15"
                     : "text-foreground hover:bg-black/5 dark:hover:bg-white/5"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-2.5">
                   <span
@@ -364,7 +334,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
       if (res?.success && res.plans && res.plans.length > 0) {
         setPlansList(res.plans.map(formatDBPlanToDashboardPlan));
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
   const { confirm } = useConfirm();
   const { data: session, status } = useSession();
@@ -373,11 +343,14 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  const cachedRole = settingsMemoryCache?.currentUserRole;
   const targetTabFromSection = initialSection ? SETTINGS_SLUG_TO_TAB[initialSection] : undefined;
   const targetTabFromQuery = searchParams.get("tab") ? SETTINGS_SLUG_TO_TAB[searchParams.get("tab")!] : undefined;
+  const requestedTab = targetTabFromSection || targetTabFromQuery;
+  const isAllowedInitial = !requestedTab || !cachedRole || isSettingsSectionAllowed(requestedTab, cachedRole);
 
-  const [activeTab, setActiveTab] = useState(targetTabFromSection || targetTabFromQuery || "profile");
-  const [activeView, setActiveView] = useState(initialSection || searchParams.get("tab") ? "form" : "hub");
+  const [activeTab, setActiveTab] = useState(isAllowedInitial && requestedTab ? requestedTab : "profile");
+  const [activeView, setActiveView] = useState(isAllowedInitial && requestedTab ? "form" : "hub");
 
   const [appearanceSubTab, setAppearanceSubTab] = useState<"theme" | "layouts">(() => {
     if (searchParams.get("sub") === "theme") return "theme";
@@ -390,9 +363,31 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
     return "members";
   });
 
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(() => settingsMemoryCache?.currentUserRole || null);
+
+  // Role guard effect: immediately revert to profile/hub if activeTab is forbidden for current role
+  useEffect(() => {
+    if (currentUserRole && !isSettingsSectionAllowed(activeTab, currentUserRole)) {
+      setActiveTab("profile");
+      setActiveView("hub");
+      if (typeof window !== "undefined") {
+        window.history.replaceState(null, '', '/user/settings');
+        window.dispatchEvent(new CustomEvent("update-title", { detail: "Settings" }));
+      }
+    }
+  }, [currentUserRole, activeTab]);
+
   useEffect(() => {
     if (initialSection) {
       const mapped = SETTINGS_SLUG_TO_TAB[initialSection] || "profile";
+      if (currentUserRole && !isSettingsSectionAllowed(mapped, currentUserRole)) {
+        setActiveTab("profile");
+        setActiveView("hub");
+        if (typeof window !== "undefined") {
+          window.history.replaceState(null, '', '/user/settings');
+        }
+        return;
+      }
       setActiveTab(mapped);
       setActiveView("form");
       if (initialSection === "invoice-layout" || initialSection === "invoice_layout" || initialSection === "appearance") {
@@ -415,42 +410,56 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
         }
       }
     }
-  }, [initialSection]);
+  }, [initialSection, currentUserRole]);
 
   useEffect(() => {
     const tabParam = searchParams.get("tab");
     if (tabParam) {
       const mapped = SETTINGS_SLUG_TO_TAB[tabParam] || "profile";
+      if (currentUserRole && !isSettingsSectionAllowed(mapped, currentUserRole)) {
+        setActiveTab("profile");
+        setActiveView("hub");
+        if (typeof window !== "undefined") {
+          window.history.replaceState(null, '', '/user/settings');
+        }
+        return;
+      }
       setActiveTab(mapped);
       setActiveView("form");
     }
-  }, [searchParams]);
+  }, [searchParams, currentUserRole]);
 
   useEffect(() => {
     if (!initialSection && !searchParams.get("tab") && typeof window !== "undefined") {
       const match = window.location.pathname.match(/\/user\/settings\/?([^/]*)/);
       const slug = match ? match[1] : "";
       if (slug && SETTINGS_SLUG_TO_TAB[slug]) {
-        setActiveTab(SETTINGS_SLUG_TO_TAB[slug]);
+        const mapped = SETTINGS_SLUG_TO_TAB[slug];
+        if (currentUserRole && !isSettingsSectionAllowed(mapped, currentUserRole)) {
+          setActiveTab("profile");
+          setActiveView("hub");
+          window.history.replaceState(null, '', '/user/settings');
+          return;
+        }
+        setActiveTab(mapped);
         setActiveView("form");
       }
     }
-  }, []);
+  }, [currentUserRole]);
   const [loading, setLoading] = useState(() => !settingsMemoryCache);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [customPasskeys, setCustomPasskeys] = useState<any[]>(() => settingsMemoryCache?.passkeys || []);
   const { autoLockDuration, setAutoLockDuration, highSecurityMode, setHighSecurityMode, requireAuth } = useAppLock();
-  const [tenantInfo, setTenantInfo] = useState<{plan: string, name: string, logo_url: string | null, industry: string | null, phone: string | null, email: string | null, website: string | null, address: string | null, accent_color?: string | null}>(() => settingsMemoryCache?.tenantInfo || { plan: "Free", name: "My Business", logo_url: null, industry: null, phone: null, email: null, website: null, address: null, accent_color: null });
+  const [tenantInfo, setTenantInfo] = useState<{ plan: string, name: string, logo_url: string | null, industry: string | null, phone: string | null, email: string | null, website: string | null, address: string | null, accent_color?: string | null }>(() => settingsMemoryCache?.tenantInfo || { plan: "Free", name: "My Business", logo_url: null, industry: null, phone: null, email: null, website: null, address: null, accent_color: null });
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("Viewer");
   const [isInviting, setIsInviting] = useState(false);
-  const [inviteMessage, setInviteMessage] = useState<{type: "success" | "error", text: string} | null>(null);
+  const [inviteMessage, setInviteMessage] = useState<{ type: "success" | "error", text: string } | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [sentInvitations, setSentInvitations] = useState<any[]>(() => settingsMemoryCache?.teamData?.sent || []);
   const [teamMembers, setTeamMembers] = useState<any[]>(() => settingsMemoryCache?.teamData?.members || []);
   const [availableRoles, setAvailableRoles] = useState<any[]>(() => settingsMemoryCache?.teamData?.roles || []);
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(() => settingsMemoryCache?.currentUserRole || null);
 
   const [reportType, setReportType] = useState<"profit_loss" | "cash_flow" | "balance_sheet" | "">("");
   const [reportDateRange, setReportDateRange] = useState("this year");
@@ -502,10 +511,10 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
   };
 
   useEffect(() => {
-    if ((activeTab === "team" || activeTab === "danger") && user) {
+    if ((activeTab === "team" || activeTab === "danger") && user && isSettingsSectionAllowed(activeTab, currentUserRole)) {
       fetchTeamData();
     }
-  }, [activeTab, user]);
+  }, [activeTab, user, currentUserRole]);
 
   const [copied, setCopied] = useState(false);
 
@@ -514,12 +523,12 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
       const p = settingsMemoryCache.profile;
       return {
         id: "",
-        name:    p?.fullName  || user?.name || "",
-        email:   p?.email     || user?.email || "",
-        phone:   p?.phone     || "",
-        company: p?.company   || "",
-        website: p?.website   || "",
-        address: p?.address   || "",
+        name: p?.fullName || user?.name || "",
+        email: p?.email || user?.email || "",
+        phone: p?.phone || "",
+        company: p?.company || "",
+        website: p?.website || "",
+        address: p?.address || "",
       };
     }
     return {
@@ -539,16 +548,16 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
   const applyProfile = (profile: any) => {
     setFormData(prev => ({
       ...prev,
-      name:    profile?.fullName  || user?.name || "",
-      email:   profile?.email     || user?.email || "",
-      phone:   profile?.phone     || "",
-      company: profile?.company   || "",
-      website: profile?.website   || "",
-      address: profile?.address   || "",
+      name: profile?.fullName || user?.name || "",
+      email: profile?.email || user?.email || "",
+      phone: profile?.phone || "",
+      company: profile?.company || "",
+      website: profile?.website || "",
+      address: profile?.address || "",
     }));
   };
 
-   // Load user + DB data
+  // Load user + DB data
   useEffect(() => {
     if (!isLoaded) return;
 
@@ -558,7 +567,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
           if (!settingsMemoryCache) {
             setLoading(true);
           }
-          
+
           let fetchedProfile: any = null;
           let fetchedPasskeys: any[] = [];
           let fetchedTenant: any = null;
@@ -569,7 +578,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               fetch(`/api/users/get-profile?userId=${user.id}`),
               fetch(`/api/auth/passkey/list`)
             ]);
-            
+
             if (resProfile.ok) {
               const data = await resProfile.json();
               fetchedProfile = data.success ? data.profile : null;
@@ -634,6 +643,13 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
         window.dispatchEvent(new CustomEvent("update-title", { detail: "Settings" }));
       } else {
         const mapped = SETTINGS_SLUG_TO_TAB[slug] || "profile";
+        if (currentUserRole && !isSettingsSectionAllowed(mapped, currentUserRole)) {
+          setActiveTab("profile");
+          setActiveView("hub");
+          window.history.replaceState(null, '', '/user/settings');
+          window.dispatchEvent(new CustomEvent("update-title", { detail: "Settings" }));
+          return;
+        }
         setActiveTab(mapped);
         if (mapped === "appearance") {
           const urlParams = new URLSearchParams(window.location.search);
@@ -650,7 +666,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  }, [currentUserRole]);
 
   // Sync dashboard top-bar title dynamically
   useEffect(() => {
@@ -698,7 +714,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
     requireAuth(async () => {
       setSaving(true);
       setSaveSuccess(false);
-      
+
       const res = await updateTenantInfo({
         name: tenantFormData.name,
         industry: tenantFormData.industry || null,
@@ -811,12 +827,12 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
         const parts = formData.name.split(" ");
         const firstName = parts[0] || "";
         const lastName = parts.slice(1).join(" ") || "";
-        
+
         // Update custom database via API
 
         const payload = {
           userId: user.id,
-         // email updates via next-auth are read-only from Google,
+          // email updates via next-auth are read-only from Google,
           fullName: formData.name.trim(),
           phone: formData.phone || null,
           company: formData.company || null,
@@ -831,7 +847,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
         });
 
         const data = await res.json();
-        
+
         if (res.ok && data.success) {
           // Update formData immediately from the returned profile — no refresh needed
           applyProfile(data.profile);
@@ -860,7 +876,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ task: `MdUpload Error: Invalid file type "${file.type}" for avatar` }),
-      }).catch(() => {});
+      }).catch(() => { });
       return;
     }
 
@@ -870,7 +886,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ task: `MdUpload Error: Avatar file size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds limit` }),
-      }).catch(() => {});
+      }).catch(() => { });
       return;
     }
 
@@ -881,7 +897,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ task: `Updated admin profile photo: "${file.name}"` }),
-      }).catch(() => {});
+      }).catch(() => { });
     } catch (err: any) {
       console.error("MdUpload error:", err);
       alert("MdUpload failed. Please try again.");
@@ -889,19 +905,19 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ task: `MdUpload Error: Profile photo upload failed: ${err.message || String(err)}` }),
-      }).catch(() => {});
+      }).catch(() => { });
     }
   };
 
 
   const tabs = [
     { id: "profile", name: "Profile", icon: MdPerson },
-    ...(currentUserRole === 'owner' || currentUserRole === 'Super Admin' 
+    ...(isSettingsSectionAllowed("billing", currentUserRole)
       ? [{ id: "billing", name: "Billing & Plans", icon: MdCreditCard }] : []),
-    ...(currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin' 
+    ...(isSettingsSectionAllowed("prefs", currentUserRole)
       ? [
-          { id: "prefs", name: "Admin Preferences", icon: Sliders }
-        ] : []),
+        { id: "prefs", name: "Admin Preferences", icon: Sliders }
+      ] : []),
   ];
 
   const handleRoleChange = async (memberId: number, newRole: string) => {
@@ -951,8 +967,8 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
     return (
       <div className="flex flex-col justify-center items-center min-h-[400px] space-y-4">
         <p className="text-gray-400">You must be signed in to access settings.</p>
-        <Link 
-          href="/login" 
+        <Link
+          href="/login"
           className="px-6 py-3 bg-gradient-to-r from-brand-600 to-brand-700 text-foreground rounded-3xl font-semibold hover:opacity-90 transition-opacity"
         >
           Sign In
@@ -965,10 +981,10 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
     <div className="w-full mx-auto pb-20 px-6">
       {activeView === "hub" && (
         <div className="flex flex-col lg:flex-row gap-10">
-          
+
           {/* Left Column (Profile Card) */}
           <div className="w-full lg:w-[340px] shrink-0 space-y-4">
-            
+
             {/* Business Card */}
             <div className="bg-card rounded-[32px] p-8 flex flex-col items-center text-center shadow-lg">
               <div className="mb-4">
@@ -985,7 +1001,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                 {tenantInfo.name}
               </h2>
               <p className="text-brand-500 text-sm font-semibold tracking-wide uppercase mb-4">Business Profile</p>
-              
+
               <div className="bg-card border border-border px-4 py-1.5 rounded-full flex items-center justify-center gap-2">
                 <span className="text-brand-500 font-bold text-xs">{tenantInfo.plan}</span>
               </div>
@@ -1011,7 +1027,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                   <p className="text-xs text-gray-400 truncate">{user.email}</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => signOut()}
                 className="p-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-xl transition-colors"
                 title="Sign Out"
@@ -1057,52 +1073,52 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
 
           {/* Right Column (Navigation Menu) */}
           <div className="flex-1 space-y-10 lg:pl-6">
-            
+
             {/* Section 2 */}
             <div>
 
               <div className="flex flex-col">
                 {[
-                  { name: "Business Profile", sub: "Update business name, contact & details.", icon: MdBusiness, id: "business", allowed: currentUserRole !== 'Viewer' && currentUserRole !== 'Editor' },
+                  { name: "Business Profile", sub: "Update business name, contact & details.", icon: MdBusiness, id: "business", allowed: isSettingsSectionAllowed("business", currentUserRole) },
                   { name: "Appearance & Layouts", sub: "Customize dashboard accent colour, theme branding, and invoice layouts.", icon: Palette, id: "appearance", allowed: true },
                   { name: "Account & Security", sub: "Manage your profile, connected accounts, and app lock.", icon: MdPerson, id: "profile", allowed: true },
-                  { name: "Billing & Plans", sub: "Manage your subscription and payments.", icon: MdCreditCard, id: "billing", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
-                  { name: "Team & Permissions", sub: "Manage team members, invitations, and custom roles.", icon: MdGroup, id: "team", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
-                  { name: "Admin Preferences", sub: "Configure default dashboard date range and display preferences.", icon: Sliders, id: "prefs", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin' },
-                  { name: "Audit Logs", sub: "View system and user activity.", icon: MdHistory, id: "audit_logs", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
-                  { name: "Data Export", sub: "Export your workspace data to CSV.", icon: MdDownload, id: "export", allowed: currentUserRole === 'owner' },
-                  { name: "Danger Zone", sub: "Destructive account and workspace actions.", icon: MdWarning, id: "danger", allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' }
+                  { name: "Billing & Plans", sub: "Manage your subscription and payments.", icon: MdCreditCard, id: "billing", allowed: isSettingsSectionAllowed("billing", currentUserRole) },
+                  { name: "Team & Permissions", sub: "Manage team members, invitations, and custom roles.", icon: MdGroup, id: "team", allowed: isSettingsSectionAllowed("team", currentUserRole) },
+                  { name: "Admin Preferences", sub: "Configure default dashboard date range and display preferences.", icon: Sliders, id: "prefs", allowed: isSettingsSectionAllowed("prefs", currentUserRole) },
+                  { name: "Audit Logs", sub: "View system and user activity.", icon: MdHistory, id: "audit_logs", allowed: isSettingsSectionAllowed("audit_logs", currentUserRole) },
+                  { name: "Data Export", sub: "Export your workspace data to CSV.", icon: MdDownload, id: "export", allowed: isSettingsSectionAllowed("export", currentUserRole) },
+                  { name: "Danger Zone", sub: "Destructive account and workspace actions.", icon: MdWarning, id: "danger", allowed: isSettingsSectionAllowed("danger", currentUserRole) }
                 ]
-                .filter(item => item.allowed)
-                .map((item, i) => (
-                  <button 
-                    key={i} 
-                    onClick={() => {
-                      const slug = SETTINGS_TAB_TO_SLUG[item.id] || item.id;
-                      setActiveTab(item.id);
-                      if (item.id === "appearance") {
-                        setAppearanceSubTab("layouts");
-                      }
-                      setActiveView("form");
-                      window.history.pushState(null, '', `/user/settings/${slug}`);
-                      const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
-                      window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
-                      window.scrollTo({ top: 0, behavior: "instant" });
-                    }}
-                    className="flex items-center justify-between py-4 group cursor-pointer text-left hover:bg-card px-2 -mx-2 rounded-xl transition-colors"
-                  >
-                    <div className="flex items-center gap-5">
-                      <div className="p-2.5 rounded-full border border-black/20 dark:border-white/20 text-gray-300 group-hover:border-white/40 transition-colors shrink-0 mt-1">
-                        <item.icon className="w-[18px] h-[18px]" />
+                  .filter(item => item.allowed)
+                  .map((item, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        const slug = SETTINGS_TAB_TO_SLUG[item.id] || item.id;
+                        setActiveTab(item.id);
+                        if (item.id === "appearance") {
+                          setAppearanceSubTab("layouts");
+                        }
+                        setActiveView("form");
+                        window.history.pushState(null, '', `/user/settings/${slug}`);
+                        const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
+                        window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
+                        window.scrollTo({ top: 0, behavior: "instant" });
+                      }}
+                      className="flex items-center justify-between py-4 group cursor-pointer text-left hover:bg-card px-2 -mx-2 rounded-xl transition-colors"
+                    >
+                      <div className="flex items-center gap-5">
+                        <div className="p-2.5 rounded-full border border-black/20 dark:border-white/20 text-gray-300 group-hover:border-white/40 transition-colors shrink-0 mt-1">
+                          <item.icon className="w-[18px] h-[18px]" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-[15px]">{item.name}</span>
+                          <span className="text-sm text-gray-400 mt-0.5">{item.sub}</span>
+                        </div>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-[15px]">{item.name}</span>
-                        <span className="text-sm text-gray-400 mt-0.5">{item.sub}</span>
-                      </div>
-                    </div>
-                    <MdKeyboardArrowRight className="w-5 h-5 text-gray-500 group-hover:text-gray-300 transition-colors shrink-0" />
-                  </button>
-                ))}
+                      <MdKeyboardArrowRight className="w-5 h-5 text-gray-500 group-hover:text-gray-300 transition-colors shrink-0" />
+                    </button>
+                  ))}
               </div>
             </div>
 
@@ -1111,19 +1127,19 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
       )}
 
       {/* Data Export Tab */}
-      {activeView === "form" && activeTab === "export" && (
+      {activeView === "form" && activeTab === "export" && isSettingsSectionAllowed("export", currentUserRole) && (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 relative z-50">
-            <button 
+            <button
               type="button"
-              onClick={(e) => { 
+              onClick={(e) => {
                 e.preventDefault();
-                setActiveTab("profile"); 
-                setActiveView("hub"); 
-                window.history.pushState(null, '', "/user/settings"); 
+                setActiveTab("profile");
+                setActiveView("hub");
+                window.history.pushState(null, '', "/user/settings");
                 window.dispatchEvent(new CustomEvent("update-title", { detail: "Settings" }));
                 window.scrollTo({ top: 0, behavior: "instant" });
-              }} 
+              }}
               className="flex items-center gap-2 text-gray-400 hover:text-foreground font-semibold transition-colors cursor-pointer w-fit"
             >
               <MdKeyboardArrowLeft className="w-5 h-5" /> Settings
@@ -1131,51 +1147,50 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
 
             <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
               {[
-                { name: "Business", id: "business", icon: MdBusiness, allowed: currentUserRole !== 'Viewer' && currentUserRole !== 'Editor' },
+                { name: "Business", id: "business", icon: MdBusiness, allowed: isSettingsSectionAllowed("business", currentUserRole) },
                 { name: "Appearance & Layouts", id: "appearance", icon: Palette, allowed: true },
                 { name: "Account", id: "profile", icon: MdPerson, allowed: true },
-                { name: "Billing", id: "billing", icon: MdCreditCard, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
-                { name: "Team & Permissions", id: "team", icon: MdGroup, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
-                { name: "Preferences", id: "prefs", icon: Sliders, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin' },
-                { name: "Audit Logs", id: "audit_logs", icon: MdHistory, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
-                { name: "Export", id: "export", icon: MdDownload, allowed: currentUserRole === 'owner' },
-                { name: "Danger Zone", id: "danger", icon: MdWarning, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' }
+                { name: "Billing", id: "billing", icon: MdCreditCard, allowed: isSettingsSectionAllowed("billing", currentUserRole) },
+                { name: "Team & Permissions", id: "team", icon: MdGroup, allowed: isSettingsSectionAllowed("team", currentUserRole) },
+                { name: "Preferences", id: "prefs", icon: Sliders, allowed: isSettingsSectionAllowed("prefs", currentUserRole) },
+                { name: "Audit Logs", id: "audit_logs", icon: MdHistory, allowed: isSettingsSectionAllowed("audit_logs", currentUserRole) },
+                { name: "Export", id: "export", icon: MdDownload, allowed: isSettingsSectionAllowed("export", currentUserRole) },
+                { name: "Danger Zone", id: "danger", icon: MdWarning, allowed: isSettingsSectionAllowed("danger", currentUserRole) }
               ]
-              .filter(item => item.allowed)
-              .map(item => {
-                const isCurrent = activeTab === item.id;
-                const slug = SETTINGS_TAB_TO_SLUG[item.id] || item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveTab(item.id);
-                      if (item.id === "appearance") {
-                        setAppearanceSubTab("layouts");
-                      }
-                      window.history.pushState(null, '', `/user/settings/${slug}`);
-                      const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
-                      window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
-                      window.scrollTo({ top: 0, behavior: "instant" });
-                    }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
-                      isCurrent
-                        ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs"
-                        : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
-                    }`}
-                  >
-                    <item.icon className="w-3.5 h-3.5" />
-                    {item.name}
-                  </button>
-                );
-              })}
+                .filter(item => item.allowed)
+                .map(item => {
+                  const isCurrent = activeTab === item.id;
+                  const slug = SETTINGS_TAB_TO_SLUG[item.id] || item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        if (item.id === "appearance") {
+                          setAppearanceSubTab("layouts");
+                        }
+                        window.history.pushState(null, '', `/user/settings/${slug}`);
+                        const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
+                        window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
+                        window.scrollTo({ top: 0, behavior: "instant" });
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${isCurrent
+                          ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs"
+                          : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
+                        }`}
+                    >
+                      <item.icon className="w-3.5 h-3.5" />
+                      {item.name}
+                    </button>
+                  );
+                })}
             </div>
           </div>
 
           <div className="bg-transparent border border-border rounded-3xl p-7">
             <p className="text-gray-400 text-sm mb-6">Export your workspace data into CSV format for your own records or to share with your accountant.</p>
-            
+
             {tenantInfo.plan === "Free" ? (
               <UpgradeOverlay
                 title="Data Export"
@@ -1197,7 +1212,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                     </div>
                     <button
                       onClick={async () => {
-                        const items: ("invoices"|"incomes"|"expenses"|"clients")[] = ["invoices", "incomes", "expenses", "clients"];
+                        const items: ("invoices" | "incomes" | "expenses" | "clients")[] = ["invoices", "incomes", "expenses", "clients"];
                         for (const item of items) {
                           const res = await exportData(item);
                           if (res.success && res.csv) {
@@ -1217,7 +1232,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                       Export All Data
                     </button>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {[
                       { id: "invoices", label: "Invoices" },
@@ -1258,8 +1273,8 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                   <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
                     <div className="w-full md:w-auto">
                       <label className="block text-sm font-medium text-gray-400 mb-1">Select Report</label>
-                      <select 
-                        value={reportType} 
+                      <select
+                        value={reportType}
                         onChange={(e: any) => setReportType(e.target.value)}
                         className="w-full md:w-[250px] bg-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:border-brand-500 outline-none transition-colors cursor-pointer"
                       >
@@ -1284,7 +1299,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                       </div>
                     )}
                   </div>
-                  
+
                   {reportType && (
                     <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
                       <button
@@ -1319,7 +1334,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
       {activeView === "form" && activeTab !== "export" && (
         <div className="w-full">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <button 
+            <button
               onClick={() => {
                 setActiveView("hub");
                 window.history.pushState(null, '', "/user/settings");
@@ -1333,53 +1348,52 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
 
             <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
               {[
-                { name: "Business", id: "business", icon: MdBusiness, allowed: currentUserRole !== 'Viewer' && currentUserRole !== 'Editor' },
+                { name: "Business", id: "business", icon: MdBusiness, allowed: isSettingsSectionAllowed("business", currentUserRole) },
                 { name: "Appearance & Layouts", id: "appearance", icon: Palette, allowed: true },
                 { name: "Account", id: "profile", icon: MdPerson, allowed: true },
-                { name: "Billing", id: "billing", icon: MdCreditCard, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
-                { name: "Team & Permissions", id: "team", icon: MdGroup, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
-                { name: "Preferences", id: "prefs", icon: Sliders, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin' },
-                { name: "Audit Logs", id: "audit_logs", icon: MdHistory, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' },
-                { name: "Export", id: "export", icon: MdDownload, allowed: currentUserRole === 'owner' },
-                { name: "Danger Zone", id: "danger", icon: MdWarning, allowed: currentUserRole === 'owner' || currentUserRole === 'Super Admin' }
+                { name: "Billing", id: "billing", icon: MdCreditCard, allowed: isSettingsSectionAllowed("billing", currentUserRole) },
+                { name: "Team & Permissions", id: "team", icon: MdGroup, allowed: isSettingsSectionAllowed("team", currentUserRole) },
+                { name: "Preferences", id: "prefs", icon: Sliders, allowed: isSettingsSectionAllowed("prefs", currentUserRole) },
+                { name: "Audit Logs", id: "audit_logs", icon: MdHistory, allowed: isSettingsSectionAllowed("audit_logs", currentUserRole) },
+                { name: "Export", id: "export", icon: MdDownload, allowed: isSettingsSectionAllowed("export", currentUserRole) },
+                { name: "Danger Zone", id: "danger", icon: MdWarning, allowed: isSettingsSectionAllowed("danger", currentUserRole) }
               ]
-              .filter(item => item.allowed)
-              .map(item => {
-                const isCurrent = activeTab === item.id;
-                const slug = SETTINGS_TAB_TO_SLUG[item.id] || item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveTab(item.id);
-                      if (item.id === "appearance") {
-                        setAppearanceSubTab("layouts");
-                      }
-                      window.history.pushState(null, '', `/user/settings/${slug}`);
-                      const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
-                      window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
-                      window.scrollTo({ top: 0, behavior: "instant" });
-                    }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
-                      isCurrent
-                        ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs"
-                        : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
-                    }`}
-                  >
-                    <item.icon className="w-3.5 h-3.5" />
-                    {item.name}
-                  </button>
-                );
-              })}
+                .filter(item => item.allowed)
+                .map(item => {
+                  const isCurrent = activeTab === item.id;
+                  const slug = SETTINGS_TAB_TO_SLUG[item.id] || item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        if (item.id === "appearance") {
+                          setAppearanceSubTab("layouts");
+                        }
+                        window.history.pushState(null, '', `/user/settings/${slug}`);
+                        const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
+                        window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
+                        window.scrollTo({ top: 0, behavior: "instant" });
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${isCurrent
+                          ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs"
+                          : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
+                        }`}
+                    >
+                      <item.icon className="w-3.5 h-3.5" />
+                      {item.name}
+                    </button>
+                  );
+                })}
             </div>
           </div>
-          
+
           <div className="bg-transparent">
 
             {activeTab === "business" && (
               <div className="max-w-4xl space-y-6">
-                {currentUserRole === 'Viewer' || currentUserRole === 'Editor' ? (
+                {!isSettingsSectionAllowed("business", currentUserRole) ? (
                   <div className="p-4 bg-red-500/10 text-red-400 rounded-xl border border-red-500/20">
                     You do not have permission to view or edit the business profile.
                   </div>
@@ -1442,11 +1456,10 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                                 if (file) processLogoFile(file);
                               }
                             }}
-                            className={`flex items-center justify-center gap-2.5 w-full py-3.5 px-4 transition-all border-2 border-dashed rounded-xl ${
-                              isDraggingLogo
+                            className={`flex items-center justify-center gap-2.5 w-full py-3.5 px-4 transition-all border-2 border-dashed rounded-xl ${isDraggingLogo
                                 ? "border-brand-500 bg-brand-500/10"
                                 : "border-border hover:border-brand-500/70 hover:bg-muted/30"
-                            } ${currentUserRole === 'Viewer' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                              } ${currentUserRole === 'Viewer' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                           >
                             <Upload className="w-4 h-4 text-brand-500 shrink-0" />
                             <span className="text-xs">
@@ -1596,8 +1609,8 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                           <span>Shown on invoices and client-facing documents.</span>
                         </div>
                         {currentUserRole !== 'Viewer' && (
-                          <button 
-                            type="submit" 
+                          <button
+                            type="submit"
                             disabled={saving}
                             className="flex items-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-xl transition-all shadow-md active:scale-98 cursor-pointer text-xs disabled:opacity-50"
                           >
@@ -1668,29 +1681,27 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                     <button
                       type="button"
                       onClick={() => setAppearanceSubTab("layouts")}
-                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                        appearanceSubTab === "layouts"
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${appearanceSubTab === "layouts"
                           ? "bg-brand-500 text-brand-900 font-bold shadow-xs"
                           : "bg-card text-muted-foreground hover:text-foreground border border-border"
-                      }`}
+                        }`}
                     >
                       Invoice Layouts & Fields
                     </button>
                     <button
                       type="button"
                       onClick={() => setAppearanceSubTab("theme")}
-                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                        appearanceSubTab === "theme"
+                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${appearanceSubTab === "theme"
                           ? "bg-brand-500 text-brand-900 font-bold shadow-xs"
                           : "bg-card text-muted-foreground hover:text-foreground border border-border"
-                      }`}
+                        }`}
                     >
                       Dashboard Theme & Accent
                     </button>
                   </div>
 
                   {appearanceSubTab === "theme" ? (
-                    <AppearanceTab 
+                    <AppearanceTab
                       initialAccent={tenantInfo?.accent_color || null}
                       canManage={currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin'}
                       isProPlus={tenantInfo.plan === 'Pro' || tenantInfo.plan === 'Pro Plus'}
@@ -1702,7 +1713,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                       }}
                     />
                   ) : (
-                    <InvoiceLayoutTab 
+                    <InvoiceLayoutTab
                       canManage={currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin'}
                       isProPlus={tenantInfo.plan === 'Pro Plus'}
                     />
@@ -1711,10 +1722,10 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               </div>
             )}
 
-            {activeTab === "team" && (
+            {activeTab === "team" && isSettingsSectionAllowed("team", currentUserRole) && (
               <div className="space-y-4">
                 {tenantInfo.plan !== 'Pro Plus' ? (
-                  <UpgradeOverlay 
+                  <UpgradeOverlay
                     title="Team & Permissions"
                     description="Invite team members and configure custom roles. Upgrade to Pro Plus to unlock this feature."
                     requiredPlan="Pro Plus"
@@ -1728,11 +1739,10 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                       <button
                         type="button"
                         onClick={() => setTeamSubTab("members")}
-                        className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                          teamSubTab === "members"
+                        className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${teamSubTab === "members"
                             ? "bg-brand-500 text-brand-900 font-bold shadow-xs"
                             : "bg-card text-muted-foreground hover:text-foreground border border-border"
-                        }`}
+                          }`}
                       >
                         Team Members ({teamMembers.length})
                       </button>
@@ -1740,11 +1750,10 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                         <button
                           type="button"
                           onClick={() => setTeamSubTab("roles")}
-                          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                            teamSubTab === "roles"
+                          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${teamSubTab === "roles"
                               ? "bg-brand-500 text-brand-900 font-bold shadow-xs"
                               : "bg-card text-muted-foreground hover:text-foreground border border-border"
-                          }`}
+                            }`}
                         >
                           Roles & Permissions
                         </button>
@@ -1756,228 +1765,227 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                     ) : (
                       <>
                         <div className="flex items-center justify-between mb-8">
-                      <div>
-                        <h3 className="text-lg font-semibold text-foreground">Active Team Members</h3>
-                        <p className="text-sm text-gray-400 mt-1">Manage current members and roles.</p>
-                      </div>
-                      <button
-                        onClick={() => setIsInviteModalOpen(true)}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-full transition-colors cursor-pointer text-sm"
-                      >
-                        <MdGroup className="w-4 h-4" />
-                        Add Member
-                      </button>
-                    </div>
-
-                    {isInviteModalOpen && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" style={{ margin: 0 }}>
-                        <div className="bg-card border border-border rounded-3xl p-8 max-w-md w-full shadow-2xl relative">
-                          <button 
-                            onClick={() => { setIsInviteModalOpen(false); setInviteMessage(null); }}
-                            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-gray-500 hover:text-foreground rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                          <div>
+                            <h3 className="text-lg font-semibold text-foreground">Active Team Members</h3>
+                            <p className="text-sm text-gray-400 mt-1">Manage current members and roles.</p>
+                          </div>
+                          <button
+                            onClick={() => setIsInviteModalOpen(true)}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-full transition-colors cursor-pointer text-sm"
                           >
-                            ✕
+                            <MdGroup className="w-4 h-4" />
+                            Add Member
                           </button>
-
-                          <div className="text-center mb-8">
-                            <MdGroup className="w-12 h-12 text-brand-500 mx-auto mb-4" />
-                            <h3 className="text-xl font-bold text-foreground mb-2">Invite to Team</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Invite team members to collaborate and manage access to your business profile.</p>
-                          </div>
-                          
-                          <form 
-                            onSubmit={async (e) => {
-                              e.preventDefault();
-                              if (!inviteEmail) return;
-                              setIsInviting(true);
-                              setInviteMessage(null);
-                              try {
-                                const res = await fetch('/api/team/invite', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
-                                });
-                                const data = await res.json();
-                                if (res.ok) {
-                                  setInviteMessage({ type: 'success', text: data.message });
-                                  setInviteEmail("");
-                                  setInviteRole("Viewer");
-                                  fetchTeamData();
-                                  setTimeout(() => setIsInviteModalOpen(false), 2000);
-                                } else {
-                                  setInviteMessage({ type: 'error', text: data.error || 'Failed to invite user.' });
-                                }
-                              } catch (err) {
-                                setInviteMessage({ type: 'error', text: 'An unexpected error occurred.' });
-                              } finally {
-                                setIsInviting(false);
-                              }
-                            }}
-                            className="space-y-4"
-                          >
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
-                              <input 
-                                type="email" 
-                                value={inviteEmail}
-                                onChange={(e) => setInviteEmail(e.target.value)}
-                                placeholder="teammember@domain.com"
-                                className="w-full bg-card border border-border hover:border-black/20 dark:border-white/20 rounded-2xl px-4 py-3 outline-none focus:border-brand-500 transition-colors text-sm text-foreground mb-4 shadow-2xs placeholder:text-gray-500 dark:placeholder:text-gray-400"
-                                required
-                              />
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Role</label>
-                              <select 
-                                value={inviteRole}
-                                onChange={(e) => setInviteRole(e.target.value)}
-                                className="w-full bg-card border border-border hover:border-black/20 dark:border-white/20 rounded-2xl px-4 py-3 outline-none focus:border-brand-500 transition-colors text-sm text-foreground appearance-none cursor-pointer shadow-2xs"
-                              >
-                                {availableRoles.length > 0 ? availableRoles.filter(r => r.role.toLowerCase() !== 'owner').map((r) => (
-                                  <option key={r.role} value={r.role} className="bg-card text-foreground">{r.role}</option>
-                                )) : (
-                                  <>
-                                    <option value="Admin" className="bg-card text-foreground">Admin</option>
-                                    <option value="Editor" className="bg-card text-foreground">Editor</option>
-                                    <option value="Viewer" className="bg-card text-foreground">Viewer</option>
-                                  </>
-                                )}
-                              </select>
-                            </div>
-                            
-                            {inviteMessage && (
-                              <div className={`p-4 rounded-2xl text-sm font-medium ${inviteMessage.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-                                {inviteMessage.text}
-                              </div>
-                            )}
-
-                            <button 
-                              type="submit" 
-                              disabled={isInviting || !inviteEmail}
-                              className="w-full px-6 py-3 mt-4 bg-brand-500 hover:bg-brand-400 disabled:opacity-50 text-brand-900 font-bold rounded-2xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                            >
-                              {isInviting ? <Loader size="sm" /> : "Send Invitation"}
-                            </button>
-                          </form>
                         </div>
-                      </div>
-                    )}
-                
-                {teamMembers.length > 0 && (
-                  <div className="bg-card border border-border rounded-3xl p-8 shadow-xs">
-                    <div className="space-y-3">
-                      {teamMembers.map(member => (
-                        <div key={member.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50/50 dark:bg-black/20 rounded-2xl border border-border gap-4">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <ClientAvatar
-                              imageUrl={member.avatar_url}
-                              email={member.email}
-                              name={member.full_name}
-                              className="w-10 h-10 rounded-xl object-cover shrink-0 border border-border"
-                              fallbackClassName="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold flex items-center justify-center uppercase shrink-0 text-sm"
-                            />
-                            <div className="min-w-0">
-                              <p className="font-medium text-foreground flex items-center gap-2">
-                                {member.full_name || 'Unnamed User'}
-                                {(String(member.id) === String(user?.id) || String(member.id) === String((user as any)?.dbId)) && <span className="px-2 py-0.5 bg-emerald-100/80 text-emerald-800 border border-emerald-200/60 dark:bg-brand-500/10 dark:text-brand-400 text-[10px] uppercase font-bold rounded-full dark:border-brand-500/20">You</span>}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{member.email}</p>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-3">
-                            {(currentUserRole === 'owner' || currentUserRole === 'Super Admin') && member.role !== 'owner' && member.role !== 'Super Admin' ? (
-                              <select 
-                                value={member.role}
-                                onChange={(e) => handleRoleChange(member.id, e.target.value)}
-                                className="bg-card border border-border rounded-xl px-3 py-1.5 text-sm text-foreground outline-none cursor-pointer shadow-2xs"
-                              >
-                                {availableRoles.length > 0 ? (
-                                  availableRoles.filter(r => r.role.toLowerCase() !== 'owner').map((r) => (
-                                    <option key={r.role} value={r.role} className="bg-card text-foreground">{r.role}</option>
-                                  ))
-                                ) : (
-                                  <>
-                                    <option value="Admin" className="bg-card text-foreground">Admin</option>
-                                    <option value="Editor" className="bg-card text-foreground">Editor</option>
-                                    <option value="Viewer" className="bg-card text-foreground">Viewer</option>
-                                  </>
-                                )}
-                              </select>
-                            ) : (
-                              <span className="px-3 py-1.5 text-xs font-bold uppercase rounded-full bg-slate-100 text-slate-800 border border-slate-200/80 dark:bg-card dark:text-gray-300 dark:border-border">
-                                {member.role}
-                              </span>
-                            )}
 
-                            {(currentUserRole === 'owner' || currentUserRole === 'Super Admin') && member.role !== 'owner' && member.role !== 'Super Admin' && (
-                              <button 
-                                onClick={() => handleRemoveMember(member.id, member.full_name)}
-                                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 rounded-xl text-sm font-medium transition-colors border border-rose-200/60 dark:border-red-500/20"
-                              >
-                                Remove
-                              </button>
-                            )}
-
-                            {(String(member.id) === String(user?.id) || String(member.id) === String((user as any)?.dbId)) && member.role !== 'owner' && member.role !== 'Super Admin' && (
-                              <button 
-                                onClick={handleLeaveTeam}
-                                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 rounded-xl text-sm font-medium transition-colors border border-rose-200/60 dark:border-red-500/20"
-                              >
-                                Leave Team
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {sentInvitations.length > 0 && (
-                  <div className="mt-8 bg-card border border-border rounded-3xl p-8 shadow-xs">
-                    <h3 className="text-lg font-semibold text-foreground mb-6">Sent Invitations</h3>
-                    <div className="space-y-3">
-                      {sentInvitations.map(inv => (
-                        <div key={inv.id} className="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-black/20 rounded-2xl border border-border">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <ClientAvatar
-                              imageUrl={inv.avatar_url}
-                              email={inv.email}
-                              name={inv.full_name}
-                              className="w-10 h-10 rounded-xl object-cover shrink-0 border border-border"
-                              fallbackClassName="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold flex items-center justify-center uppercase shrink-0 text-sm"
-                            />
-                            <div className="min-w-0">
-                              <p className="font-medium text-foreground truncate">{inv.email}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Sent on {new Date(inv.created_at).toLocaleDateString()}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className={`inline-block px-3 py-1 text-xs font-bold uppercase rounded-full ${
-                              inv.status === 'pending' ? 'bg-amber-100/80 text-amber-800 border border-amber-300/60 dark:bg-amber-400/10 dark:text-amber-400 dark:border-amber-400/20' :
-                              inv.status === 'accepted' ? 'bg-emerald-100/80 text-emerald-800 border border-emerald-300/60 dark:bg-green-400/10 dark:text-green-400 dark:border-green-400/20' :
-                              'bg-rose-100/80 text-rose-800 border border-rose-300/60 dark:bg-red-400/10 dark:text-red-400 dark:border-red-400/20'
-                            }`}>
-                              {inv.status}
-                            </span>
-                            {inv.status === 'pending' && currentUserRole === 'owner' && (
+                        {isInviteModalOpen && (
+                          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" style={{ margin: 0 }}>
+                            <div className="bg-card border border-border rounded-3xl p-8 max-w-md w-full shadow-2xl relative">
                               <button
-                                onClick={() => handleDeleteInvitation(inv.id, inv.email)}
-                                className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-400/10 rounded-md transition-colors"
-                                title="Cancel Invitation"
+                                onClick={() => { setIsInviteModalOpen(false); setInviteMessage(null); }}
+                                className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-gray-500 hover:text-foreground rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
                               >
-                                <MdDelete className="w-5 h-5" />
+                                ✕
                               </button>
-                            )}
+
+                              <div className="text-center mb-8">
+                                <MdGroup className="w-12 h-12 text-brand-500 mx-auto mb-4" />
+                                <h3 className="text-xl font-bold text-foreground mb-2">Invite to Team</h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Invite team members to collaborate and manage access to your business profile.</p>
+                              </div>
+
+                              <form
+                                onSubmit={async (e) => {
+                                  e.preventDefault();
+                                  if (!inviteEmail) return;
+                                  setIsInviting(true);
+                                  setInviteMessage(null);
+                                  try {
+                                    const res = await fetch('/api/team/invite', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+                                    });
+                                    const data = await res.json();
+                                    if (res.ok) {
+                                      setInviteMessage({ type: 'success', text: data.message });
+                                      setInviteEmail("");
+                                      setInviteRole("Viewer");
+                                      fetchTeamData();
+                                      setTimeout(() => setIsInviteModalOpen(false), 2000);
+                                    } else {
+                                      setInviteMessage({ type: 'error', text: data.error || 'Failed to invite user.' });
+                                    }
+                                  } catch (err) {
+                                    setInviteMessage({ type: 'error', text: 'An unexpected error occurred.' });
+                                  } finally {
+                                    setIsInviting(false);
+                                  }
+                                }}
+                                className="space-y-4"
+                              >
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
+                                  <input
+                                    type="email"
+                                    value={inviteEmail}
+                                    onChange={(e) => setInviteEmail(e.target.value)}
+                                    placeholder="teammember@domain.com"
+                                    className="w-full bg-card border border-border hover:border-black/20 dark:border-white/20 rounded-2xl px-4 py-3 outline-none focus:border-brand-500 transition-colors text-sm text-foreground mb-4 shadow-2xs placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                                    required
+                                  />
+                                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Role</label>
+                                  <select
+                                    value={inviteRole}
+                                    onChange={(e) => setInviteRole(e.target.value)}
+                                    className="w-full bg-card border border-border hover:border-black/20 dark:border-white/20 rounded-2xl px-4 py-3 outline-none focus:border-brand-500 transition-colors text-sm text-foreground appearance-none cursor-pointer shadow-2xs"
+                                  >
+                                    {availableRoles.length > 0 ? availableRoles.filter(r => r.role.toLowerCase() !== 'owner').map((r) => (
+                                      <option key={r.role} value={r.role} className="bg-card text-foreground">{r.role}</option>
+                                    )) : (
+                                      <>
+                                        <option value="Admin" className="bg-card text-foreground">Admin</option>
+                                        <option value="Editor" className="bg-card text-foreground">Editor</option>
+                                        <option value="Viewer" className="bg-card text-foreground">Viewer</option>
+                                      </>
+                                    )}
+                                  </select>
+                                </div>
+
+                                {inviteMessage && (
+                                  <div className={`p-4 rounded-2xl text-sm font-medium ${inviteMessage.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                                    {inviteMessage.text}
+                                  </div>
+                                )}
+
+                                <button
+                                  type="submit"
+                                  disabled={isInviting || !inviteEmail}
+                                  className="w-full px-6 py-3 mt-4 bg-brand-500 hover:bg-brand-400 disabled:opacity-50 text-brand-900 font-bold rounded-2xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                                >
+                                  {isInviting ? <Loader size="sm" /> : "Send Invitation"}
+                                </button>
+                              </form>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        )}
+
+                        {teamMembers.length > 0 && (
+                          <div className="bg-card border border-border rounded-3xl p-8 shadow-xs">
+                            <div className="space-y-3">
+                              {teamMembers.map(member => (
+                                <div key={member.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50/50 dark:bg-black/20 rounded-2xl border border-border gap-4">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <ClientAvatar
+                                      imageUrl={member.avatar_url}
+                                      email={member.email}
+                                      name={member.full_name}
+                                      className="w-10 h-10 rounded-xl object-cover shrink-0 border border-border"
+                                      fallbackClassName="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold flex items-center justify-center uppercase shrink-0 text-sm"
+                                    />
+                                    <div className="min-w-0">
+                                      <p className="font-medium text-foreground flex items-center gap-2">
+                                        {member.full_name || 'Unnamed User'}
+                                        {(String(member.id) === String(user?.id) || String(member.id) === String((user as any)?.dbId)) && <span className="px-2 py-0.5 bg-emerald-100/80 text-emerald-800 border border-emerald-200/60 dark:bg-brand-500/10 dark:text-brand-400 text-[10px] uppercase font-bold rounded-full dark:border-brand-500/20">You</span>}
+                                      </p>
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{member.email}</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-3">
+                                    {(currentUserRole === 'owner' || currentUserRole === 'Super Admin') && member.role !== 'owner' && member.role !== 'Super Admin' ? (
+                                      <select
+                                        value={member.role}
+                                        onChange={(e) => handleRoleChange(member.id, e.target.value)}
+                                        className="bg-card border border-border rounded-xl px-3 py-1.5 text-sm text-foreground outline-none cursor-pointer shadow-2xs"
+                                      >
+                                        {availableRoles.length > 0 ? (
+                                          availableRoles.filter(r => r.role.toLowerCase() !== 'owner').map((r) => (
+                                            <option key={r.role} value={r.role} className="bg-card text-foreground">{r.role}</option>
+                                          ))
+                                        ) : (
+                                          <>
+                                            <option value="Admin" className="bg-card text-foreground">Admin</option>
+                                            <option value="Editor" className="bg-card text-foreground">Editor</option>
+                                            <option value="Viewer" className="bg-card text-foreground">Viewer</option>
+                                          </>
+                                        )}
+                                      </select>
+                                    ) : (
+                                      <span className="px-3 py-1.5 text-xs font-bold uppercase rounded-full bg-slate-100 text-slate-800 border border-slate-200/80 dark:bg-card dark:text-gray-300 dark:border-border">
+                                        {member.role}
+                                      </span>
+                                    )}
+
+                                    {(currentUserRole === 'owner' || currentUserRole === 'Super Admin') && member.role !== 'owner' && member.role !== 'Super Admin' && (
+                                      <button
+                                        onClick={() => handleRemoveMember(member.id, member.full_name)}
+                                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 rounded-xl text-sm font-medium transition-colors border border-rose-200/60 dark:border-red-500/20"
+                                      >
+                                        Remove
+                                      </button>
+                                    )}
+
+                                    {(String(member.id) === String(user?.id) || String(member.id) === String((user as any)?.dbId)) && member.role !== 'owner' && member.role !== 'Super Admin' && (
+                                      <button
+                                        onClick={handleLeaveTeam}
+                                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 rounded-xl text-sm font-medium transition-colors border border-rose-200/60 dark:border-red-500/20"
+                                      >
+                                        Leave Team
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {sentInvitations.length > 0 && (
+                          <div className="mt-8 bg-card border border-border rounded-3xl p-8 shadow-xs">
+                            <h3 className="text-lg font-semibold text-foreground mb-6">Sent Invitations</h3>
+                            <div className="space-y-3">
+                              {sentInvitations.map(inv => (
+                                <div key={inv.id} className="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-black/20 rounded-2xl border border-border">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <ClientAvatar
+                                      imageUrl={inv.avatar_url}
+                                      email={inv.email}
+                                      name={inv.full_name}
+                                      className="w-10 h-10 rounded-xl object-cover shrink-0 border border-border"
+                                      fallbackClassName="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold flex items-center justify-center uppercase shrink-0 text-sm"
+                                    />
+                                    <div className="min-w-0">
+                                      <p className="font-medium text-foreground truncate">{inv.email}</p>
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Sent on {new Date(inv.created_at).toLocaleDateString()}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <span className={`inline-block px-3 py-1 text-xs font-bold uppercase rounded-full ${inv.status === 'pending' ? 'bg-amber-100/80 text-amber-800 border border-amber-300/60 dark:bg-amber-400/10 dark:text-amber-400 dark:border-amber-400/20' :
+                                        inv.status === 'accepted' ? 'bg-emerald-100/80 text-emerald-800 border border-emerald-300/60 dark:bg-green-400/10 dark:text-green-400 dark:border-green-400/20' :
+                                          'bg-rose-100/80 text-rose-800 border border-rose-300/60 dark:bg-red-400/10 dark:text-red-400 dark:border-red-400/20'
+                                      }`}>
+                                      {inv.status}
+                                    </span>
+                                    {inv.status === 'pending' && currentUserRole === 'owner' && (
+                                      <button
+                                        onClick={() => handleDeleteInvitation(inv.id, inv.email)}
+                                        className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-400/10 rounded-md transition-colors"
+                                        title="Cancel Invitation"
+                                      >
+                                        <MdDelete className="w-5 h-5" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
-                  </>
-                )}
-              </div>
-            )}
               </div>
             )}
 
@@ -2036,160 +2044,161 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                 {(() => {
                   const hasCurrentDevicePasskey = customPasskeys.some((pk: any) => pk.is_current_device);
                   return (
-                <div className="pt-6 border-t border-border">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
-                    <div className="flex-1 pr-4">
-                      <h3 className="text-lg font-semibold text-foreground">App Lock</h3>
-                      <p className="text-sm text-gray-400 mt-1">Secure your dashboard with your device using a fingerprint, face scan, or screen lock.</p>
-                    </div>
-                    <button 
-                      onClick={async () => {
-                        try {
-                          const { startRegistration } = await import('@simplewebauthn/browser');
-                          const resp = await fetch('/api/auth/passkey/register/generate');
-                          const options = await resp.json();
-                          if (options.error) throw new Error(options.error);
-                          
-                          const attResp = await startRegistration(options);
-                          
-                          const verifyResp = await fetch('/api/auth/passkey/register/verify', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(attResp),
-                          });
-                          
-                          const verification = await verifyResp.json();
-                          if (verification.verified) {
-                            alert("App Lock successfully enabled!");
-                            const refresh = await fetch('/api/auth/passkey/list');
-                            const pkData = await refresh.json();
-                            setCustomPasskeys(pkData.passkeys || []);
-                            // reload page to apply lock provider immediately
-                            window.location.reload();
-                          } else {
-                            alert(verification.error || "Failed to verify passkey.");
-                          }
-                        } catch (e: any) {
-                          console.error("Passkey error:", e);
-                          alert("Failed to add App Lock: " + e.message);
-                        }
-                      }}
-                      className="px-4 py-2 bg-white/10 hover:bg-white/20 text-foreground rounded-3xl font-semibold transition-colors text-sm whitespace-nowrap shrink-0 cursor-pointer"
-                    >
-                      {customPasskeys.length > 0 ? "Add Another Passkey" : "Enable App Lock with Passkey"}
-                    </button>
-                  </div>
-
-                  {customPasskeys.length > 0 && (
-                    <div className="mb-4 relative z-30">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Auto-Lock Duration</label>
-                      <AutoLockDurationSelect
-                        value={autoLockDuration}
-                        onChange={setAutoLockDuration}
-                      />
-                    </div>
-                  )}
-
-                  {customPasskeys.length > 0 && (
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">High Security Mode</label>
-                      <div className="flex items-center justify-between p-4 bg-card border border-border rounded-2xl shadow-2xs">
-                        <div>
-                          <p className="text-foreground font-medium">Require passkey for all actions</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">If disabled, passkey is only required for major actions like workspace deletion.</p>
+                    <div className="pt-6 border-t border-border">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
+                        <div className="flex-1 pr-4">
+                          <h3 className="text-lg font-semibold text-foreground">App Lock</h3>
+                          <p className="text-sm text-gray-400 mt-1">Secure your dashboard with your device using a fingerprint, face scan, or screen lock.</p>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" className="sr-only peer" checked={highSecurityMode} onChange={(e) => setHighSecurityMode(e.target.checked)} />
-                          <div className="w-11 h-6 bg-slate-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-3">
-                    {!hasCurrentDevicePasskey && customPasskeys.length > 0 && !customPasskeys.some((pk: any) => pk.device_type === 'multiDevice') && (
-                      <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl mb-4">
-                        <p className="text-orange-400 font-medium text-sm">App Lock is not enabled on this device.</p>
-                      </div>
-                    )}
-                    {customPasskeys.length === 0 ? (
-                      <p className="text-gray-400 text-sm">App Lock is currently disabled.</p>
-                    ) : (
-                      customPasskeys.map((pk: any) => (
-                        <div key={pk.id} className="flex items-center justify-between p-4 bg-card rounded-3xl border border-border">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-brand-500/10 rounded-2xl flex items-center justify-center">
-                              <MdCheck className="w-5 h-5 text-brand-400" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-foreground">{pk.name}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <p className="text-xs text-gray-400">Added on {new Date(pk.created_at).toLocaleDateString()}</p>
-                                <span className="w-1 h-1 rounded-full bg-white/20"></span>
-                                <p className="text-xs text-gray-400">
-                                  {pk.device_type === 'singleDevice' ? 'Single Device Key' : 'Multi-Device Passkey'}
-                                  {pk.backed_up ? ' • Backed up' : ''}
-                                  {pk.is_current_device ? ' • Ready on this Device' : ''}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              if (!confirm(`Delete passkey "${pk.name}"?`)) return;
-                              try {
-                                const res = await fetch('/api/auth/passkey/remove', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ id: pk.id })
-                                });
-                                if (res.ok) {
-                                  setCustomPasskeys((prev: any[]) => prev.filter((p: any) => p.id !== pk.id));
-                                } else {
-                                  alert("Failed to delete passkey.");
-                                }
-                              } catch (e) {
-                                alert("Error deleting passkey.");
-                              }
-                            }}
-                            className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-xl hover:bg-red-500/10 cursor-pointer"
-                            title="Delete this passkey"
-                          >
-                            <MdDelete className="w-5 h-5" />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                    {customPasskeys.length > 0 && (
-                      <div className="pt-4 mt-2 border-t border-border flex justify-end">
                         <button
-                          onClick={() => {
-                            requireAuth(async () => {
-                              if (!confirm("Are you sure you want to remove App Lock? This will remove all registered devices.")) return;
-                              try {
-                                const res = await fetch('/api/auth/passkey/remove', { method: 'POST' });
-                                if (res.ok) {
-                                  alert("App Lock removed successfully.");
-                                  window.location.reload();
-                                } else {
-                                  alert("Failed to remove App Lock.");
-                                }
-                              } catch (e) {
-                                alert("An error occurred while removing App Lock.");
+                          onClick={async () => {
+                            try {
+                              const { startRegistration } = await import('@simplewebauthn/browser');
+                              const resp = await fetch('/api/auth/passkey/register/generate');
+                              const options = await resp.json();
+                              if (options.error) throw new Error(options.error);
+
+                              const attResp = await startRegistration(options);
+
+                              const verifyResp = await fetch('/api/auth/passkey/register/verify', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(attResp),
+                              });
+
+                              const verification = await verifyResp.json();
+                              if (verification.verified) {
+                                alert("App Lock successfully enabled!");
+                                const refresh = await fetch('/api/auth/passkey/list');
+                                const pkData = await refresh.json();
+                                setCustomPasskeys(pkData.passkeys || []);
+                                // reload page to apply lock provider immediately
+                                window.location.reload();
+                              } else {
+                                alert(verification.error || "Failed to verify passkey.");
                               }
-                            }, true);
+                            } catch (e: any) {
+                              console.error("Passkey error:", e);
+                              alert("Failed to add App Lock: " + e.message);
+                            }
                           }}
-                          className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl font-medium transition-colors text-sm"
+                          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-foreground rounded-3xl font-semibold transition-colors text-sm whitespace-nowrap shrink-0 cursor-pointer"
                         >
-                          Remove App Lock
+                          {customPasskeys.length > 0 ? "Add Another Passkey" : "Enable App Lock with Passkey"}
                         </button>
                       </div>
-                    )}
-                  </div>
-                </div>
-                );})()}
+
+                      {customPasskeys.length > 0 && (
+                        <div className="mb-4 relative z-30">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Auto-Lock Duration</label>
+                          <AutoLockDurationSelect
+                            value={autoLockDuration}
+                            onChange={setAutoLockDuration}
+                          />
+                        </div>
+                      )}
+
+                      {customPasskeys.length > 0 && (
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">High Security Mode</label>
+                          <div className="flex items-center justify-between p-4 bg-card border border-border rounded-2xl shadow-2xs">
+                            <div>
+                              <p className="text-foreground font-medium">Require passkey for all actions</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">If disabled, passkey is only required for major actions like workspace deletion.</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input type="checkbox" className="sr-only peer" checked={highSecurityMode} onChange={(e) => setHighSecurityMode(e.target.checked)} />
+                              <div className="w-11 h-6 bg-slate-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-3">
+                        {!hasCurrentDevicePasskey && customPasskeys.length > 0 && !customPasskeys.some((pk: any) => pk.device_type === 'multiDevice') && (
+                          <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl mb-4">
+                            <p className="text-orange-400 font-medium text-sm">App Lock is not enabled on this device.</p>
+                          </div>
+                        )}
+                        {customPasskeys.length === 0 ? (
+                          <p className="text-gray-400 text-sm">App Lock is currently disabled.</p>
+                        ) : (
+                          customPasskeys.map((pk: any) => (
+                            <div key={pk.id} className="flex items-center justify-between p-4 bg-card rounded-3xl border border-border">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-brand-500/10 rounded-2xl flex items-center justify-center">
+                                  <MdCheck className="w-5 h-5 text-brand-400" />
+                                </div>
+                                <div>
+                                  <p className="font-medium text-foreground">{pk.name}</p>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <p className="text-xs text-gray-400">Added on {new Date(pk.created_at).toLocaleDateString()}</p>
+                                    <span className="w-1 h-1 rounded-full bg-white/20"></span>
+                                    <p className="text-xs text-gray-400">
+                                      {pk.device_type === 'singleDevice' ? 'Single Device Key' : 'Multi-Device Passkey'}
+                                      {pk.backed_up ? ' • Backed up' : ''}
+                                      {pk.is_current_device ? ' • Ready on this Device' : ''}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (!confirm(`Delete passkey "${pk.name}"?`)) return;
+                                  try {
+                                    const res = await fetch('/api/auth/passkey/remove', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ id: pk.id })
+                                    });
+                                    if (res.ok) {
+                                      setCustomPasskeys((prev: any[]) => prev.filter((p: any) => p.id !== pk.id));
+                                    } else {
+                                      alert("Failed to delete passkey.");
+                                    }
+                                  } catch (e) {
+                                    alert("Error deleting passkey.");
+                                  }
+                                }}
+                                className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-xl hover:bg-red-500/10 cursor-pointer"
+                                title="Delete this passkey"
+                              >
+                                <MdDelete className="w-5 h-5" />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                        {customPasskeys.length > 0 && (
+                          <div className="pt-4 mt-2 border-t border-border flex justify-end">
+                            <button
+                              onClick={() => {
+                                requireAuth(async () => {
+                                  if (!confirm("Are you sure you want to remove App Lock? This will remove all registered devices.")) return;
+                                  try {
+                                    const res = await fetch('/api/auth/passkey/remove', { method: 'POST' });
+                                    if (res.ok) {
+                                      alert("App Lock removed successfully.");
+                                      window.location.reload();
+                                    } else {
+                                      alert("Failed to remove App Lock.");
+                                    }
+                                  } catch (e) {
+                                    alert("An error occurred while removing App Lock.");
+                                  }
+                                }, true);
+                              }}
+                              className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl font-medium transition-colors text-sm"
+                            >
+                              Remove App Lock
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {currentUserRole !== 'owner' && (
                   <div className="pt-6 border-t border-border mt-8">
@@ -2198,7 +2207,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                       Leaving this workspace will remove your access to all data and resources. You will need a new invitation to rejoin.
                     </p>
                     <button onClick={async () => {
-                      if(confirm("Are you sure you want to leave this workspace? This action cannot be undone.")) {
+                      if (confirm("Are you sure you want to leave this workspace? This action cannot be undone.")) {
                         await leaveTeam();
                         window.location.reload();
                       }
@@ -2211,20 +2220,45 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               </div>
             )}
 
-            {activeTab === "audit_logs" && (
+            {activeTab === "audit_logs" && isSettingsSectionAllowed("audit_logs", currentUserRole) && (
               <AuditLogsTab />
             )}
 
-            {activeTab === "danger" && (
+            {activeTab === "danger" && isSettingsSectionAllowed("danger", currentUserRole) && (
               <DangerZoneView currentUserRole={currentUserRole} teamMembers={teamMembers} />
             )}
 
-            {activeTab === "billing" && (
+            {activeTab === "billing" && isSettingsSectionAllowed("billing", currentUserRole) && (
               <BillingView tenantInfo={tenantInfo} plansList={plansList} />
             )}
 
-            {activeTab === "prefs" && (
+            {activeTab === "prefs" && isSettingsSectionAllowed("prefs", currentUserRole) && (
               <AdminPreferencesView />
+            )}
+
+            {currentUserRole && !isSettingsSectionAllowed(activeTab, currentUserRole) && (
+              <div className="bg-card border border-border rounded-3xl p-8 text-center max-w-lg mx-auto my-12 animate-in fade-in">
+                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto mb-4">
+                  <MdWarning className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold text-foreground mb-2">Access Restricted</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Your workspace role ({currentUserRole}) does not have permission to view or manage this section.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab("profile");
+                    setActiveView("hub");
+                    if (typeof window !== "undefined") {
+                      window.history.replaceState(null, '', '/user/settings');
+                    }
+                  }}
+                  className="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-brand-950 font-bold rounded-xl text-sm transition-colors cursor-pointer"
+                >
+                  Return to Settings
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -2233,89 +2267,104 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
   );
 }
 
-function BillingView({ 
-  tenantInfo, 
-  plansList 
-}: { 
+function BillingView({
+  tenantInfo,
+  plansList
+}: {
   tenantInfo: { plan: string, name: string, logo_url: string | null, industry: string | null };
   plansList?: PlanViewItem[];
 }) {
   const activePlans = plansList && plansList.length > 0 ? plansList : defaultPlans;
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
+  const [processingCheckout, setProcessingCheckout] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(tenantInfo.plan && tenantInfo.plan !== "Free" ? tenantInfo.plan : "Pro");
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
-  
-  // Bank Slip Upload form state
-  const [enteredAmount, setEnteredAmount] = useState<string>("2500");
-  const [slipFile, setSlipFile] = useState<File | null>(null);
-  const [slipPreview, setSlipPreview] = useState<string | null>(null);
-  const [customerNotes, setCustomerNotes] = useState<string>("");
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [copiedBank, setCopiedBank] = useState(false);
-
+  const [gatewayStatus, setGatewayStatus] = useState<any>(null);
   const [usage, setUsage] = useState<any>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"slip" | "online">("slip");
-  const [bankDetails, setBankDetails] = useState({
-    bank: "Bank of Ceylon",
-    accountName: "",
-    accountNumber: "",
-    branch: "",
+  const [subDetails, setSubDetails] = useState<any>(null);
+  const [togglingAutoRenew, setTogglingAutoRenew] = useState(false);
+  const [wallet, setWallet] = useState<any>(null);
+  const [topupAmountInput, setTopupAmountInput] = useState<string>("2500");
+  const [rechargingWallet, setRechargingWallet] = useState(false);
+  const [togglingAutoPull, setTogglingAutoPull] = useState(false);
+
+  // Switch Billing Interval / Method Modal
+  const [switchModalOpen, setSwitchModalOpen] = useState(false);
+  const [switchTargetInterval, setSwitchTargetInterval] = useState<"monthly" | "yearly">("yearly");
+  const [switchingCycle, setSwitchingCycle] = useState(false);
+  const [shortfallRecharging, setShortfallRecharging] = useState(false);
+
+  // Coupon state
+  const [couponInput, setCouponInput] = useState("");
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    id: number;
+    code: string;
+    type: "percent" | "fixed";
+    value: number;
+    discountText: string;
+    isComplimentary: boolean;
+    applicablePlans?: string[] | null;
+  } | null>(null);
+
+  // Billing address & email details
+  const [billingSettings, setBillingSettings] = useState<{
+    billingEmail: string;
+    billingName: string;
+    billingAddress: string;
+    billingCity: string;
+    billingPostalCode: string;
+    billingCountry: string;
+  }>({
+    billingEmail: "",
+    billingName: tenantInfo.name || "",
+    billingAddress: "",
+    billingCity: "",
+    billingPostalCode: "",
+    billingCountry: "Sri Lanka",
   });
 
   useEffect(() => {
-    import("@/app/onboarding/actions").then(m => m.getCompanyBankDetailsAction()).then(res => {
-      if (res?.success && res.bankDetails) {
-        setBankDetails(res.bankDetails);
+    import("../actions/billing").then(m => m.getGatewayStatusAction()).then(res => {
+      if (res?.success) {
+        setGatewayStatus(res.status);
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
-
-  // Keep entered amount aligned when plan or cycle changes, unless custom
-  useEffect(() => {
-    const planInfo = activePlans.find((p) => p.name.toLowerCase() === selectedPlan.toLowerCase());
-    if (planInfo) {
-      const priceStr = billingCycle === "monthly" ? planInfo.price : planInfo.yearlyPrice;
-      const cleanNum = priceStr.replace(/,/g, "");
-      setEnteredAmount(cleanNum);
-    }
-  }, [selectedPlan, billingCycle]);
-
-  // Clean up slip object URL
-  useEffect(() => {
-    return () => {
-      if (slipPreview) URL.revokeObjectURL(slipPreview);
-    };
-  }, [slipPreview]);
-
-  const handleSlipChange = (file: File | null) => {
-    if (slipPreview) {
-      URL.revokeObjectURL(slipPreview);
-      setSlipPreview(null);
-    }
-    setSlipFile(file);
-    if (file && file.type.startsWith("image/")) {
-      setSlipPreview(URL.createObjectURL(file));
-    }
-  };
-
-  const copyBankInfo = () => {
-    if (bankDetails.accountNumber) {
-      navigator.clipboard.writeText(bankDetails.accountNumber);
-      setCopiedBank(true);
-      setTimeout(() => setCopiedBank(false), 2500);
-    }
-  };
 
   const fetchHistoryAndUsage = async () => {
     try {
       setLoading(true);
-      const res = await import("../actions/billing").then(m => m.getSubscriptionHistory());
-      if (res.success) {
-        setHistory(res.history || []);
+      const [histRes, subRes, walletRes, billRes] = await Promise.all([
+        import("../actions/billing").then(m => m.getSubscriptionHistory()),
+        import("../actions/billing").then(m => m.getActiveSubscriptionDetails()),
+        import("../actions/billing").then(m => m.getWalletDetailsAction()),
+        import("../actions/billing").then(m => m.getBillingSettingsAction()),
+      ]);
+
+      if (histRes.success) {
+        setHistory(histRes.history || []);
       }
-      
+      if (subRes?.success) {
+        setSubDetails(subRes.subscription || null);
+        if (subRes.subscription?.activeCoupon) {
+          setAppliedCoupon(subRes.subscription.activeCoupon);
+        } else if ((subRes as any).activeCoupon) {
+          setAppliedCoupon((subRes as any).activeCoupon);
+        } else {
+          setAppliedCoupon(null);
+        }
+      }
+      if (walletRes?.success) {
+        setWallet(walletRes.wallet || null);
+      }
+      if (billRes?.success && billRes.data) {
+        setBillingSettings(billRes.data);
+      }
+
       if (tenantInfo.plan === "Free") {
         const { getTenantUsage } = await import("../actions/tenants");
         const usageData = await getTenantUsage();
@@ -2332,55 +2381,326 @@ function BillingView({
     fetchHistoryAndUsage();
   }, [tenantInfo.plan]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatusMessage(null);
-
-    const amt = parseFloat(enteredAmount);
-    if (isNaN(amt) || amt <= 0) {
-      setStatusMessage({ type: "error", text: "Please enter a valid payment amount." });
-      return;
-    }
-
-    if (!slipFile) {
-      setStatusMessage({ type: "error", text: "Please select and upload a photo of your payment slip." });
-      return;
-    }
-
-    setUploading(true);
+  const handleToggleAutoRenew = async () => {
+    if (!subDetails) return;
+    setTogglingAutoRenew(true);
     try {
-      const formData = new FormData();
-      formData.append("planName", selectedPlan);
-      formData.append("billingCycle", billingCycle);
-      formData.append("amount", String(amt));
-      formData.append("slip", slipFile);
-      if (customerNotes.trim()) {
-        formData.append("notes", customerNotes.trim());
+      const nextVal = !subDetails.auto_renew;
+      const res = await import("../actions/billing").then(m => m.toggleAutoRenewAction(nextVal));
+      if (res?.success) {
+        setSubDetails((prev: any) => ({ ...prev, auto_renew: nextVal }));
+        setStatusMessage({
+          type: "success",
+          text: nextVal ? "Automatic subscription renewal enabled." : "Automatic subscription renewal paused.",
+        });
       }
-      
-      const { submitSubscriptionPayment } = await import("../actions/billing");
-      const res = await submitSubscriptionPayment(formData);
-      
+    } catch (err: any) {
+      console.error(err);
+      setStatusMessage({ type: "error", text: err.message || "Failed to update auto-renew." });
+    } finally {
+      setTogglingAutoRenew(false);
+    }
+  };
+
+  const handleToggleAutoPull = async () => {
+    if (!wallet) return;
+    setTogglingAutoPull(true);
+    try {
+      const nextVal = !wallet.autoPullCard;
+      const res = await import("../actions/billing").then(m => m.toggleAutoPullCardAction(nextVal));
+      if (res?.success) {
+        setWallet((prev: any) => ({ ...prev, autoPullCard: nextVal }));
+        setStatusMessage({
+          type: "success",
+          text: nextVal ? "Auto top-up from saved card enabled." : "Auto top-up from saved card disabled.",
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
+      setStatusMessage({ type: "error", text: err.message || "Failed to toggle auto top-up." });
+    } finally {
+      setTogglingAutoPull(false);
+    }
+  };
+
+  const handleRechargeWalletCheckout = async (amount: number) => {
+    try {
+      setRechargingWallet(true);
+      setStatusMessage(null);
+
+      const res = await fetch("/api/payments/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "wallet_topup",
+          amount,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setStatusMessage({
+          type: "error",
+          text: data.error || "Failed to initiate wallet recharge.",
+        });
+        return;
+      }
+
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      }
+    } catch (err: any) {
+      setStatusMessage({ type: "error", text: err.message || "Recharge failed." });
+    } finally {
+      setRechargingWallet(false);
+    }
+  };
+
+  const handleRechargeWithSavedCard = async (amount: number) => {
+    if (!wallet?.savedCard?.cardId) return;
+    try {
+      setRechargingWallet(true);
+      setStatusMessage(null);
+      const res = await import("../actions/billing").then(m => m.rechargeWalletWithSavedCardAction(amount));
       if (res.success) {
         setStatusMessage({
           type: "success",
-          text: "Payment slip submitted successfully! Our admin team will verify it and activate your subscription.",
+          text: `Successfully recharged LKR ${amount.toLocaleString()} from your saved card!`,
         });
-        setSlipFile(null);
-        if (slipPreview) {
-          URL.revokeObjectURL(slipPreview);
-          setSlipPreview(null);
-        }
-        setCustomerNotes("");
-        fetchHistoryAndUsage();
+        setWallet((prev: any) => ({
+          ...prev,
+          walletBalance: res.newBalance,
+        }));
+        await fetchHistoryAndUsage();
       } else {
-        setStatusMessage({ type: "error", text: res.error || "Failed to submit payment slip." });
+        setStatusMessage({
+          type: "error",
+          text: res.error || "Recharge with saved card failed.",
+        });
       }
-    } catch (e: any) {
-      console.error(e);
-      setStatusMessage({ type: "error", text: e.message || "An error occurred while submitting payment." });
+    } catch (err: any) {
+      setStatusMessage({ type: "error", text: err.message || "Recharge error." });
     } finally {
-      setUploading(false);
+      setRechargingWallet(false);
+    }
+  };
+
+  const handleRemoveCard = async () => {
+    if (!confirm("Are you sure you want to remove this payment method? Automatic renewals will stop.")) return;
+    try {
+      const res = await import("../actions/billing").then(m => m.removeSavedCardAction());
+      if (res?.success) {
+        setSubDetails((prev: any) => ({
+          ...prev,
+          saved_card_id: null,
+          card_brand: null,
+          card_last4: null,
+          auto_renew: false,
+        }));
+        setWallet((prev: any) => ({
+          ...prev,
+          savedCard: null,
+        }));
+        setStatusMessage({ type: "success", text: "Saved card removed." });
+      }
+    } catch (err: any) {
+      setStatusMessage({ type: "error", text: err.message || "Failed to remove card." });
+    }
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return;
+    setValidatingCoupon(true);
+    setCouponError("");
+    try {
+      const { applyCouponToSubscriptionAction } = await import("../actions/billing");
+      const res = await applyCouponToSubscriptionAction(couponInput.trim());
+      if (res.success && res.coupon) {
+        setAppliedCoupon(res.coupon);
+        setCouponError("");
+        setStatusMessage({
+          type: "success",
+          text: res.message || `Coupon "${res.coupon.code}" applied! (${res.coupon.discountText})`,
+        });
+      } else {
+        setCouponError(res.message || "Invalid or inactive coupon code.");
+        setAppliedCoupon(null);
+      }
+    } catch (err: any) {
+      setCouponError(err.message || "Failed to validate coupon.");
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = async () => {
+    setAppliedCoupon(null);
+    setCouponInput("");
+    setCouponError("");
+    try {
+      const { removeCouponFromSubscriptionAction } = await import("../actions/billing");
+      await removeCouponFromSubscriptionAction();
+      setStatusMessage({
+        type: "success",
+        text: "Coupon removed from subscription.",
+      });
+    } catch (err: any) {
+      console.error("Error removing coupon:", err);
+    }
+  };
+
+  const calculatePlanPrice = (plan: PlanViewItem, cycle: "monthly" | "yearly") => {
+    const rawPriceStr = cycle === "monthly" ? plan.price : plan.yearlyPrice;
+    const rawPriceNum = parseInt(String(rawPriceStr).replace(/[^0-9]/g, ""), 10) || 0;
+
+    if (!appliedCoupon || rawPriceNum === 0) {
+      return {
+        rawPrice: rawPriceNum,
+        rawPriceStr,
+        finalPrice: rawPriceNum,
+        finalPriceStr: rawPriceStr,
+        discountAmount: 0,
+        isDiscounted: false,
+      };
+    }
+
+    if (appliedCoupon.applicablePlans && appliedCoupon.applicablePlans.length > 0) {
+      const normPlan = plan.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const isApplicable = appliedCoupon.applicablePlans.some(
+        (p: string) => p.toLowerCase().replace(/[^a-z0-9]/g, "") === normPlan
+      );
+      if (!isApplicable) {
+        return {
+          rawPrice: rawPriceNum,
+          rawPriceStr,
+          finalPrice: rawPriceNum,
+          finalPriceStr: rawPriceStr,
+          discountAmount: 0,
+          isDiscounted: false,
+        };
+      }
+    }
+
+    const couponVal = Number(appliedCoupon.value) || 0;
+    let discount = 0;
+    if (appliedCoupon.type === "percent" || (appliedCoupon as any).type === "percentage") {
+      discount = Math.round(rawPriceNum * (couponVal / 100));
+    } else {
+      discount = Math.min(rawPriceNum, couponVal);
+    }
+
+    const final = Math.max(0, rawPriceNum - discount);
+    return {
+      rawPrice: rawPriceNum,
+      rawPriceStr,
+      finalPrice: final,
+      finalPriceStr: final.toLocaleString(),
+      discountAmount: discount,
+      isDiscounted: discount > 0,
+    };
+  };
+
+  const handleOpenSwitchModal = (target: "monthly" | "yearly") => {
+    setSwitchTargetInterval(target);
+    setSwitchModalOpen(true);
+  };
+
+  const handleConfirmSwitchWithWallet = async () => {
+    setSwitchingCycle(true);
+    try {
+      const res = await import("../actions/billing").then(m =>
+        m.switchBillingIntervalWithWalletAction({ targetInterval: switchTargetInterval, couponCode: appliedCoupon?.code })
+      );
+
+      if (res.success) {
+        setSwitchModalOpen(false);
+        setStatusMessage({
+          type: "success",
+          text: res.message || `Successfully changed billing cycle to ${switchTargetInterval}!`,
+        });
+        await fetchHistoryAndUsage();
+      } else {
+        setStatusMessage({
+          type: "error",
+          text: res.error || "Failed to switch billing cycle.",
+        });
+      }
+    } catch (err: any) {
+      setStatusMessage({
+        type: "error",
+        text: err.message || "An unexpected error occurred.",
+      });
+    } finally {
+      setSwitchingCycle(false);
+    }
+  };
+
+  const handleRechargeShortfallAndSwitch = async (shortfall: number) => {
+    setShortfallRecharging(true);
+    try {
+      const res = await import("../actions/billing").then(m =>
+        m.rechargeAndSwitchBillingIntervalAction({
+          targetInterval: switchTargetInterval,
+          shortfall,
+          couponCode: appliedCoupon?.code,
+        })
+      );
+
+      if (res.success) {
+        setSwitchModalOpen(false);
+        setStatusMessage({
+          type: "success",
+          text: res.message || `Successfully recharged shortfall and switched to ${switchTargetInterval} billing!`,
+        });
+        await fetchHistoryAndUsage();
+      } else {
+        setStatusMessage({
+          type: "error",
+          text: res.error || "Failed to recharge from saved card.",
+        });
+      }
+    } catch (err: any) {
+      setStatusMessage({
+        type: "error",
+        text: err.message || "An unexpected error occurred.",
+      });
+    } finally {
+      setShortfallRecharging(false);
+    }
+  };
+
+  const handleUpgradePlan = async (targetPlanName: string) => {
+    try {
+      setProcessingCheckout(true);
+      setStatusMessage(null);
+
+      const res = await fetch("/api/payments/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planName: targetPlanName,
+          billingInterval: billingCycle,
+          couponCode: appliedCoupon?.code,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setStatusMessage({
+          type: "error",
+          text: data.error || "Failed to initiate online upgrade.",
+        });
+        return;
+      }
+
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      }
+    } catch (err: any) {
+      console.error("Upgrade error:", err);
+      setStatusMessage({ type: "error", text: err.message || "An unexpected error occurred." });
+    } finally {
+      setProcessingCheckout(false);
     }
   };
 
@@ -2392,43 +2712,101 @@ function BillingView({
     clients: 50,
     accounts: 2
   };
-
   const getPercentage = (current: number, max: number) => Math.min(100, (current / max) * 100);
 
-  const handleSelectPackageFromBottom = (planName: string) => {
-    setSelectedPlan(planName);
-    const planInfo = activePlans.find((p) => p.name.toLowerCase() === planName.toLowerCase());
-    if (planInfo) {
-      const priceStr = billingCycle === "monthly" ? planInfo.price : planInfo.yearlyPrice;
-      setEnteredAmount(priceStr.replace(/,/g, ""));
+  const activePlanName = tenantInfo.plan || "Free";
+  const cardData = wallet?.savedCard || (subDetails?.saved_card_id ? {
+    cardId: subDetails.saved_card_id,
+    brand: subDetails.card_brand,
+    last4: subDetails.card_last4,
+    expMonth: subDetails.card_exp_month,
+    expYear: subDetails.card_exp_year,
+  } : null);
+
+  const currentPlanDef = activePlans.find(
+    p => p.name.toLowerCase() === activePlanName.toLowerCase()
+  ) || activePlans.find(p => p.name.toLowerCase() === "pro plus") || activePlans[0];
+
+  const baseTargetPriceNum = switchTargetInterval === "yearly"
+    ? (subDetails?.price_yearly ? Number(subDetails.price_yearly) : currentPlanDef?.yearlyPrice ? parseInt(String(currentPlanDef.yearlyPrice).replace(/[^0-9]/g, ""), 10) : 52000)
+    : (subDetails?.price_monthly ? Number(subDetails.price_monthly) : currentPlanDef?.price ? parseInt(String(currentPlanDef.price).replace(/[^0-9]/g, ""), 10) : 5200);
+
+  const normActivePlan = activePlanName.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const isCouponApplicableToTarget = Boolean(
+    appliedCoupon &&
+    (!appliedCoupon.applicablePlans ||
+      appliedCoupon.applicablePlans.length === 0 ||
+      appliedCoupon.applicablePlans.some((p: string) => {
+        const normP = p.toLowerCase().replace(/[^a-z0-9]/g, "");
+        return normP === normActivePlan;
+      }))
+  );
+
+  let targetPriceNum = baseTargetPriceNum;
+  let targetDiscountAmount = 0;
+  if (isCouponApplicableToTarget && appliedCoupon) {
+    if (appliedCoupon.type === "percent") {
+      targetDiscountAmount = Math.round(baseTargetPriceNum * (appliedCoupon.value / 100));
+    } else {
+      targetDiscountAmount = Math.min(baseTargetPriceNum, appliedCoupon.value);
     }
-    document.getElementById("payment-section")?.scrollIntoView({ behavior: "smooth" });
-  };
+    targetPriceNum = Math.max(0, baseTargetPriceNum - targetDiscountAmount);
+  }
+
+  const walletBalanceNum = Number(wallet?.walletBalance || 0);
+  const hasSufficientWalletBalance = walletBalanceNum >= targetPriceNum;
+  const shortfallAmount = Math.max(0, targetPriceNum - walletBalanceNum);
 
   return (
     <div className="space-y-8">
-      {/* 1. TOP: Usage View for Free Plan */}
+      {/* 1. Status Message Alert */}
+      {statusMessage && (
+        <div
+          className={`p-4 rounded-2xl text-sm font-semibold flex items-center justify-between gap-3 ${statusMessage.type === "success"
+              ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+              : "bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400"
+            }`}
+        >
+          <div className="flex items-center gap-2.5">
+            {statusMessage.type === "success" ? (
+              <CheckCircle2 className="w-5 h-5 shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 shrink-0" />
+            )}
+            <span>{statusMessage.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setStatusMessage(null)}
+            className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Free Plan Lifetime Usage (if applicable) */}
       {tenantInfo.plan === "Free" && usage && (
-        <div className="bg-transparent border border-border rounded-3xl p-7">
+        <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-foreground">Current Plan Usage</h2>
-              <p className="text-muted-foreground text-sm mt-0.5">
-                You are currently on the <span className="font-bold text-foreground">Free</span> plan. Usage is tracked cumulatively as lifetime entries created (deleting older records does not reset quota). Upgrade below to unlock unlimited features.
+              <h3 className="text-lg font-bold text-foreground">Free Plan Lifetime Quota</h3>
+              <p className="text-muted-foreground text-xs mt-0.5">
+                Tracked cumulatively. Upgrade to unlock unlimited records.
               </p>
             </div>
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-muted text-foreground border border-border self-start sm:self-auto">
               Lifetime Quota
             </span>
           </div>
-          
-          <div className="space-y-5">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             <div>
               <div className="flex justify-between text-xs font-medium mb-1.5">
                 <span className="text-foreground">Invoices</span>
                 <span className="text-muted-foreground">{usage.invoices} / {limits.invoices}</span>
               </div>
-              <div className="w-full bg-card rounded-full h-2 overflow-hidden border border-border">
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden border border-border">
                 <div className="bg-brand-500 h-full rounded-full transition-all" style={{ width: `${getPercentage(usage.invoices, limits.invoices)}%` }}></div>
               </div>
             </div>
@@ -2438,17 +2816,17 @@ function BillingView({
                 <span className="text-foreground">Quotations</span>
                 <span className="text-muted-foreground">{usage.quotations ?? 0} / {limits.quotations}</span>
               </div>
-              <div className="w-full bg-card rounded-full h-2 overflow-hidden border border-border">
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden border border-border">
                 <div className="bg-emerald-500 h-full rounded-full transition-all" style={{ width: `${getPercentage(usage.quotations ?? 0, limits.quotations)}%` }}></div>
               </div>
             </div>
-            
+
             <div>
               <div className="flex justify-between text-xs font-medium mb-1.5">
                 <span className="text-foreground">Income Records</span>
                 <span className="text-muted-foreground">{usage.incomes} / {limits.incomes}</span>
               </div>
-              <div className="w-full bg-card rounded-full h-2 overflow-hidden border border-border">
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden border border-border">
                 <div className="bg-blue-500 h-full rounded-full transition-all" style={{ width: `${getPercentage(usage.incomes, limits.incomes)}%` }}></div>
               </div>
             </div>
@@ -2458,7 +2836,7 @@ function BillingView({
                 <span className="text-foreground">Expense Records</span>
                 <span className="text-muted-foreground">{usage.expenses} / {limits.expenses}</span>
               </div>
-              <div className="w-full bg-card rounded-full h-2 overflow-hidden border border-border">
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden border border-border">
                 <div className="bg-red-500 h-full rounded-full transition-all" style={{ width: `${getPercentage(usage.expenses, limits.expenses)}%` }}></div>
               </div>
             </div>
@@ -2468,17 +2846,17 @@ function BillingView({
                 <span className="text-foreground">Clients</span>
                 <span className="text-muted-foreground">{usage.clients} / {limits.clients}</span>
               </div>
-              <div className="w-full bg-card rounded-full h-2 overflow-hidden border border-border">
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden border border-border">
                 <div className="bg-purple-500 h-full rounded-full transition-all" style={{ width: `${getPercentage(usage.clients, limits.clients)}%` }}></div>
               </div>
             </div>
 
             <div>
               <div className="flex justify-between text-xs font-medium mb-1.5">
-                <span className="text-foreground">Bank/Cash Accounts</span>
+                <span className="text-foreground">Accounts</span>
                 <span className="text-muted-foreground">{usage.accounts} / {limits.accounts}</span>
               </div>
-              <div className="w-full bg-card rounded-full h-2 overflow-hidden border border-border">
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden border border-border">
                 <div className="bg-orange-500 h-full rounded-full transition-all" style={{ width: `${getPercentage(usage.accounts, limits.accounts)}%` }}></div>
               </div>
             </div>
@@ -2486,460 +2864,771 @@ function BillingView({
         </div>
       )}
 
-      {/* 2. TOP: Payment Section (Placed at TOP) */}
-      <div id="payment-section" className="bg-card border border-border rounded-3xl p-6 sm:p-8 shadow-xs space-y-6 scroll-mt-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-5">
-          <div>
-            <h3 className="text-xl sm:text-2xl font-bold text-foreground">Make Payment & Upgrade</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              Deposit via bank transfer and upload your receipt, or pay instantly online.
-            </p>
-          </div>
-
-          <div className="flex bg-muted/60 p-1 rounded-full w-fit shrink-0 border border-border">
-            <button
-              type="button"
-              onClick={() => setPaymentMethod("slip")}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                paymentMethod === "slip"
-                  ? "bg-brand-500 text-brand-950 shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Upload Bank Slip
-            </button>
-            <button
-              type="button"
-              onClick={() => setPaymentMethod("online")}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                paymentMethod === "online"
-                  ? "bg-brand-500 text-brand-950 shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Pay Online
-            </button>
-          </div>
-        </div>
-
-        {statusMessage && (
-          <div
-            className={`p-4 rounded-2xl text-sm font-semibold flex items-center gap-2.5 ${
-              statusMessage.type === "success"
-                ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-                : "bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400"
-            }`}
-          >
-            {statusMessage.type === "success" ? (
-              <CheckCircle2 className="w-5 h-5 shrink-0" />
-            ) : (
-              <AlertCircle className="w-5 h-5 shrink-0" />
-            )}
-            <span>{statusMessage.text}</span>
-          </div>
-        )}
-
-        {paymentMethod === "slip" ? (
-          <div className="space-y-6">
-            {/* Company Bank Account Details Card */}
-            <div className="p-5 rounded-2xl bg-muted/30 border border-border">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2">
-                  <Building className="w-4 h-4 text-brand-500" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Bank Transfer Details
+      {/* TWO CONTINUOUS COLUMNS: (Left: Wallet & Payment Method | Right: Plan Info & History) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        {/* LEFT COLUMN: Workspace Prepaid Wallet & Payment Method */}
+        <div className="space-y-6">
+          {/* Card 1: Workspace Prepaid Wallet */}
+          <div id="wallet-section" className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Workspace Wallet</span>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-3xl sm:text-4xl font-black text-foreground">
+                    LKR {Number(wallet?.walletBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={copyBankInfo}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>{copiedBank ? "Copied Account No!" : "Copy Account No"}</span>
-                </button>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div>
-                  <span className="text-muted-foreground block text-[11px]">Bank:</span>
-                  <span className="font-semibold text-foreground">{bankDetails.bank || "Bank of Ceylon"}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block text-[11px]">Account Name:</span>
-                  <span className="font-semibold text-foreground">{bankDetails.accountName || "Official Account"}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block text-[11px]">Account Number:</span>
-                  <span className="font-mono font-bold text-foreground">{bankDetails.accountNumber || "—"}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block text-[11px]">Branch / Currency:</span>
-                  <span className="font-semibold text-foreground">{bankDetails.branch || "LKR"}</span>
-                </div>
+              <div className="flex flex-col items-end gap-1">
+                <button
+                  type="button"
+                  onClick={handleToggleAutoPull}
+                  disabled={togglingAutoPull}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${wallet?.autoPullCard
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                      : "bg-muted text-muted-foreground border-border"
+                    }`}
+                >
+                  {togglingAutoPull ? "Saving..." : wallet?.autoPullCard ? "✓ Auto Top-Up: On" : "Auto Top-Up: Off"}
+                </button>
               </div>
             </div>
 
-            {/* Bank Slip Upload Form */}
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Plan & Cycle Selection */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
-                    Plan / Package to Activate *
-                  </label>
-                  <select
-                    value={selectedPlan}
-                    onChange={(e) => setSelectedPlan(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm font-semibold outline-none focus:border-brand-500 cursor-pointer"
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Funds in your wallet are automatically deducted first for renewal payments. If balance is insufficient, the remaining shortfall is pulled seamlessly from your saved card.
+            </p>
+
+            {/* Quick Top-up buttons */}
+            <div className="p-4 rounded-2xl bg-muted/20 border border-border space-y-3">
+              <span className="text-xs font-bold text-foreground block">Recharge Wallet</span>
+
+              <div className="grid grid-cols-3 gap-2">
+                {[1000, 2500, 5000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => {
+                      if (cardData?.cardId) {
+                        handleRechargeWithSavedCard(amt);
+                      } else {
+                        handleRechargeWalletCheckout(amt);
+                      }
+                    }}
+                    disabled={rechargingWallet}
+                    className="py-2.5 px-2 rounded-xl bg-card hover:bg-muted border border-border text-xs font-bold text-foreground text-center transition-all cursor-pointer shadow-2xs"
                   >
-                    {activePlans.filter(p => p.name !== "Free").map((p) => (
-                      <option key={p.name} value={p.name}>
-                        {p.name} ({billingCycle === "monthly" ? `${p.price} LKR/mo` : `${p.yearlyPrice} LKR/yr`})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
-                    Billing Cycle *
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setBillingCycle("monthly")}
-                      className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                        billingCycle === "monthly"
-                          ? "bg-brand-500/15 border-brand-500 text-brand-700 dark:text-brand-400 ring-1 ring-brand-500"
-                          : "bg-background border-border text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      Monthly
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setBillingCycle("yearly")}
-                      className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                        billingCycle === "yearly"
-                          ? "bg-brand-500/15 border-brand-500 text-brand-700 dark:text-brand-400 ring-1 ring-brand-500"
-                          : "bg-background border-border text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      Yearly (Save 20%)
-                    </button>
-                  </div>
-                </div>
+                    + {amt.toLocaleString()} LKR
+                  </button>
+                ))}
               </div>
 
-              {/* Amount Paid Input (Required) */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
-                  Amount on Payslip (LKR) <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
-                    LKR
-                  </span>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    value={enteredAmount}
-                    onChange={(e) => setEnteredAmount(e.target.value)}
-                    placeholder="e.g. 2500"
-                    className="w-full pl-12 pr-4 py-2.5 bg-background border border-border rounded-xl text-base font-bold text-foreground outline-none focus:border-brand-500"
-                  />
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  Please enter the exact transfer amount printed on your deposit slip or bank confirmation.
-                </p>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="number"
+                  min="100"
+                  step="any"
+                  value={topupAmountInput}
+                  onChange={(e) => setTopupAmountInput(e.target.value)}
+                  placeholder="Custom LKR"
+                  className="flex-1 px-3.5 py-2.5 rounded-xl bg-background border border-border text-xs font-semibold outline-none focus:border-brand-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const amt = Number(topupAmountInput);
+                    if (amt >= 100) {
+                      if (cardData?.cardId) {
+                        handleRechargeWithSavedCard(amt);
+                      } else {
+                        handleRechargeWalletCheckout(amt);
+                      }
+                    }
+                  }}
+                  disabled={rechargingWallet}
+                  className="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 text-xs font-bold transition-all cursor-pointer"
+                >
+                  {rechargingWallet ? "Processing..." : cardData?.cardId ? "1-Click Top-Up" : "Top-Up"}
+                </button>
               </div>
+            </div>
+          </div>
 
-              {/* Photo of Payslip Upload (Required) */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
-                  Photo of Payslip / Receipt <span className="text-red-500">*</span>
-                </label>
+          {/* Card 2: Payment Method */}
+          <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-muted-foreground">Payment method</h3>
+              <button
+                type="button"
+                onClick={() => handleRechargeWalletCheckout(100)}
+                disabled={rechargingWallet}
+                className="px-3 py-1.5 rounded-xl bg-card hover:bg-muted border border-border text-foreground text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add</span>
+              </button>
+            </div>
 
-                {!slipFile ? (
-                  <label className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-border hover:border-brand-500 rounded-2xl bg-muted/20 hover:bg-muted/40 transition-all cursor-pointer">
-                    <Upload className="w-8 h-8 text-brand-500 mb-2" />
-                    <span className="text-sm font-semibold text-foreground">Click to upload payslip photo</span>
-                    <span className="text-xs text-muted-foreground mt-0.5">Supports JPG, PNG, WebP or PDF (Max 5MB)</span>
-                    <input 
-                      type="file"
-                      required
-                      accept="image/*,application/pdf"
-                      onChange={(e) => handleSlipChange(e.target.files?.[0] || null)}
-                      className="hidden"
-                    />
-                  </label>
-                ) : (
-                  <div className="p-4 rounded-2xl border border-border bg-background flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {slipPreview ? (
-                        <div className="w-16 h-16 rounded-xl overflow-hidden border border-border shrink-0 bg-muted/40">
-                          <img src={slipPreview} alt="Slip preview" className="w-full h-full object-cover" />
-                        </div>
-                      ) : (
-                        <div className="w-12 h-12 rounded-xl bg-brand-500/10 text-brand-600 flex items-center justify-center shrink-0">
-                          <FileText className="w-6 h-6" />
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-foreground truncate">{slipFile.name}</div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {(slipFile.size / 1024).toFixed(1)} KB • Photo ready for verification
-                        </div>
+            <div className="space-y-3">
+              <span className="text-xs font-bold text-foreground">Primary</span>
+
+              {cardData ? (
+                <div className="w-full max-w-[360px] sm:max-w-[380px] aspect-[1.586/1] bg-gradient-to-br from-[#131a26] via-[#0d131d] to-[#080c14] border border-white/10 rounded-2xl p-5 sm:p-6 text-white shadow-2xl flex flex-col justify-between relative overflow-hidden group">
+                  {/* Subtle Background Glows */}
+                  <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-brand-500/10 rounded-full blur-2xl pointer-events-none" />
+                  <div className="absolute -left-10 -top-10 w-36 h-36 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.02] to-white/[0.05] pointer-events-none" />
+
+                  {/* Top Row: EMV Chip & Brand */}
+                  <div className="flex items-center justify-between relative z-10">
+                    {/* EMV Chip */}
+                    <div className="w-10 h-7 rounded-md bg-gradient-to-br from-amber-200 via-amber-400 to-amber-500 p-[1px] shadow-sm">
+                      <div className="w-full h-full rounded-[5px] bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 relative overflow-hidden flex items-center justify-center">
+                        <div className="absolute inset-0 border border-amber-700/30 rounded-[4px]" />
+                        <div className="w-full h-[1px] bg-amber-700/40 my-auto" />
+                        <div className="absolute h-full w-[1px] bg-amber-700/40" />
+                        <div className="absolute w-3.5 h-3 border border-amber-700/40 rounded-sm" />
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <label className="px-3 py-1.5 rounded-full text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground cursor-pointer transition-colors">
-                        <span>Change</span>
-                        <input 
-                          type="file"
-                          accept="image/*,application/pdf"
-                          onChange={(e) => handleSlipChange(e.target.files?.[0] || null)}
-                          className="hidden"
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => handleSlipChange(null)}
-                        className="p-1.5 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
-                        title="Remove photo"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                    <span className="font-mono text-xs font-black tracking-widest uppercase bg-white/10 px-2.5 py-1 rounded-md text-gray-200 border border-white/10 shadow-xs">
+                      {cardData.brand || "VISA"}
+                    </span>
+                  </div>
+
+                  {/* Middle Row: Card Number */}
+                  <div className="py-2 relative z-10">
+                    <div className="font-mono text-base sm:text-lg tracking-[0.22em] text-gray-100 font-medium drop-shadow-xs">
+                      •••• •••• •••• {cardData.last4 || "••••"}
                     </div>
                   </div>
-                )}
+
+                  {/* Bottom Row: Cardholder & Expiry */}
+                  <div className="flex justify-between items-end gap-2 relative z-10">
+                    <div className="min-w-0">
+                      <div className="text-[9px] uppercase tracking-wider text-gray-400 font-semibold mb-0.5">Cardholder</div>
+                      <div className="font-mono text-xs sm:text-sm text-gray-200 font-bold uppercase tracking-wider truncate max-w-[200px]">
+                        {billingSettings.billingName || tenantInfo.name}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="text-[9px] uppercase tracking-wider text-gray-400 font-semibold mb-0.5">Expires</div>
+                      <div className="font-mono text-xs sm:text-sm text-gray-200 font-bold tracking-wider">
+                        {String(cardData.expMonth || 1).padStart(2, "0")}/{String(cardData.expYear || 2029).slice(-2)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-6 rounded-2xl bg-muted/20 border border-dashed border-border text-center space-y-2">
+                  <CreditCard className="w-8 h-8 text-muted-foreground mx-auto" />
+                  <p className="text-xs font-medium text-muted-foreground">No primary card saved yet</p>
+                  <p className="text-[11px] text-muted-foreground/80">Add a card via Payments.lk to enable 1-click renewals.</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              {cardData ? (
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleRechargeWalletCheckout(100)}
+                    disabled={rechargingWallet}
+                    className="px-4 py-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground text-xs font-bold border border-border cursor-pointer transition-colors"
+                  >
+                    Update
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCard}
+                    className="px-4 py-2 rounded-xl bg-[#ef4444] hover:bg-red-600 text-white text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ) : null}
+
+              {!cardData && (
+                <p className="text-[11px] text-muted-foreground bg-muted/30 p-2.5 rounded-xl border border-border/50">
+                  💡 A nominal <strong>100 LKR</strong> card verification charge applies, which is <strong>100% credited</strong> to your Workspace Wallet balance for renewals and switches.
+                </p>
+              )}
+
+              {/* Security & Trust Notice */}
+              <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-muted/20 border border-border/60 text-xs">
+                <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-foreground text-xs block">PCI-DSS Compliant Security & Privacy</span>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Your card details are <strong>never stored on our servers</strong>. All card data is securely encrypted and processed directly by <strong>Payments.lk</strong> (PCI-DSS certified).
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: All Plan Things & Payment & Billing History */}
+        <div className="space-y-6">
+          {/* Card 1: All Plan Things */}
+          <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-5">
+            {/* Top: Current Plan Status Header */}
+            <div className="space-y-3 pb-4 border-b border-border/70">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Current Plan</span>
+
+                {/* Action buttons (Switch to Yearly, Auto-Renew) */}
+                <div className="flex items-center gap-2">
+                  {subDetails && activePlanName.toLowerCase() !== "free" && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenSwitchModal(subDetails?.billing_interval === "yearly" ? "monthly" : "yearly")}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold border border-brand-500/40 bg-brand-500/10 text-brand-700 dark:text-brand-300 hover:bg-brand-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                      title="Change billing cycle using workspace wallet balance"
+                    >
+                      <Repeat className="w-3.5 h-3.5 text-brand-500" />
+                      <span>
+                        Switch to {subDetails?.billing_interval === "yearly" ? "Monthly" : "Yearly (-17%)"}
+                      </span>
+                    </button>
+                  )}
+                  {subDetails && cardData && (
+                    <button
+                      type="button"
+                      onClick={handleToggleAutoRenew}
+                      disabled={togglingAutoRenew}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${subDetails.auto_renew
+                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                          : "bg-muted text-muted-foreground border-border hover:text-foreground"
+                        }`}
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${togglingAutoRenew ? "animate-spin" : ""}`} />
+                      <span>{togglingAutoRenew ? "Saving..." : subDetails.auto_renew ? "Auto-Renew: On" : "Auto-Renew: Off"}</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {/* Optional Reference Note */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
-                  Bank Reference Number / Note (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Ref # 20261009-91823"
-                  value={customerNotes}
-                  onChange={(e) => setCustomerNotes(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm outline-none focus:border-brand-500"
-                />
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={uploading || !slipFile || !enteredAmount}
-                className="w-full py-3.5 bg-brand-500 hover:bg-brand-400 disabled:opacity-50 disabled:cursor-not-allowed text-brand-950 font-bold rounded-2xl transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer text-sm"
-              >
-                {uploading ? (
-                  <>
-                    <Loader />
-                    <span>Uploading & Submitting Slip...</span>
-                  </>
-                ) : (
-                  <span>Submit Payment Slip for Verification</span>
-                )}
-              </button>
-            </form>
-          </div>
-        ) : (
-          <div className="text-center py-10 bg-muted/20 border border-border rounded-2xl p-6">
-            <MdCreditCard className="w-12 h-12 text-brand-500 mx-auto mb-3" />
-            <h4 className="text-lg font-bold text-foreground mb-1">Instant Online Card Checkout</h4>
-            <p className="text-muted-foreground text-xs sm:text-sm mb-6 max-w-sm mx-auto">
-              Secure online payment via Visa, Mastercard, or local bank card. Your subscription will be activated automatically upon completion.
-            </p>
-            <button
-              type="button"
-              onClick={() => alert("Online payment gateway integration is configured for live checkout.")}
-              className="px-8 py-3 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-full transition-colors shadow-xs cursor-pointer text-sm"
-            >
-              Proceed to Secure Checkout
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* 3. Payment History */}
-      <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs">
-        <h3 className="text-xl font-bold text-foreground mb-4">Payment & Slip History</h3>
-        {loading ? (
-          <div className="flex justify-center p-8"><Loader /></div>
-        ) : history.length === 0 ? (
-          <p className="text-muted-foreground text-center py-6 text-sm">No payment slips recorded yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
-              <thead>
-                <tr className="border-b border-border bg-muted/30 text-muted-foreground font-semibold text-xs uppercase tracking-wider">
-                  <th className="py-3 px-4">Date</th>
-                  <th className="py-3 px-4">Plan</th>
-                  <th className="py-3 px-4">Amount</th>
-                  <th className="py-3 px-4">Receipt Slip</th>
-                  <th className="py-3 px-4">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {history.map((row) => {
-                  const isApproved = row.status === "approved" || row.status === "paid";
-                  const isRejected = row.status === "rejected" || row.status === "failed";
-                  return (
-                    <tr key={row.id} className="hover:bg-muted/20 transition-colors">
-                      <td className="py-3 px-4 text-muted-foreground font-medium text-xs">
-                        {new Date(row.created_at).toLocaleDateString(undefined, {
+              <div className="flex items-baseline justify-between gap-2">
+                <h2 className="text-xl sm:text-2xl font-black text-foreground tracking-tight flex items-baseline gap-2">
+                  <span>{activePlanName} Plan</span>
+                  {subDetails?.billing_interval && activePlanName.toLowerCase() !== "free" && (
+                    <span className="text-sm sm:text-base font-semibold text-muted-foreground capitalize">
+                      ({subDetails.billing_interval})
+                    </span>
+                  )}
+                </h2>
+                <p className="text-xs text-muted-foreground text-right">
+                  {subDetails?.current_period_end ? (
+                    <>
+                      Valid until{" "}
+                      <strong className="text-foreground">
+                        {new Date(subDetails.current_period_end).toLocaleDateString(undefined, {
                           month: "short",
                           day: "numeric",
                           year: "numeric"
                         })}
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-foreground text-xs">{row.plan_name}</td>
-                      <td className="py-3 px-4 font-bold text-foreground text-xs">
-                        {row.amount ? `${Number(row.amount).toLocaleString()} LKR` : "—"}
-                      </td>
-                      <td className="py-3 px-4">
-                        {row.slip_url ? (
-                          <a
-                            href={row.slip_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-brand-600 dark:text-brand-400 hover:underline font-semibold text-xs flex items-center gap-1"
-                          >
-                            <span>View Slip</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          isApproved
-                            ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30"
-                            : isRejected
-                            ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30"
-                            : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30"
-                        }`}>
-                          {isApproved ? "APPROVED" : isRejected ? "DECLINED" : "UNDER REVIEW"}
-                        </span>
-                      </td>
+                      </strong>
+                    </>
+                  ) : (
+                    "Core features active"
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Available Plans Header with Monthly/Yearly toggle */}
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Available Plans</h3>
+              </div>
+
+              <div className="flex bg-muted/60 p-1 rounded-full w-fit border border-border shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle("monthly")}
+                  className={`px-3 py-1 text-xs font-bold rounded-full transition-colors cursor-pointer ${billingCycle === "monthly" ? "bg-brand-500 text-brand-950 shadow-xs" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle("yearly")}
+                  className={`px-3 py-1 text-xs font-bold rounded-full transition-colors cursor-pointer ${billingCycle === "yearly" ? "bg-brand-500 text-brand-950 shadow-xs" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  Yearly <span className="opacity-80 font-normal">-17%</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Coupon Bar */}
+            <div className="p-3 rounded-2xl bg-muted/20 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-brand-500/15 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+                  <Tag className="w-3.5 h-3.5" />
+                </div>
+                <span className="text-xs font-bold text-foreground">Have a coupon code?</span>
+              </div>
+
+              {appliedCoupon ? (
+                <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-xl">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span className="font-mono font-bold text-xs text-foreground uppercase tracking-wider">{appliedCoupon.code}</span>
+                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">({appliedCoupon.discountText})</span>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    className="ml-1 p-0.5 text-muted-foreground hover:text-foreground rounded cursor-pointer"
+                    title="Remove coupon"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={couponInput}
+                    onChange={(e) => {
+                      setCouponInput(e.target.value.toUpperCase());
+                      if (couponError) setCouponError("");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleApplyCoupon();
+                      }
+                    }}
+                    placeholder="Coupon code"
+                    className="w-32 px-2.5 py-1 rounded-xl bg-background border border-border text-xs font-mono font-semibold outline-none focus:border-brand-500 uppercase"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    disabled={validatingCoupon || !couponInput.trim()}
+                    className="px-3 py-1 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                  >
+                    {validatingCoupon ? <Loader2 className="w-3 h-3 animate-spin" /> : "Apply"}
+                  </button>
+                </div>
+              )}
+            </div>
+            {couponError && (
+              <div className="px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{couponError}</span>
+              </div>
+            )}
+
+            {/* Compact Plan Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {activePlans.map((plan) => {
+                const isCurrent = activePlanName.toLowerCase() === plan.name.toLowerCase();
+                const priceInfo = calculatePlanPrice(plan, billingCycle);
+
+                const getPlanTier = (pName: string): number => {
+                  const norm = pName.toLowerCase().replace(/[^a-z0-9]/g, "");
+                  if (norm.includes("plus")) return 2;
+                  if (norm.includes("pro")) return 1;
+                  return 0; // free
+                };
+                const currentTier = getPlanTier(activePlanName);
+                const targetTier = getPlanTier(plan.name);
+                const isDowngrade = !isCurrent && targetTier < currentTier;
+
+                return (
+                  <div
+                    key={plan.name}
+                    className={`relative bg-background/60 rounded-2xl p-4 border transition-all flex flex-col justify-between gap-3 ${isCurrent
+                        ? "border-brand-500 ring-2 ring-brand-500/20 shadow-xs"
+                        : "border-border hover:border-muted-foreground/30"
+                      }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-1 mb-1.5">
+                        <h4 className="text-sm font-bold text-foreground">{plan.name}</h4>
+                        {isCurrent ? (
+                          <span className="text-[9px] font-bold uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                            Current
+                          </span>
+                        ) : plan.popular ? (
+                          <span className="text-[9px] font-bold uppercase bg-brand-500 text-brand-950 px-2 py-0.5 rounded-full shadow-xs">
+                            Popular
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {priceInfo.isDiscounted ? (
+                        <div className="space-y-0.5 mb-1.5">
+                          <div className="flex items-center gap-1 text-[10px]">
+                            <span className="text-muted-foreground line-through font-semibold">
+                              LKR {priceInfo.rawPrice.toLocaleString()}
+                            </span>
+                            <span className="text-emerald-500 font-bold">
+                              -{(appliedCoupon?.type === "percent" || (appliedCoupon as any)?.type === "percentage") ? `${Number(appliedCoupon.value)}%` : `LKR ${priceInfo.discountAmount.toLocaleString()}`}
+                            </span>
+                          </div>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-[11px] text-foreground font-semibold">LKR</span>
+                            <span className="text-xl font-black text-brand-500 tracking-tight">
+                              {priceInfo.finalPrice === 0 ? "0" : priceInfo.finalPriceStr}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground font-medium">
+                              /{billingCycle === "monthly" ? "mo" : "yr"}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-baseline gap-1 mb-1.5">
+                          <span className="text-[11px] text-foreground font-semibold">LKR</span>
+                          <span className="text-xl font-black text-foreground tracking-tight">
+                            {billingCycle === "monthly" ? plan.price : plan.yearlyPrice}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-medium">
+                            /{billingCycle === "monthly" ? "mo" : "yr"}
+                          </span>
+                        </div>
+                      )}
+
+                      <p className="text-[10px] text-muted-foreground line-clamp-2 leading-tight">
+                        {plan.description}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isCurrent) {
+                          handleUpgradePlan(plan.name);
+                        } else if (subDetails?.billing_interval && subDetails.billing_interval !== billingCycle) {
+                          handleOpenSwitchModal(billingCycle);
+                        }
+                      }}
+                      disabled={(isCurrent && (!subDetails?.billing_interval || subDetails.billing_interval === billingCycle)) || processingCheckout}
+                      className={`w-full py-2 rounded-xl font-bold transition-all text-xs cursor-pointer flex items-center justify-center gap-1 ${isCurrent && (!subDetails?.billing_interval || subDetails.billing_interval === billingCycle)
+                          ? "bg-muted text-muted-foreground cursor-default opacity-80"
+                          : isCurrent
+                            ? "bg-brand-500/15 border border-brand-500/40 text-brand-700 dark:text-brand-300 hover:bg-brand-500/25 shadow-xs"
+                            : isDowngrade
+                              ? "bg-muted/70 hover:bg-muted text-foreground border border-border shadow-2xs"
+                              : "bg-brand-500 text-brand-950 hover:bg-brand-400 shadow-xs"
+                        }`}
+                    >
+                      <span>
+                        {isCurrent
+                          ? subDetails?.billing_interval && subDetails.billing_interval !== billingCycle
+                            ? `Switch`
+                            : `Active`
+                          : isDowngrade
+                            ? `Downgrade`
+                            : `Upgrade`}
+                      </span>
+                      {isCurrent && subDetails?.billing_interval && subDetails.billing_interval !== billingCycle ? (
+                        <Repeat className="w-3 h-3 text-brand-500" />
+                      ) : isDowngrade ? (
+                        <ArrowDown className="w-3 h-3 text-muted-foreground" />
+                      ) : !isCurrent ? (
+                        <ArrowUp className="w-3 h-3" />
+                      ) : null}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Card 2: Payment & Billing History */}
+          <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
+            <h3 className="text-lg font-bold text-foreground">Payment & Billing History</h3>
+
+            {loading ? (
+              <div className="flex justify-center p-8"><Loader /></div>
+            ) : history.length === 0 ? (
+              <p className="text-muted-foreground text-center py-6 text-xs">No billing records found.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/20 text-muted-foreground font-semibold text-[11px] uppercase tracking-wider">
+                      <th className="py-3 px-3">Date</th>
+                      <th className="py-3 px-3">Description</th>
+                      <th className="py-3 px-3">Amount</th>
+                      <th className="py-3 px-3">Method</th>
+                      <th className="py-3 px-3">Status</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* 4. BOTTOM: Available Plans & Packages (Placed on BOTTOM) */}
-      <div id="packages-section" className="pt-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Available Plans & Packages</h2>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-              Choose the package that fits your business. Click &quot;Select Package&quot; to pay and upgrade above.
-            </p>
-          </div>
-
-          <div className="flex bg-muted/60 p-1 rounded-full w-fit border border-border">
-            <button
-              type="button"
-              onClick={() => setBillingCycle("monthly")}
-              className={`px-4 py-1.5 text-xs font-bold rounded-full transition-colors cursor-pointer ${
-                billingCycle === "monthly" ? "bg-brand-500 text-brand-950" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              type="button"
-              onClick={() => setBillingCycle("yearly")}
-              className={`px-4 py-1.5 text-xs font-bold rounded-full transition-colors cursor-pointer ${
-                billingCycle === "yearly" ? "bg-brand-500 text-brand-950" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Yearly <span className="ml-1 opacity-80 font-normal">- Save 20%</span>
-            </button>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {history.map((row) => {
+                      const isApproved = row.status === "approved" || row.status === "paid";
+                      const isRejected = row.status === "rejected" || row.status === "failed";
+                      return (
+                        <tr key={row.id} className="hover:bg-muted/15 transition-colors">
+                          <td className="py-3 px-3 text-muted-foreground font-medium text-xs whitespace-nowrap">
+                            {new Date(row.created_at).toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric"
+                            })}
+                          </td>
+                          <td className="py-3 px-3 font-semibold text-foreground text-xs whitespace-nowrap">{row.plan_name}</td>
+                          <td className="py-3 px-3 font-bold text-foreground text-xs whitespace-nowrap">
+                            {row.amount ? `${Number(row.amount).toLocaleString()} LKR` : "—"}
+                          </td>
+                          <td className="py-3 px-3 text-xs text-muted-foreground whitespace-nowrap">
+                            {row.method ? row.method : row.provider ? `${row.provider} (Card)` : "Card"}
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isApproved
+                                ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30"
+                                : isRejected
+                                  ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30"
+                                  : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30"
+                              }`}>
+                              {isApproved ? "PAID" : isRejected ? "FAILED" : "PENDING"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
+      </div>
 
-        <div className={`grid grid-cols-1 ${
-          activePlans.length === 1 ? 'max-w-md' :
-          activePlans.length === 2 ? 'max-w-3xl md:grid-cols-2' :
-          activePlans.length === 4 ? 'max-w-7xl sm:grid-cols-2 lg:grid-cols-4' :
-          'max-w-6xl md:grid-cols-3'
-        } gap-6`}>
-          {activePlans.map((plan) => (
-            <div
-              key={plan.name}
-              className={`relative bg-card rounded-3xl overflow-hidden transition-all flex flex-col ${
-                selectedPlan.toLowerCase() === plan.name.toLowerCase()
-                ? "ring-2 ring-brand-500 shadow-xl shadow-brand-500/10" 
-                : "border border-border"
-              }`}
-            >
-              {/* Header */}
-              <div className="p-6 pb-4">
-                {plan.popular && (
-                  <span className="absolute top-6 right-6 text-[10px] font-bold uppercase bg-brand-500 text-brand-950 px-3 py-1 rounded-full">Popular</span>
-                )}
-                <h4 className="text-xl font-bold text-foreground mb-2">{plan.name}</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 min-h-[40px] pr-8">{plan.description}</p>
-                
-                <div className="flex items-end gap-1 mb-2">
-                  <span className="text-xl text-foreground font-semibold">LKR</span>
-                  <span className="text-4xl font-black text-foreground tracking-tight">
-                    {billingCycle === "monthly" ? plan.price : plan.yearlyPrice}
-                  </span>
-                  <span className="text-xs text-muted-foreground mb-1.5 font-medium">
-                    /{billingCycle === "monthly" ? "month" : "year"}
+      {/* 7. Switch Billing Cycle / Method Modal */}
+      {switchModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl space-y-5">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-brand-500/15 text-brand-700 dark:text-brand-300 flex items-center justify-center">
+                  <Repeat className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">Change Billing Method</h3>
+                  <p className="text-xs text-muted-foreground">Switch interval while keeping your subscription active</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSwitchModalOpen(false)}
+                className="p-1 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Interval comparison */}
+            <div className="grid grid-cols-2 gap-3 p-4 bg-muted/40 border border-border rounded-2xl">
+              <div>
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                  Current Billing
+                </span>
+                <span className="text-sm font-bold text-foreground capitalize flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-muted-foreground"></span>
+                  {subDetails?.billing_interval || "Monthly"}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider block mb-1">
+                  New Billing Target
+                </span>
+                <span className="text-sm font-black text-brand-600 dark:text-brand-400 capitalize flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
+                  {switchTargetInterval} ({switchTargetInterval === "yearly" ? "Save 17% · 2 Mo Free" : "Per Month"})
+                </span>
+              </div>
+            </div>
+
+            {/* Plan Fee vs Wallet Balance */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs py-1 border-b border-border/50">
+                <span className="text-muted-foreground font-medium">{activePlanName} ({switchTargetInterval}) Cost</span>
+                <div className="text-right">
+                  {targetDiscountAmount > 0 && (
+                    <span className="text-xs text-muted-foreground line-through mr-2">
+                      LKR {baseTargetPriceNum.toLocaleString()}
+                    </span>
+                  )}
+                  <span className="text-base font-black text-foreground">
+                    LKR {targetPriceNum.toLocaleString()}
                   </span>
                 </div>
               </div>
 
-              {/* Divider */}
-              <div className="h-px w-full bg-border"></div>
+              {targetDiscountAmount > 0 && appliedCoupon && (
+                <div className="flex items-center justify-between text-xs py-1 border-b border-border/50 text-emerald-600 dark:text-emerald-400 font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5" />
+                    <span>Coupon Discount ({appliedCoupon.code})</span>
+                  </span>
+                  <span>-LKR {targetDiscountAmount.toLocaleString()}</span>
+                </div>
+              )}
 
-              {/* Features List */}
-              <div className="p-6 flex-1 flex flex-col">
-                <ul className="space-y-4 flex-1 mb-8">
-                  {plan.features.map((feature, j) => (
-                    <li key={j} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-brand-500/20 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
-                          <feature.icon className="w-3.5 h-3.5" />
-                        </div>
-                        <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">{feature.label}</span>
-                      </div>
-                      <span className="text-xs sm:text-sm font-semibold text-foreground text-right">{feature.value}</span>
-                    </li>
-                  ))}
-                </ul>
+              {/* Coupon input inside Modal */}
+              <div className="p-3.5 rounded-2xl bg-muted/30 border border-border space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-foreground flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5 text-brand-500" />
+                    <span>Have a Coupon Code?</span>
+                  </span>
+                  {appliedCoupon && (
+                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                      {appliedCoupon.code} ({appliedCoupon.discountText})
+                    </span>
+                  )}
+                </div>
 
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={couponInput}
+                    onChange={(e) => {
+                      setCouponInput(e.target.value.toUpperCase());
+                      if (couponError) setCouponError("");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleApplyCoupon();
+                      }
+                    }}
+                    placeholder="Enter code"
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-background border border-border text-xs font-mono font-bold uppercase tracking-wider focus:outline-none focus:border-brand-500"
+                  />
+                  {appliedCoupon ? (
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="px-3 py-1.5 rounded-xl bg-muted hover:bg-muted/80 text-foreground text-xs font-bold border border-border cursor-pointer transition-colors"
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      disabled={validatingCoupon || !couponInput.trim()}
+                      className="px-4 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 text-xs font-bold shadow-xs disabled:opacity-50 cursor-pointer transition-colors"
+                    >
+                      {validatingCoupon ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Apply"}
+                    </button>
+                  )}
+                </div>
+                {couponError && (
+                  <p className="text-[11px] text-red-500 font-medium">{couponError}</p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between text-xs py-1 border-b border-border/50">
+                <span className="text-muted-foreground font-medium flex items-center gap-1.5">
+                  <Wallet className="w-3.5 h-3.5 text-brand-500" />
+                  <span>Workspace Wallet Balance</span>
+                </span>
+                <span className={`text-base font-black ${hasSufficientWalletBalance ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                  LKR {walletBalanceNum.toLocaleString()}
+                </span>
+              </div>
+
+              {hasSufficientWalletBalance ? (
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs space-y-1.5 text-emerald-800 dark:text-emerald-300">
+                  <div className="flex items-center gap-2 font-bold">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Sufficient wallet balance available</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-700 dark:text-emerald-400 pl-6">
+                    LKR {targetPriceNum.toLocaleString()} will be deducted from your workspace wallet. New remaining balance: LKR {(walletBalanceNum - targetPriceNum).toLocaleString()}.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs space-y-2 text-amber-800 dark:text-amber-300">
+                  <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-300">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>Insufficient Wallet Balance</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    You need <strong>LKR {shortfallAmount.toLocaleString()}</strong> more in your workspace wallet to switch to {switchTargetInterval} billing.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="pt-2 border-t border-border flex flex-col gap-2.5">
+              {hasSufficientWalletBalance ? (
                 <button
                   type="button"
-                  onClick={() => handleSelectPackageFromBottom(plan.name)}
-                  className={`w-full py-3.5 rounded-2xl font-bold transition-all text-sm cursor-pointer flex items-center justify-center gap-2 ${
-                    selectedPlan.toLowerCase() === plan.name.toLowerCase()
-                      ? "bg-brand-500 text-brand-950 hover:bg-brand-400 shadow-md"
-                      : "bg-[#161916] text-white hover:bg-black dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
-                  }`}
+                  onClick={handleConfirmSwitchWithWallet}
+                  disabled={switchingCycle}
+                  className="w-full py-3.5 rounded-2xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  <span>Select {plan.name}</span>
-                  <ArrowUp className="w-4 h-4" />
+                  {switchingCycle ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Deducting & Switching Billing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Wallet className="w-4 h-4" />
+                      <span>Confirm & Switch with Wallet (LKR {targetPriceNum.toLocaleString()})</span>
+                    </>
+                  )}
                 </button>
-              </div>
+              ) : (
+                <div className="space-y-2">
+                  {wallet?.savedCard?.cardId ? (
+                    <button
+                      type="button"
+                      onClick={() => handleRechargeShortfallAndSwitch(shortfallAmount)}
+                      disabled={shortfallRecharging}
+                      className="w-full py-3.5 rounded-2xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {shortfallRecharging ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Recharging Shortfall & Switching...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-4 h-4" />
+                          <span>Recharge LKR {shortfallAmount.toLocaleString()} from Saved Card & Switch</span>
+                        </>
+                      )}
+                    </button>
+                  ) : null}
+
+                  <a
+                    href="#wallet-section"
+                    onClick={() => {
+                      setSwitchModalOpen(false);
+                      setTopupAmountInput(String(shortfallAmount));
+                    }}
+                    className="w-full py-3 rounded-2xl bg-muted hover:bg-muted/80 text-foreground font-bold text-xs transition-all border border-border flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Top Up Wallet via Gateway (LKR {shortfallAmount.toLocaleString()})</span>
+                  </a>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setSwitchModalOpen(false)}
+                className="w-full py-2.5 rounded-2xl text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -3200,7 +3889,7 @@ function DangerZoneView({ currentUserRole, teamMembers = [] }: { currentUserRole
           <Terminal className="w-5 h-5" />
           <h2 className="text-xl font-bold">Confirm Action</h2>
         </div>
-        
+
         {errorMsg && (
           <div className="text-red-400 bg-red-400/10 border border-red-400/20 px-4 py-3 rounded-2xl text-sm mb-6">
             {errorMsg}
@@ -3209,10 +3898,10 @@ function DangerZoneView({ currentUserRole, teamMembers = [] }: { currentUserRole
 
         <div className="bg-card border border-red-500/20 rounded-3xl p-6 shadow-xs">
           <p className="text-gray-600 dark:text-gray-400 mb-6">Are you sure you want to proceed? This action is irreversible.</p>
-          
+
           <div className="bg-rose-50 dark:bg-red-500/10 border border-rose-200 dark:border-red-500/20 rounded-2xl p-6 mb-6">
             <p className="text-sm text-rose-800 dark:text-red-300/80 mb-4">Please type <span className="font-mono font-bold text-red-600 dark:text-red-400">{requiredText}</span> to confirm.</p>
-            <input 
+            <input
               type="text"
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
@@ -3222,13 +3911,13 @@ function DangerZoneView({ currentUserRole, teamMembers = [] }: { currentUserRole
           </div>
 
           <div className="flex gap-4">
-            <button 
+            <button
               onClick={() => { setPendingAction(null); setDeleteConfirmText(""); setErrorMsg(""); }}
               className="px-6 py-2 bg-card hover:bg-black/5 dark:hover:bg-white/10 text-foreground border border-border rounded-xl transition-colors font-medium cursor-pointer shadow-2xs"
             >
               Cancel
             </button>
-            <button 
+            <button
               onClick={() => {
                 if (pendingAction === 'reset') handleResetWorkspace();
                 else if (pendingAction === 'delete_workspace') handleDeleteWorkspace();
@@ -3248,7 +3937,7 @@ function DangerZoneView({ currentUserRole, teamMembers = [] }: { currentUserRole
 
   return (
     <div className="space-y-6">
-      
+
       {errorMsg && (
         <div className="text-red-600 dark:text-red-400 bg-red-100/80 dark:bg-red-400/10 border border-red-300 dark:border-red-400/20 px-4 py-3 rounded-2xl text-sm mb-6">
           {errorMsg}
@@ -3259,7 +3948,7 @@ function DangerZoneView({ currentUserRole, teamMembers = [] }: { currentUserRole
         <div className="bg-card border border-rose-200/60 dark:border-red-500/10 hover:border-red-500/30 rounded-3xl p-6 transition-all shadow-xs">
           <h3 className="font-bold text-foreground mb-2">Reset Workspace</h3>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Delete all invoices, clients, inventory, and transactions, but keep the workspace itself and your team members.</p>
-          <button 
+          <button
             onClick={() => { setPendingAction('reset'); setErrorMsg(""); }}
             disabled={isDeleting}
             className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 font-bold rounded-xl text-sm transition-colors border border-rose-200/60 dark:border-red-500/20 cursor-pointer shadow-2xs"
@@ -3271,7 +3960,7 @@ function DangerZoneView({ currentUserRole, teamMembers = [] }: { currentUserRole
         <div className="bg-card border border-rose-200/60 dark:border-red-500/10 hover:border-red-500/30 rounded-3xl p-6 transition-all shadow-xs">
           <h3 className="font-bold text-foreground mb-2">Delete Workspace</h3>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Permanently delete this workspace and all associated data. This action is irreversible.</p>
-          <button 
+          <button
             onClick={() => { setPendingAction('delete_workspace'); setErrorMsg(""); }}
             disabled={isDeleting || currentUserRole !== 'owner'}
             className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 font-bold rounded-xl text-sm transition-colors border border-rose-200/60 dark:border-red-500/20 disabled:opacity-50 cursor-pointer shadow-2xs"
@@ -3283,11 +3972,11 @@ function DangerZoneView({ currentUserRole, teamMembers = [] }: { currentUserRole
         <div className="bg-card border border-rose-200/60 dark:border-red-500/10 hover:border-red-500/30 rounded-3xl p-6 transition-all md:col-span-2 shadow-xs">
           <h3 className="font-bold text-foreground mb-2">Transfer Ownership</h3>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Transfer your workspace ownership to another team member. You will lose owner privileges and become an Admin.</p>
-          
+
           {teamMembers.length > 0 ? (
             <div className="flex gap-4 items-center">
-              <select 
-                value={transferToUserId} 
+              <select
+                value={transferToUserId}
                 onChange={(e) => setTransferToUserId(e.target.value)}
                 className="bg-card border border-border rounded-xl px-4 py-2 text-foreground outline-none focus:border-brand-500 text-sm w-full sm:w-auto min-w-[200px] shadow-2xs"
               >
@@ -3296,13 +3985,13 @@ function DangerZoneView({ currentUserRole, teamMembers = [] }: { currentUserRole
                   <option key={member.id} value={member.id} className="bg-card text-foreground">{member.email}</option>
                 ))}
               </select>
-              <button 
+              <button
                 onClick={() => {
                   if (!transferToUserId) {
                     setErrorMsg("Please select a team member first.");
                     return;
                   }
-                  setPendingAction('transfer'); 
+                  setPendingAction('transfer');
                   setErrorMsg("");
                 }}
                 disabled={isDeleting || !transferToUserId || currentUserRole !== 'owner'}
@@ -3319,7 +4008,7 @@ function DangerZoneView({ currentUserRole, teamMembers = [] }: { currentUserRole
         <div className="bg-card border border-red-500/10 hover:border-red-500/30 rounded-3xl p-6 transition-all md:col-span-2">
           <h3 className="font-bold text-foreground mb-2">Delete Personal Account</h3>
           <p className="text-sm text-gray-400 mb-6">Permanently delete your account and personal data from the platform. Workspace owners cannot delete their account without first deleting or transferring the workspace.</p>
-          <button 
+          <button
             onClick={() => { setPendingAction('delete_account'); setErrorMsg(""); }}
             disabled={isDeleting}
             className="px-4 py-2 bg-red-500 hover:bg-red-600 text-foreground font-bold rounded-xl text-sm transition-colors cursor-pointer"

@@ -83,23 +83,23 @@ export async function exportReport(reportType: "profit_loss" | "cash_flow" | "ba
     
     if (reportType === 'profit_loss') {
       csv = `Category,Amount\nIncome,\n`;
-      reports.incomeByService.forEach((i: any) => csv += `"${i.name}",${i.value}\n`);
-      csv += `Total Income,${reports.totalIncome}\n\nExpenses,\n`;
-      reports.expensesBreakdown.forEach((e: any) => csv += `"${e.name}",${e.value}\n`);
-      csv += `Total Expenses,${reports.totalExpenses}\n\n`;
-      csv += `Net Profit,${reports.netProfit}\n`;
+      reports.incomeByService.forEach((i: any) => csv += `${sanitizeCsvValue(i.name)},${sanitizeCsvValue(i.value)}\n`);
+      csv += `Total Income,${sanitizeCsvValue(reports.totalIncome)}\n\nExpenses,\n`;
+      reports.expensesBreakdown.forEach((e: any) => csv += `${sanitizeCsvValue(e.name)},${sanitizeCsvValue(e.value)}\n`);
+      csv += `Total Expenses,${sanitizeCsvValue(reports.totalExpenses)}\n\n`;
+      csv += `Net Profit,${sanitizeCsvValue(reports.netProfit)}\n`;
     }
     
     if (reportType === 'balance_sheet') {
-      csv = `Category,Amount\nAssets,\nBank Balance,${reports.advanced.assets.bankBalance}\nAccounts Receivable,${reports.advanced.assets.accountsReceivable}\nTotal Assets,${reports.advanced.assets.total}\n\n`;
+      csv = `Category,Amount\nAssets,\nBank Balance,${sanitizeCsvValue(reports.advanced.assets.bankBalance)}\nAccounts Receivable,${sanitizeCsvValue(reports.advanced.assets.accountsReceivable)}\nTotal Assets,${sanitizeCsvValue(reports.advanced.assets.total)}\n\n`;
       csv += `Liabilities,\nAccounts Payable,0\nTotal Liabilities,0\n\n`;
-      csv += `Equity,\nRetained Earnings,${reports.advanced.assets.total}\nTotal Equity,${reports.advanced.assets.total}\n`;
+      csv += `Equity,\nRetained Earnings,${sanitizeCsvValue(reports.advanced.assets.total)}\nTotal Equity,${sanitizeCsvValue(reports.advanced.assets.total)}\n`;
     }
     
     if (reportType === 'cash_flow') {
       csv = `Date,Type,Description,Category,Amount\n`;
       reports.journalEntries.forEach((j: any) => {
-        csv += `${j.date},${j.type},"${j.description.replace(/"/g, '""')}","${j.category}",${j.amount}\n`;
+        csv += `${sanitizeCsvValue(j.date)},${sanitizeCsvValue(j.type)},${sanitizeCsvValue(j.description)},${sanitizeCsvValue(j.category)},${sanitizeCsvValue(j.amount)}\n`;
       });
     }
 

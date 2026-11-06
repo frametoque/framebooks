@@ -1,19 +1,26 @@
 import { NextResponse } from "next/server";
 import { auth, currentUser } from '@/lib/auth';
-import postgres from "postgres";
-const neon = postgres;
+import sql from "@/lib/db";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 
 export async function POST(req: Request) {
   try {
     const { userId, session } = await auth();
     if (!userId && !session?.user) return new NextResponse("Unauthorized", { status: 401 });
 
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
+    const rateCheck = checkRateLimit("onboarding-profile-create", `${userId}:${ip}`, { limit: 5, windowMs: 15 * 60 * 1000 });
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { message: "Too many onboarding attempts. Please wait a few minutes." },
+        { status: 429 }
+      );
+    }
+
     const email = session?.user?.email?.trim().toLowerCase() || "";
     const fullName = session?.user?.name || "";
 
     const { businessName, address, plan, accountName, initialBalance, couponCode } = await req.json();
-
-    const sql = neon(process.env.DATABASE_URL!);
 
     // Check if user already exists
     const existingUser = await sql`

@@ -277,7 +277,7 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
                 )}
                 {p.price_yearly > 0 && (
                   <div className="text-[11px] text-muted-foreground mt-0.5 font-medium">
-                    {formatLKR(p.price_yearly)} /year (save ~20%)
+                    {formatLKR(p.price_yearly)} /year (save ~17% · 2 months free)
                   </div>
                 )}
               </div>

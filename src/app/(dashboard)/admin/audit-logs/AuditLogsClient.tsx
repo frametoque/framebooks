@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { RoleBadge } from "@/components/Formatters";
 import { JsonDiffModal } from "@/app/(dashboard)/admin/_components/JsonDiffModal";
+import { sanitizeCsvValue } from "@/lib/security/csv";
 
 export function AuditLogsClient({
   initialData,
@@ -48,14 +49,14 @@ export function AuditLogsClient({
       headers.join(","),
       ...logs.map((l: any) =>
         [
-          l.id,
-          `"${l.actor_email || ''}"`,
-          l.actor_role,
-          `"${l.action}"`,
-          l.target_type || '',
-          l.target_id || '',
-          l.ip_address || '',
-          `"${new Date(l.created_at).toISOString()}"`,
+          sanitizeCsvValue(l.id),
+          sanitizeCsvValue(l.actor_email || ''),
+          sanitizeCsvValue(l.actor_role),
+          sanitizeCsvValue(l.action),
+          sanitizeCsvValue(l.target_type || ''),
+          sanitizeCsvValue(l.target_id || ''),
+          sanitizeCsvValue(l.ip_address || ''),
+          sanitizeCsvValue(new Date(l.created_at).toISOString()),
         ].join(",")
       ),
     ].join("\n");

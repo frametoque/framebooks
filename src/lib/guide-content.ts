@@ -761,7 +761,7 @@ export const guideGroups: GuideGroup[] = [
             content: 'Click "Upgrade to Pro" or "Upgrade to Pro Plus" to initiate plan migration.',
             bullets: [
               'Review the summary modal with calculated LKR pricing and payment instructions',
-              'Submit your bank transfer slip or online payment confirmation',
+              'Complete payment via the secure online payment gateway',
               'Your workspace tier and quotas upgrade immediately upon payment verification'
             ]
           },
@@ -770,7 +770,7 @@ export const guideGroups: GuideGroup[] = [
             content: 'If an annual or monthly plan expires before payment, Framebooks activates a non-disruptive grace period banner.',
             bullets: [
               'Financial data remains safe and read-only accessible without sudden lockouts',
-              'Owners can upload renewal proof anytime to seamlessly reactivate full writing privileges'
+              'Owners can renew anytime via online checkout to seamlessly reactivate full writing privileges'
             ]
           }
         ]

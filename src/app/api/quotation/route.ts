@@ -1,20 +1,19 @@
 // app/api/quotation/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import postgres from "postgres";
-const neon = postgres;
+import sql from "@/lib/db";
+import { auth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 
 export async function POST(req: NextRequest) {
-  // ── Env check ────────────────────────────────────────────────────────────
-  if (!process.env.DATABASE_URL) {
-    console.error("[quotation] DATABASE_URL is not set");
+  // ── Rate limit: max 10 quotation creations per 10 minutes per IP ─────────
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
+  const rateCheck = checkRateLimit("quotation-post", ip, { limit: 10, windowMs: 10 * 60 * 1000 });
+  if (!rateCheck.allowed) {
     return NextResponse.json(
-      { error: "Server misconfiguration: DATABASE_URL missing." },
-      { status: 500 }
+      { error: "Too many quotation requests. Please wait a few minutes before trying again." },
+      { status: 429 }
     );
   }
-
-  // Initialise inside the handler so env is always resolved
-  const sql = neon(process.env.DATABASE_URL);
 
   // ── Parse body ────────────────────────────────────────────────────────────
   let body: {
@@ -223,15 +222,14 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  if (!process.env.DATABASE_URL) {
-    console.error("[quotation] DATABASE_URL is not set");
+  // ── Authentication & Authorization check (SEC-01) ─────────────────────────
+  const { userId, user } = await auth();
+  if (!userId || !user) {
     return NextResponse.json(
-      { error: "Server misconfiguration: DATABASE_URL missing." },
-      { status: 500 }
+      { error: "Unauthorized. Authentication required to access quotations." },
+      { status: 401 }
     );
   }
-
-  const sql = neon(process.env.DATABASE_URL);
 
   try {
     const { searchParams } = new URL(req.url);
@@ -241,6 +239,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         { error: "user_email is required" },
         { status: 400 }
+      );
+    }
+
+    const userWithRole = user as { role?: string; email?: string };
+    const isPrivilegedAdmin = userWithRole.role === "admin";
+    const isOwner = user.email && user.email.toLowerCase() === userEmail.toLowerCase();
+
+    if (!isPrivilegedAdmin && !isOwner) {
+      return NextResponse.json(
+        { error: "Forbidden. You do not have permission to access these quotations." },
+        { status: 403 }
       );
     }
 

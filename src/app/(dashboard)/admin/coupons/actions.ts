@@ -88,3 +88,60 @@ export async function toggleCouponActive(id: number, isActive: boolean) {
   revalidatePath("/admin/coupons");
   return { success: true };
 }
+
+export async function updateCoupon({
+  id,
+  code,
+  type,
+  value,
+  validFrom,
+  validTo,
+  maxRedemptions,
+  isActive,
+  applicablePlans,
+}: {
+  id: number;
+  code: string;
+  type: "percent" | "fixed";
+  value: number;
+  validFrom?: string;
+  validTo?: string;
+  maxRedemptions?: number | null;
+  isActive?: boolean;
+  applicablePlans?: string[];
+}) {
+  const actor = await requireAdmin("manage_coupons");
+
+  const cleanCode = code.trim().toUpperCase();
+  if (!cleanCode) throw new Error("Coupon code is required");
+  if (value <= 0) throw new Error("Coupon discount value must be greater than zero");
+
+  const existingRows = await sql`SELECT * FROM coupons WHERE id = ${id} LIMIT 1`;
+  if (existingRows.length === 0) throw new Error("Coupon not found");
+  const before = existingRows[0];
+
+  await sql`
+    UPDATE coupons SET
+      code = ${cleanCode},
+      type = ${type},
+      value = ${value},
+      valid_from = ${validFrom ? new Date(validFrom) : null},
+      valid_to = ${validTo ? new Date(validTo) : null},
+      max_redemptions = ${maxRedemptions !== undefined ? maxRedemptions : before.max_redemptions},
+      is_active = ${isActive !== undefined ? isActive : before.is_active},
+      applicable_plans = ${applicablePlans && applicablePlans.length > 0 ? sql.json(applicablePlans) : sql.json(["pro", "pro_plus"])}
+    WHERE id = ${id}
+  `;
+
+  await logAdminAction({
+    actor,
+    action: "UPDATE_COUPON",
+    targetType: "coupon",
+    targetId: id,
+    before: { code: before.code, type: before.type, value: before.value, is_active: before.is_active },
+    after: { code: cleanCode, type, value, is_active: isActive }
+  });
+
+  revalidatePath("/admin/coupons");
+  return { success: true };
+}

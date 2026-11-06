@@ -1,0 +1,303 @@
+import { NextRequest, NextResponse } from "next/server";
+import sql from "@/lib/db";
+import { getGatewayConfig } from "@/lib/payment-gateway/config";
+import { verifyPaymentsLkWebhook } from "@/lib/payment-gateway/payments-lk";
+import { verifyStripeSignature } from "@/lib/payment-gateway/stripe";
+import { verifyPayHereNotification } from "@/lib/payment-gateway/payhere";
+import { activateSubscriptionFromGateway } from "@/lib/payment-gateway/activation";
+
+export async function POST(req: NextRequest) {
+  const config = getGatewayConfig();
+  const searchParams = req.nextUrl.searchParams;
+  const providerParam = searchParams.get("provider");
+
+  const paymentsSignature = req.headers.get("payments-signature") || req.headers.get("Payments-Signature");
+  const isPaymentsLk = providerParam === "payments_lk" || Boolean(paymentsSignature);
+  const isStripe = providerParam === "stripe" || req.headers.has("stripe-signature");
+  const isPayHere = providerParam === "payhere" || req.headers.get("content-type")?.includes("application/x-www-form-urlencoded");
+
+  // ==========================================
+  // 1. PAYMENTS.LK WEBHOOK HANDLER (PRIMARY)
+  // Docs: https://payments.lk/developers
+  // ==========================================
+  if (isPaymentsLk) {
+    try {
+      const rawBody = await req.text();
+
+      // Enforce strict webhook signature verification (SEC-02)
+      if (!paymentsSignature) {
+        console.error("[Payments.lk Webhook] Missing payments-signature header");
+        return NextResponse.json({ error: "Missing webhook signature" }, { status: 400 });
+      }
+
+      if (!config.paymentsLk.webhookSecret) {
+        console.error("[Payments.lk Webhook] Server misconfiguration: PAYMENTS_LK_WEBHOOK_SECRET is not configured");
+        return NextResponse.json({ error: "Webhook secret misconfigured" }, { status: 500 });
+      }
+
+      const verification = verifyPaymentsLkWebhook(
+        rawBody,
+        paymentsSignature,
+        config.paymentsLk.webhookSecret
+      );
+      if (!verification.valid) {
+        console.error("[Payments.lk Webhook] Invalid signature:", verification.error);
+        return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+      }
+      const event = verification.event;
+
+      // 1. Handle card.saved event
+      if (event.type === "card.saved" && event.data) {
+        const cardData = event.data;
+        const cardId = cardData.id;
+        const cardBrand = cardData.scheme || cardData.brand || "card";
+        const cardLast4 = cardData.last4 || "";
+        const cardExpMonth = cardData.expiry?.month || null;
+        const cardExpYear = cardData.expiry?.year || null;
+        const paymentId = cardData.paymentId;
+        const customerEmail = (cardData.customerEmail || "").toLowerCase().trim();
+
+        if (paymentId) {
+          // Look up matching payment to find tenant
+          const payRows = await sql`
+            SELECT tenant_id, subscription_id FROM payments 
+            WHERE provider_reference = ${paymentId} OR id = ${Number(paymentId) || 0}
+            LIMIT 1
+          `;
+          if (payRows.length > 0) {
+            const tenantId = payRows[0].tenant_id;
+            const t = await sql`SELECT owner_email FROM tenants WHERE id = ${tenantId} LIMIT 1`;
+            const email = customerEmail || t[0]?.owner_email;
+            if (email) {
+              const { syncCustomerSavedCard } = await import("@/lib/payment-gateway/payments-lk");
+              await syncCustomerSavedCard(tenantId, email);
+            }
+          }
+        } else if (customerEmail) {
+          const tRows = await sql`SELECT id FROM tenants WHERE LOWER(owner_email) = ${customerEmail} LIMIT 1`;
+          if (tRows.length > 0) {
+            const { syncCustomerSavedCard } = await import("@/lib/payment-gateway/payments-lk");
+            await syncCustomerSavedCard(tRows[0].id, customerEmail);
+          }
+        }
+      }
+
+      // 2. Handle payment.succeeded event
+      if (event.type === "payment.succeeded" && event.data) {
+        const data = event.data;
+        const metadata = data.metadata || {};
+        
+        let tenantId = Number(metadata.tenantId) || 0;
+        let planName = metadata.planName || "Pro";
+        let billingInterval = (metadata.billingInterval || "monthly") as "monthly" | "yearly";
+
+        // Extract details from reference: FB_{tenantId}_{plan}_{interval}_{timestamp}
+        const ref = data.reference || data.payment?.reference || "";
+        let parts: string[] = [];
+        if (ref) {
+          const delimiter = ref.includes("_") ? "_" : "-";
+          parts = ref.split(delimiter);
+          if (parts[0] === "FB") {
+            if (parts[1] && !tenantId) tenantId = Number(parts[1]);
+            if (parts[2]) planName = parts[2];
+            if (parts[3]) billingInterval = parts[3] === "yearly" ? "yearly" : "monthly";
+          }
+        }
+
+        const userId = metadata.userId ? Number(metadata.userId) : null;
+        let amount = data.amountCents ? Number(data.amountCents) / 100 : 0;
+        if (amount <= 0 && parts[2] === "WALLET" && !isNaN(Number(parts[3]))) {
+          amount = Number(parts[3]);
+        }
+        const currency = (data.currency || "LKR").toUpperCase();
+        const paymentReference = data.id || ref;
+
+        // Extract saved card if returned on payment
+        const savedCardId = data.savedCardId || data.payment?.savedCardId || null;
+        const cardInfo = data.card || data.payment?.card || null;
+        const cardBrand = cardInfo?.scheme || cardInfo?.brand || null;
+        const cardLast4 = cardInfo?.last4 || null;
+        const cardExpMonth = cardInfo?.expiry?.month || null;
+        const cardExpYear = cardInfo?.expiry?.year || null;
+
+        const isWalletTopup = parts[2] === "WALLET" || parts[2] === "WalletRecharge";
+
+        if (isWalletTopup && tenantId) {
+          const { creditWallet } = await import("@/lib/payment-gateway/wallet");
+          await creditWallet({
+            tenantId,
+            amount,
+            type: "topup",
+            description: `Workspace wallet recharge (LKR ${amount.toLocaleString()})`,
+            provider: "payments_lk",
+            providerReference: paymentReference,
+          });
+
+          await sql`
+            INSERT INTO payments (
+              tenant_id, user_id, amount, currency, method, provider, provider_reference, status, notes, paid_at, created_at
+            ) VALUES (
+              ${tenantId}, ${userId || null}, ${amount}, ${currency}, 'card', 'payments_lk', ${paymentReference}, 'paid', 'Workspace wallet recharge', NOW(), NOW()
+            )
+          `;
+
+          if (savedCardId) {
+            await sql`
+              UPDATE subscriptions SET
+                saved_card_id = ${savedCardId},
+                card_brand = COALESCE(${cardBrand}, card_brand),
+                card_last4 = COALESCE(${cardLast4}, card_last4),
+                card_exp_month = COALESCE(${cardExpMonth}, card_exp_month),
+                card_exp_year = COALESCE(${cardExpYear}, card_exp_year),
+                auto_renew = true,
+                updated_at = NOW()
+              WHERE tenant_id = ${tenantId}
+            `;
+          }
+          return NextResponse.json({ received: true });
+        }
+
+        if (tenantId) {
+          await activateSubscriptionFromGateway({
+            tenantId,
+            userId,
+            planName,
+            billingInterval,
+            amount,
+            currency,
+            provider: "payments_lk",
+            providerReference: paymentReference,
+            receiptUrl: data.receiptUrl || data.url || undefined,
+            notes: `Payments.lk subscription payment confirmed: ${paymentReference} (${billingInterval})`,
+            savedCardId: savedCardId || undefined,
+            cardBrand: cardBrand || undefined,
+            cardLast4: cardLast4 || undefined,
+            cardExpMonth: cardExpMonth || undefined,
+            cardExpYear: cardExpYear || undefined,
+            autoRenew: true,
+          });
+        }
+      }
+
+      return NextResponse.json({ received: true });
+    } catch (err: any) {
+      console.error("[Payments.lk Webhook Error]", err);
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+  }
+
+  // ==========================================
+  // 2. STRIPE WEBHOOK HANDLER (OPTIONAL)
+  // ==========================================
+  if (isStripe) {
+    try {
+      const rawBody = await req.text();
+      const signature = req.headers.get("stripe-signature");
+      if (!signature) {
+        console.error("[Stripe Webhook] Missing stripe-signature header");
+        return NextResponse.json({ error: "Missing webhook signature" }, { status: 400 });
+      }
+
+      if (!config.stripe.webhookSecret) {
+        console.error("[Stripe Webhook] Server misconfiguration: STRIPE_WEBHOOK_SECRET is not configured");
+        return NextResponse.json({ error: "Webhook secret misconfigured" }, { status: 500 });
+      }
+
+      const verification = verifyStripeSignature(rawBody, signature, config.stripe.webhookSecret);
+      if (!verification.valid) {
+        console.error("[Stripe Webhook] Invalid signature:", verification.error);
+        return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+      }
+      const event = verification.event;
+
+      if (event.type === "checkout.session.completed") {
+        const session = event.data.object;
+        const tenantId = Number(session.client_reference_id || session.metadata?.tenantId);
+        const planName = session.metadata?.planName || "Pro";
+        const billingInterval = (session.metadata?.billingInterval || "monthly") as "monthly" | "yearly";
+        const userId = session.metadata?.userId ? Number(session.metadata.userId) : null;
+        const amount = session.amount_total ? session.amount_total / 100 : 0;
+        const currency = (session.currency || "lkr").toUpperCase();
+
+        if (tenantId) {
+          await activateSubscriptionFromGateway({
+            tenantId,
+            userId,
+            planName,
+            billingInterval,
+            amount,
+            currency,
+            provider: "stripe",
+            providerReference: session.id,
+            notes: `Stripe Checkout completed for ${planName} (${billingInterval})`,
+          });
+        }
+      }
+
+      return NextResponse.json({ received: true });
+    } catch (err: any) {
+      console.error("[Stripe Webhook Error]", err);
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+  }
+
+  // ==========================================
+  // 3. PAYHERE IPN HANDLER (OPTIONAL)
+  // ==========================================
+  if (isPayHere) {
+    try {
+      let body: Record<string, any> = {};
+      const contentType = req.headers.get("content-type") || "";
+
+      if (contentType.includes("application/x-www-form-urlencoded")) {
+        const text = await req.text();
+        const params = new URLSearchParams(text);
+        params.forEach((val, key) => {
+          body[key] = val;
+        });
+      } else {
+        body = await req.json();
+      }
+
+      if (!config.payhere.merchantSecret) {
+        console.error("[PayHere Webhook] Server misconfiguration: PAYHERE_SECRET is not configured");
+        return NextResponse.json({ error: "Webhook secret misconfigured" }, { status: 500 });
+      }
+
+      const verification = verifyPayHereNotification(body, config.payhere.merchantSecret);
+      if (!verification.valid) {
+        console.error("[PayHere Webhook] Invalid signature:", verification.error);
+        return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+      }
+
+      if (String(body.status_code) === "2") {
+        const tenantId = Number(body.custom_1);
+        const planName = body.custom_2 || "Pro";
+        const amount = parseFloat(body.payhere_amount) || 0;
+        const currency = (body.payhere_currency || "LKR").toUpperCase();
+        const orderId = body.order_id;
+        const paymentId = body.payment_id;
+
+        if (tenantId) {
+          await activateSubscriptionFromGateway({
+            tenantId,
+            planName,
+            billingInterval: "monthly",
+            amount,
+            currency,
+            provider: "payhere",
+            providerReference: paymentId || orderId,
+            notes: `PayHere payment captured: ${paymentId || orderId}`,
+          });
+        }
+      }
+
+      return NextResponse.json({ received: true });
+    } catch (err: any) {
+      console.error("[PayHere Webhook Error]", err);
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+  }
+
+  return NextResponse.json({ error: "Unsupported provider" }, { status: 400 });
+}

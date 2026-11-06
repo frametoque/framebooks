@@ -115,7 +115,7 @@ export function DashboardShell({
     if (variant === "admin") {
       if (path === "/admin") return "Dashboard";
       if (path.startsWith("/admin/users")) return "Users";
-      if (path.startsWith("/admin/subscriptions")) return "Subscriptions";
+      if (path.startsWith("/admin/subscriptions")) return "Workspaces";
       if (path.startsWith("/admin/payments")) return "Payments";
       if (path.startsWith("/admin/plans")) return "Plans";
       if (path.startsWith("/admin/coupons")) return "Coupons";
@@ -160,7 +160,7 @@ export function DashboardShell({
   const adminLinks = [
     { name: "Dashboard", href: "/admin", icon: MdDashboard },
     { name: "Users", href: "/admin/users", icon: MdGroup },
-    { name: "Subscriptions", href: "/admin/subscriptions", icon: Repeat },
+    { name: "Workspaces", href: "/admin/subscriptions", icon: Repeat },
     { name: "Payments", href: "/admin/payments", icon: MdAccountBalanceWallet },
     { name: "Plans", href: "/admin/plans", icon: Layers },
     { name: "Coupons", href: "/admin/coupons", icon: MdLocalOffer },

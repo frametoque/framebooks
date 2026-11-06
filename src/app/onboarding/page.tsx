@@ -31,8 +31,9 @@ import {
   validateCouponAction,
   getOnboardingPlansAction,
   getOnboardingStatusAction,
-  submitOnboardingPaymentAction,
-  getCompanyBankDetailsAction,
+  initiateOnboardingCheckoutAction,
+  completeOnboardingSandboxAction,
+  getPaymentGatewayStatusAction,
   switchToFreePlanAction
 } from "./actions";
 import { plans as staticPlans } from "@/data/landing/content";
@@ -64,24 +65,9 @@ export default function OnboardingPage() {
 
   // Billing & Payment state
   const [activeTenantId, setActiveTenantId] = useState<number | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"slip" | "online">("slip");
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
-  const [slipFile, setSlipFile] = useState<File | null>(null);
-  const [slipPreview, setSlipPreview] = useState<string | null>(null);
-  const [customerNotes, setCustomerNotes] = useState("");
-  const [uploadingSlip, setUploadingSlip] = useState(false);
-  const [copiedBank, setCopiedBank] = useState(false);
-  const [bankDetails, setBankDetails] = useState({
-    bank: "",
-    accountName: "",
-    accountNumber: "",
-    branch: "",
-  });
-
-  // Awaiting approval state
-  const [pendingPaymentData, setPendingPaymentData] = useState<any>(null);
-  const [checkingStatus, setCheckingStatus] = useState(false);
-  const [statusNotice, setStatusNotice] = useState<string | null>(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [gatewayStatus, setGatewayStatus] = useState<any>(null);
 
   useEffect(() => {
     getOnboardingPlansAction().then(res => {
@@ -90,9 +76,9 @@ export default function OnboardingPage() {
       }
     }).catch(() => { });
 
-    getCompanyBankDetailsAction().then(res => {
-      if (res?.success && res.bankDetails) {
-        setBankDetails(res.bankDetails);
+    getPaymentGatewayStatusAction().then(res => {
+      if (res?.success && res.status) {
+        setGatewayStatus(res.status);
       }
     }).catch(() => { });
   }, []);
@@ -100,37 +86,18 @@ export default function OnboardingPage() {
   useEffect(() => {
     async function checkInitialStatus() {
       try {
-        // 1. Check existing tenant status (e.g. if user refreshed or already has pending payment)
+        // 1. Check existing tenant status
         const statusRes = await getOnboardingStatusAction();
         if (statusRes?.success && statusRes.hasTenant) {
           if (statusRes.isApproved) {
             router.push("/user/dashboard");
             return;
           }
-          if (statusRes.isPending) {
-            setPendingPaymentData(statusRes.payment);
+          if (statusRes.needsPayment) {
             setBusinessName(statusRes.tenantName || "");
             setSelectedPlan(statusRes.plan || "Pro");
             if (statusRes.tenantId) setActiveTenantId(statusRes.tenantId);
-            setStep(5); // Awaiting approval step
-            setCheckingInvite(false);
-            return;
-          }
-          if (statusRes.isRejected) {
-            setPendingPaymentData(statusRes.payment);
-            setBusinessName(statusRes.tenantName || "");
-            setSelectedPlan(statusRes.plan || "Pro");
-            if (statusRes.tenantId) setActiveTenantId(statusRes.tenantId);
-            setErrorMsg(`Your previous payment slip was declined: ${statusRes.reason || "Declined by admin"}. Please upload a new slip.`);
-            setStep(4); // Back to billing
-            setCheckingInvite(false);
-            return;
-          }
-          if (statusRes.needsPaymentUpload) {
-            setBusinessName(statusRes.tenantName || "");
-            setSelectedPlan(statusRes.plan || "Pro");
-            if (statusRes.tenantId) setActiveTenantId(statusRes.tenantId);
-            setStep(4); // Billing upload step
+            setStep(4); // Direct checkout step
             setCheckingInvite(false);
             return;
           }
@@ -216,25 +183,6 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleSlipChange = (file: File | null) => {
-    if (slipPreview) {
-      URL.revokeObjectURL(slipPreview);
-      setSlipPreview(null);
-    }
-    setSlipFile(file);
-    if (file && file.type.startsWith("image/")) {
-      setSlipPreview(URL.createObjectURL(file));
-    }
-  };
-
-  const handleCopyAccountNo = () => {
-    if (bankDetails.accountNumber) {
-      navigator.clipboard.writeText(bankDetails.accountNumber);
-      setCopiedBank(true);
-      setTimeout(() => setCopiedBank(false), 2000);
-    }
-  };
-
   const handleApplyCoupon = async () => {
     if (!couponInput.trim()) return;
     setValidatingCoupon(true);
@@ -300,15 +248,58 @@ export default function OnboardingPage() {
     }
   }
 
-  // Step 4 Completion: Submit Bank Slip
-  async function handleSubmitBankSlip(e: React.FormEvent) {
-    e.preventDefault();
-    if (!slipFile || uploadingSlip) return;
-
-    setUploadingSlip(true);
+  // Step 4 Completion: Online Payment Gateway Checkout
+  async function handleGatewayCheckout() {
+    setProcessingPayment(true);
     setErrorMsg("");
 
     try {
+      const res = await initiateOnboardingCheckoutAction({
+        tenantId: activeTenantId || undefined,
+        planName: selectedPlan,
+        billingCycle,
+        couponCode: appliedCoupon?.code,
+      });
+
+      if (!res.success || !("provider" in res)) {
+        setErrorMsg((res as any).error || "Failed to initiate online checkout.");
+        return;
+      }
+
+      if (res.checkoutUrl) {
+        window.location.href = res.checkoutUrl;
+      } else if (res.formData && res.provider === "payhere") {
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = res.checkoutUrl || "https://sandbox.payhere.lk/pay/checkout";
+        Object.entries(res.formData).forEach(([k, v]) => {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = k;
+          input.value = String(v);
+          form.appendChild(input);
+        });
+        document.body.appendChild(form);
+        form.submit();
+      }
+    } catch (err: any) {
+      console.error("Gateway checkout error:", err);
+      setErrorMsg(err.message || "An unexpected error occurred.");
+    } finally {
+      setProcessingPayment(false);
+    }
+  }
+
+  // Step 4 Sandbox fallback when keys not yet placed in .env
+  async function handleSandboxCheckout() {
+    setProcessingPayment(true);
+    setErrorMsg("");
+
+    try {
+      if (!activeTenantId) {
+        setErrorMsg("Workspace ID not found. Please refresh the page.");
+        return;
+      }
       const currentPlanObj = displayPlans.find(
         (p: any) => p.name.toLowerCase() === selectedPlan.toLowerCase()
       );
@@ -317,62 +308,23 @@ export default function OnboardingPage() {
       const basePrice = billingCycle === "monthly" ? baseMonthly : baseYearly;
       const priceInfo = getFinalPrice(basePrice, true);
 
-      const formData = new FormData();
-      if (activeTenantId) {
-        formData.append("tenantId", String(activeTenantId));
-      }
-      formData.append("planName", selectedPlan);
-      formData.append("billingCycle", billingCycle);
-      formData.append("amount", String(priceInfo.finalPrice));
-      formData.append("slip", slipFile);
-      if (customerNotes.trim()) {
-        formData.append("notes", customerNotes.trim());
-      }
+      const res = await completeOnboardingSandboxAction({
+        tenantId: activeTenantId,
+        planName: selectedPlan,
+        billingCycle,
+        amount: priceInfo.finalPrice,
+      });
 
-      const res = await submitOnboardingPaymentAction(formData);
-      if (res.success && res.payment) {
-        setPendingPaymentData(res.payment);
-        setStep(5); // Move to Awaiting Approval
+      if (res.success) {
+        await update();
+        router.push("/user/dashboard");
       } else {
-        setErrorMsg(res.error || "Failed to submit payment slip.");
+        setErrorMsg(res.error || "Failed to complete test payment.");
       }
     } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || "An unexpected error occurred.");
+      setErrorMsg(err.message || "Failed to complete test payment.");
     } finally {
-      setUploadingSlip(false);
-    }
-  }
-
-  // Step 5: Check Approval Status
-  async function handleCheckStatus() {
-    setCheckingStatus(true);
-    setStatusNotice(null);
-    try {
-      const res = await getOnboardingStatusAction();
-      if (res?.success) {
-        if (res.isApproved) {
-          await update();
-          router.push("/user/dashboard");
-          return;
-        }
-        if (res.isRejected) {
-          setStep(4);
-          setErrorMsg(`Your payment slip was declined: ${res.reason || "Please upload a new payment slip."}`);
-          return;
-        }
-        if (res.isPending) {
-          setStatusNotice("Your payment slip is still under review by our admin team. Please check back shortly.");
-          if (res.payment) {
-            setPendingPaymentData(res.payment);
-          }
-        }
-      }
-    } catch (err: any) {
-      console.error(err);
-      setStatusNotice("Could not check status. Please refresh the page.");
-    } finally {
-      setCheckingStatus(false);
+      setProcessingPayment(false);
     }
   }
 
@@ -445,143 +397,15 @@ export default function OnboardingPage() {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // STEP 5: Awaiting Admin Approval
-  // ─────────────────────────────────────────────────────────────
-  if (step === 5) {
-    return (
-      <div className="min-h-screen bg-[#F9FAFB] text-[#082830] flex flex-col justify-between py-10 px-4 sm:px-6 lg:px-8 overflow-y-auto">
-        <div className="max-w-2xl w-full mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-center mb-8">
-            <Image
-              src="/logos/ft/name-logo.png"
-              alt="FrameBooks"
-              width={160}
-              height={32}
-              className="h-8 w-auto"
-            />
-          </div>
 
-          <div className="bg-white rounded-3xl border border-[#E5E7EB] shadow-sm p-6 sm:p-10 text-center space-y-6">
-            {/* Pulsing Icon */}
-            <div className="w-20 h-20 rounded-3xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto shadow-sm">
-              <Clock className="w-10 h-10 text-amber-500 animate-pulse" />
-            </div>
-
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs font-bold mb-3">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                <span>Awaiting Admin Approval</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-[#082830] tracking-tight">
-                Bank Slip Under Review
-              </h1>
-              <p className="text-gray-500 text-sm sm:text-base mt-2 max-w-md mx-auto leading-relaxed">
-                Your payment slip for <strong className="text-[#082830]">{businessName || "your workspace"}</strong> ({selectedPlan}) has been received and is currently being verified by our admin team.
-              </p>
-            </div>
-
-            {/* Payment Details Card */}
-            <div className="bg-[#F9FAFB] rounded-2xl border border-[#E5E7EB] p-5 text-left space-y-3">
-              <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
-                <span className="text-xs text-gray-500 font-medium">Workspace</span>
-                <span className="text-xs font-bold text-[#082830]">{businessName || "My Business"}</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
-                <span className="text-xs text-gray-500 font-medium">Selected Plan</span>
-                <span className="text-xs font-bold text-[#082830]">{selectedPlan}</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
-                <span className="text-xs text-gray-500 font-medium">Amount Submitted</span>
-                <span className="text-xs font-mono font-bold text-[#082830]">
-                  LKR {Number(pendingPaymentData?.amount || activePriceInfo.finalPrice).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
-                <span className="text-xs text-gray-500 font-medium">Verification Status</span>
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-                  <Clock className="w-3 h-3" /> Pending Review
-                </span>
-              </div>
-              {pendingPaymentData?.receiptUrl && (
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-xs text-gray-500 font-medium">Uploaded Receipt</span>
-                  <a
-                    href={pendingPaymentData.receiptUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-[#007A31] hover:underline"
-                  >
-                    <span>View Slip</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              )}
-            </div>
-
-            {/* Notice / Feedback */}
-            {statusNotice && (
-              <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium text-center">
-                {statusNotice}
-              </div>
-            )}
-
-            {/* Explanatory callout */}
-            <div className="p-4 rounded-2xl bg-[#E6FDF0] border border-[#00E35B]/20 text-left flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-[#00C750] shrink-0 mt-0.5" />
-              <div className="text-xs text-gray-700 leading-relaxed">
-                <p className="font-bold text-[#082830] mb-0.5">What happens next?</p>
-                <p>
-                  Our administrators verify deposits promptly. Once approved, you can refresh this page to proceed directly to your dashboard.
-                </p>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-3 pt-2">
-              <button
-                type="button"
-                onClick={handleCheckStatus}
-                disabled={checkingStatus}
-                className="w-full rounded-2xl bg-[#00E35B] hover:bg-[#00C750] disabled:opacity-50 text-[#041418] font-bold py-3.5 text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-lg active:scale-[0.99]"
-              >
-                <RefreshCw className={`w-4 h-4 ${checkingStatus ? "animate-spin" : ""}`} />
-                <span>{checkingStatus ? "Checking Status..." : "Refresh Approval Status"}</span>
-              </button>
-
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleSwitchToFree}
-                  disabled={submitting}
-                  className="text-xs text-gray-500 hover:text-gray-800 transition-colors cursor-pointer underline underline-offset-4"
-                >
-                  Need immediate access? Use Free Plan instead
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-center gap-2 mt-8">
-          <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
-          <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
-          <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
-          <div className="h-1.5 rounded-full w-8 bg-amber-500 transition-all animate-pulse" />
-        </div>
-      </div>
-    );
-  }
 
   // ─────────────────────────────────────────────────────────────
-  // STEP 4: Billing Section (Upload Bank Slip or Online Payment)
+  // STEP 4: Payment Gateway Checkout & Activation
   // ─────────────────────────────────────────────────────────────
   if (step === 4) {
     return (
       <div className="min-h-screen bg-[#F9FAFB] text-[#082830] flex flex-col justify-between py-10 px-4 sm:px-6 lg:px-8 overflow-y-auto">
-        <div className="max-w-3xl w-full mx-auto">
+        <div className="max-w-2xl w-full mx-auto">
           {/* Top Header */}
           <div className="flex items-center justify-between mb-8 sm:mb-10">
             <Image
@@ -594,7 +418,7 @@ export default function OnboardingPage() {
             <button
               type="button"
               onClick={handlePrev}
-              disabled={uploadingSlip}
+              disabled={processingPayment}
               className="text-gray-600 hover:text-[#082830] transition-colors flex items-center gap-1.5 text-sm font-semibold cursor-pointer px-3.5 py-2 rounded-xl hover:bg-gray-200/60"
             >
               <MdKeyboardArrowLeft className="w-5 h-5" />
@@ -607,13 +431,13 @@ export default function OnboardingPage() {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E6FDF0] text-[#007A31] border border-[#00E35B]/20 text-xs font-bold mb-3">
               <span>Step 4 of 4</span>
               <span>•</span>
-              <span>Billing & Activation</span>
+              <span>Checkout & Activation</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-black text-[#082830] tracking-tight">
               Activate your {selectedPlan} subscription<span className="text-[#00E35B]">.</span>
             </h1>
             <p className="text-gray-500 text-sm sm:text-base mt-2 leading-relaxed">
-              Upload your bank deposit slip or select online checkout to activate your workspace.
+              Complete your payment via secure online checkout to activate your workspace instantly.
             </p>
           </div>
 
@@ -623,276 +447,135 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Payment Method Switcher Tabs */}
+          {/* Checkout Card */}
           <div className="bg-white rounded-3xl border border-[#E5E7EB] p-6 sm:p-8 shadow-xs space-y-6 mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E5E7EB] pb-5">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-5">
               <div>
-                <h3 className="text-lg sm:text-xl font-bold text-[#082830]">Select Payment Method</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-[#082830]">Online Checkout</h3>
                 <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                  Deposit via bank transfer and upload your receipt, or pay instantly online.
+                  Instant activation with credit card, debit card, or payment gateway.
                 </p>
               </div>
-
-              <div className="flex bg-[#F3F4F6] p-1 rounded-2xl w-fit shrink-0 border border-[#E5E7EB]">
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod("slip")}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${paymentMethod === "slip"
-                      ? "bg-[#082830] text-white shadow-xs"
-                      : "text-gray-600 hover:text-black"
-                    }`}
-                >
-                  Upload Bank Slip
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod("online")}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${paymentMethod === "online"
-                      ? "bg-[#082830] text-white shadow-xs"
-                      : "text-gray-600 hover:text-black"
-                    }`}
-                >
-                  <span>Pay Online</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-800 font-semibold">
-                    Disabled
-                  </span>
-                </button>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#E6FDF0] text-[#007A31] border border-[#00E35B]/20 text-xs font-bold shrink-0">
+                <ShieldCheck className="w-4 h-4 text-[#00C750]" />
+                <span>256-bit Encrypted</span>
               </div>
             </div>
 
-            {paymentMethod === "slip" ? (
-              <div className="space-y-6">
-                {/* Official Bank Account Details Card */}
-                <div className="p-5 rounded-2xl bg-[#F9FAFB] border border-[#E5E7EB]">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-2">
-                      <Building className="w-4 h-4 text-[#00C750]" />
-                      <span className="text-xs font-bold uppercase tracking-wider text-gray-600">
-                        Bank Account
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleCopyAccountNo}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-[#007A31] hover:underline cursor-pointer"
-                    >
-                      {copiedBank ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedBank ? "Copied Account No!" : "Copy Account No"}</span>
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                    <div>
-                      <span className="text-gray-400 block text-[11px]">Bank:</span>
-                      <span className="font-semibold text-[#082830]">{bankDetails.bank}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-400 block text-[11px]">Account Name:</span>
-                      <span className="font-semibold text-[#082830]">{bankDetails.accountName}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-400 block text-[11px]">Account Number:</span>
-                      <span className="font-mono font-bold text-[#082830]">{bankDetails.accountNumber}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-400 block text-[11px]">Branch / Currency:</span>
-                      <span className="font-semibold text-[#082830]">{bankDetails.branch}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Plan & Cycle Summary Box */}
-                <div className="p-4 rounded-2xl bg-white border border-[#E5E7EB] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500 font-medium">Selected Subscription:</span>
-                      <span className="text-sm font-black text-[#082830]">{selectedPlan}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setBillingCycle("monthly")}
-                        className={`text-xs px-3 py-1 rounded-lg font-bold border transition-colors cursor-pointer ${billingCycle === "monthly"
-                            ? "bg-[#082830] text-white border-[#082830]"
-                            : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
-                          }`}
-                      >
-                        Monthly
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setBillingCycle("yearly")}
-                        className={`text-xs px-3 py-1 rounded-lg font-bold border transition-colors cursor-pointer ${billingCycle === "yearly"
-                            ? "bg-[#082830] text-white border-[#082830]"
-                            : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
-                          }`}
-                      >
-                        Yearly (Save)
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-xs text-gray-400 block">Total Amount to Transfer</span>
-                    <div className="flex items-baseline justify-end gap-1.5">
-                      {activePriceInfo.isDiscounted && !activePriceInfo.isFree && (
-                        <span className="text-sm line-through text-gray-400">
-                          LKR {Number(basePrice).toLocaleString()}
-                        </span>
-                      )}
-                      <span className="text-2xl sm:text-3xl font-black text-[#082830]">
-                        LKR {Number(activePriceInfo.finalPrice).toLocaleString()}
-                      </span>
-                    </div>
+            {/* Plan & Cycle Summary Box */}
+            <div className="p-5 rounded-2xl bg-[#F9FAFB] border border-[#E5E7EB] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <span className="text-xs text-gray-500 font-medium">Selected Plan:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-black text-[#082830]">{selectedPlan}</span>
                     {activePriceInfo.text && (
-                      <span className="text-[11px] font-bold text-[#007A31]">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#E6FDF0] text-[#007A31] font-bold">
                         {activePriceInfo.text}
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Upload Form */}
-                <form onSubmit={handleSubmitBankSlip} className="space-y-5">
-                  {/* File Upload Zone */}
-                  <div>
-                    <label className="block text-xs font-bold text-[#082830] mb-2">
-                      Photo of Payslip / Bank Deposit Receipt <span className="text-red-500">*</span>
-                    </label>
-
-                    {!slipFile ? (
-                      <label className="w-full flex flex-col items-center justify-center p-8 border-2 border-dashed border-[#E5E7EB] hover:border-[#00C750] rounded-2xl bg-[#F9FAFB] hover:bg-white transition-all cursor-pointer group">
-                        <div className="w-12 h-12 rounded-full bg-white border border-[#E5E7EB] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                          <Upload className="w-6 h-6 text-[#00C750]" />
-                        </div>
-                        <span className="text-sm font-bold text-[#082830]">Click to upload payslip photo</span>
-                        <span className="text-xs text-gray-400 mt-1">Supports JPG, PNG, WebP or PDF (Max 5MB)</span>
-                        <input
-                          type="file"
-                          required
-                          accept="image/*,application/pdf"
-                          onChange={(e) => handleSlipChange(e.target.files?.[0] || null)}
-                          className="hidden"
-                        />
-                      </label>
-                    ) : (
-                      <div className="p-4 rounded-2xl border border-[#E5E7EB] bg-[#F9FAFB] flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-3 min-w-0">
-                          {slipPreview ? (
-                            <div className="w-16 h-16 rounded-xl overflow-hidden border border-[#E5E7EB] shrink-0 bg-white">
-                              <img src={slipPreview} alt="Slip preview" className="w-full h-full object-cover" />
-                            </div>
-                          ) : (
-                            <div className="w-12 h-12 rounded-xl bg-[#E6FDF0] text-[#00C750] flex items-center justify-center shrink-0">
-                              <FileText className="w-6 h-6" />
-                            </div>
-                          )}
-                          <div className="min-w-0">
-                            <div className="text-xs font-bold text-[#082830] truncate">{slipFile.name}</div>
-                            <div className="text-[11px] text-gray-500">
-                              {(slipFile.size / 1024).toFixed(1)} KB • Ready for verification
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          <label className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white border border-[#E5E7EB] hover:bg-gray-50 text-[#082830] cursor-pointer transition-colors">
-                            <span>Change</span>
-                            <input
-                              type="file"
-                              accept="image/*,application/pdf"
-                              onChange={(e) => handleSlipChange(e.target.files?.[0] || null)}
-                              className="hidden"
-                            />
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => handleSlipChange(null)}
-                            className="p-1.5 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                            title="Remove photo"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Optional Reference */}
-                  <div>
-                    <label className="block text-xs font-bold text-[#082830] mb-1.5">
-                      Bank Reference Number / Remarks (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Ref # 20261011-8172 or Transfer Remarks"
-                      value={customerNotes}
-                      onChange={(e) => setCustomerNotes(e.target.value)}
-                      className={inputCls}
-                    />
-                  </div>
-
-                  {/* Submit Slip Button */}
-                  <button
-                    type="submit"
-                    disabled={uploadingSlip || !slipFile}
-                    className="w-full py-4 bg-[#00E35B] hover:bg-[#00C750] disabled:opacity-50 disabled:cursor-not-allowed text-[#041418] font-black rounded-2xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.99] cursor-pointer text-sm"
-                  >
-                    {uploadingSlip ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Uploading & Submitting Slip...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Submit Bank Slip for Approval</span>
-                      </>
-                    )}
-                  </button>
-                </form>
-
-
-              </div>
-            ) : (
-              /* Online Payments (Currently Disabled) */
-              <div className="text-center py-12 px-6 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl space-y-4">
-                <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto shadow-sm">
-                  <CreditCard className="w-8 h-8" />
-                </div>
-                <div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs font-bold mb-2">
-                    <span>Payment Gateway Unavailable</span>
-                  </div>
-                  <h4 className="text-lg font-bold text-[#082830]">
-                    Online Card Payments Temporarily Disabled
-                  </h4>
-                  <p className="text-gray-500 text-xs sm:text-sm max-w-md mx-auto leading-relaxed mt-1">
-                    Instant online card checkout is currently disabled for scheduled maintenance. Please use the <strong>Upload Bank Slip</strong> tab to make a direct bank deposit and activate your subscription.
-                  </p>
-                </div>
-
-                <div className="pt-2">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod("slip")}
-                    className="px-6 py-3 bg-[#082830] hover:bg-black text-white text-xs font-bold rounded-xl transition-colors cursor-pointer inline-flex items-center gap-2"
+                    onClick={() => setBillingCycle("monthly")}
+                    className={`text-xs px-3.5 py-1.5 rounded-xl font-bold border transition-colors cursor-pointer ${
+                      billingCycle === "monthly"
+                        ? "bg-[#082830] text-white border-[#082830]"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                    }`}
                   >
-                    <span>Switch to Bank Slip Deposit</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    Monthly
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBillingCycle("yearly")}
+                    className={`text-xs px-3.5 py-1.5 rounded-xl font-bold border transition-colors cursor-pointer ${
+                      billingCycle === "yearly"
+                        ? "bg-[#082830] text-white border-[#082830]"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                    }`}
+                  >
+                    Yearly (Save 17% · 2 Mo Free)
                   </button>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Progress Indicators */}
-        <div className="flex justify-center gap-2 mt-8 pb-4">
-          <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
-          <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
-          <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
-          <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
+              <div className="pt-3 border-t border-[#E5E7EB] flex items-center justify-between">
+                <span className="text-xs text-gray-500 font-medium">Total Amount</span>
+                <div className="flex items-baseline gap-2">
+                  {activePriceInfo.isDiscounted && !activePriceInfo.isFree && (
+                    <span className="text-sm line-through text-gray-400">
+                      LKR {Number(basePrice).toLocaleString()}
+                    </span>
+                  )}
+                  <span className="text-2xl sm:text-3xl font-black text-[#082830]">
+                    LKR {Number(activePriceInfo.finalPrice).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Gateway Checkout Actions */}
+            <div className="space-y-3 pt-2">
+              <button
+                type="button"
+                onClick={handleGatewayCheckout}
+                disabled={processingPayment}
+                className="w-full py-4 bg-[#00E35B] hover:bg-[#00C750] disabled:opacity-50 text-[#041418] font-black rounded-2xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.99] cursor-pointer text-sm"
+              >
+                {processingPayment ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Connecting to Payment Gateway...</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-4 h-4" />
+                    <span>Proceed to Secure Checkout</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+
+              {!gatewayStatus?.isConfigured && (
+                <div className="space-y-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleSandboxCheckout}
+                    disabled={processingPayment}
+                    className="w-full py-3 bg-[#082830] hover:bg-black text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <span>Complete Test Checkout (Sandbox Mode)</span>
+                  </button>
+                  <p className="text-[11px] text-gray-500 text-center">
+                    Note: Payments.lk keys pending in <code className="bg-gray-100 px-1 py-0.5 rounded font-mono">.env.local</code>. Use sandbox button above to complete instant test onboarding.
+                  </p>
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-[#E5E7EB] text-center">
+                <button
+                  type="button"
+                  onClick={handleSwitchToFree}
+                  disabled={submitting || processingPayment}
+                  className="text-xs text-gray-500 hover:text-gray-800 transition-colors cursor-pointer underline underline-offset-4"
+                >
+                  Start with Free Plan instead (Upgrade later)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Indicators (4 clean steps) */}
+          <div className="flex justify-center gap-2 mt-8 pb-4">
+            <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
+            <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
+            <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
+            <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
+          </div>
         </div>
       </div>
     );

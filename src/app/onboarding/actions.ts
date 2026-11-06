@@ -4,6 +4,7 @@ import sql from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { uploadToR2 } from "@/lib/r2";
 import { getLandingPlansFormatted } from "@/lib/plans-db";
+import { addPackageGatewayFee } from "@/lib/payment-gateway/fee";
 
 export async function getOnboardingPlansAction() {
   try {
@@ -173,27 +174,38 @@ export async function completeOnboarding(formData: FormData) {
         UPDATE coupons SET redeemed_count = redeemed_count + 1 WHERE id = ${validatedCoupon.id}
       `;
 
+      const planRows = await sql`
+        SELECT id FROM plans 
+        WHERE LOWER(name) = LOWER(${planName}) OR LOWER(key) = LOWER(${planName})
+        LIMIT 1
+      `;
+      const planId = planRows[0]?.id || 1;
+
       if (validatedCoupon.isComplimentary) {
         isComplimentary = true;
-        const planRows = await sql`
-          SELECT id FROM plans 
-          WHERE LOWER(name) = LOWER(${planName}) OR LOWER(key) = LOWER(${planName})
-          LIMIT 1
-        `;
-        const planId = planRows[0]?.id || 1;
-
         await sql`
           INSERT INTO subscriptions (
             tenant_id, user_id, plan_id, status, billing_interval,
-            current_period_start, current_period_end, source, created_at, updated_at
+            current_period_start, current_period_end, coupon_code, source, created_at, updated_at
           ) VALUES (
             ${tenantId}, ${dbUserId}, ${planId}, 'active', 'monthly',
-            NOW(), NOW() + interval '100 years', 'admin_comp', NOW(), NOW()
+            NOW(), NOW() + interval '100 years', ${validatedCoupon.code}, 'admin_comp', NOW(), NOW()
           )
         `;
 
         await sql`
           UPDATE tenants SET payment_status = 'paid' WHERE id = ${tenantId}
+        `;
+      } else {
+        // Save coupon code on initial subscription record so it persists into settings & billing
+        await sql`
+          INSERT INTO subscriptions (
+            tenant_id, user_id, plan_id, status, billing_interval,
+            current_period_start, current_period_end, coupon_code, created_at, updated_at
+          ) VALUES (
+            ${tenantId}, ${dbUserId}, ${planId}, 'active', 'monthly',
+            NOW(), NOW() + interval '30 days', ${validatedCoupon.code}, NOW(), NOW()
+          )
         `;
       }
     }
@@ -215,22 +227,14 @@ export async function completeOnboarding(formData: FormData) {
   }
 }
 
-export async function getCompanyBankDetailsAction() {
+import { createCheckoutSession, completeSandboxCheckout, getGatewayStatus } from "@/lib/payment-gateway";
+
+export async function getPaymentGatewayStatusAction() {
   try {
-    const rows = await sql`SELECT value FROM platform_settings WHERE key = 'bank_details' LIMIT 1`;
-    if (rows.length > 0 && rows[0].value) {
-      return { success: true, bankDetails: rows[0].value };
-    }
-  } catch {}
-  return {
-    success: true,
-    bankDetails: {
-      bank: "Bank of Ceylon",
-      accountName: "Framebooks Official",
-      accountNumber: "Official Bank Account",
-      branch: "Colombo / LKR",
-    }
-  };
+    return { success: true, status: getGatewayStatus() };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
 }
 
 export async function getOnboardingStatusAction() {
@@ -259,7 +263,6 @@ export async function getOnboardingStatusAction() {
     }
 
     const tenant = ownedTenantRows[0];
-    const tenantId = tenant.id;
     const isFree = (tenant.plan || "").toLowerCase() === "free";
 
     // If tenant is on Free plan or explicitly marked as paid
@@ -276,74 +279,14 @@ export async function getOnboardingStatusAction() {
     }
 
     // Tenant is on paid plan and payment_status is pending_payment
-    // Check payments table for this tenant
-    const paymentRows = await sql`
-      SELECT id, plan_id, amount, status, receipt_url, notes, created_at 
-      FROM payments 
-      WHERE tenant_id = ${tenantId} 
-      ORDER BY id DESC 
-      LIMIT 1
-    `;
-
-    if (paymentRows.length > 0) {
-      const p = paymentRows[0];
-      if (p.status === "paid") {
-        return {
-          success: true,
-          hasTenant: true,
-          isApproved: true,
-          tenantId: tenant.id,
-          tenantName: tenant.name,
-          plan: tenant.plan,
-        };
-      }
-      if (p.status === "failed") {
-        return {
-          success: true,
-          hasTenant: true,
-          isApproved: false,
-          isRejected: true,
-          reason: p.notes,
-          tenantId: tenant.id,
-          tenantName: tenant.name,
-          plan: tenant.plan,
-          payment: {
-            id: p.id,
-            amount: p.amount,
-            receiptUrl: p.receipt_url,
-            notes: p.notes,
-            createdAt: p.created_at,
-          },
-        };
-      }
-      // status === 'pending'
-      return {
-        success: true,
-        hasTenant: true,
-        isApproved: false,
-        isPending: true,
-        tenantId: tenant.id,
-        tenantName: tenant.name,
-        plan: tenant.plan,
-        payment: {
-          id: p.id,
-          amount: p.amount,
-          receiptUrl: p.receipt_url,
-          notes: p.notes,
-          createdAt: p.created_at,
-        },
-      };
-    }
-
-    // No payment submitted yet, but tenant exists with pending payment
     return {
       success: true,
       hasTenant: true,
       isApproved: false,
-      needsPaymentUpload: true,
+      needsPayment: true,
       tenantId: tenant.id,
       tenantName: tenant.name,
-      plan: tenant.plan,
+      plan: tenant.plan || "Pro",
     };
   } catch (err: any) {
     console.error("Error fetching onboarding status:", err);
@@ -351,7 +294,12 @@ export async function getOnboardingStatusAction() {
   }
 }
 
-export async function submitOnboardingPaymentAction(formData: FormData) {
+export async function initiateOnboardingCheckoutAction(params: {
+  tenantId?: number;
+  planName: string;
+  billingCycle: "monthly" | "yearly";
+  couponCode?: string;
+}) {
   try {
     const { userId, session } = await auth();
     if (!userId && !session?.user) {
@@ -362,119 +310,91 @@ export async function submitOnboardingPaymentAction(formData: FormData) {
     const numId = Number(userId) || 0;
 
     const userRows = await sql`
-      SELECT id, tenant_id FROM admin_users 
+      SELECT id, full_name, tenant_id FROM admin_users 
       WHERE (id = ${numId} AND ${numId} > 0) OR (email IS NOT NULL AND LOWER(email) = ${email})
       LIMIT 1
     `;
 
-    let tenantId = userRows[0]?.tenant_id;
-    const formTenantId = formData.get("tenantId");
-    if (formTenantId) {
-      tenantId = Number(formTenantId);
+    let tenantId = params.tenantId ? Number(params.tenantId) : userRows[0]?.tenant_id;
+    if (!tenantId) {
+      const owned = await sql`SELECT id FROM tenants WHERE LOWER(owner_email) = ${email} ORDER BY id DESC LIMIT 1`;
+      if (owned.length > 0) tenantId = owned[0].id;
     }
 
     if (!tenantId) {
       return { success: false, error: "No workspace found to attach payment to." };
     }
 
-    const dbUserId = userRows[0]?.id || null;
-    const planName = (formData.get("planName") as string) || "Pro";
-    const billingCycle = (formData.get("billingCycle") as string) || "monthly";
-    const amountVal = formData.get("amount");
-    const amount = amountVal ? Number(amountVal) : 0;
-    const slipFile = formData.get("slip") as File;
-    const customerNotes = (formData.get("notes") as string) || "";
-
-    if (!amount || amount <= 0) {
-      return { success: false, error: "Please enter a valid payment amount." };
-    }
-
-    if (!slipFile || slipFile.size === 0) {
-      return { success: false, error: "Please upload a photo of the payment slip." };
-    }
-
-    // 1. Upload to Cloudflare R2
-    const cleanFileName = `${tenantId}-${Date.now()}-${slipFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    const result = await uploadToR2({
-      file: slipFile,
-      fileName: cleanFileName,
-      folder: "subscriptions",
-    });
-    const slipUrl = result.url;
-
-    // 2. Lookup plan ID
-    let planId: number | null = null;
-    if (planName) {
-      const p = await sql`
-        SELECT id FROM plans 
-        WHERE LOWER(name) = LOWER(${planName}) OR key = LOWER(${planName}) 
-        LIMIT 1
-      `;
-      if (p.length > 0) planId = p[0].id;
-    }
-
-    const ref = `SLIP-${tenantId}-${Date.now().toString().slice(-6)}`;
-    const fullNotes = `Bank slip uploaded for ${planName} (${billingCycle})${customerNotes ? ` | Ref: ${customerNotes}` : ''}`;
-
-    // 3. Insert into payments table
-    const paymentInsert = await sql`
-      INSERT INTO payments (
-        tenant_id,
-        user_id,
-        plan_id,
-        amount,
-        currency,
-        method,
-        provider,
-        provider_reference,
-        status,
-        receipt_url,
-        notes,
-        created_at
-      )
-      VALUES (
-        ${tenantId},
-        ${dbUserId},
-        ${planId},
-        ${amount},
-        'LKR',
-        'bank_transfer',
-        'bank_slip',
-        ${ref},
-        'pending',
-        ${slipUrl},
-        ${fullNotes},
-        NOW()
-      )
-      RETURNING id, created_at
+    // Lookup plan
+    const planRows = await sql`
+      SELECT id, name, price_monthly, price_yearly, currency 
+      FROM plans 
+      WHERE LOWER(name) = LOWER(${params.planName}) OR LOWER(key) = LOWER(${params.planName})
+      LIMIT 1
     `;
 
-    // 4. Insert into tenant_subscriptions
-    await sql`
-      INSERT INTO tenant_subscriptions (tenant_id, plan_name, billing_cycle, amount, slip_url, status)
-      VALUES (${tenantId}, ${planName}, ${billingCycle}, ${amount}, ${slipUrl}, 'pending')
-    `;
+    if (planRows.length === 0) {
+      return { success: false, error: "Invalid plan selected." };
+    }
 
-    // 5. Ensure tenant is in pending_payment status
-    await sql`
-      UPDATE tenants 
-      SET payment_status = 'pending_payment', plan = ${planName} 
-      WHERE id = ${tenantId}
-    `;
+    const plan = planRows[0];
+    const baseAmount = params.billingCycle === "yearly" ? Number(plan.price_yearly) : Number(plan.price_monthly);
+    let amount = addPackageGatewayFee(baseAmount, params.billingCycle);
 
-    return {
-      success: true,
-      payment: {
-        id: paymentInsert[0].id,
-        amount,
-        receiptUrl: slipUrl,
-        notes: fullNotes,
-        createdAt: paymentInsert[0].created_at,
+    if (params.couponCode) {
+      const valRes = await validateCouponAction(params.couponCode, params.planName);
+      if (valRes.success && valRes.coupon) {
+        const c = valRes.coupon;
+        if (c.type === "percent" || (c as any).type === "percentage") {
+          amount = Math.round(amount * (1 - Number(c.value) / 100));
+        } else if (c.type === "fixed") {
+          amount = Math.max(0, amount - Number(c.value));
+        }
       }
-    };
+    }
+
+    const userName = userRows[0]?.full_name || session?.user?.name || "Customer";
+    const checkoutRes = await createCheckoutSession({
+      tenantId,
+      userId: userRows[0]?.id || null,
+      userEmail: email,
+      userName,
+      planId: plan.id,
+      planName: plan.name,
+      billingInterval: params.billingCycle,
+      amount,
+      currency: plan.currency || "LKR",
+      couponCode: params.couponCode,
+    });
+
+    return checkoutRes;
   } catch (err: any) {
-    console.error("Error submitting onboarding payment:", err);
-    return { success: false, error: err.message || "Failed to submit bank slip." };
+    console.error("Error creating onboarding checkout:", err);
+    return { success: false, error: err.message || "Failed to create checkout session." };
+  }
+}
+
+export async function completeOnboardingSandboxAction(params: {
+  tenantId: number;
+  planName: string;
+  billingCycle: "monthly" | "yearly";
+  amount: number;
+}) {
+  try {
+    const { userId } = await auth();
+    const sandboxSession = `SB-${params.tenantId}-${Date.now().toString().slice(-6)}`;
+    const res = await completeSandboxCheckout({
+      tenantId: params.tenantId,
+      userId: userId ? Number(userId) : null,
+      planName: params.planName,
+      billingInterval: params.billingCycle,
+      amount: params.amount,
+      sessionId: sandboxSession,
+    });
+    return res;
+  } catch (err: any) {
+    console.error("Error completing sandbox onboarding payment:", err);
+    return { success: false, error: err.message };
   }
 }
 

@@ -33,7 +33,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "Subscriptions", href: "/admin/subscriptions", icon: Repeat, permission: "view_subscriptions" },
+  { label: "Workspaces", href: "/admin/subscriptions", icon: Repeat, permission: "view_subscriptions" },
   { label: "Payments", href: "/admin/payments", icon: CreditCard, permission: "view_payments" },
   { label: "Plans", href: "/admin/plans", icon: Layers, permission: "view_plans" },
   { label: "Coupons", href: "/admin/coupons", icon: Tag, permission: "view_coupons" },

@@ -4,6 +4,7 @@
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { sanitizeCsvValue } from "@/lib/security/csv";
 import {
   Search,
   Download,
@@ -250,14 +251,14 @@ export function SubscriptionsClient({
       headers.join(","),
       ...users.map((r: any) =>
         [
-          r.id,
-          `"${r.email}"`,
-          `"${r.full_name || ''}"`,
-          `"${r.tenant_name || ''}"`,
-          r.current_plan,
-          r.workspace_role || r.role || "member",
-          r.is_banned ? "banned" : "active",
-          `"${new Date(r.created_at).toISOString()}"`,
+          sanitizeCsvValue(r.id),
+          sanitizeCsvValue(r.email),
+          sanitizeCsvValue(r.full_name || ''),
+          sanitizeCsvValue(r.tenant_name || ''),
+          sanitizeCsvValue(r.current_plan),
+          sanitizeCsvValue(r.workspace_role || r.role || "member"),
+          sanitizeCsvValue(r.is_banned ? "banned" : "active"),
+          sanitizeCsvValue(new Date(r.created_at).toISOString()),
         ].join(",")
       ),
     ].join("\n");
@@ -444,7 +445,7 @@ export function SubscriptionsClient({
       {/* Top Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <AdminStatCard
-          label="Active subscriptions"
+          label="Active Workspaces"
           value={businessCount}
         />
 

@@ -46,6 +46,7 @@ import {
 } from "@/app/(dashboard)/admin/users/actions";
 import { 
   adminRevokeTenantCoupon,
+  applyTenantCoupon,
   adminDeleteBusiness,
   adminUpdateBusinessRenewalDate,
 } from "@/app/(dashboard)/admin/subscriptions/actions";
@@ -120,6 +121,13 @@ export function BusinessDetailView({
   const [isRemoveBusinessPasskeysModalOpen, setIsRemoveBusinessPasskeysModalOpen] = useState(false);
   const [removingBusinessPasskeys, setRemovingBusinessPasskeys] = useState(false);
   const [currentBusinessPasskeysCount, setCurrentBusinessPasskeysCount] = useState<number>(businessData.passkeysCount ?? 0);
+
+  // Apply coupon state
+  const [isApplyCouponModalOpen, setIsApplyCouponModalOpen] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [couponReason, setCouponReason] = useState("");
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [applyCouponError, setApplyCouponError] = useState("");
 
   const {
     tenant,
@@ -255,6 +263,29 @@ export function BusinessDetailView({
       alert(err.message || "Failed to remove coupon");
     } finally {
       setRevokingCoupon(false);
+    }
+  };
+
+  const handleApplyCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!couponInput.trim()) return;
+    setApplyingCoupon(true);
+    setApplyCouponError("");
+    try {
+      await applyTenantCoupon({
+        tenantId: tenant.id,
+        couponCode: couponInput.trim(),
+        reason: couponReason || "Coupon attached by admin via business portal",
+      });
+      setIsApplyCouponModalOpen(false);
+      setCouponInput("");
+      setCouponReason("");
+      if (onRefresh) onRefresh();
+      router.refresh();
+    } catch (err: any) {
+      setApplyCouponError(err.message || "Failed to apply coupon");
+    } finally {
+      setApplyingCoupon(false);
     }
   };
 
@@ -516,9 +547,9 @@ export function BusinessDetailView({
                   </button>
                 </div>
               </div>
-              {appliedCoupon && (
-                <div className="py-2.5 flex justify-between items-center">
-                  <span className="text-gray-500">Applied Coupon</span>
+              <div className="py-2.5 flex justify-between items-center">
+                <span className="text-gray-500">Applied Coupon</span>
+                {appliedCoupon ? (
                   <div className="flex items-center gap-2">
                     <span className="inline-flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400 font-mono text-xs px-2.5 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
                       <Tag className="w-3 h-3" />
@@ -533,8 +564,24 @@ export function BusinessDetailView({
                       Remove
                     </button>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">None</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsApplyCouponModalOpen(true);
+                        setApplyCouponError("");
+                        setCouponInput("");
+                      }}
+                      className="text-xs font-semibold px-2 py-0.5 rounded-lg border border-border bg-card hover:bg-muted text-brand-600 dark:text-brand-400 transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <Tag className="w-3 h-3" />
+                      <span>+ Apply Coupon</span>
+                    </button>
+                  </div>
+                )}
+              </div>
               <div className="py-2.5 flex justify-between">
                 <span className="text-gray-500">Currency</span>
                 <span className="font-semibold">{tenant.currency || "LKR"}</span>
@@ -1275,6 +1322,84 @@ export function BusinessDetailView({
                 >
                   {savingRenewal && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   <span>Save Renewal Date</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Apply Coupon Modal */}
+      {isApplyCouponModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-card border border-border w-full max-w-md rounded-2xl shadow-xl overflow-hidden p-6 animate-in fade-in zoom-in-95">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <Tag className="w-5 h-5 text-brand-500" />
+                <h3 className="font-bold text-foreground text-base">Apply Coupon to {tenant.name}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsApplyCouponModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-muted text-gray-400 hover:text-foreground transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleApplyCoupon} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                  Coupon Code
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. SUMMER50, VIP100"
+                  value={couponInput}
+                  onChange={(e) => {
+                    setCouponInput(e.target.value.toUpperCase());
+                    setApplyCouponError("");
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm font-mono font-bold text-foreground outline-none focus:border-brand-500 transition-colors uppercase"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                  Reason / Notes (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Courtesy promotional discount / Partner agreement"
+                  value={couponReason}
+                  onChange={(e) => setCouponReason(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground outline-none focus:border-brand-500 transition-colors"
+                />
+              </div>
+
+              {applyCouponError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{applyCouponError}</span>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsApplyCouponModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold hover:bg-muted text-foreground transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={applyingCoupon || !couponInput.trim()}
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-brand-500 hover:bg-brand-400 text-brand-950 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {applyingCoupon && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Apply Coupon</span>
                 </button>
               </div>
             </form>

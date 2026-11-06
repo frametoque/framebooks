@@ -18,6 +18,13 @@ export function Money({ amount, compact = false, className = "" }: { amount: num
 
 export function PlanBadge({ plan, className = "" }: { plan: string | null | undefined; className?: string }) {
   const p = (plan || 'Free').toLowerCase();
+  if (p === 'wallet' || p.includes('wallet')) {
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 ${className}`}>
+        WALLET
+      </span>
+    );
+  }
   if (p === 'pro_plus' || p === 'pro plus') {
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-500/15 text-brand-700 dark:text-brand-400 border border-brand-500/30 ${className}`}>

@@ -87,7 +87,7 @@ export function PaymentDetailClient({ data }: { data: any }) {
                 }}
                 className="px-4 py-2.5 bg-red-600/15 hover:bg-red-600/25 text-red-600 dark:text-red-400 border border-red-500/30 font-bold rounded-xl text-sm transition-all"
               >
-                Reject Slip
+                Reject Payment
               </button>
             </>
           )}
@@ -150,10 +150,10 @@ export function PaymentDetailClient({ data }: { data: any }) {
             )}
           </div>
 
-          {/* Receipt / Slip Preview Viewer */}
+          {/* Receipt Preview Viewer */}
           <div className="bg-card border border-border rounded-3xl p-6 shadow-2xs space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-foreground text-base">Payment Slip / Receipt Document</h3>
+              <h3 className="font-bold text-foreground text-base">Payment Receipt / Proof Document</h3>
               {payment.receipt_url && (
                 <a
                   href={payment.receipt_url}
@@ -177,14 +177,14 @@ export function PaymentDetailClient({ data }: { data: any }) {
                 ) : (
                   <img
                     src={payment.receipt_url}
-                    alt="Deposit Receipt"
+                    alt="Receipt"
                     className="max-h-[500px] w-auto object-contain rounded-xl shadow-md"
                   />
                 )}
               </div>
             ) : (
               <div className="p-12 text-center text-gray-400 text-sm border border-dashed border-border rounded-2xl">
-                No deposit slip or receipt was uploaded for this transaction.
+                No receipt or payment attachment was attached to this transaction.
               </div>
             )}
           </div>

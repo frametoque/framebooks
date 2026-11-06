@@ -48,7 +48,7 @@ export default async function BusinessDetailPage({
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-sm text-gray-500">
         <Link href="/admin/subscriptions" className="hover:text-foreground flex items-center gap-1 transition-colors">
-          <ChevronLeft className="w-4 h-4" /> Subscriptions & Businesses
+          <ChevronLeft className="w-4 h-4" /> Workspaces
         </Link>
         <span>/</span>
         <span className="text-foreground font-medium">{businessData.tenant.name}</span>

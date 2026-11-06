@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from '@/lib/auth';
-import postgres from "postgres";
-const neon = postgres;
+import sql from "@/lib/db";
 
 export async function POST(req: Request) {
   try {
@@ -13,8 +12,6 @@ export async function POST(req: Request) {
 
     const { inviteId, action } = await req.json();
     if (!inviteId || !action) return new NextResponse("Bad Request", { status: 400 });
-
-    const sql = neon(process.env.DATABASE_URL!);
 
     // Verify invite
     const inviteRows = await sql`

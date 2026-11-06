@@ -3,25 +3,10 @@ import React, { Suspense } from 'react';
 import MainPage from '../MainPage';
 import { getActivePlans } from "@/lib/plans-db";
 import { redirect } from "next/navigation";
+import { getUserContext } from "../../actions/rbac";
+import { isSettingsSectionAllowed, SETTINGS_SLUG_TO_TAB } from "../settings-permissions";
 
 export const dynamic = "force-dynamic";
-
-const SETTINGS_SLUG_TO_TAB: Record<string, string> = {
-  "profile": "profile",
-  "business": "business",
-  "appearance": "appearance",
-  "invoice-layout": "appearance",
-  "invoice_layout": "appearance",
-  "billing": "billing",
-  "team": "team",
-  "roles": "team",
-  "audit-logs": "audit_logs",
-  "audit_logs": "audit_logs",
-  "export": "export",
-  "danger": "danger",
-  "preferences": "prefs",
-  "prefs": "prefs",
-};
 
 const SECTION_METADATA: Record<string, { title: string; description: string }> = {
   "profile": { title: "Account & Security | Framebooks", description: "Manage your profile, connected accounts, and app lock." },
@@ -63,6 +48,11 @@ export default async function SettingsSectionPage({
   const section = resolvedParams?.section || "";
   const tab = SETTINGS_SLUG_TO_TAB[section];
   if (!tab) {
+    redirect("/user/settings");
+  }
+
+  const { role } = await getUserContext();
+  if (!role || !isSettingsSectionAllowed(section, role)) {
     redirect("/user/settings");
   }
 

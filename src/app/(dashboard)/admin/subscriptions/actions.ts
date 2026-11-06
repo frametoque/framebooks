@@ -538,6 +538,84 @@ export async function adminRevokeTenantCoupon({
   return { success: true, removedCoupon: redemption.code };
 }
 
+export async function applyTenantCoupon({
+  tenantId,
+  couponCode,
+  reason = "",
+}: {
+  tenantId: number;
+  couponCode: string;
+  reason?: string;
+}) {
+  const actor = await requireAdmin("manage_subscriptions");
+  const cleanCode = couponCode.trim().toUpperCase();
+  if (!cleanCode) throw new Error("Coupon code is required");
+
+  const couponRows = await sql`
+    SELECT * FROM coupons 
+    WHERE UPPER(code) = ${cleanCode} AND is_active = true 
+    AND (valid_from IS NULL OR valid_from <= NOW())
+    AND (valid_to IS NULL OR valid_to > NOW())
+    AND (max_redemptions IS NULL OR redeemed_count <= max_redemptions)
+    LIMIT 1
+  `;
+  if (couponRows.length === 0) {
+    throw new Error("Invalid or inactive coupon code.");
+  }
+  const coupon = couponRows[0];
+
+  // 1. Record redemption in coupon_redemptions
+  await sql`DELETE FROM coupon_redemptions WHERE tenant_id = ${tenantId}`;
+  await sql`
+    INSERT INTO coupon_redemptions (coupon_id, tenant_id, redeemed_at)
+    VALUES (${coupon.id}, ${tenantId}, NOW())
+  `;
+  await sql`
+    UPDATE coupons SET redeemed_count = redeemed_count + 1 WHERE id = ${coupon.id}
+  `;
+
+  // 2. Attach to subscriptions table
+  const subRows = await sql`SELECT id FROM subscriptions WHERE tenant_id = ${tenantId} ORDER BY id DESC LIMIT 1`;
+  if (subRows.length > 0) {
+    await sql`
+      UPDATE subscriptions 
+      SET coupon_code = ${coupon.code}, updated_at = NOW() 
+      WHERE id = ${subRows[0].id}
+    `;
+  } else {
+    const t = await sql`SELECT plan FROM tenants WHERE id = ${tenantId} LIMIT 1`;
+    const planName = t[0]?.plan || "Free";
+    const pRows = await sql`SELECT id FROM plans WHERE LOWER(name) = LOWER(${planName}) LIMIT 1`;
+    const planId = pRows[0]?.id || 1;
+    await sql`
+      INSERT INTO subscriptions (
+        tenant_id, plan_id, status, billing_interval,
+        current_period_start, current_period_end, coupon_code, created_at, updated_at
+      ) VALUES (
+        ${tenantId}, ${planId}, 'active', 'monthly',
+        NOW(), NOW() + interval '30 days', ${coupon.code}, NOW(), NOW()
+      )
+    `;
+  }
+
+  // 3. Log admin action
+  await logAdminAction({
+    actor,
+    action: "APPLY_COUPON",
+    targetType: "tenant",
+    targetId: tenantId,
+    after: { coupon_code: coupon.code, value: coupon.value, type: coupon.type, reason },
+  });
+
+  revalidatePath("/admin/subscriptions");
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/businesses/${tenantId}`);
+  revalidatePath("/user/settings");
+  revalidatePath("/user/settings/billing");
+
+  return { success: true, coupon };
+}
+
 export async function adminToggleTenantPaymentStatus({
   tenantId,
   paymentStatus,

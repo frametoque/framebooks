@@ -5,7 +5,7 @@ import { SubscriptionsClient } from "./SubscriptionsClient";
 import { getWorkspacesAndSubscriptionsList } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Subscriptions & Businesses",
+  title: "Workspaces",
 };
 
 export const dynamic = "force-dynamic";

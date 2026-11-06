@@ -1,6 +1,5 @@
 import {  auth  } from '@/lib/auth';
-import postgres from "postgres";
-const neon = postgres;
+import sql from "@/lib/db";
 
 export type Role = string;
 export type ResourceType = 'invoices' | 'incomes' | 'expenses' | 'clients' | 'accounts' | 'inventory' | 'settings' | 'team' | 'export' | 'billing';
@@ -17,7 +16,6 @@ export async function getUserContext() {
   const numId = Number(userId) || 0;
   const safeId = (numId > 0 && numId < 2147483647) ? numId : 0;
 
-  const sql = neon(process.env.DATABASE_URL!);
   const userRows = await sql`
     SELECT id, tenant_id, role 
     FROM admin_users 
@@ -54,7 +52,6 @@ export async function hasPermission(role: Role | null, resource: ResourceType, a
     return role.toLowerCase() === 'owner';
   }
 
-  const sql = neon(process.env.DATABASE_URL!);
   let result;
   
   if (tenantId) {
@@ -110,7 +107,6 @@ export async function hasPermission(role: Role | null, resource: ResourceType, a
 export async function checkTenantReadOnly(tenantId: number | string | null): Promise<boolean> {
   if (!tenantId) return false;
   try {
-    const sql = neon(process.env.DATABASE_URL!);
     const tenantRows = await sql`SELECT plan, plan_expires_at, payment_status FROM tenants WHERE id = ${tenantId} LIMIT 1`;
     if (tenantRows.length === 0) return false;
 
@@ -193,5 +189,5 @@ export async function requirePermission(resource: ResourceType, action: ActionTy
     return { error: "Insufficient permissions to perform this action.", context: null };
   }
 
-  return { error: null, context: { userId, role, tenantId, sql: neon(process.env.DATABASE_URL!) } };
+  return { error: null, context: { userId, role, tenantId, sql } };
 }

@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Percent, Link as LinkIcon } from "lucide-react";
+import { Percent, Link as LinkIcon, Calculator, Building2, User, Info } from "lucide-react";
 import { MdTrendingUp, MdTrendingDown, MdAttachMoney, MdDownload, MdInsertDriveFile, MdCalendarToday, MdGroup, MdMenuBook, MdSearch, MdCallMade, MdCallReceived, MdShowChart } from "react-icons/md";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { getReports, getClients } from "../actions/actions";
 import AnimatedNumber from "../components/AnimatedNumber";
 import { useAdminDateRange } from "../context/AdminDateRangeContext";
+import { useTaxEstimator } from "../context/TaxEstimatorContext";
 import WheelDatePicker from "../components/WheelDatePicker";
 import { PlanType } from "@/lib/plans";
 import { getTenantPlan } from "../actions/plan";
@@ -21,7 +22,7 @@ export const REPORT_TAB_TO_SLUG: Record<ReportTab, string> = {
   profit_loss: "profit-loss",
   cash_flow: "cash-flow",
   balance_sheet: "balance-sheet",
-  tax_summary: "tax-summary",
+  tax_summary: "tax-estimator",
   trial_balance: "trial-balance",
   general_ledger: "general-ledger",
   account_ledger: "account-ledger",
@@ -37,6 +38,8 @@ export const SLUG_TO_REPORT_TAB: Record<string, ReportTab> = {
   "balance_sheet": "balance_sheet",
   "tax-summary": "tax_summary",
   "tax_summary": "tax_summary",
+  "tax-estimator": "tax_summary",
+  "tax_estimator": "tax_summary",
   "trial-balance": "trial_balance",
   "trial_balance": "trial_balance",
   "general-ledger": "general_ledger",
@@ -55,12 +58,24 @@ const formatLKR = (amount: number) => {
 
 const RED_PALETTE = ['#EF4444', '#E03C3C', '#D13535', '#C22D2D', '#B32525', '#A41D1D'];
 
+// Sri Lanka Inland Revenue Department (IRD) Individual / Sole Proprietor Progressive Tax Slabs
+// Under Inland Revenue Act No. 24 of 2017 as amended by Act No. 45 of 2022
+const SRI_LANKA_INDIVIDUAL_SLABS = [
+  { name: "Personal Relief (Tax-Free)", rangeLabel: "First 1,200,000 LKR", rate: 0, limit: 1200000 },
+  { name: "1st Tax Tier", rangeLabel: "Next 500,000 LKR (1.2M - 1.7M)", rate: 6, limit: 500000 },
+  { name: "2nd Tax Tier", rangeLabel: "Next 500,000 LKR (1.7M - 2.2M)", rate: 12, limit: 500000 },
+  { name: "3rd Tax Tier", rangeLabel: "Next 500,000 LKR (2.2M - 2.7M)", rate: 18, limit: 500000 },
+  { name: "4th Tax Tier", rangeLabel: "Next 500,000 LKR (2.7M - 3.2M)", rate: 24, limit: 500000 },
+  { name: "5th Tax Tier", rangeLabel: "Next 500,000 LKR (3.2M - 3.7M)", rate: 30, limit: 500000 },
+  { name: "Top Tax Tier", rangeLabel: "Balance exceeding 3,700,000 LKR", rate: 36, limit: Infinity },
+];
+
 export const REPORT_TAB_TITLES: Record<ReportTab, string> = {
   overview: "Overview",
   profit_loss: "Profit & Loss",
   cash_flow: "Cash Flow",
   balance_sheet: "Balance Sheet",
-  tax_summary: "Tax Summary",
+  tax_summary: "Tax Estimator",
   trial_balance: "Trial Balance",
   general_ledger: "General Ledger",
   account_ledger: "Account Ledger",
@@ -91,6 +106,16 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
   const [searchTerm, setSearchTerm] = useState("");
   const [journalFilter, setJournalFilter] = useState("all");
   const [activePicker, setActivePicker] = useState<"trial_date" | null>(null);
+
+  // Tax Estimator State (synchronized with top bar via TaxEstimatorContext)
+  const {
+    taxEntityType,
+    taxProfitBasis,
+    customProfit: customProfitInput,
+    customRate: customRateInput,
+    additionalDeductions: additionalDeductionsInput,
+    setAdditionalDeductions,
+  } = useTaxEstimator();
 
   // Trial balance uses its own local date (not the shared global date) 
   // so switching tabs doesn't re-trigger the main data load.
@@ -372,7 +397,7 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
             { id: "profit_loss", label: "Profit & Loss", icon: <MdTrendingUp className="w-4 h-4" /> },
             { id: "cash_flow", label: "Cash Flow", icon: <MdAttachMoney className="w-4 h-4" /> },
             { id: "balance_sheet", label: "Balance Sheet", icon: <MdMenuBook className="w-4 h-4" /> },
-            { id: "tax_summary", label: "Tax Summary", icon: <Percent className="w-4 h-4" /> },
+            { id: "tax_summary", label: "Tax Estimator", icon: <Calculator className="w-4 h-4" /> },
             { id: "trial_balance", label: "Trial Balance", icon: <MdInsertDriveFile className="w-4 h-4" /> },
             { id: "general_ledger", label: "General Ledger", icon: <MdMenuBook className="w-4 h-4" /> },
             { id: "account_ledger", label: "Account Ledger", icon: <MdGroup className="w-4 h-4" /> }
@@ -973,35 +998,249 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
         </div>
       )}
 
-      {activeTab === "tax_summary" && data?.advanced && (
-        <div className="bg-card border border-border rounded-3xl p-8 overflow-x-auto print:p-0 print:border-none max-w-2xl shadow-xs">
-          <h2 className="text-2xl font-bold mb-6 text-foreground">Tax Summary</h2>
-          <table className="w-full text-sm text-left">
-            <thead className="border-b border-border bg-slate-50/75 dark:bg-white/[0.02] text-gray-700 dark:text-gray-400">
-              <tr>
-                <th className="py-4 px-4 font-semibold uppercase tracking-wider">Tax Type</th>
-                <th className="py-4 px-4 font-semibold uppercase tracking-wider text-right">Amount (LKR)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors group">
-                <td className="py-4 px-4 font-medium text-foreground">Tax Collected (Sales/Invoices)</td>
-                <td className="py-4 px-4 text-right text-gray-700 dark:text-gray-300 font-medium">{formatLKR(data.advanced.taxCollected)}</td>
-              </tr>
-              <tr className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors group text-gray-500">
-                <td className="py-4 px-4 font-medium">Tax Paid (Expenses/Purchases)</td>
-                <td className="py-4 px-4 text-right">-</td>
-              </tr>
-              <tr className="bg-slate-100 dark:bg-white/10 font-bold border-t-2 border-slate-300 dark:border-white/20">
-                <td className="py-4 px-4 text-foreground uppercase tracking-wider">Net Tax Liability</td>
-                <td className="py-4 px-4 text-right text-base text-amber-600 dark:text-amber-400 font-bold">
-                  {formatLKR(data.advanced.taxCollected)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <p className="mt-4 text-xs text-gray-600 dark:text-gray-400">* Note: Net Tax Liability is the estimated tax you owe based on recorded invoices. Please consult a professional accountant for official filings.</p>
-        </div>
+      {activeTab === "tax_summary" && (
+        (() => {
+          const getDays = (s?: string, e?: string) => {
+            if (!s || !e) return 365;
+            try {
+              const d1 = new Date(s);
+              const d2 = new Date(e);
+              const diff = Math.ceil(Math.abs(d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+              return diff > 0 ? diff : 365;
+            } catch {
+              return 365;
+            }
+          };
+
+          const periodNetProfit = data?.netProfit ?? 0;
+
+          let baseProfit = periodNetProfit;
+          if (taxProfitBasis === "custom") {
+            const parsed = parseFloat(customProfitInput);
+            baseProfit = isNaN(parsed) ? 0 : parsed;
+          }
+
+          const additionalDeductions = Math.max(0, parseFloat(additionalDeductionsInput) || 0);
+          const taxableProfit = Math.max(0, baseProfit - additionalDeductions);
+
+          let totalEstimatedTax = 0;
+          let breakdown: {
+            tier: string;
+            range: string;
+            rate: number;
+            taxableInTier: number;
+            taxInTier: number;
+          }[] = [];
+
+          if (taxEntityType === "corporate") {
+            const citRate = 30; // Standard Sri Lanka Corporate Income Tax (CIT)
+            totalEstimatedTax = (taxableProfit * citRate) / 100;
+            breakdown = [
+              {
+                tier: "Corporate Income Tax (CIT)",
+                range: "Standard Flat Rate under Inland Revenue Act No. 45 of 2022",
+                rate: citRate,
+                taxableInTier: taxableProfit,
+                taxInTier: totalEstimatedTax,
+              }
+            ];
+          } else if (taxEntityType === "custom") {
+            const parsedRate = Math.max(0, Math.min(100, parseFloat(customRateInput) || 0));
+            totalEstimatedTax = (taxableProfit * parsedRate) / 100;
+            breakdown = [
+              {
+                tier: "Concessionary / Custom Rate",
+                range: `Special / Concessionary Sector Rate (${parsedRate}%)`,
+                rate: parsedRate,
+                taxableInTier: taxableProfit,
+                taxInTier: totalEstimatedTax,
+              }
+            ];
+          } else {
+            // Sole Proprietor / Individual progressive slabs (Inland Revenue Act)
+            let remaining = taxableProfit;
+            for (const slab of SRI_LANKA_INDIVIDUAL_SLABS) {
+              if (remaining <= 0) {
+                breakdown.push({
+                  tier: slab.name,
+                  range: slab.rangeLabel,
+                  rate: slab.rate,
+                  taxableInTier: 0,
+                  taxInTier: 0,
+                });
+                continue;
+              }
+
+              const taxableInTier = slab.limit === Infinity ? remaining : Math.min(remaining, slab.limit);
+              const tierTax = (taxableInTier * slab.rate) / 100;
+              totalEstimatedTax += tierTax;
+              remaining -= taxableInTier;
+
+              breakdown.push({
+                tier: slab.name,
+                range: slab.rangeLabel,
+                rate: slab.rate,
+                taxableInTier: taxableInTier,
+                taxInTier: tierTax,
+              });
+            }
+          }
+
+          const effectiveRate = baseProfit > 0 ? ((totalEstimatedTax / baseProfit) * 100).toFixed(1) : "0.0";
+          const netProfitAfterTax = baseProfit - totalEstimatedTax;
+          const quarterlyTax = totalEstimatedTax / 4;
+
+          return (
+            <div className="space-y-6">
+              {/* Important Sri Lankan Tax Disclaimer */}
+              <div className="bg-amber-500/[0.05] border border-amber-500/20 rounded-2xl p-4 flex items-start gap-3">
+                <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                  <strong className="text-foreground">Important Sri Lankan Tax Disclaimer:</strong> This tool calculates an indicative tax estimate using your net accounting profit (total revenue minus allowable expenses) based on the Inland Revenue Act No. 24 of 2017 (as amended by Act No. 45 of 2022). Actual taxable profit for Inland Revenue Department (IRD) returns (Form IT) may require tax adjustments for non-deductible accounting expenses (e.g., disallowed entertainment or motor vehicle lease limits) and capital allowances instead of accounting depreciation. Please consult a licensed Chartered Accountant or tax consultant before submitting your tax return.
+                </div>
+              </div>
+
+              {/* Four Metric KPI Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-card border border-border rounded-3xl p-6 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                      Taxable Net Profit
+                    </div>
+                    <div className="text-2xl font-bold text-foreground">{formatLKR(taxableProfit)}</div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mt-3 pt-3 border-t border-border">
+                    <span className="truncate">
+                      {taxProfitBasis === "custom" ? "Custom target" : taxProfitBasis === "last year" ? "Last year's profit" : "This year's profit"}
+                    </span>
+                    <label className="flex items-center gap-1 shrink-0" title="Additional non-taxable exemptions or relief">
+                      <span className="text-[10px] text-gray-500">Exemptions:</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={additionalDeductionsInput}
+                        onChange={(e) => setAdditionalDeductions(e.target.value)}
+                        className="w-16 px-1 py-0.5 rounded border border-border text-foreground text-[11px] font-semibold bg-transparent focus:outline-hidden focus:border-brand-500 text-right"
+                        placeholder="0"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="bg-card border border-amber-500/30 dark:border-amber-500/20 bg-amber-500/[0.03] rounded-3xl p-6 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">
+                      Estimated Tax Payable
+                    </div>
+                    <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{formatLKR(totalEstimatedTax)}</div>
+                  </div>
+                  <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-3 pt-3 border-t border-border">
+                    Estimated liability to IRD
+                  </p>
+                </div>
+
+                <div className="bg-card border border-border rounded-3xl p-6 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                      Effective Tax Rate
+                    </div>
+                    <div className="text-2xl font-bold text-foreground">{effectiveRate}%</div>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 pt-3 border-t border-border">
+                    {taxEntityType === "corporate" ? "Flat 30% CIT" : taxEntityType === "individual" ? "Blended progressive slabs" : `${customRateInput}% custom`}
+                  </p>
+                </div>
+
+                <div className="bg-card border border-emerald-500/30 dark:border-emerald-500/20 bg-emerald-500/[0.03] rounded-3xl p-6 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-2">
+                      Net Profit After Tax
+                    </div>
+                    <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatLKR(netProfitAfterTax)}</div>
+                  </div>
+                  <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 mt-3 pt-3 border-t border-border">
+                    Retained business earnings
+                  </p>
+                </div>
+              </div>
+
+              {/* Slabs / Tax Calculation Breakdown Table */}
+              <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-xs overflow-x-auto">
+                <h3 className="text-lg font-bold text-foreground mb-4">Tax Calculation Breakdown</h3>
+
+                <table className="w-full text-sm text-left">
+                  <thead className="border-b border-border bg-slate-50/75 dark:bg-white/[0.02] text-gray-700 dark:text-gray-400">
+                    <tr>
+                      <th className="py-3 px-4 font-semibold uppercase tracking-wider text-xs">Bracket / Tier</th>
+                      <th className="py-3 px-4 font-semibold uppercase tracking-wider text-xs">Threshold / IRD Range</th>
+                      <th className="py-3 px-4 font-semibold uppercase tracking-wider text-xs text-center">Tax Rate</th>
+                      <th className="py-3 px-4 font-semibold uppercase tracking-wider text-xs text-right">Taxable in Tier (LKR)</th>
+                      <th className="py-3 px-4 font-semibold uppercase tracking-wider text-xs text-right">Tax Payable (LKR)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {breakdown.map((row, i) => (
+                      <tr key={i} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                        <td className="py-3.5 px-4 font-medium text-foreground">{row.tier}</td>
+                        <td className="py-3.5 px-4 text-gray-500 dark:text-gray-400 text-xs">{row.range}</td>
+                        <td className="py-3.5 px-4 text-center font-semibold text-gray-700 dark:text-gray-300">
+                          {row.rate === 0 ? "0% (Free)" : `${row.rate}%`}
+                        </td>
+                        <td className="py-3.5 px-4 text-right text-gray-700 dark:text-gray-300 font-medium">
+                          {formatLKR(row.taxableInTier)}
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-semibold text-foreground">
+                          {formatLKR(row.taxInTier)}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="bg-slate-100/75 dark:bg-white/10 font-bold border-t-2 border-slate-300 dark:border-white/20">
+                      <td colSpan={3} className="py-4 px-4 text-foreground uppercase tracking-wider text-xs">
+                        Total Estimated Business Tax
+                      </td>
+                      <td className="py-4 px-4 text-right text-foreground font-bold">
+                        {formatLKR(taxableProfit)}
+                      </td>
+                      <td className="py-4 px-4 text-right text-base text-amber-600 dark:text-amber-400 font-bold">
+                        {formatLKR(totalEstimatedTax)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Quarterly Advance Tax Payment Schedule */}
+              <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-xs">
+                <h3 className="text-lg font-bold text-foreground mb-4">Quarterly Advance Tax Payment Schedule</h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                  {[
+                    { quarter: "Quarter 1", period: "1 Apr – 30 Jun", due: "15 August", amount: quarterlyTax },
+                    { quarter: "Quarter 2", period: "1 Jul – 30 Sep", due: "15 November", amount: quarterlyTax },
+                    { quarter: "Quarter 3", period: "1 Oct – 31 Dec", due: "15 February", amount: quarterlyTax },
+                    { quarter: "Quarter 4", period: "1 Jan – 31 Mar", due: "15 May", amount: quarterlyTax },
+                  ].map((q, idx) => (
+                    <div key={idx} className="bg-slate-50 dark:bg-white/[0.02] border border-border rounded-2xl p-4 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-bold text-foreground uppercase tracking-wider">{q.quarter}</span>
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400">
+                            25%
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{q.period}</p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-border">
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400">Due Date: <strong className="text-foreground">{q.due}</strong></div>
+                        <div className="text-base font-bold text-foreground mt-1">{formatLKR(q.amount)}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()
       )}
         </>
       )}

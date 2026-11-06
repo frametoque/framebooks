@@ -269,12 +269,12 @@ export function OverviewClient({
 
       {/* Actionable Lists Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pending Slips */}
+        {/* Pending Payments */}
         <div className="bg-card border border-border rounded-3xl p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-border/60 pb-3">
             <h3 className="font-bold text-foreground text-sm flex items-center gap-2">
               <Clock className="w-4 h-4 text-amber-500" />
-              <span>Pending review</span>
+              <span>Pending Payments</span>
             </h3>
             <Link href="/admin/payments?status=pending" className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline">
               View all

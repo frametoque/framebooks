@@ -40,12 +40,27 @@ export async function uploadReceipt(formData: FormData, type: 'income' | 'expens
     throw new Error("No file uploaded");
   }
 
+  // File size validation (Max 10MB)
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error("File size exceeds 10MB limit. Please upload a smaller receipt.");
+  }
+
+  // Allowed MIME types for financial receipts
+  const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    throw new Error("Invalid file type. Only JPG, PNG, WebP, and PDF documents are allowed.");
+  }
+
   try {
-    const cleanFileName = `${tenantId ? `tenant-${tenantId}-` : ''}${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
+    const randomSuffix = crypto.randomUUID().slice(0, 12);
+    const cleanBaseName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').slice(0, 50);
+    const cleanFileName = `${tenantId ? `tenant-${tenantId}-` : ''}${Date.now()}-${randomSuffix}-${cleanBaseName}`;
     const result = await uploadToR2({
       file,
       fileName: cleanFileName,
       folder: `receipts/${type}`,
+      contentType: file.type,
     });
     
     await logSystemAction(`Uploaded ${type} receipt: "${file.name}"`);

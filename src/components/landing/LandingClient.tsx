@@ -394,7 +394,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                 <span className={`text-sm sm:text-base font-semibold flex items-center gap-1.5 ${yearly ? 'text-[#082830]' : 'text-gray-500'}`}>
                   Yearly
                   <span className="text-[11px] sm:text-xs font-bold text-[#007A31] bg-[#E6FDF0] px-2 py-0.5 rounded-full border border-[#00E35B]/20">
-                    Save 20%
+                    Save 17% · 2 months free
                   </span>
                 </span>
               </div>

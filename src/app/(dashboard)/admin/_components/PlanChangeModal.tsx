@@ -117,7 +117,7 @@ export function PlanChangeModal({
               {/* Plan Selection Cards */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
-                  Select New Tier
+                  Select New Plan
                 </label>
                 <div className="grid grid-cols-3 gap-3">
                   {allPlans.map((p) => {

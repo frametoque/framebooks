@@ -1,6 +1,7 @@
 // src/lib/plans-db.ts
 import sql, { cachedQuery } from "@/lib/db";
 import { plans as fallbackPlans } from "@/data/landing/content";
+import { addPackageGatewayFee } from "@/lib/payment-gateway/fee";
 
 export interface DBPlan {
   id: number;
@@ -44,7 +45,11 @@ export async function getActivePlans(): Promise<DBPlan[]> {
           SELECT * FROM plans WHERE is_active = true ORDER BY sort_order ASC
         `;
         if (rows.length === 0) throw new Error("No plans in database");
-        return (rows as unknown) as DBPlan[];
+        return ((rows as unknown) as DBPlan[]).map(p => ({
+          ...p,
+          price_monthly: addPackageGatewayFee(Number(p.price_monthly), "monthly"),
+          price_yearly: addPackageGatewayFee(Number(p.price_yearly), "yearly"),
+        }));
       },
       ["plans-all"],
       3600
@@ -72,8 +77,8 @@ export async function getActivePlans(): Promise<DBPlan[]> {
         key: 'pro',
         name: 'Pro',
         description: 'Advanced tools to manage finances and grow faster.',
-        price_monthly: 2500,
-        price_yearly: 25000,
+        price_monthly: 2600,
+        price_yearly: 26000,
         currency: 'LKR',
         is_active: true,
         is_popular: true,
@@ -86,8 +91,8 @@ export async function getActivePlans(): Promise<DBPlan[]> {
         key: 'pro_plus',
         name: 'Pro Plus',
         description: 'For Power Users and large teams',
-        price_monthly: 5000,
-        price_yearly: 50000,
+        price_monthly: 5200,
+        price_yearly: 52000,
         currency: 'LKR',
         is_active: true,
         is_popular: false,

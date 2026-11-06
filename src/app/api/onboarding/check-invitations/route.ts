@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import {  auth, currentUser  } from '@/lib/auth';
-import postgres from "postgres";
-const neon = postgres;
+import sql from "@/lib/db";
 
 export async function GET() {
   try {
@@ -9,8 +8,6 @@ export async function GET() {
     if (!userId && !session?.user) return new NextResponse("Unauthorized", { status: 401 });
 
     const email = session?.user?.email?.trim().toLowerCase() || "";
-
-    const sql = neon(process.env.DATABASE_URL!);
 
     // Check if user already owns a business profile
     const ownedTenantRows = await sql`

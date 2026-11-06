@@ -92,22 +92,37 @@ export async function uploadToR2({
   let resolvedContentType = contentType;
 
   if (file instanceof File || file instanceof Blob) {
+    // Universal file size limit (15MB)
+    const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      throw new Error("File exceeds maximum upload size of 15MB");
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     body = Buffer.from(arrayBuffer);
     if (!resolvedContentType && "type" in file && file.type) {
       resolvedContentType = file.type;
     }
   } else if (Buffer.isBuffer(file) || file instanceof Uint8Array) {
+    if (file.length > 15 * 1024 * 1024) {
+      throw new Error("Buffer exceeds maximum upload size of 15MB");
+    }
     body = file;
   } else {
     throw new Error("Unsupported file type for upload");
   }
 
-  // Construct the object key
+  // Construct the object key and validate extension
   let key: string;
   if (customKey) {
     key = customKey.replace(/^\/+/, "");
   } else {
+    const ext = (fileName || "").split(".").pop()?.toLowerCase();
+    const DANGEROUS_EXTENSIONS = ["html", "htm", "svg", "js", "mjs", "php", "sh", "exe", "bat", "cmd", "vbs"];
+    if (ext && DANGEROUS_EXTENSIONS.includes(ext)) {
+      throw new Error(`File extension '.${ext}' is restricted for security.`);
+    }
+
     const safeName = (fileName || `upload-${Date.now()}`)
       .replace(/[^a-zA-Z0-9.-]/g, "_")
       .replace(/_+/g, "_");

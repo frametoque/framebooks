@@ -4,6 +4,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { sanitizeCsvValue } from "@/lib/security/csv";
 import { 
   Search, 
   Download, 
@@ -89,15 +90,15 @@ export function PaymentsClient({
       headers.join(","),
       ...payments.map((p: any) =>
         [
-          p.id,
-          `"${p.provider_reference || ''}"`,
-          `"${p.user_email || ''}"`,
-          `"${p.tenant_name || ''}"`,
-          `"${p.plan_name || ''}"`,
-          p.amount,
-          p.method,
-          p.status,
-          `"${new Date(p.created_at).toISOString()}"`,
+          sanitizeCsvValue(p.id),
+          sanitizeCsvValue(p.provider_reference || ''),
+          sanitizeCsvValue(p.user_email || ''),
+          sanitizeCsvValue(p.tenant_name || ''),
+          sanitizeCsvValue(p.plan_name || ''),
+          sanitizeCsvValue(p.amount),
+          sanitizeCsvValue(p.method),
+          sanitizeCsvValue(p.status),
+          sanitizeCsvValue(new Date(p.created_at).toISOString()),
         ].join(",")
       ),
     ].join("\n");
@@ -330,9 +331,9 @@ export function PaymentsClient({
                             type="button"
                             onClick={() => setPreviewSlip({ url: p.receipt_url, ref: p.provider_reference, tenant: p.tenant_name })}
                             className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/15 text-brand-700 dark:text-brand-400 border border-brand-500/30 hover:bg-brand-500/25 transition-colors cursor-pointer"
-                            title="View customer payment slip"
+                            title="View payment receipt"
                           >
-                            Slip
+                            Receipt
                           </button>
                         )}
                       </div>
@@ -675,18 +676,18 @@ export function PaymentsClient({
               </div>
             </div>
 
-            {/* Slip Preview if available */}
+            {/* Receipt Preview if available */}
             {approveModalPay.receipt_url && (
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-semibold text-muted-foreground">Uploaded Payslip</span>
+                  <span className="text-xs font-semibold text-muted-foreground">Payment Receipt</span>
                   <a
                     href={approveModalPay.receipt_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
                   >
-                    <span>Open full slip</span>
+                    <span>Open full document</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
@@ -694,12 +695,12 @@ export function PaymentsClient({
                   {approveModalPay.receipt_url.endsWith(".pdf") ? (
                     <div className="flex flex-col items-center gap-2 p-4 text-muted-foreground">
                       <FileText className="w-10 h-10 text-brand-500" />
-                      <span className="text-xs font-medium">PDF Payslip Document</span>
+                      <span className="text-xs font-medium">PDF Receipt Document</span>
                     </div>
                   ) : (
                     <img
                       src={approveModalPay.receipt_url}
-                      alt="Uploaded payslip"
+                      alt="Payment receipt"
                       className="w-full h-full object-contain"
                     />
                   )}
@@ -839,13 +840,13 @@ export function PaymentsClient({
         </div>
       )}
 
-      {/* View Slip Modal */}
+      {/* View Receipt Modal */}
       {previewSlip && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 max-w-2xl w-full shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
-                <h3 className="text-lg font-bold text-foreground">Customer Payment Slip</h3>
+                <h3 className="text-lg font-bold text-foreground">Payment Receipt Document</h3>
                 <p className="text-xs text-muted-foreground">
                   {previewSlip.tenant} • {previewSlip.ref}
                 </p>
@@ -872,9 +873,9 @@ export function PaymentsClient({
 
             <div className="w-full max-h-[70vh] overflow-auto rounded-2xl border border-border bg-background flex items-center justify-center p-2">
               {previewSlip.url.endsWith(".pdf") ? (
-                <iframe src={previewSlip.url} className="w-full h-[60vh] rounded-xl" title="Payslip" />
+                <iframe src={previewSlip.url} className="w-full h-[60vh] rounded-xl" title="Receipt" />
               ) : (
-                <img src={previewSlip.url} alt="Payment slip" className="max-w-full max-h-[65vh] object-contain rounded-xl" />
+                <img src={previewSlip.url} alt="Payment receipt" className="max-w-full max-h-[65vh] object-contain rounded-xl" />
               )}
             </div>
           </div>

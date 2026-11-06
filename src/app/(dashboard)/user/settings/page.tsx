@@ -2,6 +2,9 @@ import { Loader } from "@/components/ui/Loader";
 import React, { Suspense } from 'react';
 import MainPage from './MainPage';
 import { getActivePlans } from "@/lib/plans-db";
+import { redirect } from "next/navigation";
+import { getUserContext } from "../actions/rbac";
+import { isSettingsSectionAllowed } from "./settings-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +28,20 @@ export const metadata = {
   },
 };
 
-export default async function SettingsServerPage() {
+export default async function SettingsServerPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ tab?: string }> | { tab?: string };
+}) {
+  const resolvedSearchParams = await searchParams;
+  const tabParam = resolvedSearchParams?.tab;
+  if (tabParam) {
+    const { role } = await getUserContext();
+    if (!role || !isSettingsSectionAllowed(tabParam, role)) {
+      redirect("/user/settings");
+    }
+  }
+
   const dbPlans = await getActivePlans().catch(() => []);
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh]"><Loader /></div>}>

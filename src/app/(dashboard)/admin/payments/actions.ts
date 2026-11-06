@@ -28,15 +28,27 @@ export async function getPaymentsList({
   const payments = await sql`
     SELECT 
       p.*,
-      pl.name AS plan_name,
+      COALESCE(
+        pl.name, 
+        CASE 
+          WHEN p.notes ILIKE '%wallet%' OR p.provider_reference ILIKE '%wallet%' THEN 'Wallet'
+          WHEN t.plan IS NOT NULL THEN t.plan
+          ELSE 'Pro'
+        END
+      ) AS plan_name,
       t.name AS tenant_name,
-      u.email AS user_email,
-      u.full_name AS user_name
+      COALESCE(u.email, t.owner_email) AS user_email,
+      COALESCE(u.full_name, t.name) AS user_name
     FROM payments p
     LEFT JOIN plans pl ON p.plan_id = pl.id
     LEFT JOIN tenants t ON p.tenant_id = t.id
     LEFT JOIN admin_users u ON p.user_id = u.id
-    WHERE (${searchPattern}::text IS NULL OR p.provider_reference ILIKE ${searchPattern} OR u.email ILIKE ${searchPattern} OR t.name ILIKE ${searchPattern})
+    WHERE (${searchPattern}::text IS NULL 
+           OR p.provider_reference ILIKE ${searchPattern} 
+           OR t.owner_email ILIKE ${searchPattern} 
+           OR u.email ILIKE ${searchPattern} 
+           OR t.name ILIKE ${searchPattern}
+           OR p.notes ILIKE ${searchPattern})
       AND (${status || null}::text IS NULL OR p.status = ${status})
       AND (${method || null}::text IS NULL OR p.method = ${method})
       AND (${plan || null}::text IS NULL OR pl.key = ${plan} OR LOWER(pl.name) = LOWER(${plan}))
@@ -50,7 +62,12 @@ export async function getPaymentsList({
     LEFT JOIN plans pl ON p.plan_id = pl.id
     LEFT JOIN tenants t ON p.tenant_id = t.id
     LEFT JOIN admin_users u ON p.user_id = u.id
-    WHERE (${searchPattern}::text IS NULL OR p.provider_reference ILIKE ${searchPattern} OR u.email ILIKE ${searchPattern} OR t.name ILIKE ${searchPattern})
+    WHERE (${searchPattern}::text IS NULL 
+           OR p.provider_reference ILIKE ${searchPattern} 
+           OR t.owner_email ILIKE ${searchPattern} 
+           OR u.email ILIKE ${searchPattern} 
+           OR t.name ILIKE ${searchPattern}
+           OR p.notes ILIKE ${searchPattern})
       AND (${status || null}::text IS NULL OR p.status = ${status})
       AND (${method || null}::text IS NULL OR p.method = ${method})
       AND (${plan || null}::text IS NULL OR pl.key = ${plan} OR LOWER(pl.name) = LOWER(${plan}))
@@ -77,6 +94,7 @@ export async function getPaymentsSummary() {
   ]);
 
   return {
+    totalPaid: parseInt(collectedRes[0].sum) || 0,
     totalCollected: parseInt(collectedRes[0].sum) || 0,
     totalPending: parseInt(pendingRes[0].sum) || 0,
     totalFailed: parseInt(failedRes[0].sum) || 0,

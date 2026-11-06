@@ -176,7 +176,7 @@ export function AnalyticsClient({ data }: { data: any }) {
                       </span>
                     </div>
                     <span className="text-xs font-bold text-foreground">
-                      {p.isPaid ? `LKR ${p.mrr.toLocaleString()} /mo` : "Free Tier"}
+                      {p.isPaid ? `LKR ${p.mrr.toLocaleString()} /mo` : "Free Plan"}
                     </span>
                   </div>
 

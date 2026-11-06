@@ -358,9 +358,17 @@ export async function getAuditLogs() {
 
 export async function getCurrentUserRole() {
   try {
-    const { userId } = await auth();
-    if (!userId) return null;
-    const rows = await sql`SELECT role FROM admin_users WHERE id = ${Number(userId) || 0} LIMIT 1`;
+    const { userId, session } = await auth();
+    if (!userId && !session?.user?.email) return null;
+    const email = session?.user?.email?.trim().toLowerCase();
+    const numId = Number(userId) || 0;
+    const safeId = (numId > 0 && numId < 2147483647) ? numId : 0;
+    const rows = await sql`
+      SELECT role FROM admin_users 
+      WHERE (id = ${safeId} AND ${safeId} > 0)
+         OR (email IS NOT NULL AND LOWER(email) = ${email || ''})
+      LIMIT 1
+    `;
     if (rows.length > 0) return rows[0].role;
     return null;
   } catch (e) {
