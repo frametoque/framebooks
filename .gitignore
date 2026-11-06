@@ -42,9 +42,6 @@ yarn-error.log*
 next-env.d.ts
 src/app/layout.js
 
-# clerk configuration (can include secrets)
-/.clerk/
-
 # database backups, exports and migration dumps
 /backups/
 /migrations/

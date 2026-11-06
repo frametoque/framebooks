@@ -15,11 +15,15 @@ const CURRENT_KEY_VERSION = "v1";
  * In development/test, provides a stable fallback if not explicitly configured.
  */
 function getMasterKey(): Buffer {
-  const envKey = process.env.APP_MASTER_KEY?.trim() || DEFAULT_DEV_KEY;
-  if (/^[0-9a-fA-F]{64}$/.test(envKey)) {
-    return Buffer.from(envKey, "hex");
+  const envKey = process.env.APP_MASTER_KEY?.trim();
+  if (process.env.NODE_ENV === "production" && (!envKey || envKey === DEFAULT_DEV_KEY)) {
+    throw new Error("Critical Security Misconfiguration: APP_MASTER_KEY must be configured with a 32-byte hex secret in production.");
   }
-  return crypto.createHash("sha256").update(envKey).digest();
+  const keyToUse = envKey || DEFAULT_DEV_KEY;
+  if (/^[0-9a-fA-F]{64}$/.test(keyToUse)) {
+    return Buffer.from(keyToUse, "hex");
+  }
+  return crypto.createHash("sha256").update(keyToUse).digest();
 }
 
 /**

@@ -100,14 +100,11 @@ export async function sendEmail({
   const mailer = getTransporter();
 
   if (!mailer) {
-    console.log(
-      `\n=======================================================\n` +
-      `[EMAIL SERVICE - DEV FALLBACK (${category})]\n` +
-      `To: ${to}\n` +
-      `Subject: ${subject}\n` +
-      `Content:\n${text}\n` +
-      `=======================================================\n`
-    );
+    if (process.env.NODE_ENV !== "production") {
+      console.log(
+        `[EMAIL SERVICE - DEV FALLBACK (${category})] To: ${to} | Subject: ${subject}`
+      );
+    }
     return { success: true, simulated: true };
   }
 
