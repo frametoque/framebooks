@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sanitizeCsvValue } from "@/lib/security/csv";
+import { addPackageGatewayFee } from "@/lib/payment-gateway/fee";
 import { 
   Search, 
   Download, 
@@ -447,7 +448,7 @@ export function PaymentsClient({
                       const matchPlan = allPlans.find((p: any) => p.name.toLowerCase() === t.plan.toLowerCase());
                       if (matchPlan) {
                         setNewPlanKey(matchPlan.key);
-                        setNewAmount(matchPlan.price_monthly || 2500);
+                        setNewAmount(addPackageGatewayFee(matchPlan.price_monthly, "monthly") || 2600);
                       }
                     }
                   }}
@@ -474,14 +475,14 @@ export function PaymentsClient({
                       setNewPlanKey(key);
                       const pl = allPlans.find((p: any) => p.key === key);
                       if (pl) {
-                        setNewAmount(pl.price_monthly || 2500);
+                        setNewAmount(addPackageGatewayFee(pl.price_monthly, "monthly") || 2600);
                       }
                     }}
                     className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-sm outline-none focus:border-brand-500 cursor-pointer"
                   >
                     {allPlans.map((pl) => (
                       <option key={pl.id} value={pl.key}>
-                        {pl.name} ({formatLKR(pl.price_monthly)}/mo)
+                        {pl.name} ({formatLKR(addPackageGatewayFee(pl.price_monthly, "monthly"))}/mo)
                       </option>
                     ))}
                   </select>

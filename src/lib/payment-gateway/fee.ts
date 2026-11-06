@@ -38,3 +38,53 @@ export function addPackageGatewayFee(
   const withFee = (num * 10229) / 10000;
   return Math.ceil(withFee / 100) * 100;
 }
+
+export interface PlanPricingBreakdown {
+  baseMonthly: number;
+  baseYearly: number;
+  feeMonthly: number;
+  feeYearly: number;
+  coveringMonthly: number;
+  coveringYearly: number;
+  feeRatePercent: number;
+}
+
+/**
+ * Calculates a full pricing breakdown comparing our net price, the Payments.lk gateway fee (2.29%),
+ * and the final rounded client covering price.
+ */
+export function calculatePlanPricingBreakdown(
+  baseMonthly: number | null | undefined,
+  baseYearly?: number | null | undefined
+): PlanPricingBreakdown {
+  const m = Number(baseMonthly) || 0;
+  const y = baseYearly != null && Number(baseYearly) > 0 ? Number(baseYearly) : m * 10;
+
+  if (m <= 0) {
+    return {
+      baseMonthly: 0,
+      baseYearly: 0,
+      feeMonthly: 0,
+      feeYearly: 0,
+      coveringMonthly: 0,
+      coveringYearly: 0,
+      feeRatePercent: 2.29,
+    };
+  }
+
+  const coveringMonthly = addPackageGatewayFee(m, "monthly");
+  const feeMonthly = Math.round(m * PAYMENTS_LK_GATEWAY_FEE_RATE * 100) / 100;
+
+  const coveringYearly = addPackageGatewayFee(y, "yearly");
+  const feeYearly = Math.round(y * PAYMENTS_LK_GATEWAY_FEE_RATE * 100) / 100;
+
+  return {
+    baseMonthly: m,
+    baseYearly: y,
+    feeMonthly,
+    feeYearly,
+    coveringMonthly,
+    coveringYearly,
+    feeRatePercent: 2.29,
+  };
+}

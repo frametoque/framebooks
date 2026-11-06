@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, AlertTriangle, ArrowRight, Check, Loader2 } from "lucide-react";
 import { formatLKR, PlanBadge } from "@/components/Formatters";
+import { addPackageGatewayFee } from "@/lib/payment-gateway/fee";
 import { checkDowngradeEligibility, changeSubscriptionPlan } from "@/app/(dashboard)/admin/subscriptions/actions";
 
 interface PlanChangeModalProps {
@@ -137,7 +138,7 @@ export function PlanChangeModal({
                           {isSelected && <Check className="w-4 h-4 text-brand-500" />}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {p.price_monthly === 0 ? "Free" : `${formatLKR(p.price_monthly)}/mo`}
+                          {p.price_monthly === 0 ? "Free" : `${formatLKR(addPackageGatewayFee(p.price_monthly, "monthly"))}/mo`}
                         </div>
                       </div>
                     );
@@ -185,8 +186,8 @@ export function PlanChangeModal({
                     onChange={(e) => setInterval(e.target.value as any)}
                     className="w-full px-3 py-2 bg-background border border-border rounded-xl text-sm text-foreground outline-none cursor-pointer"
                   >
-                    <option value="monthly">Monthly ({formatLKR(selectedPlan?.price_monthly || 0)})</option>
-                    <option value="yearly">Yearly ({formatLKR(selectedPlan?.price_yearly || 0)})</option>
+                    <option value="monthly">Monthly ({formatLKR(addPackageGatewayFee(selectedPlan?.price_monthly || 0, "monthly"))})</option>
+                    <option value="yearly">Yearly ({formatLKR(addPackageGatewayFee(selectedPlan?.price_yearly || 0, "yearly"))})</option>
                   </select>
                 </div>
 

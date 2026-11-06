@@ -18,6 +18,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { formatLKR } from "@/components/Formatters";
+import { calculatePlanPricingBreakdown, addPackageGatewayFee } from "@/lib/payment-gateway/fee";
 import { updatePlan, createPlan, deletePlan, togglePlanActive } from "./actions";
 
 export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
@@ -269,16 +270,44 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
               )}
 
               <div className="mb-4">
-                <span className="text-3xl font-extrabold text-foreground">
-                  {p.price_monthly === 0 ? "Free" : formatLKR(p.price_monthly)}
-                </span>
-                {p.price_monthly > 0 && (
-                  <span className="text-xs text-muted-foreground ml-1">/month</span>
-                )}
-                {p.price_yearly > 0 && (
-                  <div className="text-[11px] text-muted-foreground mt-0.5 font-medium">
-                    {formatLKR(p.price_yearly)} /year (save ~17% · 2 months free)
-                  </div>
+                {p.price_monthly === 0 ? (
+                  <span className="text-3xl font-extrabold text-foreground">Free</span>
+                ) : (
+                  (() => {
+                    const breakdown = calculatePlanPricingBreakdown(p.price_monthly, p.price_yearly);
+                    return (
+                      <div className="space-y-2.5">
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <span className="text-3xl font-extrabold text-foreground">
+                            {formatLKR(breakdown.coveringMonthly)}
+                          </span>
+                          <span className="text-xs text-muted-foreground font-medium">/month</span>
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            Covering Fee
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground font-medium">
+                          {formatLKR(breakdown.coveringYearly)} /year (save ~17% · 2 months free)
+                        </div>
+
+                        {/* Our Price, Fee and Covering Breakdown Card */}
+                        <div className="mt-3 p-3 rounded-2xl bg-muted/40 border border-border/70 text-xs space-y-2">
+                          <div className="flex justify-between items-center text-muted-foreground">
+                            <span>Our Price:</span>
+                            <span className="font-semibold text-foreground">{formatLKR(breakdown.baseMonthly)} /mo</span>
+                          </div>
+                          <div className="flex justify-between items-center text-muted-foreground">
+                            <span>Payments.lk Fee ({breakdown.feeRatePercent}%):</span>
+                            <span className="font-mono text-amber-500 font-medium">+{formatLKR(breakdown.feeMonthly)}</span>
+                          </div>
+                          <div className="flex justify-between items-center pt-1.5 border-t border-border/40 font-bold">
+                            <span className="text-foreground">Client Covering Price:</span>
+                            <span className="text-brand-500 font-extrabold text-sm">{formatLKR(breakdown.coveringMonthly)} /mo</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()
                 )}
               </div>
 
@@ -486,19 +515,28 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                    Monthly price (LKR)
+                    Our Monthly price (LKR)
                   </label>
                   <input
                     type="number"
                     min={0}
                     value={newPlanData.priceMonthly}
-                    onChange={(e) => setNewPlanData({ ...newPlanData, priceMonthly: Number(e.target.value) })}
+                    onChange={(e) => {
+                      const newMonthly = Number(e.target.value);
+                      const isDefaultYearly = !newPlanData.priceYearly || newPlanData.priceYearly === newPlanData.priceMonthly * 10;
+                      setNewPlanData({ 
+                        ...newPlanData, 
+                        priceMonthly: newMonthly,
+                        priceYearly: isDefaultYearly ? newMonthly * 10 : newPlanData.priceYearly,
+                      });
+                    }}
                     className="w-full px-3.5 py-2 bg-background border border-border rounded-xl text-sm font-bold text-foreground outline-none focus:border-brand-500"
                   />
+                  <span className="text-[10px] text-muted-foreground mt-0.5 block">Net amount our business keeps</span>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                    Yearly price (LKR)
+                    Our Yearly price (LKR)
                   </label>
                   <input
                     type="number"
@@ -507,8 +545,63 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
                     onChange={(e) => setNewPlanData({ ...newPlanData, priceYearly: Number(e.target.value) })}
                     className="w-full px-3.5 py-2 bg-background border border-border rounded-xl text-sm font-bold text-foreground outline-none focus:border-brand-500"
                   />
+                  <span className="text-[10px] text-muted-foreground mt-0.5 block">Default: Monthly × 10 (2 mos free)</span>
                 </div>
               </div>
+
+              {/* Dynamic Live Fee & Covering Values Calculator */}
+              {newPlanData.priceMonthly > 0 && (() => {
+                const breakdown = calculatePlanPricingBreakdown(newPlanData.priceMonthly, newPlanData.priceYearly);
+                return (
+                  <div className="p-3.5 rounded-2xl bg-brand-500/5 border border-brand-500/20 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-brand-500" />
+                        Client Covering Price (Auto-Calculated)
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500 font-semibold">
+                        +2.29% Payments.lk Fee Covered
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="p-2.5 rounded-xl bg-background border border-border/70 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                          Client Monthly
+                        </span>
+                        <div className="text-base font-black text-foreground">
+                          {formatLKR(breakdown.coveringMonthly)} <span className="text-[10px] text-muted-foreground font-normal">/mo</span>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground pt-1 border-t border-border/40 flex justify-between">
+                          <span>Our net:</span>
+                          <span className="font-semibold text-foreground">{formatLKR(breakdown.baseMonthly)}</span>
+                        </div>
+                        <div className="text-[10px] text-amber-500 flex justify-between">
+                          <span>Fee (2.29%):</span>
+                          <span className="font-mono">+{formatLKR(breakdown.feeMonthly)}</span>
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl bg-background border border-border/70 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                          Client Yearly (2 mos free)
+                        </span>
+                        <div className="text-base font-black text-brand-500">
+                          {formatLKR(breakdown.coveringYearly)} <span className="text-[10px] text-muted-foreground font-normal">/yr</span>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground pt-1 border-t border-border/40 flex justify-between">
+                          <span>Our net:</span>
+                          <span className="font-semibold text-foreground">{formatLKR(breakdown.baseYearly)}</span>
+                        </div>
+                        <div className="text-[10px] text-amber-500 flex justify-between">
+                          <span>Fee (2.29%):</span>
+                          <span className="font-mono">+{formatLKR(breakdown.feeYearly)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Status Toggles */}
               <div className="grid grid-cols-2 gap-3 pt-2">
@@ -766,19 +859,28 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                    Monthly price (LKR)
+                    Our Monthly price (LKR)
                   </label>
                   <input
                     type="number"
                     min={0}
                     value={editFormData.priceMonthly}
-                    onChange={(e) => setEditFormData({ ...editFormData, priceMonthly: Number(e.target.value) })}
+                    onChange={(e) => {
+                      const newMonthly = Number(e.target.value);
+                      const isDefaultYearly = !editFormData.priceYearly || editFormData.priceYearly === editFormData.priceMonthly * 10;
+                      setEditFormData({ 
+                        ...editFormData, 
+                        priceMonthly: newMonthly,
+                        priceYearly: isDefaultYearly ? newMonthly * 10 : editFormData.priceYearly,
+                      });
+                    }}
                     className="w-full px-3.5 py-2 bg-background border border-border rounded-xl text-sm font-bold text-foreground outline-none focus:border-brand-500"
                   />
+                  <span className="text-[10px] text-muted-foreground mt-0.5 block">Net amount our business keeps</span>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                    Yearly price (LKR)
+                    Our Yearly price (LKR)
                   </label>
                   <input
                     type="number"
@@ -787,8 +889,63 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
                     onChange={(e) => setEditFormData({ ...editFormData, priceYearly: Number(e.target.value) })}
                     className="w-full px-3.5 py-2 bg-background border border-border rounded-xl text-sm font-bold text-foreground outline-none focus:border-brand-500"
                   />
+                  <span className="text-[10px] text-muted-foreground mt-0.5 block">Default: Monthly × 10 (2 mos free)</span>
                 </div>
               </div>
+
+              {/* Dynamic Live Fee & Covering Values Calculator */}
+              {editFormData.priceMonthly > 0 && (() => {
+                const breakdown = calculatePlanPricingBreakdown(editFormData.priceMonthly, editFormData.priceYearly);
+                return (
+                  <div className="p-3.5 rounded-2xl bg-brand-500/5 border border-brand-500/20 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-brand-500" />
+                        Client Covering Price (Auto-Calculated)
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500 font-semibold">
+                        +2.29% Payments.lk Fee Covered
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="p-2.5 rounded-xl bg-background border border-border/70 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                          Client Monthly
+                        </span>
+                        <div className="text-base font-black text-foreground">
+                          {formatLKR(breakdown.coveringMonthly)} <span className="text-[10px] text-muted-foreground font-normal">/mo</span>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground pt-1 border-t border-border/40 flex justify-between">
+                          <span>Our net:</span>
+                          <span className="font-semibold text-foreground">{formatLKR(breakdown.baseMonthly)}</span>
+                        </div>
+                        <div className="text-[10px] text-amber-500 flex justify-between">
+                          <span>Fee (2.29%):</span>
+                          <span className="font-mono">+{formatLKR(breakdown.feeMonthly)}</span>
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl bg-background border border-border/70 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                          Client Yearly (2 mos free)
+                        </span>
+                        <div className="text-base font-black text-brand-500">
+                          {formatLKR(breakdown.coveringYearly)} <span className="text-[10px] text-muted-foreground font-normal">/yr</span>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground pt-1 border-t border-border/40 flex justify-between">
+                          <span>Our net:</span>
+                          <span className="font-semibold text-foreground">{formatLKR(breakdown.baseYearly)}</span>
+                        </div>
+                        <div className="text-[10px] text-amber-500 flex justify-between">
+                          <span>Fee (2.29%):</span>
+                          <span className="font-mono">+{formatLKR(breakdown.feeYearly)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Status Toggles */}
               <div className="grid grid-cols-2 gap-3">
