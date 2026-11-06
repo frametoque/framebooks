@@ -41,15 +41,15 @@ Required environment variables:
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_REPLY_TO`: Outbound email configuration
 
 ### C. Database Migrations
-Run versioned migrations located under `docs/migrations/`:
+Run versioned migrations located under `scripts/security/`:
 ```bash
 # Apply additive encryption migration
 node -e "
 const fs = require('fs');
 const postgres = require('postgres');
 require('dotenv').config({ path: '.env.local' });
-const sql = postgres(process.env.DATABASE_URL);
-sql.unsafe(fs.readFileSync('docs/migrations/002_additive_encryption.sql', 'utf8'))
+const sql = postgres(process.env.DATABASE_URL, { ssl: 'require' });
+sql.unsafe(fs.readFileSync('scripts/security/additive_migration.sql', 'utf8'))
   .then(() => { console.log('Migrations applied'); process.exit(0); });
 "
 ```
