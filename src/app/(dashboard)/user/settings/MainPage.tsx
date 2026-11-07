@@ -2945,8 +2945,13 @@ function BillingView({
                       }
                     }
                   }}
-                  disabled={rechargingWallet}
-                  className="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 text-xs font-bold transition-all cursor-pointer"
+                  disabled={rechargingWallet || Boolean(gatewayStatus?.cardPaymentsDisabled)}
+                  className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    gatewayStatus?.cardPaymentsDisabled
+                      ? "opacity-50 cursor-not-allowed bg-muted border border-border text-muted-foreground"
+                      : "bg-brand-500 hover:bg-brand-400 text-brand-950 cursor-pointer"
+                  }`}
+                  title={gatewayStatus?.cardPaymentsDisabled ? "Card payments are disabled on live with test key" : undefined}
                 >
                   {rechargingWallet ? "Processing..." : cardData?.cardId ? "1-Click Top-Up" : "Top-Up"}
                 </button>
@@ -2961,13 +2966,25 @@ function BillingView({
               <button
                 type="button"
                 onClick={() => handleRechargeWalletCheckout(100)}
-                disabled={rechargingWallet}
-                className="px-3 py-1.5 rounded-xl bg-card hover:bg-muted border border-border text-foreground text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                disabled={rechargingWallet || Boolean(gatewayStatus?.cardPaymentsDisabled)}
+                className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1 transition-colors ${
+                  gatewayStatus?.cardPaymentsDisabled
+                    ? "opacity-50 cursor-not-allowed bg-muted border-border text-muted-foreground"
+                    : "bg-card hover:bg-muted border-border text-foreground cursor-pointer"
+                }`}
+                title={gatewayStatus?.cardPaymentsDisabled ? "Card payments are disabled on live with test key" : undefined}
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add</span>
               </button>
             </div>
+
+            {gatewayStatus?.cardPaymentsDisabled && (
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>Card payments are disabled on live while Payments.lk test keys (<code>sk_test_*</code>) are configured.</span>
+              </div>
+            )}
 
             <div className="space-y-3">
               <span className="text-xs font-bold text-foreground">Primary</span>
@@ -3033,8 +3050,13 @@ function BillingView({
                   <button
                     type="button"
                     onClick={() => handleRechargeWalletCheckout(100)}
-                    disabled={rechargingWallet}
-                    className="px-4 py-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground text-xs font-bold border border-border cursor-pointer transition-colors"
+                    disabled={rechargingWallet || Boolean(gatewayStatus?.cardPaymentsDisabled)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors ${
+                      gatewayStatus?.cardPaymentsDisabled
+                        ? "opacity-50 cursor-not-allowed bg-muted border-border text-muted-foreground"
+                        : "bg-muted hover:bg-muted/80 text-foreground border-border cursor-pointer"
+                    }`}
+                    title={gatewayStatus?.cardPaymentsDisabled ? "Card payments are disabled on live with test key" : undefined}
                   >
                     Update
                   </button>
@@ -3223,6 +3245,12 @@ function BillingView({
             )}
 
             {/* Compact Plan Cards Grid */}
+            {gatewayStatus?.cardPaymentsDisabled && (
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>Card payments are disabled on live while Payments.lk test keys (<code>sk_test_*</code>) are configured.</span>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {activePlans.map((plan) => {
                 const isCurrent = activePlanName.toLowerCase() === plan.name.toLowerCase();
@@ -3306,7 +3334,8 @@ function BillingView({
                           handleOpenSwitchModal(billingCycle);
                         }
                       }}
-                      disabled={(isCurrent && (!subDetails?.billing_interval || subDetails.billing_interval === billingCycle)) || processingCheckout}
+                      disabled={(isCurrent && (!subDetails?.billing_interval || subDetails.billing_interval === billingCycle)) || processingCheckout || (!isCurrent && Boolean(gatewayStatus?.cardPaymentsDisabled))}
+                      title={!isCurrent && gatewayStatus?.cardPaymentsDisabled ? "Card payments are disabled on live with test key" : undefined}
                       className={`w-full py-2 rounded-xl font-bold transition-all text-xs cursor-pointer flex items-center justify-center gap-1 ${isCurrent && (!subDetails?.billing_interval || subDetails.billing_interval === billingCycle)
                           ? "bg-muted text-muted-foreground cursor-default opacity-80"
                           : isCurrent

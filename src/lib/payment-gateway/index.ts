@@ -23,6 +23,15 @@ export async function createCheckoutSession(
 ): Promise<CheckoutResult> {
   const config = getGatewayConfig();
 
+  // If card payments are disabled on live due to sk_test_ key, immediately abort
+  if (config.paymentsLk.cardPaymentsDisabled) {
+    return {
+      success: false,
+      provider: "payments_lk",
+      error: "Card payments are currently disabled on the live environment because a Payments.lk test key (sk_test_*) is configured.",
+    };
+  }
+
   // 1. Payments.lk Hosted Checkout (Primary)
   if (config.activeProvider === "payments_lk" && config.paymentsLk.isAvailable) {
     return await createPaymentsLkCheckoutSession(params);
@@ -38,7 +47,16 @@ export async function createCheckoutSession(
     return await createPayHereCheckoutSession(params);
   }
 
-  // 4. Sandbox Mode (Ready for keys in .env.local)
+  // On live environment, do not allow sandbox checkout bypass
+  if (config.isLive) {
+    return {
+      success: false,
+      provider: "sandbox",
+      error: "Card payments are currently disabled on the live environment.",
+    };
+  }
+
+  // 4. Sandbox Mode (Ready for keys in .env.local in dev/staging only)
   const sandboxSessionId = `SANDBOX-${params.tenantId}-${Date.now().toString().slice(-6)}`;
   const returnUrl = `${config.appUrl}/billing/success?sandbox_session=${sandboxSessionId}&tenant_id=${params.tenantId}&plan=${encodeURIComponent(params.planName)}&cycle=${params.billingInterval}&amount=${params.amount}`;
 

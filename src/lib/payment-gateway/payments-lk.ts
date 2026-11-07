@@ -21,6 +21,14 @@ export async function createPaymentsLkCheckoutSession(
     };
   }
 
+  if (config.paymentsLk.cardPaymentsDisabled || (secretKey.startsWith("sk_test_") && config.isLive)) {
+    return {
+      success: false,
+      provider: "payments_lk",
+      error: "Card payments are disabled in the live environment because a Payments.lk test key (sk_test_*) is configured.",
+    };
+  }
+
   const isWallet = params.planName.toLowerCase().includes("wallet");
   const sanitizedPlan = isWallet ? "WALLET" : params.planName.replace(/\s+/g, "");
   const amountNum = Math.round(Number(params.amount));
@@ -135,6 +143,13 @@ export async function chargePaymentsLkSavedCard({
     return { success: false, error: "PAYMENTS_LK_SECRET_KEY not configured" };
   }
 
+  if (config.paymentsLk.cardPaymentsDisabled || (secretKey.startsWith("sk_test_") && config.isLive)) {
+    return {
+      success: false,
+      error: "Card payments are disabled in the live environment because a Payments.lk test key (sk_test_*) is configured.",
+    };
+  }
+
   try {
     const res = await fetch(`https://api.payments.lk/v1/cards/${encodeURIComponent(cardId)}/charge`, {
       method: "POST",
@@ -214,6 +229,7 @@ export async function listPaymentsLkSavedCards(customerEmail: string): Promise<P
   const config = getGatewayConfig();
   const secretKey = config.paymentsLk.secretKey;
   if (!secretKey || !customerEmail) return [];
+  if (config.paymentsLk.cardPaymentsDisabled || (secretKey.startsWith("sk_test_") && config.isLive)) return [];
 
   try {
     const res = await fetch(`https://api.payments.lk/v1/cards?customerEmail=${encodeURIComponent(customerEmail.trim())}`, {

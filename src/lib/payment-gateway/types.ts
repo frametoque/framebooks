@@ -56,4 +56,8 @@ export interface GatewayStatus {
     payhere: boolean;
     sandbox: boolean;
   };
+  cardPaymentsDisabled?: boolean;
+  cardPaymentsDisabledReason?: string;
+  isLive?: boolean;
+  isTestKey?: boolean;
 }

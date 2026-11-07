@@ -444,6 +444,11 @@ export async function rechargeWalletWithSavedCardAction(amount: number) {
       return { success: false, error: "Minimum recharge amount is LKR 100." };
     }
 
+    const { getGatewayConfig } = await import("@/lib/payment-gateway");
+    if (getGatewayConfig().paymentsLk.cardPaymentsDisabled) {
+      return { success: false, error: "Card payments are currently disabled on the live environment." };
+    }
+
     const subs = await sql`
       SELECT saved_card_id, card_brand, card_last4 
       FROM subscriptions 
@@ -1085,6 +1090,11 @@ export async function rechargeAndSwitchBillingIntervalAction(params: {
     const { targetInterval, shortfall, couponCode } = params;
     if (shortfall <= 0) {
       return await switchBillingIntervalWithWalletAction({ targetInterval, couponCode });
+    }
+
+    const { getGatewayConfig } = await import("@/lib/payment-gateway");
+    if (getGatewayConfig().paymentsLk.cardPaymentsDisabled) {
+      return { success: false, error: "Card payments are currently disabled on the live environment." };
     }
 
     // Check saved card

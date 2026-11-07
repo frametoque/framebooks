@@ -1,4 +1,34 @@
-import { GatewayStatus, PaymentProvider } from "./types";
+import type { GatewayStatus, PaymentProvider } from "./types.ts";
+
+/**
+ * Checks whether the application is currently running in a live / production environment.
+ */
+export function isLiveEnvironment(): boolean {
+  if (process.env.PAYMENTS_LK_ENV === "test") return false;
+  if (process.env.PAYMENTS_LK_ENV === "live") return true;
+  if (process.env.VERCEL_ENV === "production") return true;
+  if (process.env.NODE_ENV === "production") return true;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  if (
+    appUrl &&
+    !appUrl.includes("localhost") &&
+    !appUrl.includes("127.0.0.1") &&
+    process.env.NODE_ENV !== "development"
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Returns true if card payments must be disabled because a test key (sk_test_*) is present in live environment.
+ */
+export function isCardPaymentsDisabledOnLive(): boolean {
+  const paymentsLkSecretKey = process.env.PAYMENTS_LK_SECRET_KEY || "";
+  return paymentsLkSecretKey.startsWith("sk_test_") && isLiveEnvironment();
+}
 
 export function getGatewayConfig() {
   // Payments.lk credentials (https://app.payments.lk/admin/developers)
@@ -16,9 +46,21 @@ export function getGatewayConfig() {
   const payhereMerchantSecret = process.env.PAYHERE_MERCHANT_SECRET || "";
   const payhereEnv = (process.env.PAYHERE_ENV || "sandbox").toLowerCase();
 
+  const isLive = isLiveEnvironment();
+  const isPaymentsLkTestKey = paymentsLkSecretKey.startsWith("sk_test_");
+  const cardPaymentsDisabled = isLive && isPaymentsLkTestKey;
+  const cardPaymentsDisabledReason = cardPaymentsDisabled
+    ? "Card payments are disabled on live because a Payments.lk test key (sk_test_*) is configured."
+    : undefined;
+
   const explicitProvider = (process.env.PAYMENT_GATEWAY_PROVIDER || "").toLowerCase() as PaymentProvider;
 
-  const hasPaymentsLk = Boolean(paymentsLkSecretKey && paymentsLkSecretKey.length > 5);
+  // Payments.lk is available for card payments ONLY if keys exist AND card payments are not disabled on live
+  const hasPaymentsLk = Boolean(
+    paymentsLkSecretKey && 
+    paymentsLkSecretKey.length > 5 && 
+    !cardPaymentsDisabled
+  );
   const hasStripe = Boolean(stripeSecretKey && stripeSecretKey.length > 5);
   const hasPayhere = Boolean(payhereMerchantId && payhereMerchantSecret);
 
@@ -44,11 +86,15 @@ export function getGatewayConfig() {
   return {
     isConfigured,
     activeProvider,
+    isLive,
     paymentsLk: {
       isAvailable: hasPaymentsLk,
       secretKey: paymentsLkSecretKey,
       publicKey: paymentsLkPublicKey,
       webhookSecret: paymentsLkWebhookSecret,
+      isTestKey: isPaymentsLkTestKey,
+      cardPaymentsDisabled,
+      cardPaymentsDisabledReason,
     },
     stripe: {
       isAvailable: hasStripe,
@@ -75,7 +121,11 @@ export function getGatewayStatus(): GatewayStatus {
       payments_lk: config.paymentsLk.isAvailable,
       stripe: config.stripe.isAvailable,
       payhere: config.payhere.isAvailable,
-      sandbox: true,
+      sandbox: !config.isLive,
     },
+    cardPaymentsDisabled: config.paymentsLk.cardPaymentsDisabled,
+    cardPaymentsDisabledReason: config.paymentsLk.cardPaymentsDisabledReason,
+    isLive: config.isLive,
+    isTestKey: config.paymentsLk.isTestKey,
   };
 }
