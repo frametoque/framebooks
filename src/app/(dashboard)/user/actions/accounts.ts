@@ -5,6 +5,7 @@ import { requirePermission } from "./rbac";
 import sql from "@/lib/db";
 import { logSystemAction } from "@/lib/logger";
 import { getTenantId } from "./actions";
+import { encryptField, decryptField, blindIndex } from "@/lib/security/crypto";
 
 // Fetch all accounts and calculate running balances
 export async function getAccounts(startDate?: string, endDate?: string) {
@@ -13,27 +14,58 @@ export async function getAccounts(startDate?: string, endDate?: string) {
 
   const tenantId = await getTenantId();
   const rows = await sql`
-    SELECT id, name, type, bank_name, account_number, branch, initial_balance, created_at, is_default, is_hidden
+    SELECT id, name, type, bank_name, account_number, account_number_enc, branch, branch_enc, initial_balance, created_at, is_default, is_hidden
     FROM accounts
     WHERE is_hidden IS NOT TRUE AND tenant_id = ${tenantId}
     ORDER BY created_at ASC
   `;
 
-  const accounts = rows.map((r: any) => ({
-    id: r.id,
-    name: r.name,
-    type: r.type,
-    bankName: r.bank_name || "",
-    accountNumber: r.account_number || "",
-    branch: r.branch || "",
-    initialBalance: parseFloat(r.initial_balance || "0"),
-    createdAt: r.created_at,
-    
-    isDefault: r.is_default === true,
-    currentBalance: parseFloat(r.initial_balance || "0"),
-    periodInflow: 0,
-    periodOutflow: 0,
-  }));
+  const accounts = rows.map((r: any) => {
+    let resolvedAccountNumber = r.account_number || "";
+    let resolvedBranch = r.branch || "";
+
+    if (r.account_number_enc) {
+      try {
+        resolvedAccountNumber = decryptField(r.account_number_enc, {
+          tenantId: tenantId || 1,
+          table: "accounts",
+          column: "account_number",
+          recordId: r.id,
+        });
+      } catch (e) {
+        console.error(`[Crypto] Failed to decrypt account_number for account ${r.id}:`, e);
+      }
+    }
+
+    if (r.branch_enc) {
+      try {
+        resolvedBranch = decryptField(r.branch_enc, {
+          tenantId: tenantId || 1,
+          table: "accounts",
+          column: "branch",
+          recordId: r.id,
+        });
+      } catch (e) {
+        console.error(`[Crypto] Failed to decrypt branch for account ${r.id}:`, e);
+      }
+    }
+
+    return {
+      id: r.id,
+      name: r.name,
+      type: r.type,
+      bankName: r.bank_name || "",
+      accountNumber: resolvedAccountNumber,
+      branch: resolvedBranch,
+      initialBalance: parseFloat(r.initial_balance || "0"),
+      createdAt: r.created_at,
+      
+      isDefault: r.is_default === true,
+      currentBalance: parseFloat(r.initial_balance || "0"),
+      periodInflow: 0,
+      periodOutflow: 0,
+    };
+  });
 
   if (accounts.length === 0) return accounts;
 
@@ -88,10 +120,30 @@ export async function createAccount(data: { name: string; type: string; bankName
   if (!limitCheck.allowed) return { error: limitCheck.error };
 
   const tenantId = await getTenantId();
-  await sql`
+
+  // 1. Insert account record
+  const inserted = await sql`
     INSERT INTO accounts (name, type, bank_name, account_number, branch, initial_balance, tenant_id)
     VALUES (${data.name}, ${data.type}, ${data.bankName || null}, ${data.accountNumber || null}, ${data.branch || null}, ${data.initialBalance || 0}, ${tenantId})
+    RETURNING id
   `;
+  const newId = inserted[0]?.id;
+
+  // 2. Encrypt sensitive fields with AES-256-GCM + blind index
+  if (newId && (data.accountNumber || data.branch)) {
+    const encAcc = data.accountNumber ? encryptField(data.accountNumber, { tenantId, table: "accounts", column: "account_number", recordId: newId }) : null;
+    const bidxAcc = data.accountNumber ? blindIndex(data.accountNumber, tenantId) : null;
+    const encBranch = data.branch ? encryptField(data.branch, { tenantId, table: "accounts", column: "branch", recordId: newId }) : null;
+
+    await sql`
+      UPDATE accounts 
+      SET account_number_enc = ${encAcc},
+          account_number_bidx = ${bidxAcc},
+          branch_enc = ${encBranch}
+      WHERE id = ${newId} AND tenant_id = ${tenantId}
+    `;
+  }
+
   await incrementLifetimeUsage(Number(tenantId), 'accounts');
   await logSystemAction(`Created account "${data.name}"`);
 }
@@ -101,13 +153,21 @@ export async function updateAccount(id: number, data: { name: string; type: stri
   if (rbacError) throw new Error(rbacError);
 
   const tenantId = await getTenantId();
+
+  const encAcc = data.accountNumber ? encryptField(data.accountNumber, { tenantId, table: "accounts", column: "account_number", recordId: id }) : null;
+  const bidxAcc = data.accountNumber ? blindIndex(data.accountNumber, tenantId) : null;
+  const encBranch = data.branch ? encryptField(data.branch, { tenantId, table: "accounts", column: "branch", recordId: id }) : null;
+
   await sql`
     UPDATE accounts 
     SET name = ${data.name},
         type = ${data.type},
         bank_name = ${data.bankName || null},
         account_number = ${data.accountNumber || null},
+        account_number_enc = ${encAcc},
+        account_number_bidx = ${bidxAcc},
         branch = ${data.branch || null},
+        branch_enc = ${encBranch},
         initial_balance = ${data.initialBalance != null ? data.initialBalance : 0},
         updated_at = NOW()
     WHERE id = ${id} AND tenant_id = ${tenantId}
