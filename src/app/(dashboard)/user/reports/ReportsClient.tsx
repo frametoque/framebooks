@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Loader } from "@/components/ui/Loader";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Percent, Link as LinkIcon, Calculator, Building2, User, Info } from "lucide-react";
 import { MdTrendingUp, MdTrendingDown, MdAttachMoney, MdDownload, MdInsertDriveFile, MdCalendarToday, MdGroup, MdMenuBook, MdSearch, MdCallMade, MdCallReceived, MdShowChart } from "react-icons/md";
@@ -263,65 +264,8 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
 
   if (loading || !data) {
     return (
-      <div className="space-y-4">
-        {/* Four Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-pulse">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-card w-12 h-12" />
-              <div className="space-y-2 flex-1">
-                <div className="h-4 bg-card rounded-full w-24" />
-                <div className="h-6 bg-white/10 rounded-full w-32" />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Tab Buttons */}
-        <div className="flex flex-wrap gap-2 animate-pulse">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-10 bg-transparent border border-border rounded-full w-32" />
-          ))}
-        </div>
-        
-        {/* Two side-by-side charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 animate-pulse">
-          <div className="bg-transparent border border-border rounded-3xl p-6 space-y-6">
-            <div className="h-6 bg-white/10 rounded-full w-40" />
-            <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="h-4 bg-card rounded-full w-20" />
-                  <div className="h-8 bg-white/10 rounded-2xl flex-1" />
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="bg-transparent border border-border rounded-3xl p-6 space-y-6">
-            <div className="h-6 bg-white/10 rounded-full w-40" />
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="h-4 bg-card rounded-full w-20" />
-                  <div className="h-8 bg-white/10 rounded-2xl flex-1" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Client Revenue Chart */}
-        <div className="bg-transparent border border-border rounded-3xl p-6 animate-pulse space-y-6">
-          <div className="h-6 bg-white/10 rounded-full w-48" />
-          <div className="space-y-3">
-            {[...Array(2)].map((_, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <div className="h-4 bg-card rounded-full w-20" />
-                <div className="h-8 bg-white/10 rounded-2xl flex-1" />
-              </div>
-            ))}
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader size="lg" />
       </div>
     );
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Loader } from "@/components/ui/Loader";
 import Link from "next/link";
 import { Receipt, Folder, CheckSquare, Droplets, ArrowRight } from "lucide-react";
 import { MdAccountBalance, MdAccountBalanceWallet, MdTrendingUp, MdErrorOutline, MdCallMade, MdCallReceived, MdInsertDriveFile, MdGroup, MdRemoveRedEye, MdCalendarToday, MdLocationOn, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdCheck } from "react-icons/md";
@@ -76,64 +77,8 @@ export default function DashboardPage() {
 
   if (loading || !data) {
     return (
-      <div className="space-y-4">
-        {/* Skeleton Stats Cards (Row 1) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-          {[...Array(5)].map((_, i) => (
-            <div 
-              key={i} 
-              className={`bg-card border border-border rounded-3xl p-4 sm:p-5 xl:p-6 flex items-center gap-3.5 animate-pulse shadow-xs min-w-0 ${
-                i === 4 ? "sm:col-span-2 lg:col-span-2 xl:col-span-1" : ""
-              }`}
-            >
-              <div className="w-10 h-10 rounded-2xl bg-black/5 dark:bg-card shrink-0" />
-              <div className="space-y-2 flex-1 min-w-0">
-                <div className="h-3.5 bg-black/5 dark:bg-card rounded-full w-20" />
-                <div className="h-7 bg-black/10 dark:bg-white/10 rounded-full w-28" />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Skeleton Stats Cards (Row 2) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-3xl p-5 sm:p-6 flex flex-col justify-between gap-3 animate-pulse shadow-xs min-w-0">
-              <div className="h-3.5 bg-black/5 dark:bg-card rounded-full w-28" />
-              <div className="h-7 bg-black/10 dark:bg-white/10 rounded-full w-32" />
-            </div>
-          ))}
-        </div>
-
-        {/* Skeleton Analytics Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-3xl p-7 flex items-center gap-4 animate-pulse shadow-xs">
-              <div className="p-3 rounded-2xl bg-black/5 dark:bg-card w-12 h-12" />
-              <div className="space-y-2 flex-1">
-                <div className="h-4 bg-black/5 dark:bg-card rounded-full w-24" />
-                <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-32" />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Skeleton Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          {/* Skeleton Chart */}
-          <div className="lg:col-span-2 bg-card border border-border rounded-3xl p-6 animate-pulse space-y-6 shadow-xs">
-            <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-40" />
-            <div className="h-[280px] bg-black/5 dark:bg-card rounded-2xl" />
-          </div>
-          <div className="bg-card border border-border rounded-3xl p-6 animate-pulse space-y-6 shadow-xs">
-            <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-40" />
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-16 bg-black/5 dark:bg-card rounded-2xl border border-border" />
-              ))}
-            </div>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader size="lg" />
       </div>
     );
   }
