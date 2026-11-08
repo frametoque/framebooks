@@ -24,6 +24,7 @@ import { useRole } from "../context/RoleContext";
 import { getTenantInfo } from "../actions/tenants";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import Image from "next/image";
+import { categoryMatches } from "@/lib/categoryUtils";
 
 const filters = ["All", "Web dev", "Graphic design", "Video editing", "Photography", "Videography"];
 
@@ -428,7 +429,7 @@ const handleDelete = async (id: number) => {
   ];
 
   const filteredQuotations = data.items.filter((row: any) => 
-    activeFilter === "All" || row.category === activeFilter
+    categoryMatches(row.category, activeFilter)
   );
 
   const getStatusColor = (status: string) => {
@@ -468,7 +469,7 @@ const handleDelete = async (id: number) => {
               key={f}
               onClick={() => setActiveFilter(f)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all border ${
-                activeFilter === f 
+                activeFilter.trim().toLowerCase() === f.trim().toLowerCase() 
                   ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs" 
                   : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
               }`}

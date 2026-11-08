@@ -18,6 +18,7 @@ import { useAdminDateRange } from "../context/AdminDateRangeContext";
 import { useAppLock } from "../components/AppLockProvider";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import Image from "next/image";
+import { parseCategories, deduplicateCategories, categoryMatches } from "@/lib/categoryUtils";
 
 const formatLKR = (amount: number) => {
   const num = new Intl.NumberFormat('en-LK', {
@@ -27,12 +28,7 @@ const formatLKR = (amount: number) => {
   return `${num} LKR`;
 };
 
-// Helper: parse stored comma-separated category string → array
-const parseCategories = (raw: string | string[] | undefined): string[] => {
-  if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  return raw.split(",").map((s) => s.trim()).filter(Boolean);
-};
+
 
 // Helper: array → comma-separated string for storage
 const joinCategories = (cats: string[]): string => cats.join(", ");
@@ -399,13 +395,14 @@ export default function IncomePage() {
   };
 
   const dynamicCategories = useMemo(() => {
-    if (!data?.items) return serverCategories;
-    const all = new Set(serverCategories);
-    data.items.forEach((item: any) => {
-      parseCategories(item.category).forEach(c => all.add(c));
-    });
-    return Array.from(all);
-  }, [data?.items]);
+    const raw: string[] = [...serverCategories];
+    if (data?.items) {
+      data.items.forEach((item: any) => {
+        parseCategories(item.category).forEach(c => raw.push(c));
+      });
+    }
+    return deduplicateCategories(raw).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  }, [data?.items, serverCategories]);
 
   if (loading || !data) {
     return (
@@ -450,8 +447,7 @@ export default function IncomePage() {
 
   // Filter: match if any of the row's categories includes the active filter
   const filteredIncome = data.items.filter((row: any) => {
-    if (activeFilter === "All") return true;
-    return parseCategories(row.category).includes(activeFilter);
+    return categoryMatches(row.category, activeFilter);
   });
 
   return (
@@ -475,7 +471,7 @@ export default function IncomePage() {
         <div className="flex flex-wrap gap-2">
           {dynamicFilters.map((f) => (
             <button key={f} onClick={() => setActiveFilter(f)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors border ${activeFilter === f ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs" : "bg-card text-foreground/80 hover:text-foreground border-slate-200/90 dark:border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"}`}>
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors border ${activeFilter.trim().toLowerCase() === f.trim().toLowerCase() ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs" : "bg-card text-foreground/80 hover:text-foreground border-slate-200/90 dark:border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"}`}>
               {f}
             </button>
           ))}

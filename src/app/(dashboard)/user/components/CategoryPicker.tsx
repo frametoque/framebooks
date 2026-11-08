@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { MdKeyboardArrowDown, MdClose, MdDelete, MdAdd } from "react-icons/md";
 import { getCategories, createCategory, deleteCategory } from "../actions/categories";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
+import { deduplicateCategories, canonicalizeCategory } from "@/lib/categoryUtils";
 
 interface CategoryPickerProps {
   value: string[];
@@ -44,8 +45,9 @@ export default function CategoryPicker({
         setLoading(true);
         const res = await getCategories(type);
         setServerCategories(prev => {
-          const merged = Array.from(new Set([...prev, ...res, ...initialCategories])).filter(Boolean);
-          return merged.sort();
+          return deduplicateCategories([...prev, ...res, ...initialCategories]).sort((a, b) => 
+            a.localeCompare(b, undefined, { sensitivity: 'base' })
+          );
         });
       } catch (e) {
         console.error(e);
@@ -59,8 +61,9 @@ export default function CategoryPicker({
   useEffect(() => {
     if (initialCategories.length > 0) {
       setServerCategories(prev => {
-        const merged = Array.from(new Set([...prev, ...initialCategories])).filter(Boolean);
-        return merged.sort();
+        return deduplicateCategories([...prev, ...initialCategories]).sort((a, b) => 
+          a.localeCompare(b, undefined, { sensitivity: 'base' })
+        );
       });
     }
   }, [initialCategories]);
@@ -133,21 +136,40 @@ export default function CategoryPicker({
   }, [open, serverCategories.length]);
 
   const toggle = (cat: string) => {
-    onChange(value.includes(cat) ? value.filter((c) => c !== cat) : [...value, cat]);
+    const catLower = cat.trim().toLowerCase();
+    const exists = value.some(c => c.trim().toLowerCase() === catLower);
+    if (exists) {
+      onChange(value.filter((c) => c.trim().toLowerCase() !== catLower));
+    } else {
+      onChange([...value, cat]);
+    }
   };
 
   const removeValue = (cat: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    onChange(value.filter((c) => c !== cat));
+    const catLower = cat.trim().toLowerCase();
+    onChange(value.filter((c) => c.trim().toLowerCase() !== catLower));
   };
 
   const handleAddCategory = async (catName: string) => {
-    if (!catName || serverCategories.includes(catName)) return;
+    const trimmed = catName.trim();
+    if (!trimmed) return;
+    const lower = trimmed.toLowerCase();
+    const existingCat = serverCategories.find(c => c.trim().toLowerCase() === lower);
+    if (existingCat) {
+      if (!value.some(c => c.trim().toLowerCase() === lower)) {
+        onChange([...value, existingCat]);
+      }
+      return;
+    }
+    const canonical = canonicalizeCategory(trimmed);
     try {
       setAdding(true);
-      await createCategory(catName, type);
-      setServerCategories(prev => [...prev, catName].sort());
-      onChange([...value, catName]);
+      await createCategory(canonical, type);
+      setServerCategories(prev => deduplicateCategories([...prev, canonical]).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })));
+      if (!value.some(c => c.trim().toLowerCase() === lower)) {
+        onChange([...value, canonical]);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -160,8 +182,9 @@ export default function CategoryPicker({
     if (!await confirm(`Delete category "${catName}"?`)) return;
     try {
       await deleteCategory(catName, type);
-      setServerCategories(prev => prev.filter(c => c !== catName));
-      onChange(value.filter(c => c !== catName));
+      const lower = catName.trim().toLowerCase();
+      setServerCategories(prev => prev.filter(c => c.trim().toLowerCase() !== lower));
+      onChange(value.filter(c => c.trim().toLowerCase() !== lower));
     } catch (e) {
       console.error(e);
     }
@@ -215,7 +238,7 @@ export default function CategoryPicker({
           <div className="p-4 text-center text-sm text-gray-500">No categories found</div>
         ) : (
           serverCategories.map((cat) => {
-            const selected = value.includes(cat);
+            const selected = value.some(c => c.trim().toLowerCase() === cat.trim().toLowerCase());
             return (
               <div
                 key={cat}

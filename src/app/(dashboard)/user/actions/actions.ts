@@ -178,17 +178,21 @@ export async function _getDashboardData(tenantId: string, start: string, end: st
       LIMIT 5
     ),
     exp_cat AS (
-      SELECT category as name, SUM(amount) as value
+      SELECT 
+        COALESCE(NULLIF(INITCAP(LOWER(TRIM(category))), ''), 'Other') as name, 
+        SUM(amount) as value
       FROM admin_expenses
       WHERE tenant_id = ${tenantId} AND date >= ${start}::date AND date <= ${end}::date
-      GROUP BY category
+      GROUP BY COALESCE(NULLIF(INITCAP(LOWER(TRIM(category))), ''), 'Other')
       ORDER BY value DESC
     ),
     inc_cat AS (
-      SELECT category as name, SUM(amount) as value
+      SELECT 
+        COALESCE(NULLIF(INITCAP(LOWER(TRIM(category))), ''), 'Other') as name, 
+        SUM(amount) as value
       FROM admin_incomes
       WHERE tenant_id = ${tenantId} AND date >= ${start}::date AND date <= ${end}::date
-      GROUP BY category
+      GROUP BY COALESCE(NULLIF(INITCAP(LOWER(TRIM(category))), ''), 'Other')
       ORDER BY value DESC
     ),
     clients_cnt AS (
@@ -1763,10 +1767,12 @@ export async function getReports(startDate?: string, endDate?: string) {
       WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp
     `,
     sql`
-      SELECT category as name, SUM(amount) as value
+      SELECT 
+        COALESCE(NULLIF(INITCAP(LOWER(TRIM(category))), ''), 'Other') as name, 
+        SUM(amount) as value
       FROM admin_expenses
       WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp
-      GROUP BY category
+      GROUP BY COALESCE(NULLIF(INITCAP(LOWER(TRIM(category))), ''), 'Other')
       ORDER BY value DESC
     `,
     sql`
@@ -1788,16 +1794,25 @@ export async function getReports(startDate?: string, endDate?: string) {
   const netProfit = totalIncome - totalExpenses;
   const profitMargin = totalIncome > 0 ? ((netProfit / totalIncome) * 100).toFixed(1) : '0.0';
 
-  const serviceMap: Record<string, number> = {};
+  const serviceMap = new Map<string, { name: string; value: number }>();
   for (const row of rawIncome) {
     const rawCategory = (row.category || 'Other').trim();
-    const categoryName = rawCategory
-      ? rawCategory.split(',').map((s: string) => s.trim()).filter(Boolean).join(' + ') || 'Other'
+    const parts = rawCategory
+      ? rawCategory.split(',').map((s: string) => s.trim()).filter(Boolean)
+      : [];
+    const formatted = parts.length > 0
+      ? parts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' + ')
       : 'Other';
-    serviceMap[categoryName] = (serviceMap[categoryName] || 0) + parseFloat(row.amount);
+    const key = formatted.toLowerCase();
+    const amt = parseFloat(row.amount || 0);
+    const existing = serviceMap.get(key);
+    if (existing) {
+      existing.value += amt;
+    } else {
+      serviceMap.set(key, { name: formatted, value: amt });
+    }
   }
-  const incomeByService = Object.entries(serviceMap)
-    .map(([name, value]) => ({ name, value }))
+  const incomeByService = Array.from(serviceMap.values())
     .sort((a, b) => b.value - a.value);
 
   const journalEntries = journalEntriesRaw.map((r: any) => ({
@@ -2822,11 +2837,11 @@ export async function getExpenseBreakdownByMode(mode: string) {
 
   const rows = await sql`
     SELECT 
-      category as name,
+      COALESCE(NULLIF(INITCAP(LOWER(TRIM(category))), ''), 'Other') as name,
       SUM(amount) as value
     FROM admin_expenses
     WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp
-    GROUP BY category
+    GROUP BY COALESCE(NULLIF(INITCAP(LOWER(TRIM(category))), ''), 'Other')
     ORDER BY value DESC
   `;
 
@@ -2865,11 +2880,11 @@ export async function getIncomeBreakdownByMode(mode: string) {
 
   const rows = await sql`
     SELECT 
-      category as name,
+      COALESCE(NULLIF(INITCAP(LOWER(TRIM(category))), ''), 'Other') as name,
       SUM(amount) as value
     FROM admin_incomes
     WHERE tenant_id = ${tenantId} AND date >= ${start}::timestamp AND date <= (${end} || ' 23:59:59.999')::timestamp
-    GROUP BY category
+    GROUP BY COALESCE(NULLIF(INITCAP(LOWER(TRIM(category))), ''), 'Other')
     ORDER BY value DESC
   `;
 

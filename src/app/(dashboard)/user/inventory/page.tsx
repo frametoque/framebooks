@@ -14,6 +14,7 @@ import { PlanType } from "@/lib/plans";
 import { getTenantPlan } from "../actions/plan";
 import { UpgradeOverlay } from "../components/UpgradeOverlay";
 import Image from "next/image";
+import { parseCategories, deduplicateCategories, categoryMatches } from "@/lib/categoryUtils";
 
 const formatLKR = (amount: number) => {
   const num = new Intl.NumberFormat('en-LK', {
@@ -23,10 +24,7 @@ const formatLKR = (amount: number) => {
   return `${num} LKR`;
 };
 
-const parseCategories = (catStr: string | null | undefined): string[] => {
-  if (!catStr) return [];
-  return catStr.split(',').map(s => s.trim()).filter(Boolean);
-};
+
 
 const emptyForm = { item_name: '', category: '', serial_number: '', quantity: 1, status: 'Available', purchase_date: '', purchase_price: '', notes: '', warranty_letter_url: '', expense_id: '' };
 
@@ -179,25 +177,22 @@ export default function InventoryPage() {
   };
 
   const dynamicCategories = useMemo(() => {
-    const cats = new Set<string>();
+    const raw: string[] = [];
     data.forEach((item) => {
       const parsed = parseCategories(item.category);
       if (parsed.length > 0) {
-        parsed.forEach(c => cats.add(c));
+        parsed.forEach(c => raw.push(c));
       } else if (item.category && item.category.trim()) {
-        cats.add(item.category.trim());
+        raw.push(item.category.trim());
       }
     });
-    return ["All", ...Array.from(cats).sort()];
+    return ["All", ...deduplicateCategories(raw).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))];
   }, [data]);
 
   const filteredData = useMemo(() => {
     let list = data;
     if (activeCategory !== "All") {
-      list = list.filter(d => {
-        const cats = parseCategories(d.category);
-        return cats.length > 0 ? cats.includes(activeCategory) : d.category === activeCategory;
-      });
+      list = list.filter(d => categoryMatches(d.category, activeCategory));
     }
     if (searchTerm) {
       const lower = searchTerm.toLowerCase();
@@ -321,7 +316,7 @@ export default function InventoryPage() {
             key={cat}
             onClick={() => setActiveCategory(cat)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer border ${
-              activeCategory === cat
+              activeCategory.trim().toLowerCase() === cat.trim().toLowerCase()
                 ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs"
                 : "bg-card text-foreground/80 hover:text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
             }`}

@@ -20,6 +20,7 @@ import { useAdminDateRange } from "../context/AdminDateRangeContext";
 import { useAppLock } from "../components/AppLockProvider";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import Image from "next/image";
+import { parseCategories, deduplicateCategories, categoryMatches } from "@/lib/categoryUtils";
 
 
 const formatLKR = (amount: number) => {
@@ -30,10 +31,7 @@ const formatLKR = (amount: number) => {
   return `${num} LKR`;
 };
 
-const parseCategories = (catStr: string | null | undefined): string[] => {
-  if (!catStr) return [];
-  return catStr.split(',').map(s => s.trim()).filter(Boolean);
-};
+
 
 const convertPdfToImage = async (file: File): Promise<File> => {
   if (file.type !== "application/pdf") return file;
@@ -393,13 +391,17 @@ export default function ExpensesPage() {
   };
 
   const dynamicCategories = useMemo(() => {
-    if (!data?.items) return filters.filter(f => f !== "All");
-    const all = new Set(filters.filter(f => f !== "All"));
-    data.items.forEach((item: any) => {
-      parseCategories(item.category).forEach(c => all.add(c));
+    const raw: string[] = [];
+    filters.forEach(f => {
+      if (f !== "All") raw.push(f);
     });
-    return Array.from(all);
-  }, [data?.items]);
+    if (data?.items) {
+      data.items.forEach((item: any) => {
+        parseCategories(item.category).forEach(c => raw.push(c));
+      });
+    }
+    return deduplicateCategories(raw).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  }, [data?.items, filters]);
 
   if (loading || !data) {
     return (
@@ -441,8 +443,7 @@ export default function ExpensesPage() {
   const dynamicFilters = ["All", ...dynamicCategories];
 
   const filteredExpenses = data.items.filter((row: any) => {
-    if (activeFilter === "All") return true;
-    return parseCategories(row.category).includes(activeFilter);
+    return categoryMatches(row.category, activeFilter);
   });
 
   return (
@@ -546,7 +547,7 @@ export default function ExpensesPage() {
               key={f}
               onClick={() => setActiveFilter(f)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer border ${
-                activeFilter === f 
+                activeFilter.trim().toLowerCase() === f.trim().toLowerCase()
                   ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs" 
                   : "bg-card text-foreground/80 hover:text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
               }`}
