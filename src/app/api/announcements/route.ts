@@ -48,7 +48,7 @@ export async function GET() {
       { announcements: rows },
       {
         headers: {
-          "Cache-Control": "private, no-cache, no-store, must-revalidate",
+          "Cache-Control": "private, s-maxage=60, stale-while-revalidate=300",
         },
       }
     );
