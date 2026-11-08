@@ -6,7 +6,7 @@ import RolesConfigurator from "../components/RolesConfigurator";
 import { useState, useEffect, useRef } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 import { useSession, signOut } from 'next-auth/react';
-import { IdCard, Globe, Save, Building, Copy, Terminal, Sliders, Upload, FileText, CheckCircle2, AlertCircle, X, ExternalLink, ArrowUp, ArrowDown, Palette, ChevronDown, Clock, ShieldOff, ShieldCheck, Sparkles, Info, Loader2, CreditCard, Plus, Repeat, Wallet, AlertTriangle, Tag, RefreshCw } from "lucide-react";
+import { IdCard, Globe, Save, Building, Copy, Terminal, Sliders, Upload, FileText, CheckCircle2, AlertCircle, X, ExternalLink, ArrowUp, ArrowDown, Palette, ChevronDown, Clock, ShieldOff, ShieldCheck, Sparkles, Info, Loader2, CreditCard, Plus, Repeat, Wallet, AlertTriangle, Tag, RefreshCw, ArrowRight } from "lucide-react";
 import { MdPerson, MdMailOutline, MdKeyboardArrowRight, MdKeyboardArrowLeft, MdLocationOn, MdPhone, MdUpload, MdDownload, MdCheck, MdShowChart, MdCreditCard, MdGroup, MdBusiness, MdHistory, MdLogout, MdWarning, MdSecurity, MdDelete, MdLock } from "react-icons/md";
 import AppearanceTab from "./AppearanceTab";
 import InvoiceLayoutTab from "./invoice-layout/InvoiceLayoutTab";
@@ -449,6 +449,8 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
   const [loading, setLoading] = useState(() => !settingsMemoryCache);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [userNameSaving, setUserNameSaving] = useState(false);
+  const [userNameSuccess, setUserNameSuccess] = useState(false);
   const [customPasskeys, setCustomPasskeys] = useState<any[]>(() => settingsMemoryCache?.passkeys || []);
   const { autoLockDuration, setAutoLockDuration, highSecurityMode, setHighSecurityMode, requireAuth } = useAppLock();
   const [tenantInfo, setTenantInfo] = useState<{ plan: string, name: string, logo_url: string | null, industry: string | null, phone: string | null, email: string | null, website: string | null, address: string | null, accent_color?: string | null }>(() => settingsMemoryCache?.tenantInfo || { plan: "Free", name: "My Business", logo_url: null, industry: null, phone: null, email: null, website: null, address: null, accent_color: null });
@@ -820,8 +822,8 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
     }
 
     requireAuth(async () => {
-      setSaving(true);
-      setSaveSuccess(false);
+      setUserNameSaving(true);
+      setUserNameSuccess(false);
 
       try {
         const parts = formData.name.split(" ");
@@ -851,8 +853,8 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
         if (res.ok && data.success) {
           // Update formData immediately from the returned profile — no refresh needed
           applyProfile(data.profile);
-          setSaveSuccess(true);
-          setTimeout(() => setSaveSuccess(false), 3000);
+          setUserNameSuccess(true);
+          setTimeout(() => setUserNameSuccess(false), 3000);
         } else {
           alert(`Failed to save: ${data.error || "Unknown error"}`);
         }
@@ -860,7 +862,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
         console.error("Save error:", err);
         alert("An unexpected error occurred while saving.");
       } finally {
-        setSaving(false);
+        setUserNameSaving(false);
       }
     });
   };
@@ -911,7 +913,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
 
 
   const tabs = [
-    { id: "profile", name: "Profile", icon: MdPerson },
+    { id: "profile", name: "Security", icon: MdSecurity },
     ...(isSettingsSectionAllowed("billing", currentUserRole)
       ? [{ id: "billing", name: "Billing & Plans", icon: MdCreditCard }] : []),
     ...(isSettingsSectionAllowed("prefs", currentUserRole)
@@ -1081,7 +1083,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                 {[
                   { name: "Business Profile", sub: "Update business name, contact & details.", icon: MdBusiness, id: "business", allowed: isSettingsSectionAllowed("business", currentUserRole) },
                   { name: "Appearance & Layouts", sub: "Customize dashboard accent colour, theme branding, and invoice layouts.", icon: Palette, id: "appearance", allowed: true },
-                  { name: "Account & Security", sub: "Manage your profile, connected accounts, and app lock.", icon: MdPerson, id: "profile", allowed: true },
+                  { name: "Security", sub: "Manage App Lock and authentication passkeys.", icon: MdSecurity, id: "profile", allowed: true },
                   { name: "Billing & Plans", sub: "Manage your subscription and payments.", icon: MdCreditCard, id: "billing", allowed: isSettingsSectionAllowed("billing", currentUserRole) },
                   { name: "Team & Permissions", sub: "Manage team members, invitations, and custom roles.", icon: MdGroup, id: "team", allowed: isSettingsSectionAllowed("team", currentUserRole) },
                   { name: "Admin Preferences", sub: "Configure default dashboard date range and display preferences.", icon: Sliders, id: "prefs", allowed: isSettingsSectionAllowed("prefs", currentUserRole) },
@@ -1149,7 +1151,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               {[
                 { name: "Business", id: "business", icon: MdBusiness, allowed: isSettingsSectionAllowed("business", currentUserRole) },
                 { name: "Appearance & Layouts", id: "appearance", icon: Palette, allowed: true },
-                { name: "Account", id: "profile", icon: MdPerson, allowed: true },
+                { name: "Security", id: "profile", icon: MdSecurity, allowed: true },
                 { name: "Billing", id: "billing", icon: MdCreditCard, allowed: isSettingsSectionAllowed("billing", currentUserRole) },
                 { name: "Team & Permissions", id: "team", icon: MdGroup, allowed: isSettingsSectionAllowed("team", currentUserRole) },
                 { name: "Preferences", id: "prefs", icon: Sliders, allowed: isSettingsSectionAllowed("prefs", currentUserRole) },
@@ -1350,7 +1352,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               {[
                 { name: "Business", id: "business", icon: MdBusiness, allowed: isSettingsSectionAllowed("business", currentUserRole) },
                 { name: "Appearance & Layouts", id: "appearance", icon: Palette, allowed: true },
-                { name: "Account", id: "profile", icon: MdPerson, allowed: true },
+                { name: "Security", id: "profile", icon: MdSecurity, allowed: true },
                 { name: "Billing", id: "billing", icon: MdCreditCard, allowed: isSettingsSectionAllowed("billing", currentUserRole) },
                 { name: "Team & Permissions", id: "team", icon: MdGroup, allowed: isSettingsSectionAllowed("team", currentUserRole) },
                 { name: "Preferences", id: "prefs", icon: Sliders, allowed: isSettingsSectionAllowed("prefs", currentUserRole) },
@@ -1392,13 +1394,15 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
           <div className="bg-transparent">
 
             {activeTab === "business" && (
-              <div className="max-w-4xl space-y-6">
+              <div className="space-y-6">
                 {!isSettingsSectionAllowed("business", currentUserRole) ? (
                   <div className="p-4 bg-red-500/10 text-red-400 rounded-xl border border-red-500/20">
                     You do not have permission to view or edit the business profile.
                   </div>
                 ) : (
-                  <>
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    {/* Left Column: Business Profile & Logo */}
+                    <div className="lg:col-span-7 xl:col-span-8 space-y-6">
                     {/* Logo Upload Card */}
                     <div className="p-6 rounded-2xl border border-border bg-card/40 backdrop-blur-sm">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
@@ -1636,10 +1640,80 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                         </div>
                       )}
                     </form>
-                  </>
-                )}
-              </div>
-            )}
+                  </div>
+
+                  {/* Right Column: User Profile Details */}
+                  <div className="lg:col-span-5 xl:col-span-4 space-y-6">
+                    <div className="p-6 sm:p-7 rounded-2xl border border-border bg-card/40 backdrop-blur-sm space-y-6">
+                      <div className="border-b border-border/60 pb-3">
+                        <h4 className="text-sm font-bold text-foreground">User Profile</h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Your personal account identity and display name.
+                        </p>
+                      </div>
+
+                      {/* Photo and Identity */}
+                      <div className="flex flex-col items-center text-center gap-4">
+                        <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-border/80 bg-muted/40 shadow-sm shrink-0">
+                          <Image
+                            src={user?.image || "/logos/ft/logo.png"}
+                            alt="Profile"
+                            className="w-full h-full object-cover"
+                            width={800} height={800} unoptimized={true}
+                            onError={(e) => { e.currentTarget.src = "/logos/ft/logo.png"; e.currentTarget.onerror = null; }}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-base font-bold text-foreground truncate">{user?.name || "No name provided"}</h3>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">{user?.email || "No email provided"}</p>
+                        </div>
+                        <label className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 border border-border rounded-xl hover:bg-white/20 transition-colors cursor-pointer text-xs font-semibold text-foreground">
+                          <MdUpload className="w-4 h-4 text-brand-500" />
+                          <span>Change Photo</span>
+                          <input type="file" accept="image/jpeg,image/png,image/gif" onChange={handlePhotoUpload} className="hidden" />
+                        </label>
+                      </div>
+
+                      {/* Display Name form */}
+                      <form onSubmit={handleSave} className="space-y-4 pt-4 border-t border-border/60">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground">Display Name</label>
+                          <input
+                            type="text"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            className="w-full px-3.5 py-2.5 bg-card/60 hover:bg-card border border-border focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-foreground text-sm transition-all outline-none"
+                            placeholder="Your full name"
+                            required
+                          />
+                        </div>
+                        <div className="flex justify-end pt-1">
+                          <button
+                            type="submit"
+                            disabled={userNameSaving || userNameSuccess}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-xl transition-all shadow-md active:scale-98 cursor-pointer text-xs disabled:opacity-50"
+                          >
+                            {userNameSuccess ? (
+                              <>
+                                <MdCheck className="w-4 h-4" />
+                                <span>Saved!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Save className="w-4 h-4" />
+                                <span>{userNameSaving ? "Saving..." : "Save Name"}</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
             {activeTab === "appearance" && (
               <div className="space-y-4">
@@ -1990,65 +2064,16 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
             )}
 
             {activeTab === "profile" && (
-              <div className="space-y-6">
-                {/* Personal Info - simplified: name, photo, connected accounts */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-6 border-b border-border">
-                  <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-border shrink-0">
-                    <Image
-                      src={user.image || "/logos/ft/logo.png"}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                      width={800} height={800} unoptimized={true}
-                      onError={(e) => { e.currentTarget.src = "/logos/ft/logo.png"; e.currentTarget.onerror = null; }}
-                    />
-                  </div>
-                  <div className="flex-1 flex flex-col items-start gap-1">
-                    <h3 className="text-xl font-bold">{user?.name || "No name provided"}</h3>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">{user?.email || "No email provided"}</p>
-                    <label className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 border border-border rounded-3xl hover:bg-white/20 transition-colors cursor-pointer text-sm font-semibold text-gray-300 mt-1">
-                      <MdUpload className="w-4 h-4" />
-                      Change Photo
-                      <input type="file" accept="image/jpeg,image/png,image/gif" onChange={handlePhotoUpload} className="hidden" />
-                    </label>
-                  </div>
-                </div>
-
-                {/* Name update */}
-                <form onSubmit={handleSave} className="space-y-4 max-w-xl">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium text-gray-300">Display Name</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 bg-transparent border border-border focus:border-brand-500 rounded-2xl text-foreground text-sm focus:ring-1 focus:ring-brand-500 transition-colors"
-                      placeholder="Your full name"
-                      required
-                    />
-                  </div>
-                  <div className="flex">
-                    <button
-                      type="submit"
-                      disabled={saving || saveSuccess}
-                      className="flex items-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-full transition-colors disabled:opacity-50"
-                    >
-                      {saveSuccess ? <><MdCheck className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> {saving ? "Saving..." : "Save Name"}</>}
-                    </button>
-                  </div>
-                </form>
-
-
-
+              <div className="max-w-4xl space-y-6">
                 {/* App Lock */}
                 {(() => {
                   const hasCurrentDevicePasskey = customPasskeys.some((pk: any) => pk.is_current_device);
                   return (
-                    <div className="pt-6 border-t border-border">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
+                    <div className="p-6 sm:p-8 rounded-2xl border border-border bg-card/40 backdrop-blur-sm space-y-6">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-5 border-b border-border/60 gap-4">
                         <div className="flex-1 pr-4">
-                          <h3 className="text-lg font-semibold text-foreground">App Lock</h3>
-                          <p className="text-sm text-gray-400 mt-1">Secure your dashboard with your device using a fingerprint, face scan, or screen lock.</p>
+                          <h3 className="text-base font-bold text-foreground">App Lock</h3>
+                          <p className="text-xs text-muted-foreground mt-1">Secure your dashboard with your device using a fingerprint, face scan, or screen lock.</p>
                         </div>
                         <button
                           onClick={async () => {
@@ -2082,15 +2107,15 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                               alert("Failed to add App Lock: " + e.message);
                             }
                           }}
-                          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-foreground rounded-3xl font-semibold transition-colors text-sm whitespace-nowrap shrink-0 cursor-pointer"
+                          className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-950 rounded-xl font-bold transition-all shadow-md active:scale-98 text-xs whitespace-nowrap shrink-0 cursor-pointer"
                         >
                           {customPasskeys.length > 0 ? "Add Another Passkey" : "Enable App Lock with Passkey"}
                         </button>
                       </div>
 
                       {customPasskeys.length > 0 && (
-                        <div className="mb-4 relative z-30">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Auto-Lock Duration</label>
+                        <div className="relative z-30">
+                          <label className="block text-xs font-semibold text-foreground mb-1.5">Auto-Lock Duration</label>
                           <AutoLockDurationSelect
                             value={autoLockDuration}
                             onChange={setAutoLockDuration}
@@ -2099,12 +2124,12 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                       )}
 
                       {customPasskeys.length > 0 && (
-                        <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">High Security Mode</label>
-                          <div className="flex items-center justify-between p-4 bg-card border border-border rounded-2xl shadow-2xs">
+                        <div>
+                          <label className="block text-xs font-semibold text-foreground mb-1.5">High Security Mode</label>
+                          <div className="flex items-center justify-between p-4 bg-card/60 border border-border rounded-xl">
                             <div>
-                              <p className="text-foreground font-medium">Require passkey for all actions</p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">If disabled, passkey is only required for major actions like workspace deletion.</p>
+                              <p className="text-sm font-semibold text-foreground">Require passkey for all actions</p>
+                              <p className="text-xs text-muted-foreground">If disabled, passkey is only required for major actions like workspace deletion.</p>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
                               <input type="checkbox" className="sr-only peer" checked={highSecurityMode} onChange={(e) => setHighSecurityMode(e.target.checked)} />
@@ -2114,27 +2139,33 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                         </div>
                       )}
 
-                      <div className="space-y-3">
+                      <div className="space-y-3 pt-2">
                         {!hasCurrentDevicePasskey && customPasskeys.length > 0 && !customPasskeys.some((pk: any) => pk.device_type === 'multiDevice') && (
-                          <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl mb-4">
-                            <p className="text-orange-400 font-medium text-sm">App Lock is not enabled on this device.</p>
+                          <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                            <p className="text-amber-500 dark:text-amber-400 font-semibold text-xs">App Lock is not enabled on this device.</p>
                           </div>
                         )}
                         {customPasskeys.length === 0 ? (
-                          <p className="text-gray-400 text-sm">App Lock is currently disabled.</p>
+                          <div className="text-center py-8 px-4 rounded-xl border border-dashed border-border/80 bg-muted/20">
+                            <MdSecurity className="w-10 h-10 text-muted-foreground/60 mx-auto mb-2" />
+                            <p className="text-sm font-semibold text-foreground">App Lock is currently disabled</p>
+                            <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                              Add a passkey using your device biometrics (Touch ID, Face ID, or Windows Hello) to protect your financial data.
+                            </p>
+                          </div>
                         ) : (
                           customPasskeys.map((pk: any) => (
-                            <div key={pk.id} className="flex items-center justify-between p-4 bg-card rounded-3xl border border-border">
+                            <div key={pk.id} className="flex items-center justify-between p-4 bg-card/60 rounded-xl border border-border">
                               <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-brand-500/10 rounded-2xl flex items-center justify-center">
                                   <MdCheck className="w-5 h-5 text-brand-400" />
                                 </div>
                                 <div>
-                                  <p className="font-medium text-foreground">{pk.name}</p>
+                                  <p className="font-semibold text-sm text-foreground">{pk.name}</p>
                                   <div className="flex items-center gap-2 mt-0.5">
-                                    <p className="text-xs text-gray-400">Added on {new Date(pk.created_at).toLocaleDateString()}</p>
-                                    <span className="w-1 h-1 rounded-full bg-white/20"></span>
-                                    <p className="text-xs text-gray-400">
+                                    <p className="text-xs text-muted-foreground">Added on {new Date(pk.created_at).toLocaleDateString()}</p>
+                                    <span className="w-1 h-1 rounded-full bg-border"></span>
+                                    <p className="text-xs text-muted-foreground">
                                       {pk.device_type === 'singleDevice' ? 'Single Device Key' : 'Multi-Device Passkey'}
                                       {pk.backed_up ? ' • Backed up' : ''}
                                       {pk.is_current_device ? ' • Ready on this Device' : ''}
@@ -2162,7 +2193,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                                     alert("Error deleting passkey.");
                                   }
                                 }}
-                                className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-xl hover:bg-red-500/10 cursor-pointer"
+                                className="p-2 text-muted-foreground hover:text-red-500 transition-colors rounded-xl hover:bg-red-500/10 cursor-pointer"
                                 title="Delete this passkey"
                               >
                                 <MdDelete className="w-5 h-5" />
@@ -2189,7 +2220,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                                   }
                                 }, true);
                               }}
-                              className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl font-medium transition-colors text-sm"
+                              className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl font-medium transition-colors text-xs cursor-pointer"
                             >
                               Remove App Lock
                             </button>
@@ -2199,24 +2230,6 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                     </div>
                   );
                 })()}
-
-                {currentUserRole !== 'owner' && (
-                  <div className="pt-6 border-t border-border mt-8">
-                    <h3 className="text-xl font-bold text-foreground mb-4">Leave Workspace</h3>
-                    <p className="text-gray-400 text-sm mb-4">
-                      Leaving this workspace will remove your access to all data and resources. You will need a new invitation to rejoin.
-                    </p>
-                    <button onClick={async () => {
-                      if (confirm("Are you sure you want to leave this workspace? This action cannot be undone.")) {
-                        await leaveTeam();
-                        window.location.reload();
-                      }
-                    }} className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
-                      <MdWarning className="w-5 h-5" />
-                      Leave Workspace
-                    </button>
-                  </div>
-                )}
               </div>
             )}
 
@@ -2286,11 +2299,16 @@ function BillingView({
   const [subDetails, setSubDetails] = useState<any>(null);
   const [cancelingSubscription, setCancelingSubscription] = useState(false);
   const [savingBillingSettings, setSavingBillingSettings] = useState(false);
+  const [clearingHistory, setClearingHistory] = useState(false);
 
   // Switch Billing Interval Modal
   const [switchModalOpen, setSwitchModalOpen] = useState(false);
   const [switchTargetInterval, setSwitchTargetInterval] = useState<"monthly" | "yearly">("yearly");
   const [switchingCycle, setSwitchingCycle] = useState(false);
+
+  // Renewal Notice Modal before redirecting to Payments.lk checkout
+  const [renewalNoticeModalOpen, setRenewalNoticeModalOpen] = useState(false);
+  const [pendingCheckoutUrl, setPendingCheckoutUrl] = useState<string | null>(null);
 
   // Coupon state
   const [couponInput, setCouponInput] = useState("");
@@ -2430,6 +2448,22 @@ function BillingView({
     }
   };
 
+  const handleClearHistory = async () => {
+    if (!confirm("Are you sure you want to clear your billing history?")) return;
+    setClearingHistory(true);
+    try {
+      const { clearWorkspacePaymentsAction } = await import("../actions/billing");
+      const res = await clearWorkspacePaymentsAction();
+      if (res.success) {
+        setHistory([]);
+      }
+    } catch (e) {
+      console.error("Failed to clear history", e);
+    } finally {
+      setClearingHistory(false);
+    }
+  };
+
   const handleApplyCoupon = async () => {
     if (!couponInput.trim()) return;
     setValidatingCoupon(true);
@@ -2536,7 +2570,13 @@ function BillingView({
       );
 
       if (res.success && res.checkoutUrl) {
-        window.location.href = res.checkoutUrl;
+        if (res.checkoutUrl.includes("/billing/success") || res.checkoutUrl.includes("switched=true")) {
+          window.location.href = res.checkoutUrl;
+          return;
+        }
+        setSwitchModalOpen(false);
+        setPendingCheckoutUrl(res.checkoutUrl);
+        setRenewalNoticeModalOpen(true);
       } else if (res.success) {
         setSwitchModalOpen(false);
         setStatusMessage({
@@ -2585,7 +2625,12 @@ function BillingView({
       }
 
       if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
+        if (data.checkoutUrl.includes("/billing/success")) {
+          window.location.href = data.checkoutUrl;
+          return;
+        }
+        setPendingCheckoutUrl(data.checkoutUrl);
+        setRenewalNoticeModalOpen(true);
       }
     } catch (err: any) {
       console.error("Upgrade error:", err);
@@ -2854,23 +2899,13 @@ function BillingView({
               </div>
             )}
 
-            {/* Payments.lk Automation Notice */}
-            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-muted/20 border border-border/60 text-xs">
-              <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-              <div className="space-y-0.5">
-                <span className="font-semibold text-foreground text-xs block">Automated Recurring Billing via Payments.lk</span>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Subscriptions are processed through <strong>Payments.lk</strong>. Invoices are emailed automatically upon renewal. In case of payment issues, automatic retries run on days 1, 3, 7, and 14 with zero interruption to your workflow.
-                </p>
-              </div>
-            </div>
+            {/* Sub Actions */}
           </div>
 
           {/* Card 2: Billing & Invoice Information */}
           <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-5">
             <div>
               <h3 className="text-sm font-bold text-foreground">Billing Details</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">These details will appear on all your subscription invoices & receipts.</p>
             </div>
 
             <div className="space-y-3.5">
@@ -2949,57 +2984,6 @@ function BillingView({
         <div className="space-y-6">
           {/* Card 1: All Plan Things */}
           <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-5">
-            {/* Top: Current Plan Status Header */}
-            <div className="space-y-3 pb-4 border-b border-border/70">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Current Plan</span>
-
-                {/* Action buttons (Switch to Yearly, Auto-Renew) */}
-                <div className="flex items-center gap-2">
-                  {subDetails && activePlanName.toLowerCase() !== "free" && subStatus !== "canceled" && (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenSwitchModal(subDetails?.billing_interval === "yearly" ? "monthly" : "yearly")}
-                      className="px-3 py-1.5 rounded-xl text-xs font-bold border border-brand-500/40 bg-brand-500/10 text-brand-700 dark:text-brand-300 hover:bg-brand-500/20 transition-all cursor-pointer flex items-center gap-1.5"
-                      title="Change subscription billing cycle"
-                    >
-                      <Repeat className="w-3.5 h-3.5 text-brand-500" />
-                      <span>
-                        Switch to {subDetails?.billing_interval === "yearly" ? "Monthly" : "Yearly (-17%)"}
-                      </span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-baseline justify-between gap-2">
-                <h2 className="text-xl sm:text-2xl font-black text-foreground tracking-tight flex items-baseline gap-2">
-                  <span>{activePlanName} Plan</span>
-                  {subDetails?.billing_interval && activePlanName.toLowerCase() !== "free" && (
-                    <span className="text-sm sm:text-base font-semibold text-muted-foreground capitalize">
-                      ({subDetails.billing_interval})
-                    </span>
-                  )}
-                </h2>
-                <p className="text-xs text-muted-foreground text-right">
-                  {subDetails?.current_period_end ? (
-                    <>
-                      Valid until{" "}
-                      <strong className="text-foreground">
-                        {new Date(subDetails.current_period_end).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric"
-                        })}
-                      </strong>
-                    </>
-                  ) : (
-                    "Core features active"
-                  )}
-                </p>
-              </div>
-            </div>
-
             {/* Available Plans Header with Monthly/Yearly toggle */}
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -3025,65 +3009,6 @@ function BillingView({
                 </button>
               </div>
             </div>
-
-            {/* Coupon Bar */}
-            <div className="p-3 rounded-2xl bg-muted/20 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-brand-500/15 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
-                  <Tag className="w-3.5 h-3.5" />
-                </div>
-                <span className="text-xs font-bold text-foreground">Have a coupon code?</span>
-              </div>
-
-              {appliedCoupon ? (
-                <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-xl">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <span className="font-mono font-bold text-xs text-foreground uppercase tracking-wider">{appliedCoupon.code}</span>
-                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">({appliedCoupon.discountText})</span>
-                  <button
-                    type="button"
-                    onClick={handleRemoveCoupon}
-                    className="ml-1 p-0.5 text-muted-foreground hover:text-foreground rounded cursor-pointer"
-                    title="Remove coupon"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="text"
-                    value={couponInput}
-                    onChange={(e) => {
-                      setCouponInput(e.target.value.toUpperCase());
-                      if (couponError) setCouponError("");
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleApplyCoupon();
-                      }
-                    }}
-                    placeholder="Coupon code"
-                    className="w-32 px-2.5 py-1 rounded-xl bg-background border border-border text-xs font-mono font-semibold outline-none focus:border-brand-500 uppercase"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleApplyCoupon}
-                    disabled={validatingCoupon || !couponInput.trim()}
-                    className="px-3 py-1 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
-                  >
-                    {validatingCoupon ? <Loader2 className="w-3 h-3 animate-spin" /> : "Apply"}
-                  </button>
-                </div>
-              )}
-            </div>
-            {couponError && (
-              <div className="px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{couponError}</span>
-              </div>
-            )}
 
             {/* Compact Plan Cards Grid */}
             {gatewayStatus?.cardPaymentsDisabled && (
@@ -3160,10 +3085,6 @@ function BillingView({
                           </span>
                         </div>
                       )}
-
-                      <p className="text-[10px] text-muted-foreground line-clamp-2 leading-tight">
-                        {plan.description}
-                      </p>
                     </div>
 
                     <button
@@ -3207,11 +3128,87 @@ function BillingView({
                 );
               })}
             </div>
+
+            {/* Coupon Bar */}
+            <div className="p-3 rounded-2xl bg-muted/20 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-brand-500/15 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+                  <Tag className="w-3.5 h-3.5" />
+                </div>
+                <span className="text-xs font-bold text-foreground">Have a coupon code?</span>
+              </div>
+
+              {appliedCoupon ? (
+                <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-xl">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span className="font-mono font-bold text-xs text-foreground uppercase tracking-wider">{appliedCoupon.code}</span>
+                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">({appliedCoupon.discountText})</span>
+                  {(appliedCoupon as any).expiryType === "months" && (
+                    <span className="text-[10px] font-bold text-brand-600 dark:text-brand-400 bg-brand-500/15 px-1.5 py-0.5 rounded border border-brand-500/30">
+                      {(appliedCoupon as any).durationMonths || 1} Mo Auto-Expire
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    className="ml-1 p-0.5 text-muted-foreground hover:text-foreground rounded cursor-pointer"
+                    title="Remove coupon"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={couponInput}
+                    onChange={(e) => {
+                      setCouponInput(e.target.value.toUpperCase());
+                      if (couponError) setCouponError("");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleApplyCoupon();
+                      }
+                    }}
+                    placeholder="Coupon code"
+                    className="w-32 px-2.5 py-1 rounded-xl bg-background border border-border text-xs font-mono font-semibold outline-none focus:border-brand-500 uppercase"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    disabled={validatingCoupon || !couponInput.trim()}
+                    className="px-3 py-1 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                  >
+                    {validatingCoupon ? <Loader2 className="w-3 h-3 animate-spin" /> : "Apply"}
+                  </button>
+                </div>
+              )}
+            </div>
+            {couponError && (
+              <div className="px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{couponError}</span>
+              </div>
+            )}
           </div>
 
           {/* Card 2: Payment & Billing History */}
           <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
-            <h3 className="text-lg font-bold text-foreground">Payment & Billing History</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">Payment & Billing History</h3>
+              {history.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearHistory}
+                  disabled={clearingHistory}
+                  className="text-xs font-medium text-muted-foreground hover:text-rose-500 transition-colors"
+                >
+                  {clearingHistory ? "Clearing..." : "Clear History"}
+                </button>
+              )}
+            </div>
 
             {loading ? (
               <div className="flex justify-center p-8"><Loader /></div>
@@ -3401,7 +3398,7 @@ function BillingView({
               </div>
 
               <div className="p-3.5 rounded-2xl bg-muted/20 border border-border text-xs text-muted-foreground leading-relaxed">
-                You will be redirected to Payments.lk hosted subscription checkout to authorize and activate your new {switchTargetInterval} subscription cycle.
+                You will be redirected to secure checkout to authorize and activate your new {switchTargetInterval} subscription cycle.
               </div>
             </div>
 
@@ -3421,7 +3418,7 @@ function BillingView({
                 ) : (
                   <>
                     <Repeat className="w-4 h-4" />
-                    <span>Confirm & Switch on Payments.lk (LKR {targetPriceNum.toLocaleString()})</span>
+                    <span>Confirm & Switch (LKR {targetPriceNum.toLocaleString()})</span>
                   </>
                 )}
               </button>
@@ -3432,6 +3429,76 @@ function BillingView({
                 className="w-full py-2.5 rounded-2xl text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. Automatic Renewal Checkout Guidance Modal */}
+      {renewalNoticeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border pb-3.5">
+              <h3 className="text-lg font-bold text-foreground">Automatic Renewal Notice</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setRenewalNoticeModalOpen(false);
+                  setPendingCheckoutUrl(null);
+                }}
+                className="p-1 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Instruction description */}
+            <div className="space-y-3">
+              <p className="text-xs sm:text-sm text-foreground/90 font-medium leading-relaxed">
+                If you want <strong>automatic renewal</strong>, please make sure to <strong>tick the highlighted checkbox</strong> on the upcoming checkout page:
+              </p>
+
+              {/* Checkout Preview with Highlighted Box */}
+              <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden flex items-center justify-center p-2.5">
+                <img
+                  src="/images/payments-checkout-guide.png"
+                  alt="Payments.lk checkout preview with keep card on file highlighted"
+                  className="w-full max-h-60 sm:max-h-72 object-contain rounded-xl select-none shadow-xs pointer-events-none"
+                />
+              </div>
+
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300">
+                <p className="leading-relaxed">
+                  <strong>Otherwise:</strong> Your card will not be saved, and you will need to pay manually at the end of each billing cycle to prevent your workspace from reverting to the Free plan.
+                </p>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center justify-end gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setRenewalNoticeModalOpen(false);
+                  setPendingCheckoutUrl(null);
+                }}
+                className="py-2.5 px-4 rounded-xl border border-border hover:bg-muted font-bold text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (pendingCheckoutUrl) {
+                    window.location.href = pendingCheckoutUrl;
+                  }
+                }}
+                className="py-2.5 px-5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                <span>Proceed to Checkout</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>

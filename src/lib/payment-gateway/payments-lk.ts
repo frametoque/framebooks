@@ -7,7 +7,7 @@ import { getGatewayConfig } from "./config";
  * Docs: https://payments.lk/developers
  * Dashboard: https://app.payments.lk/admin/subscriptions
  */
-export async function createPaymentsLkSubscription(
+export async function createPaymentsLkCheckoutSession(
   params: CreateCheckoutParams
 ): Promise<CheckoutResult> {
   const config = getGatewayConfig();
@@ -31,9 +31,9 @@ export async function createPaymentsLkSubscription(
 
   const sanitizedPlan = params.planName.replace(/\s+/g, "");
   const amountNum = Math.round(Number(params.amount));
-  const orderReference = `FB_${params.tenantId}_${sanitizedPlan}_${params.billingInterval}_${Date.now().toString().slice(-6)}`;
+  const uniqueSuffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+  const orderReference = `FB_${params.tenantId}_${sanitizedPlan}_${params.billingInterval}_${uniqueSuffix}`;
   const amountCents = amountNum * 100;
-  const interval = params.billingInterval === "yearly" ? "year" : "month";
 
   let successUrl = params.successUrl || `${config.appUrl}/billing/success`;
   if (!successUrl.includes("reference=")) {
@@ -45,127 +45,75 @@ export async function createPaymentsLkSubscription(
     `${config.appUrl}/user/settings?tab=billing&status=cancelled`;
 
   const resolvedName = params.userName?.trim() || params.userEmail?.split("@")[0] || "Customer";
-  const userEmail = params.userEmail.trim().toLowerCase();
+  const userEmail = params.userEmail?.trim().toLowerCase() || "";
+  const userPhone = params.userPhone?.trim() || "";
 
-  // 1. Find or Create Customer on Payments.lk
-  let customerId = "";
-  try {
-    const custRes = await fetch("https://api.payments.lk/v1/customers", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${secretKey}`,
-        "Idempotency-Key": `cus-${params.tenantId}-${userEmail}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: userEmail,
-        name: resolvedName,
-      }),
-    });
-    const custData = await custRes.json().catch(() => ({}));
-    if (custData?.id) {
-      customerId = custData.id;
-    }
-  } catch (custErr) {
-    console.warn("[Payments.lk Subscription] Customer creation error:", custErr);
+  const customerObj: Record<string, string> = {
+    name: resolvedName,
+  };
+  if (userEmail && userEmail.includes("@")) {
+    customerObj.email = userEmail;
   }
 
-  // 2. Find or Create Price on Payments.lk
-  let priceId = "";
-  try {
-    const priceRes = await fetch("https://api.payments.lk/v1/prices", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${secretKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        product: { name: `Framebooks ${params.planName}` },
-        unitAmountCents: amountCents,
-        interval: interval,
-      }),
-    });
-    const priceData = await priceRes.json().catch(() => ({}));
-    if (priceData?.id) {
-      priceId = priceData.id;
-    }
-  } catch (priceErr) {
-    console.warn("[Payments.lk Subscription] Price creation error:", priceErr);
-  }
+  const orderDescription = `Framebooks ${params.planName} Plan (${params.billingInterval})`;
 
-  // 3. Initiate Subscription via POST /v1/subscriptions
-  const subscriptionPayload: Record<string, any> = {
+  const payload: Record<string, any> = {
+    amountCents,
+    description: orderDescription,
+    reference: orderReference,
+    saveCard: true,
     successUrl,
     cancelUrl,
-    metadata: {
-      tenantId: String(params.tenantId),
-      userId: params.userId ? String(params.userId) : "",
-      planName: params.planName,
-      billingInterval: params.billingInterval,
-      reference: orderReference,
-    },
+    customer: customerObj,
   };
 
-  if (customerId) {
-    subscriptionPayload.customerId = customerId;
-  } else {
-    subscriptionPayload.customer = {
-      email: userEmail,
-      name: resolvedName,
-    };
-  }
-
-  if (priceId) {
-    subscriptionPayload.priceId = priceId;
-  } else {
-    subscriptionPayload.unitAmountCents = amountCents;
-    subscriptionPayload.interval = interval;
-    subscriptionPayload.planName = `Framebooks ${params.planName}`;
-  }
-
   try {
-    const res = await fetch("https://api.payments.lk/v1/subscriptions", {
+    let res = await fetch("https://api.payments.lk/v1/checkouts", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${secretKey}`,
-        "Idempotency-Key": orderReference,
+        "Idempotency-Key": `chk_${orderReference}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(subscriptionPayload),
+      body: JSON.stringify(payload),
     });
 
-    const data = await res.json().catch(() => ({}));
+    let data = await res.json().catch(() => ({}));
 
-    if (res.ok && (data.checkoutUrl || data.url)) {
-      return {
-        success: true,
-        provider: "payments_lk",
-        sessionId: data.id || orderReference,
-        checkoutUrl: data.checkoutUrl || data.url,
-        requiresRedirect: true,
-      };
+    // If saveCard is not enabled or causes validation failure, retry without saveCard
+    if (!res.ok && payload.saveCard) {
+      console.warn("[Payments.lk] Retrying checkout request without saveCard...", data);
+      const retryPayload = { ...payload };
+      delete retryPayload.saveCard;
+      const retryRes = await fetch("https://api.payments.lk/v1/checkouts", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${secretKey}`,
+          "Idempotency-Key": `chk_${orderReference}_nosave`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(retryPayload),
+      });
+      const retryData = await retryRes.json().catch(() => ({}));
+      if (retryRes.ok && (retryData.url || retryData.checkoutUrl)) {
+        res = retryRes;
+        data = retryData;
+      }
     }
 
     if (!res.ok || data.error) {
-      console.error("[Payments.lk Subscription API Error]", data);
-      
-      // Fallback: if custom plan / price format requires hosted checkout fallback with saveCard
-      if (res.status === 404 || res.status === 400 || res.status === 422) {
-        return await createPaymentsLkHostedCheckoutFallback(
-          params,
-          orderReference,
-          amountCents,
-          resolvedName,
-          successUrl,
-          cancelUrl,
-          secretKey
-        );
-      }
+      console.error("[Payments.lk API Error]", data);
+      const fieldErrors = Array.isArray(data.fields) && data.fields.length > 0
+        ? data.fields.map((f: any) => f.message || f.path).filter(Boolean).join("; ")
+        : "";
+      const errorMsg = fieldErrors
+        ? `${data.message || "Validation failed"}: ${fieldErrors}`
+        : data.error?.message || data.message || "Failed to create Payments.lk checkout session.";
 
       return {
         success: false,
         provider: "payments_lk",
-        error: data.error?.message || data.message || "Failed to create Payments.lk subscription.",
+        error: errorMsg,
       };
     }
 
@@ -173,11 +121,11 @@ export async function createPaymentsLkSubscription(
       success: true,
       provider: "payments_lk",
       sessionId: data.id || orderReference,
-      checkoutUrl: data.checkoutUrl || data.url,
+      checkoutUrl: data.url || data.checkoutUrl,
       requiresRedirect: true,
     };
   } catch (err: any) {
-    console.error("[Payments.lk Subscription Fetch Error]", err);
+    console.error("[Payments.lk Fetch Error]", err);
     return {
       success: false,
       provider: "payments_lk",
@@ -187,72 +135,12 @@ export async function createPaymentsLkSubscription(
 }
 
 /**
- * Fallback to standard Payments.lk hosted checkout with recurring card authorization.
+ * Creates a recurring subscription session using Payments.lk.
  */
-async function createPaymentsLkHostedCheckoutFallback(
-  params: CreateCheckoutParams,
-  orderReference: string,
-  amountCents: number,
-  resolvedName: string,
-  successUrl: string,
-  cancelUrl: string,
-  secretKey: string
-): Promise<CheckoutResult> {
-  const payload = {
-    amountCents,
-    currency: (params.currency || "LKR").toUpperCase(),
-    description: `Framebooks ${params.planName} Subscription (${params.billingInterval})`,
-    reference: orderReference,
-    saveCard: true,
-    successUrl,
-    cancelUrl,
-    customer: {
-      name: resolvedName,
-      email: params.userEmail.trim().toLowerCase(),
-    },
-    metadata: {
-      tenantId: String(params.tenantId),
-      planName: params.planName,
-      billingInterval: params.billingInterval,
-      isSubscription: "true",
-    },
-  };
-
-  const res = await fetch("https://api.payments.lk/v1/checkouts", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${secretKey}`,
-      "Idempotency-Key": orderReference,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data.error) {
-    return {
-      success: false,
-      provider: "payments_lk",
-      error: data.error?.message || data.message || "Failed to create Payments.lk checkout.",
-    };
-  }
-
-  return {
-    success: true,
-    provider: "payments_lk",
-    sessionId: data.id || orderReference,
-    checkoutUrl: data.url || data.checkoutUrl,
-    requiresRedirect: true,
-  };
-}
-
-/**
- * Unified checkout entry for Payments.lk. Delegates to native subscription creation.
- */
-export async function createPaymentsLkCheckoutSession(
+export async function createPaymentsLkSubscription(
   params: CreateCheckoutParams
 ): Promise<CheckoutResult> {
-  return await createPaymentsLkSubscription(params);
+  return await createPaymentsLkCheckoutSession(params);
 }
 
 /**

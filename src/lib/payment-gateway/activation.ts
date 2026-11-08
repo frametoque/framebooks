@@ -24,14 +24,6 @@ export async function activateSubscriptionFromGateway(params: ActivationParams):
   } = params;
 
   try {
-    // Ensure slip_url is nullable and provider_subscription_id column exists
-    try {
-      await sql`ALTER TABLE tenant_subscriptions ALTER COLUMN slip_url DROP NOT NULL`;
-    } catch {}
-    try {
-      await sql`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS provider_subscription_id VARCHAR(255)`;
-    } catch {}
-
     return await sql.begin(async (sqlTx) => {
       // 1. Resolve Plan
       const planRows = await sqlTx`

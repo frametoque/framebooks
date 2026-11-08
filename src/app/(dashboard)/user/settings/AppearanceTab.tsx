@@ -138,44 +138,65 @@ export default function AppearanceTab({ initialAccent, canManage = true, isProPl
     try {
       const isDefault = selectedHex.toUpperCase() === DEFAULT_ACCENT_HEX.toUpperCase();
       const payload = isDefault ? null : selectedHex.toUpperCase();
-      const res = await updateTenantAccent(payload);
-      if (res.success) {
-        const finalColor = payload || DEFAULT_ACCENT_HEX;
-        savedHexRef.current = finalColor;
-        onAccentSaved?.(payload);
+      const finalColor = payload || DEFAULT_ACCENT_HEX;
 
-        // Update persistent layout theme style tags immediately
-        const newCss = generateTenantThemeCss(finalColor);
-        const clientTag = document.getElementById("tenant-accent-theme-client") as HTMLStyleElement | null;
-        const ssrTag = document.getElementById("tenant-accent-theme-ssr") as HTMLStyleElement | null;
-        if (clientTag) {
-          clientTag.innerHTML = newCss;
-          clientTag.disabled = false;
-        }
-        if (ssrTag) {
-          ssrTag.innerHTML = newCss;
-          ssrTag.disabled = false;
-        }
+      // 1. Instantly update CSS variables, style tags, and storage so UI updates with zero delay
+      const newCss = generateTenantThemeCss(finalColor);
+      const clientTag = document.getElementById("tenant-accent-theme-client") as HTMLStyleElement | null;
+      const ssrTag = document.getElementById("tenant-accent-theme-ssr") as HTMLStyleElement | null;
+      if (clientTag) {
+        clientTag.innerHTML = newCss;
+        clientTag.disabled = false;
+      }
+      if (ssrTag) {
+        ssrTag.innerHTML = newCss;
+        ssrTag.disabled = false;
+      }
 
-        // Keep preview tag in sync
-        const previewTag = document.getElementById("tenant-accent-theme-live-preview") as HTMLStyleElement | null;
-        if (previewTag) {
-          previewTag.innerHTML = newCss;
-        }
+      const previewTag = document.getElementById("tenant-accent-theme-live-preview") as HTMLStyleElement | null;
+      if (previewTag) {
+        previewTag.innerHTML = newCss;
+      }
 
-        // Cache in localStorage & cookie
-        try {
+      document.documentElement.style.setProperty("--accent", finalColor);
+
+      try {
+        if (payload) {
           localStorage.setItem("framebooks_accent_color", finalColor);
           document.cookie = `fb_accent_color=${encodeURIComponent(finalColor)}; path=/; max-age=31536000; SameSite=Lax`;
-        } catch {}
+        } else {
+          localStorage.removeItem("framebooks_accent_color");
+          document.cookie = `fb_accent_color=; path=/; max-age=0; SameSite=Lax`;
+        }
+      } catch {}
 
-        // Broadcast to all active components in the app
-        window.dispatchEvent(new CustomEvent("accent:change", { detail: finalColor }));
-        
+      window.dispatchEvent(new CustomEvent("accent:change", { detail: finalColor }));
+      onAccentSaved?.(payload);
+
+      // 2. Persist to server
+      const res = await updateTenantAccent(payload);
+      if (res.success) {
+        savedHexRef.current = finalColor;
         router.refresh();
         setToastMsg({ type: "success", text: "Workspace appearance saved successfully." });
         setTimeout(() => setToastMsg(null), 4000);
       } else {
+        // Rollback on server error
+        const prevSaved = savedHexRef.current || DEFAULT_ACCENT_HEX;
+        const prevCss = generateTenantThemeCss(prevSaved);
+        if (clientTag) clientTag.innerHTML = prevCss;
+        if (ssrTag) ssrTag.innerHTML = prevCss;
+        document.documentElement.style.setProperty("--accent", prevSaved);
+        try {
+          if (savedHexRef.current && savedHexRef.current !== DEFAULT_ACCENT_HEX) {
+            localStorage.setItem("framebooks_accent_color", prevSaved);
+            document.cookie = `fb_accent_color=${encodeURIComponent(prevSaved)}; path=/; max-age=31536000; SameSite=Lax`;
+          } else {
+            localStorage.removeItem("framebooks_accent_color");
+            document.cookie = `fb_accent_color=; path=/; max-age=0; SameSite=Lax`;
+          }
+        } catch {}
+        window.dispatchEvent(new CustomEvent("accent:change", { detail: prevSaved }));
         setToastMsg({ type: "error", text: res.error || "Failed to save appearance setting." });
       }
     } catch (err: any) {

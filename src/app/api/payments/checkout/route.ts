@@ -108,6 +108,11 @@ export async function POST(req: NextRequest) {
         periodEnd.setMonth(periodEnd.getMonth() + 1);
       }
 
+      const durationMonths = Number(appliedCouponData?.duration_months || 1);
+      const couponExpiresAt = appliedCouponData?.expiry_type === "months"
+        ? new Date(Date.now() + durationMonths * 30 * 24 * 60 * 60 * 1000)
+        : null;
+
       if (existingSub.length > 0) {
         await sql`
           UPDATE subscriptions SET
@@ -117,13 +122,16 @@ export async function POST(req: NextRequest) {
             current_period_start = NOW(),
             current_period_end = ${periodEnd},
             coupon_code = COALESCE(${appliedCouponData ? appliedCouponData.code : null}, coupon_code),
+            coupon_applied_at = NOW(),
+            coupon_expires_at = ${couponExpiresAt},
             updated_at = NOW()
           WHERE id = ${existingSub[0].id}
         `;
       } else {
         await sql`
           INSERT INTO subscriptions (
-            tenant_id, plan_id, status, billing_interval, current_period_start, current_period_end, coupon_code
+            tenant_id, plan_id, status, billing_interval, current_period_start, current_period_end, coupon_code,
+            coupon_applied_at, coupon_expires_at, created_at, updated_at
           ) VALUES (
             ${tenantId},
             ${plan.id},
@@ -131,7 +139,11 @@ export async function POST(req: NextRequest) {
             ${billingInterval},
             NOW(),
             ${periodEnd},
-            ${appliedCouponData ? appliedCouponData.code : null}
+            ${appliedCouponData ? appliedCouponData.code : null},
+            NOW(),
+            ${couponExpiresAt},
+            NOW(),
+            NOW()
           )
         `;
       }
@@ -180,13 +192,23 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Create Gateway Checkout Session
-    const userName = userRows[0]?.full_name || session?.user?.name || "Customer";
+    const tenantDetails = await sql`
+      SELECT id, name, phone, email, owner_email, billing_name, billing_email
+      FROM tenants 
+      WHERE id = ${tenantId}
+      LIMIT 1
+    `.catch(() => []);
+    const t = tenantDetails[0];
+    const userPhone = t?.phone || "";
+    const userName = t?.billing_name || userRows[0]?.full_name || session?.user?.name || t?.name || "Customer";
+    const userEmail = t?.billing_email || email || t?.owner_email || "";
 
     const result = await createCheckoutSession({
       tenantId,
       userId: userRows[0]?.id || null,
-      userEmail: email,
+      userEmail,
       userName,
+      userPhone,
       planId: plan.id,
       planName: plan.name,
       billingInterval,

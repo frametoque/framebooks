@@ -2,7 +2,8 @@
 import { Loader } from "@/components/ui/Loader";
 
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Edit2, Send, Loader2, Image as ImageIcon, FileText as FileIcon, Printer } from "lucide-react";
 import { MdInsertDriveFile, MdCheckCircle, MdAccessTime, MdErrorOutline, MdSearch, MdRemoveRedEye, MdDownload, MdDelete, MdAttachMoney, MdClose, MdUpload } from "react-icons/md";
 import Link from "next/link";
@@ -26,9 +27,22 @@ const formatLKR = (amount: number) => {
   return `${num} LKR`;
 };
 
-export default function InvoicesPage() {
+function InvoicesPageContent() {
   const { confirm } = useConfirm();
+  const searchParams = useSearchParams();
   const [activeFilter, setActiveFilter] = useState("All");
+
+  useEffect(() => {
+    const statusParam = searchParams.get("status");
+    if (statusParam) {
+      if (statusParam.toLowerCase() === "unpaid") {
+        setActiveFilter("Unpaid");
+      } else {
+        const match = filters.find(f => f.toLowerCase() === statusParam.toLowerCase());
+        if (match) setActiveFilter(match);
+      }
+    }
+  }, [searchParams]);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -352,6 +366,8 @@ export default function InvoicesPage() {
       statusMatch = rowStatus === "partially paid";
     } else if (activeFilter === "On Review") {
       statusMatch = rowStatus === "on review";
+    } else if (activeFilter === "Unpaid") {
+      statusMatch = rowStatus === "unpaid" || rowStatus === "pending";
     } else {
       statusMatch = rowStatus === activeFilter.toLowerCase();
     }
@@ -744,5 +760,13 @@ export default function InvoicesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function InvoicesPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh]"><Loader /></div>}>
+      <InvoicesPageContent />
+    </Suspense>
   );
 }

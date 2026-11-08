@@ -4,7 +4,22 @@ import { useEffect, useState } from "react";
 import { DEFAULT_ACCENT_HEX, generateChartPalette } from "./accent";
 
 export function useAccentTheme() {
-  const [accent, setAccent] = useState<string>(DEFAULT_ACCENT_HEX);
+  const [accent, setAccent] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const match = document.cookie.match(/(?:^|;\s*)fb_accent_color=([^;]+)/);
+        if (match?.[1]) {
+          const val = decodeURIComponent(match[1]).trim();
+          if (/^#[0-9a-fA-F]{6}$/i.test(val)) return val.toUpperCase();
+        }
+        const cached = localStorage.getItem("framebooks_accent_color");
+        if (cached && /^#[0-9a-fA-F]{6}$/i.test(cached.trim())) {
+          return cached.trim().toUpperCase();
+        }
+      } catch {}
+    }
+    return DEFAULT_ACCENT_HEX;
+  });
 
   useEffect(() => {
     const readCurrentAccent = (): string => {
@@ -36,7 +51,16 @@ export function useAccentTheme() {
           return comp.toUpperCase();
         }
 
-        // 5. Local storage cache
+        // 5. Cookie
+        try {
+          const match = document.cookie.match(/(?:^|;\s*)fb_accent_color=([^;]+)/);
+          if (match?.[1]) {
+            const val = decodeURIComponent(match[1]).trim();
+            if (/^#[0-9a-fA-F]{6}$/i.test(val)) return val.toUpperCase();
+          }
+        } catch {}
+
+        // 6. Local storage cache
         try {
           const cached = localStorage.getItem("framebooks_accent_color");
           if (cached && /^#[0-9a-fA-F]{6}$/i.test(cached)) {

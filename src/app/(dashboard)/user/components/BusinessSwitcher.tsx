@@ -38,6 +38,7 @@ interface UserBusiness {
   role: string;
   isOwner: boolean;
   isActive: boolean;
+  accent_color?: string | null;
 }
 
 interface PendingInvite {
@@ -117,6 +118,20 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
     setSwitchingId(targetId);
     setGeneralMessage(null);
     try {
+      const targetBiz = businesses.find((b) => b.id === targetId);
+      if (targetBiz?.accent_color && /^#[0-9a-fA-F]{6}$/i.test(targetBiz.accent_color)) {
+        const clean = targetBiz.accent_color.toUpperCase();
+        document.cookie = `fb_accent_color=${encodeURIComponent(clean)}; path=/; max-age=31536000; SameSite=Lax`;
+        try {
+          localStorage.setItem("framebooks_accent_color", clean);
+        } catch {}
+      } else {
+        document.cookie = `fb_accent_color=; path=/; max-age=0; SameSite=Lax`;
+        try {
+          localStorage.removeItem("framebooks_accent_color");
+        } catch {}
+      }
+
       const res = await switchActiveTenant(targetId);
       if (res.success) {
         window.location.reload();

@@ -140,25 +140,62 @@ function LayoutContent({ children }) {
     grace_days_remaining?: number | null;
     grace_end_date?: string | null;
     accent_color?: string | null;
-  }>({ plan: "Loading...", name: "My Business", logo_url: null, industry: null, accent_color: null });
+  }>({
+    plan: "Loading...",
+    name: "My Business",
+    logo_url: null,
+    industry: null,
+    accent_color: null,
+  });
   const [exceededLimits, setExceededLimits] = useState<string[]>([]);
 
   useEffect(() => {
-    getTenantInfo().then(info => setTenantInfo(info));
+    getTenantInfo().then(info => {
+      setTenantInfo(prev => ({
+        ...info,
+        accent_color: info.accent_color || prev.accent_color || null,
+      }));
+      if (info.accent_color && /^#[0-9a-fA-F]{6}$/i.test(info.accent_color)) {
+        const clean = info.accent_color.toUpperCase();
+        try {
+          document.cookie = `fb_accent_color=${encodeURIComponent(clean)}; path=/; max-age=31536000; SameSite=Lax`;
+          localStorage.setItem("framebooks_accent_color", clean);
+        } catch {}
+      } else if (info.plan !== 'Loading...' && info.plan !== 'Pro Plus') {
+        try {
+          document.cookie = `fb_accent_color=; path=/; max-age=0; SameSite=Lax`;
+          localStorage.removeItem("framebooks_accent_color");
+        } catch {}
+      }
+    });
     getAllLimits().then(limits => setExceededLimits(limits));
   }, []);
 
   // Synchronize workspace accent color dynamically across client navigations
   useEffect(() => {
+    const applyClientAccent = (hex: string | null | undefined) => {
+      if (!hex || !/^#[0-9a-fA-F]{6}$/i.test(hex)) return;
+      const cleanHex = hex.toUpperCase();
+      const newCss = generateTenantThemeCss(cleanHex);
+      let tag = (document.getElementById("tenant-accent-theme-ssr") || document.getElementById("tenant-accent-theme-client")) as HTMLStyleElement | null;
+      if (tag) {
+        tag.innerHTML = newCss;
+      } else {
+        tag = document.createElement("style");
+        tag.id = "tenant-accent-theme-client";
+        document.head.appendChild(tag);
+        tag.innerHTML = newCss;
+      }
+      document.documentElement.style.setProperty("--accent", cleanHex);
+    };
+
     try {
-      const cachedColor = localStorage.getItem("framebooks_accent_color");
-      if (cachedColor && /^#[0-9a-fA-F]{6}$/i.test(cachedColor)) {
-        setTenantInfo((prev: any) => ({ ...prev, accent_color: cachedColor.toUpperCase() }));
-        const clientTag = document.getElementById("tenant-accent-theme-client");
-        const ssrTag = document.getElementById("tenant-accent-theme-ssr");
-        const newCss = generateTenantThemeCss(cachedColor.toUpperCase());
-        if (clientTag) clientTag.innerHTML = newCss;
-        if (ssrTag) ssrTag.innerHTML = newCss;
+      const match = document.cookie.match(/(?:^|;\s*)fb_accent_color=([^;]+)/);
+      const cookieVal = match ? decodeURIComponent(match[1]).trim() : null;
+      const cached = cookieVal || localStorage.getItem("framebooks_accent_color");
+      if (cached && /^#[0-9a-fA-F]{6}$/i.test(cached)) {
+        setTenantInfo((prev: any) => ({ ...prev, accent_color: cached.toUpperCase() }));
+        applyClientAccent(cached);
       }
     } catch { }
 
@@ -166,12 +203,7 @@ function LayoutContent({ children }) {
       const custom = e as CustomEvent<string>;
       const newHex = custom.detail || DEFAULT_ACCENT_HEX;
       setTenantInfo((prev: any) => ({ ...prev, accent_color: newHex }));
-
-      const clientTag = document.getElementById("tenant-accent-theme-client");
-      const ssrTag = document.getElementById("tenant-accent-theme-ssr");
-      const newCss = generateTenantThemeCss(newHex);
-      if (clientTag) clientTag.innerHTML = newCss;
-      if (ssrTag) ssrTag.innerHTML = newCss;
+      applyClientAccent(newHex);
     };
 
     window.addEventListener("accent:change", handleAccentChange);
@@ -213,11 +245,6 @@ function LayoutContent({ children }) {
   return (
     <AdminDateRangeProvider>
       <TaxEstimatorProvider>
-        <style
-          id="tenant-accent-theme-client"
-          dangerouslySetInnerHTML={{ __html: generateTenantThemeCss(tenantInfo.accent_color || DEFAULT_ACCENT_HEX) }}
-        />
-
       {/* Maintenance screen – full viewport takeover, no sidebar/header */}
       {showMaintenanceScreen && (
         <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-background text-foreground">

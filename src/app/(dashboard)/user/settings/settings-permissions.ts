@@ -1,4 +1,5 @@
 export const SETTINGS_SLUG_TO_TAB: Record<string, string> = {
+  "security": "profile",
   "profile": "profile",
   "business": "business",
   "appearance": "appearance",
@@ -16,7 +17,7 @@ export const SETTINGS_SLUG_TO_TAB: Record<string, string> = {
 };
 
 export const SETTINGS_TAB_TO_SLUG: Record<string, string> = {
-  "profile": "profile",
+  "profile": "security",
   "business": "business",
   "appearance": "appearance",
   "billing": "billing",
@@ -28,7 +29,7 @@ export const SETTINGS_TAB_TO_SLUG: Record<string, string> = {
 };
 
 export const SETTINGS_TAB_TITLES: Record<string, string> = {
-  profile: "Account & Security",
+  profile: "Security",
   business: "Business Profile",
   appearance: "Appearance & Layouts",
   billing: "Billing & Plans",

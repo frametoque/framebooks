@@ -69,6 +69,10 @@ export default function OnboardingPage() {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [gatewayStatus, setGatewayStatus] = useState<any>(null);
 
+  // Renewal Notice Modal before redirecting to Payments.lk checkout
+  const [renewalNoticeModalOpen, setRenewalNoticeModalOpen] = useState(false);
+  const [pendingCheckoutUrl, setPendingCheckoutUrl] = useState<string | null>(null);
+
   useEffect(() => {
     getOnboardingPlansAction().then(res => {
       if (res?.success && res.plans && res.plans.length > 0) {
@@ -267,7 +271,12 @@ export default function OnboardingPage() {
       }
 
       if (res.checkoutUrl) {
-        window.location.href = res.checkoutUrl;
+        if (res.checkoutUrl.includes("/billing/success")) {
+          window.location.href = res.checkoutUrl;
+          return;
+        }
+        setPendingCheckoutUrl(res.checkoutUrl);
+        setRenewalNoticeModalOpen(true);
       } else if (res.formData && res.provider === "payhere") {
         const form = document.createElement("form");
         form.method = "POST";
@@ -1075,6 +1084,76 @@ export default function OnboardingPage() {
           <p className="text-gray-500 leading-relaxed">It only takes a minute to get your account ready to manage invoices, expenses, and quotations.</p>
         </div>
       </div>
+
+      {/* Automatic Renewal Checkout Guidance Modal */}
+      {renewalNoticeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200 text-foreground">
+          <div className="bg-white dark:bg-zinc-900 border border-border rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border pb-3.5">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Automatic Renewal Notice</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setRenewalNoticeModalOpen(false);
+                  setPendingCheckoutUrl(null);
+                }}
+                className="p-1 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Instruction description */}
+            <div className="space-y-3">
+              <p className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 font-medium leading-relaxed">
+                If you want <strong>automatic renewal</strong>, please make sure to <strong>tick the highlighted checkbox</strong> on the upcoming checkout page:
+              </p>
+
+              {/* Checkout Preview with Highlighted Box */}
+              <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden flex items-center justify-center p-2.5">
+                <img
+                  src="/images/payments-checkout-guide.png"
+                  alt="Payments.lk checkout preview with keep card on file highlighted"
+                  className="w-full max-h-60 sm:max-h-72 object-contain rounded-xl select-none shadow-xs pointer-events-none"
+                />
+              </div>
+
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300">
+                <p className="leading-relaxed">
+                  <strong>Otherwise:</strong> Your card will not be saved, and you will need to pay manually at the end of each billing cycle to prevent your workspace from reverting to the Free plan.
+                </p>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center justify-end gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setRenewalNoticeModalOpen(false);
+                  setPendingCheckoutUrl(null);
+                }}
+                className="py-2.5 px-4 rounded-xl border border-gray-200 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 font-bold text-xs text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (pendingCheckoutUrl) {
+                    window.location.href = pendingCheckoutUrl;
+                  }
+                }}
+                className="py-2.5 px-5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                <span>Proceed to Checkout</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

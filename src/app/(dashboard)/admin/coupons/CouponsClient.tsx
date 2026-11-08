@@ -33,6 +33,8 @@ export function CouponsClient({ coupons }: { coupons: any[] }) {
   const [validTo, setValidTo] = useState("");
   const [maxRedemptions, setMaxRedemptions] = useState(100);
   const [applicablePlans, setApplicablePlans] = useState<string[]>(["pro", "pro_plus"]);
+  const [expiryType, setExpiryType] = useState<"manual" | "months">("months");
+  const [durationMonths, setDurationMonths] = useState<number>(1);
   const [submitting, setSubmitting] = useState(false);
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
   const [statusToast, setStatusToast] = useState("");
@@ -45,6 +47,8 @@ export function CouponsClient({ coupons }: { coupons: any[] }) {
   const [editValidTo, setEditValidTo] = useState("");
   const [editMaxRedemptions, setEditMaxRedemptions] = useState<number | string>("");
   const [editIsActive, setEditIsActive] = useState(true);
+  const [editExpiryType, setEditExpiryType] = useState<"manual" | "months">("manual");
+  const [editDurationMonths, setEditDurationMonths] = useState<number>(1);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editApplicablePlans, setEditApplicablePlans] = useState<string[]>(["pro", "pro_plus"]);
 
@@ -69,6 +73,8 @@ export function CouponsClient({ coupons }: { coupons: any[] }) {
         validTo: validTo || undefined,
         maxRedemptions: Number(maxRedemptions) || undefined,
         applicablePlans,
+        expiryType,
+        durationMonths,
       });
       setCreateOpen(false);
       setCode("");
@@ -92,6 +98,8 @@ export function CouponsClient({ coupons }: { coupons: any[] }) {
     );
     setEditMaxRedemptions(c.max_redemptions ?? "");
     setEditIsActive(Boolean(c.is_active));
+    setEditExpiryType(c.expiry_type || "manual");
+    setEditDurationMonths(Number(c.duration_months) || 1);
     const rawPlans = Array.isArray(c.applicable_plans) ? c.applicable_plans : ["pro", "pro_plus"];
     const normalized = rawPlans.map((p: string) => p.toLowerCase().replace(/[^a-z0-9_]/g, "_"));
     setEditApplicablePlans(normalized.length > 0 ? normalized : ["pro", "pro_plus"]);
@@ -111,6 +119,8 @@ export function CouponsClient({ coupons }: { coupons: any[] }) {
         maxRedemptions: editMaxRedemptions ? Number(editMaxRedemptions) : null,
         isActive: editIsActive,
         applicablePlans: editApplicablePlans,
+        expiryType: editExpiryType,
+        durationMonths: editDurationMonths,
       });
       setEditCoupon(null);
       setStatusToast("Coupon updated");
@@ -205,7 +215,7 @@ export function CouponsClient({ coupons }: { coupons: any[] }) {
                 <th className="p-4">Code</th>
                 <th className="p-4">Discount</th>
                 <th className="p-4">Redeemed</th>
-                <th className="p-4">Expires</th>
+                <th className="p-4">Duration / Expiry</th>
                 <th className="p-4">Status</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
@@ -246,8 +256,21 @@ export function CouponsClient({ coupons }: { coupons: any[] }) {
                       <span> / {c.max_redemptions || "Unlimited"}</span>
                     </td>
 
-                    <td className="p-4 text-xs text-muted-foreground">
-                      {c.valid_to ? new Date(c.valid_to).toLocaleDateString() : "Never"}
+                    <td className="p-4 text-xs">
+                      <div>
+                        {c.expiry_type === "months" ? (
+                          <span className="font-bold text-brand-700 dark:text-brand-300 bg-brand-500/15 px-2 py-0.5 rounded-md border border-brand-500/30 text-[11px]">
+                            {c.duration_months || 1} Mo Auto-Expire
+                          </span>
+                        ) : (
+                          <span className="font-bold text-slate-700 dark:text-slate-300 bg-slate-500/10 px-2 py-0.5 rounded-md border border-slate-500/20 text-[11px]">
+                            Manual Off
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        {c.valid_to ? `Until ${new Date(c.valid_to).toLocaleDateString()}` : "No end date"}
+                      </div>
                     </td>
 
                     <td className="p-4">
@@ -348,10 +371,61 @@ export function CouponsClient({ coupons }: { coupons: any[] }) {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">
+                  Subscription Expiry Workflow
+                </label>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setExpiryType("months")}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border text-left transition-all cursor-pointer ${
+                      expiryType === "months"
+                        ? "bg-brand-500/15 border-brand-500 text-brand-700 dark:text-brand-300 shadow-2xs"
+                        : "bg-muted/40 border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <div>Month-Based</div>
+                    <div className="text-[10px] font-normal opacity-80">Auto-expires after months</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setExpiryType("manual")}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border text-left transition-all cursor-pointer ${
+                      expiryType === "manual"
+                        ? "bg-brand-500/15 border-brand-500 text-brand-700 dark:text-brand-300 shadow-2xs"
+                        : "bg-muted/40 border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <div>Manual Off</div>
+                    <div className="text-[10px] font-normal opacity-80">Requires manual turn off</div>
+                  </button>
+                </div>
+
+                {expiryType === "months" && (
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                      Auto-Expires After (Months)
+                    </label>
+                    <select
+                      value={durationMonths}
+                      onChange={(e) => setDurationMonths(Number(e.target.value))}
+                      className="w-full px-3.5 py-2 bg-background border border-border rounded-xl text-xs sm:text-sm font-semibold outline-none"
+                    >
+                      <option value={1}>1 Month (1st Month Discount / Trial)</option>
+                      <option value={2}>2 Months</option>
+                      <option value={3}>3 Months</option>
+                      <option value={6}>6 Months</option>
+                      <option value={12}>12 Months (1 Year)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                    Expires on
+                    Cutoff Date (Optional)
                   </label>
                   <input
                     type="date"
@@ -362,7 +436,7 @@ export function CouponsClient({ coupons }: { coupons: any[] }) {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                    Limit
+                    Redemption Limit
                   </label>
                   <input
                     type="number"
@@ -496,10 +570,61 @@ export function CouponsClient({ coupons }: { coupons: any[] }) {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">
+                  Subscription Expiry Workflow
+                </label>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditExpiryType("months")}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border text-left transition-all cursor-pointer ${
+                      editExpiryType === "months"
+                        ? "bg-brand-500/15 border-brand-500 text-brand-700 dark:text-brand-300 shadow-2xs"
+                        : "bg-muted/40 border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <div>Month-Based</div>
+                    <div className="text-[10px] font-normal opacity-80">Auto-expires after months</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditExpiryType("manual")}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border text-left transition-all cursor-pointer ${
+                      editExpiryType === "manual"
+                        ? "bg-brand-500/15 border-brand-500 text-brand-700 dark:text-brand-300 shadow-2xs"
+                        : "bg-muted/40 border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <div>Manual Off</div>
+                    <div className="text-[10px] font-normal opacity-80">Requires manual turn off</div>
+                  </button>
+                </div>
+
+                {editExpiryType === "months" && (
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                      Auto-Expires After (Months)
+                    </label>
+                    <select
+                      value={editDurationMonths}
+                      onChange={(e) => setEditDurationMonths(Number(e.target.value))}
+                      className="w-full px-3.5 py-2 bg-background border border-border rounded-xl text-xs sm:text-sm font-semibold outline-none"
+                    >
+                      <option value={1}>1 Month (1st Month Discount / Trial)</option>
+                      <option value={2}>2 Months</option>
+                      <option value={3}>3 Months</option>
+                      <option value={6}>6 Months</option>
+                      <option value={12}>12 Months (1 Year)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                    Expires on
+                    Cutoff Date (Optional)
                   </label>
                   <input
                     type="date"

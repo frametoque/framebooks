@@ -5,6 +5,7 @@ export interface CreateCheckoutParams {
   userId?: number | null;
   userEmail: string;
   userName?: string;
+  userPhone?: string;
   planId?: number;
   planName: string;
   billingInterval: "monthly" | "yearly";

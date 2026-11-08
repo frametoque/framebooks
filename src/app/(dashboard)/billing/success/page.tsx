@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { CheckCircle2, ArrowRight, ShieldCheck, Sparkles, Wallet, Settings } from "lucide-react";
+import { CheckCircle2, ArrowRight, Wallet } from "lucide-react";
 import { auth } from "@/lib/auth";
 import sql from "@/lib/db";
 import { activateSubscriptionFromGateway, completeSandboxCheckout } from "@/lib/payment-gateway";
@@ -245,11 +245,6 @@ export default async function BillingSuccessPage({
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Payment Successful</span>
-            </div>
-
             <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               Subscription Activated!
             </h1>
@@ -290,8 +285,8 @@ export default async function BillingSuccessPage({
               </div>
               <div className="flex justify-between items-center text-muted-foreground">
                 <span>Access Status:</span>
-                <span className="font-semibold text-foreground flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Full Access
+                <span className="font-semibold text-foreground">
+                  Full Access
                 </span>
               </div>
             </>
@@ -311,9 +306,8 @@ export default async function BillingSuccessPage({
         <div className="space-y-2 pt-1">
           <Link
             href="/user/settings/billing"
-            className="w-full py-3.5 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-2xl transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer text-xs sm:text-sm"
+            className="w-full py-3.5 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-2xl transition-all flex items-center justify-center shadow-sm cursor-pointer text-xs sm:text-sm"
           >
-            <Settings className="w-4 h-4" />
             <span>Return to Billing Settings</span>
           </Link>
 

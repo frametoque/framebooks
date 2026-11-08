@@ -154,6 +154,31 @@ export async function POST(req: NextRequest) {
           const planName = inv.metadata?.planName || "Pro";
           const billingInterval = (inv.metadata?.billingInterval || "monthly") as "monthly" | "yearly";
 
+          // Coupon lifecycle check: month-based auto-expire vs manual off
+          try {
+            const currentSubs = await sql`SELECT id, coupon_code, current_period_start FROM subscriptions WHERE tenant_id = ${tenantId} LIMIT 1`;
+            if (currentSubs.length > 0 && currentSubs[0].coupon_code) {
+              const coupRows = await sql`SELECT expiry_type, duration_months, is_active FROM coupons WHERE UPPER(code) = UPPER(${currentSubs[0].coupon_code}) LIMIT 1`;
+              if (coupRows.length > 0) {
+                const c = coupRows[0];
+                if (!c.is_active) {
+                  // Admin manually paused/disabled coupon
+                  await sql`UPDATE subscriptions SET coupon_code = NULL WHERE id = ${currentSubs[0].id}`.catch(() => {});
+                } else if (c.expiry_type === "months") {
+                  const appliedTime = currentSubs[0].current_period_start ? new Date(currentSubs[0].current_period_start) : new Date();
+                  const expiryTime = new Date(appliedTime);
+                  expiryTime.setMonth(expiryTime.getMonth() + Number(c.duration_months || 1));
+                  if (new Date() >= expiryTime) {
+                    // Month-based coupon auto-expired
+                    await sql`UPDATE subscriptions SET coupon_code = NULL WHERE id = ${currentSubs[0].id}`.catch(() => {});
+                  }
+                }
+              }
+            }
+          } catch (couponLifecycleErr) {
+            console.warn("Coupon lifecycle check warning in webhook:", couponLifecycleErr);
+          }
+
           await activateSubscriptionFromGateway({
             tenantId,
             planName,

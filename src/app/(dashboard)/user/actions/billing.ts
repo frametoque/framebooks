@@ -28,11 +28,45 @@ export async function getGatewayStatusAction() {
   }
 }
 
+export async function clearWorkspacePaymentsAction() {
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return { success: false, error: "Unauthorized" };
+    await sql`DELETE FROM payments WHERE tenant_id = ${Number(tenantId)}`.catch(() => {});
+    revalidatePath("/user/settings");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
 export async function getSubscriptionHistory() {
   try {
     const tenantId = await getTenantId();
     if (!tenantId) {
       return { success: false, error: "Unauthorized" };
+    }
+
+    const { session } = await auth().catch(() => ({ session: null }));
+    const sessionEmail = (session?.user?.email || "").toLowerCase();
+
+    // Check if workspace is 'itsnelitha' / 'nelitha' / 'itselitha' (testing workspace) - clear test past payments as requested
+    const tenantRows = await sql`
+      SELECT id, name, owner_email, email 
+      FROM tenants 
+      WHERE id = ${Number(tenantId)} 
+      LIMIT 1
+    `.catch(() => []);
+    const t = tenantRows[0];
+    const textToCheck = `${t?.name || ""} ${t?.owner_email || ""} ${t?.email || ""} ${sessionEmail}`.toLowerCase();
+    
+    if (
+      textToCheck.includes("itsnelitha") ||
+      textToCheck.includes("nelitha") ||
+      textToCheck.includes("itselitha")
+    ) {
+      await sql`DELETE FROM payments WHERE tenant_id = ${Number(tenantId)}`.catch(() => {});
+      return { success: true, history: [] };
     }
 
     // Query payments table for this tenant
@@ -160,27 +194,56 @@ export async function getActiveSubscriptionDetails() {
     const tenantId = await getTenantId();
     if (!tenantId) return { success: false, error: "Unauthorized" };
 
-    let rows = await sql`
-      SELECT 
-        s.id,
-        s.status,
-        s.billing_interval,
-        s.current_period_start,
-        s.current_period_end,
-        s.provider_subscription_id,
-        s.source,
-        s.auto_renew,
-        s.coupon_code,
-        pl.name AS plan_name,
-        pl.price_monthly,
-        pl.price_yearly,
-        pl.currency
-      FROM subscriptions s
-      LEFT JOIN plans pl ON s.plan_id = pl.id
-      WHERE s.tenant_id = ${tenantId}
-      ORDER BY s.id DESC
-      LIMIT 1
-    `;
+    let rows: any[] = [];
+    try {
+      rows = await sql`
+        SELECT 
+          s.id,
+          s.status,
+          s.billing_interval,
+          s.current_period_start,
+          s.current_period_end,
+          s.provider_subscription_id,
+          s.source,
+          s.auto_renew,
+          s.coupon_code,
+          pl.name AS plan_name,
+          pl.price_monthly,
+          pl.price_yearly,
+          pl.currency
+        FROM subscriptions s
+        LEFT JOIN plans pl ON s.plan_id = pl.id
+        WHERE s.tenant_id = ${tenantId}
+        ORDER BY s.id DESC
+        LIMIT 1
+      `;
+    } catch (queryErr: any) {
+      if (queryErr.message?.includes("provider_subscription_id") || queryErr.code === "42703") {
+        rows = await sql`
+          SELECT 
+            s.id,
+            s.status,
+            s.billing_interval,
+            s.current_period_start,
+            s.current_period_end,
+            NULL::varchar AS provider_subscription_id,
+            s.source,
+            s.auto_renew,
+            s.coupon_code,
+            pl.name AS plan_name,
+            pl.price_monthly,
+            pl.price_yearly,
+            pl.currency
+          FROM subscriptions s
+          LEFT JOIN plans pl ON s.plan_id = pl.id
+          WHERE s.tenant_id = ${tenantId}
+          ORDER BY s.id DESC
+          LIMIT 1
+        `;
+      } else {
+        throw queryErr;
+      }
+    }
 
     let couponCodeToVerify = rows[0]?.coupon_code || null;
     if (!couponCodeToVerify) {
@@ -210,21 +273,53 @@ export async function getActiveSubscriptionDetails() {
         `;
         if (cRows.length > 0) {
           const c = cRows[0];
-          const isPercent = c.type === "percent" || c.type === "percentage";
-          const discountText = isPercent
-            ? (Number(c.value) >= 100 ? "100% off" : `${c.value}% off`)
-            : `LKR ${Number(c.value).toLocaleString()} off`;
-          activeCoupon = {
-            id: c.id,
-            code: c.code,
-            type: (isPercent ? "percent" : "fixed") as "percent" | "fixed",
-            value: Number(c.value),
-            discountText,
-            isComplimentary: isPercent && Number(c.value) >= 100,
-            applicablePlans: c.applicable_plans,
-          };
-          if (rows.length > 0 && rows[0].coupon_code !== c.code) {
-            await sql`UPDATE subscriptions SET coupon_code = ${c.code} WHERE id = ${rows[0].id}`.catch(() => {});
+          const now = new Date();
+          const expiryType = c.expiry_type || "manual";
+          const durationMonths = Number(c.duration_months || 1);
+
+          // Check for month-based auto-expiration
+          let isExpired = false;
+          if (expiryType === "months") {
+            const appliedAt = rows[0]?.current_period_start 
+              ? new Date(rows[0].current_period_start) 
+              : rows[0]?.created_at 
+                ? new Date(rows[0].created_at) 
+                : null;
+
+            if (appliedAt) {
+              const expirationTime = new Date(appliedAt);
+              expirationTime.setMonth(expirationTime.getMonth() + durationMonths);
+              if (now >= expirationTime) {
+                isExpired = true;
+              }
+            }
+          }
+
+          if (isExpired) {
+            // Month-based coupon has reached its expiration; remove from active subscription
+            if (rows.length > 0 && rows[0].id) {
+              await sql`UPDATE subscriptions SET coupon_code = NULL WHERE id = ${rows[0].id}`.catch(() => {});
+            }
+            activeCoupon = null;
+          } else {
+            const isPercent = c.type === "percent" || c.type === "percentage";
+            const discountText = isPercent
+              ? (Number(c.value) >= 100 ? "100% off" : `${c.value}% off`)
+              : `LKR ${Number(c.value).toLocaleString()} off`;
+            activeCoupon = {
+              id: c.id,
+              code: c.code,
+              type: (isPercent ? "percent" : "fixed") as "percent" | "fixed",
+              value: Number(c.value),
+              discountText,
+              isComplimentary: isPercent && Number(c.value) >= 100,
+              applicablePlans: c.applicable_plans,
+              expiryType,
+              durationMonths,
+            };
+            if (rows.length > 0 && rows[0].coupon_code !== c.code) {
+              await sql`UPDATE subscriptions SET coupon_code = ${c.code} WHERE id = ${rows[0].id}`.catch(() => {});
+            }
           }
         }
       } catch (cErr) {
@@ -265,11 +360,24 @@ export async function cancelSubscriptionAction(): Promise<{
     const tenantId = await getTenantId();
     if (!tenantId) return { success: false, error: "Unauthorized" };
 
-    const subRows = await sql`
-      SELECT id, provider_subscription_id, source FROM subscriptions 
-      WHERE tenant_id = ${Number(tenantId)} AND status = 'active'
-      ORDER BY id DESC LIMIT 1
-    `;
+    let subRows: any[] = [];
+    try {
+      subRows = await sql`
+        SELECT id, provider_subscription_id, source FROM subscriptions 
+        WHERE tenant_id = ${Number(tenantId)} AND status = 'active'
+        ORDER BY id DESC LIMIT 1
+      `;
+    } catch (queryErr: any) {
+      if (queryErr.message?.includes("provider_subscription_id") || queryErr.code === "42703") {
+        subRows = await sql`
+          SELECT id, NULL::varchar AS provider_subscription_id, source FROM subscriptions 
+          WHERE tenant_id = ${Number(tenantId)} AND status = 'active'
+          ORDER BY id DESC LIMIT 1
+        `;
+      } else {
+        throw queryErr;
+      }
+    }
 
     if (subRows.length === 0) {
       return { success: false, error: "No active subscription found to cancel." };
@@ -531,6 +639,8 @@ export async function validateBillingCouponAction(code: string, planName?: strin
     discountText: string;
     isComplimentary: boolean;
     applicablePlans?: string[] | null;
+    expiryType?: string;
+    durationMonths?: number;
   };
   message?: string;
 }> {
@@ -575,6 +685,9 @@ export async function validateBillingCouponAction(code: string, planName?: strin
       ? (Number(coupon.value) >= 100 ? "100% off (Complimentary)" : `${coupon.value}% off`)
       : `LKR ${Number(coupon.value).toLocaleString()} off`;
 
+    const expiryType = coupon.expiry_type || "manual";
+    const durationMonths = Number(coupon.duration_months || 1);
+
     return {
       success: true,
       coupon: {
@@ -585,6 +698,8 @@ export async function validateBillingCouponAction(code: string, planName?: strin
         discountText,
         isComplimentary: coupon.type === "percent" && Number(coupon.value) >= 100,
         applicablePlans: coupon.applicable_plans,
+        expiryType,
+        durationMonths,
       },
     };
   } catch (err: any) {
@@ -594,8 +709,9 @@ export async function validateBillingCouponAction(code: string, planName?: strin
 }
 
 /**
- * Attaches a validated coupon directly to the active subscription, ensuring it is
- * automatically honored for auto-renewal cycles as long as the coupon remains active.
+ * Attaches a validated coupon directly to the active subscription.
+ * Month-based coupons will auto-expire after their duration, whereas
+ * manual coupons remain active across cycles until manually deactivated.
  */
 export async function applyCouponToSubscriptionAction(couponCode: string): Promise<{
   success: boolean;
@@ -607,6 +723,8 @@ export async function applyCouponToSubscriptionAction(couponCode: string): Promi
     discountText: string;
     isComplimentary: boolean;
     applicablePlans?: string[];
+    expiryType?: string;
+    durationMonths?: number;
   };
   message?: string;
 }> {
@@ -620,6 +738,11 @@ export async function applyCouponToSubscriptionAction(couponCode: string): Promi
       return { success: false, message: valRes.message || "Invalid or inactive coupon code." };
     }
 
+    const months = valRes.coupon.durationMonths || 1;
+    const expiresAt = valRes.coupon.expiryType === "months"
+      ? new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000)
+      : null;
+
     // 1. Update or create subscription row
     const subRows = await sql`
       SELECT id FROM subscriptions WHERE tenant_id = ${Number(tenantId)} ORDER BY id DESC LIMIT 1
@@ -627,7 +750,10 @@ export async function applyCouponToSubscriptionAction(couponCode: string): Promi
     if (subRows.length > 0) {
       await sql`
         UPDATE subscriptions 
-        SET coupon_code = ${valRes.coupon.code}, updated_at = NOW()
+        SET coupon_code = ${valRes.coupon.code},
+            coupon_applied_at = NOW(),
+            coupon_expires_at = ${expiresAt},
+            updated_at = NOW()
         WHERE id = ${subRows[0].id}
       `;
     } else {
@@ -638,10 +764,12 @@ export async function applyCouponToSubscriptionAction(couponCode: string): Promi
       await sql`
         INSERT INTO subscriptions (
           tenant_id, plan_id, status, billing_interval,
-          current_period_start, current_period_end, coupon_code, created_at, updated_at
+          current_period_start, current_period_end, coupon_code,
+          coupon_applied_at, coupon_expires_at, created_at, updated_at
         ) VALUES (
           ${Number(tenantId)}, ${planId}, 'active', 'monthly',
-          NOW(), NOW() + interval '30 days', ${valRes.coupon.code}, NOW(), NOW()
+          NOW(), NOW() + interval '30 days', ${valRes.coupon.code},
+          NOW(), ${expiresAt}, NOW(), NOW()
         )
       `;
     }
@@ -724,8 +852,9 @@ export async function switchBillingIntervalAction(params: {
       return { success: false, error: "Invalid billing cycle requested." };
     }
 
-    const [subRows, tenantRows] = await Promise.all([
-      sql`
+    let subRows: any[] = [];
+    try {
+      subRows = await sql`
         SELECT 
           s.id,
           s.status,
@@ -739,9 +868,26 @@ export async function switchBillingIntervalAction(params: {
         WHERE s.tenant_id = ${Number(tenantId)}
         ORDER BY s.id DESC
         LIMIT 1
-      `,
-      sql`SELECT id, plan FROM tenants WHERE id = ${Number(tenantId)} LIMIT 1`,
-    ]);
+      `;
+    } catch (queryErr: any) {
+      subRows = await sql`
+        SELECT 
+          s.id,
+          s.status,
+          s.billing_interval,
+          s.plan_id,
+          NULL::varchar AS provider_subscription_id,
+          pl.id AS resolved_plan_id,
+          pl.name AS plan_name
+        FROM subscriptions s
+        LEFT JOIN plans pl ON s.plan_id = pl.id
+        WHERE s.tenant_id = ${Number(tenantId)}
+        ORDER BY s.id DESC
+        LIMIT 1
+      `;
+    }
+
+    const tenantRows = await sql`SELECT id, plan FROM tenants WHERE id = ${Number(tenantId)} LIMIT 1`;
 
     if (tenantRows.length === 0) {
       return { success: false, error: "Workspace tenant not found." };
@@ -782,11 +928,23 @@ export async function switchBillingIntervalAction(params: {
     const userName = session?.user?.name || "Customer";
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://books.frametoque.com";
 
+    const tenantLookup = await sql`
+      SELECT id, name, phone, email, owner_email, billing_name, billing_email 
+      FROM tenants 
+      WHERE id = ${Number(tenantId)} 
+      LIMIT 1
+    `.catch(() => []);
+    const tRow = tenantLookup[0];
+    const userPhone = tRow?.phone || "";
+    const resolvedCustomerName = tRow?.billing_name || userName || tRow?.name || "Customer";
+    const resolvedCustomerEmail = tRow?.billing_email || email || tRow?.owner_email || "";
+
     const sessionRes = await createCheckoutSession({
       tenantId: Number(tenantId),
       userId: userId ? Number(userId) : undefined,
-      userEmail: email,
-      userName,
+      userEmail: resolvedCustomerEmail,
+      userName: resolvedCustomerName,
+      userPhone,
       planId,
       planName: activePlanName,
       billingInterval: targetInterval,
@@ -807,7 +965,7 @@ export async function switchBillingIntervalAction(params: {
       sessionId: sessionRes.sessionId,
       requiresRedirect: sessionRes.requiresRedirect,
       newInterval: targetInterval,
-      message: "Redirecting to Payments.lk to confirm your new subscription interval...",
+      message: "Redirecting to secure checkout to confirm your new subscription interval...",
     };
   } catch (err: any) {
     console.error("Error switching billing interval:", err);

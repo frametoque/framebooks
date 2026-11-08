@@ -10,6 +10,8 @@ export async function getCouponsList() {
 
   const coupons = await sql`
     SELECT c.*,
+      COALESCE(c.expiry_type, 'manual') AS expiry_type,
+      COALESCE(c.duration_months, 1) AS duration_months,
       COALESCE((
         SELECT COUNT(*) FROM coupon_redemptions cr WHERE cr.coupon_id = c.id
       ), 0) AS actual_redemptions
@@ -28,6 +30,8 @@ export async function createCoupon({
   validTo,
   maxRedemptions,
   applicablePlans,
+  expiryType = "manual",
+  durationMonths = 1,
 }: {
   code: string;
   type: "percent" | "fixed";
@@ -36,6 +40,8 @@ export async function createCoupon({
   validTo?: string;
   maxRedemptions?: number;
   applicablePlans?: string[];
+  expiryType?: "manual" | "months";
+  durationMonths?: number;
 }) {
   const actor = await requireAdmin("manage_coupons");
 
@@ -45,7 +51,8 @@ export async function createCoupon({
 
   const rows = await sql`
     INSERT INTO coupons (
-      code, type, value, valid_from, valid_to, max_redemptions, is_active, applicable_plans
+      code, type, value, valid_from, valid_to, max_redemptions, is_active, applicable_plans,
+      expiry_type, duration_months
     )
     VALUES (
       ${cleanCode},
@@ -55,7 +62,9 @@ export async function createCoupon({
       ${validTo ? new Date(validTo) : null},
       ${maxRedemptions || null},
       true,
-      ${sql.json(applicablePlans || ["pro", "pro_plus"])}
+      ${sql.json(applicablePlans || ["pro", "pro_plus"])},
+      ${expiryType},
+      ${Number(durationMonths) || 1}
     )
     RETURNING id
   `;
@@ -65,7 +74,7 @@ export async function createCoupon({
     action: "CREATE_COUPON",
     targetType: "coupon",
     targetId: rows[0].id,
-    after: { code: cleanCode, type, value }
+    after: { code: cleanCode, type, value, expiryType, durationMonths }
   });
 
   revalidatePath("/admin/coupons");
@@ -99,6 +108,8 @@ export async function updateCoupon({
   maxRedemptions,
   isActive,
   applicablePlans,
+  expiryType,
+  durationMonths,
 }: {
   id: number;
   code: string;
@@ -109,6 +120,8 @@ export async function updateCoupon({
   maxRedemptions?: number | null;
   isActive?: boolean;
   applicablePlans?: string[];
+  expiryType?: "manual" | "months";
+  durationMonths?: number;
 }) {
   const actor = await requireAdmin("manage_coupons");
 
@@ -129,7 +142,9 @@ export async function updateCoupon({
       valid_to = ${validTo ? new Date(validTo) : null},
       max_redemptions = ${maxRedemptions !== undefined ? maxRedemptions : before.max_redemptions},
       is_active = ${isActive !== undefined ? isActive : before.is_active},
-      applicable_plans = ${applicablePlans && applicablePlans.length > 0 ? sql.json(applicablePlans) : sql.json(["pro", "pro_plus"])}
+      applicable_plans = ${applicablePlans && applicablePlans.length > 0 ? sql.json(applicablePlans) : sql.json(["pro", "pro_plus"])},
+      expiry_type = ${expiryType !== undefined ? expiryType : (before.expiry_type || "manual")},
+      duration_months = ${durationMonths !== undefined ? Number(durationMonths) : (before.duration_months || 1)}
     WHERE id = ${id}
   `;
 

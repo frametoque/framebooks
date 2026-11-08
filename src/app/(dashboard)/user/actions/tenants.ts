@@ -653,6 +653,7 @@ export interface UserBusinessItem {
   role: string;
   isOwner: boolean;
   isActive: boolean;
+  accent_color?: string | null;
 }
 
 export interface PendingInviteItem {
@@ -689,7 +690,7 @@ export async function getUserBusinesses(): Promise<UserBusinessesResult> {
 
     // 1. Check if user owns any tenant
     const ownedTenants = await sql`
-      SELECT id, name, logo_url, plan, owner_email 
+      SELECT id, name, logo_url, plan, owner_email, accent_color 
       FROM tenants 
       WHERE LOWER(owner_email) = ${email}
     `;
@@ -697,7 +698,7 @@ export async function getUserBusinesses(): Promise<UserBusinessesResult> {
 
     // 2. Check accepted team invitations
     const acceptedInvites = await sql`
-      SELECT t.id, t.name, t.logo_url, t.plan, ti.role
+      SELECT t.id, t.name, t.logo_url, t.plan, t.accent_color, ti.role
       FROM team_invitations ti
       JOIN tenants t ON ti.tenant_id = t.id::text
       WHERE LOWER(ti.email) = ${email} AND ti.status = 'accepted'
@@ -707,7 +708,7 @@ export async function getUserBusinesses(): Promise<UserBusinessesResult> {
     let fallbackTenants: any[] = [];
     if (activeTenantId && !ownedTenants.some(t => t.id === activeTenantId) && !acceptedInvites.some(t => t.id === activeTenantId)) {
       fallbackTenants = await sql`
-        SELECT id, name, logo_url, plan 
+        SELECT id, name, logo_url, plan, accent_color 
         FROM tenants 
         WHERE id = ${activeTenantId}
       `;
@@ -725,6 +726,7 @@ export async function getUserBusinesses(): Promise<UserBusinessesResult> {
         role: 'Owner',
         isOwner: true,
         isActive: t.id === activeTenantId,
+        accent_color: t.accent_color || null,
       });
     }
 
@@ -739,6 +741,7 @@ export async function getUserBusinesses(): Promise<UserBusinessesResult> {
           role: t.role || 'Viewer',
           isOwner: (t.role || '').toLowerCase() === 'owner',
           isActive: t.id === activeTenantId,
+          accent_color: t.accent_color || null,
         });
       }
     }
@@ -755,6 +758,7 @@ export async function getUserBusinesses(): Promise<UserBusinessesResult> {
           role: userRows[0]?.role || 'Viewer',
           isOwner: isOwnerRole,
           isActive: true,
+          accent_color: t.accent_color || null,
         });
       }
     }
@@ -819,6 +823,18 @@ export async function switchActiveTenant(targetTenantId: number) {
       SET tenant_id = ${targetTenantId}, role = ${newRole} 
       WHERE LOWER(email) = ${email}
     `;
+
+    // Sync target tenant accent color to browser cookie
+    const targetRows = await sql`SELECT accent_color, plan FROM tenants WHERE id = ${targetTenantId} LIMIT 1`;
+    const targetAccent = targetRows[0]?.accent_color;
+    try {
+      const cookieStore = await cookies();
+      if (targetAccent && /^#[0-9a-fA-F]{6}$/i.test(targetAccent)) {
+        cookieStore.set("fb_accent_color", targetAccent.toUpperCase(), { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+      } else {
+        cookieStore.delete("fb_accent_color");
+      }
+    } catch {}
 
     await logSystemAction(`Switched active workspace to tenant ID ${targetTenantId} as ${newRole}`);
     revalidatePath("/", "layout");
@@ -1040,4 +1056,26 @@ export async function updateTenantAccent(accentColor: string | null): Promise<{ 
     return { success: false, error: err?.message || "Failed to update appearance setting." };
   }
 }
+
+export async function dismissGettingStartedGuideAction(targetTenantId?: number | string | null) {
+  try {
+    const cookieStore = await cookies();
+    cookieStore.set("fb_guide_dismissed", "true", {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+    });
+    if (targetTenantId) {
+      cookieStore.set(`fb_guide_dismissed_${targetTenantId}`, "true", {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+      });
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message };
+  }
+}
+
 

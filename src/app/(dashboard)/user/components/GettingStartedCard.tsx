@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MdClose, MdArrowForward } from "react-icons/md";
 import { Check } from "lucide-react";
 import { useAppLock } from "./AppLockProvider";
-import { getTenantInfo } from "../actions/tenants";
+import { getTenantInfo, dismissGettingStartedGuideAction } from "../actions/tenants";
 
 interface GettingStartedCardProps {
   tenantId?: number | string | null;
@@ -29,9 +30,11 @@ export default function GettingStartedCard({
   tenantInfo: propTenantInfo,
   dashboardData,
 }: GettingStartedCardProps) {
+  const { data: session } = useSession();
+  const sessionTenantId = (session?.user as any)?.tenantId;
+
   const { hasAppLock } = useAppLock();
   const [internalTenantInfo, setInternalTenantInfo] = useState<any>(propTenantInfo || null);
-  const [isDismissed, setIsDismissed] = useState<boolean>(true);
   const [mounted, setMounted] = useState<boolean>(false);
   const [manualCompleted, setManualCompleted] = useState<Record<string, boolean>>({});
 
@@ -48,7 +51,7 @@ export default function GettingStartedCard({
   }, [propTenantInfo]);
 
   const tenantInfo = propTenantInfo || internalTenantInfo;
-  const effectiveTenantId = tenantId || tenantInfo?.id || tenantInfo?.tenantId || dashboardData?.tenantId;
+  const effectiveTenantId = tenantId || tenantInfo?.id || tenantInfo?.tenantId || sessionTenantId || dashboardData?.tenantId;
 
   const storageKey = effectiveTenantId
     ? `framebooks_getting_started_dismissed_${effectiveTenantId}`
@@ -58,16 +61,45 @@ export default function GettingStartedCard({
     ? `framebooks_checklist_completed_${effectiveTenantId}`
     : "framebooks_checklist_completed_default";
 
-  // Check if dismissed on mount or storageKey change
+  const isDismissedInStorage = (): boolean => {
+    if (typeof window === "undefined") return true;
+    try {
+      // 1. Check cookies (persists 1 year across pages, tabs, and sessions)
+      if (document.cookie.includes("fb_guide_dismissed=true")) return true;
+      if (effectiveTenantId && document.cookie.includes(`fb_guide_dismissed_${effectiveTenantId}=true`)) return true;
+
+      // 2. Check localStorage global & default keys
+      if (localStorage.getItem("framebooks_getting_started_dismissed_global") === "true") return true;
+      if (localStorage.getItem("framebooks_getting_started_dismissed_default") === "true") return true;
+      if (localStorage.getItem("framebooks_guide_dismissed") === "true") return true;
+
+      // 3. Check specific tenant key
+      if (effectiveTenantId && localStorage.getItem(`framebooks_getting_started_dismissed_${effectiveTenantId}`) === "true") {
+        return true;
+      }
+
+      // 4. Check if any tenant guide was marked dismissed
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("framebooks_getting_started_dismissed_") && localStorage.getItem(key) === "true") {
+          return true;
+        }
+      }
+    } catch {}
+    return false;
+  };
+
+  const [isDismissed, setIsDismissed] = useState<boolean>(() => {
+    return isDismissedInStorage();
+  });
+
+  // Re-verify whenever storageKey or effectiveTenantId changes
   useEffect(() => {
     setMounted(true);
-    const dismissed = localStorage.getItem(storageKey);
-    if (!dismissed) {
-      setIsDismissed(false);
-    } else {
+    if (isDismissedInStorage()) {
       setIsDismissed(true);
     }
-  }, [storageKey]);
+  }, [storageKey, effectiveTenantId]);
 
   // Load manual completion from localStorage
   useEffect(() => {
@@ -185,12 +217,12 @@ export default function GettingStartedCard({
       if (isFirstCheckRef.current) {
         // Hide immediately without flashing if already done on initial load
         setAutoHidden(true);
-        localStorage.setItem(storageKey, "true");
+        handleDismiss();
       } else {
         // User just completed the final task: small delay to perceive success, then smoothly collapse
         const timer = setTimeout(() => {
           setAutoHidden(true);
-          localStorage.setItem(storageKey, "true");
+          handleDismiss();
         }, 700);
         return () => clearTimeout(timer);
       }
@@ -202,7 +234,22 @@ export default function GettingStartedCard({
 
   const handleDismiss = () => {
     setIsDismissed(true);
-    localStorage.setItem(storageKey, "true");
+    try {
+      localStorage.setItem("framebooks_getting_started_dismissed_global", "true");
+      localStorage.setItem("framebooks_getting_started_dismissed_default", "true");
+      localStorage.setItem("framebooks_guide_dismissed", "true");
+      localStorage.setItem(storageKey, "true");
+      if (effectiveTenantId) {
+        localStorage.setItem(`framebooks_getting_started_dismissed_${effectiveTenantId}`, "true");
+        document.cookie = `fb_guide_dismissed_${effectiveTenantId}=true; path=/; max-age=31536000; SameSite=Lax`;
+      }
+      document.cookie = `fb_guide_dismissed=true; path=/; max-age=31536000; SameSite=Lax`;
+    } catch {}
+
+    // Persist to server cookies & session
+    try {
+      dismissGettingStartedGuideAction(effectiveTenantId).catch(() => {});
+    } catch {}
   };
 
   const toggleManualCheck = (id: string, currentState: boolean, e: React.MouseEvent) => {

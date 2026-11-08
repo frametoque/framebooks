@@ -1,6 +1,6 @@
 // src/app/(dashboard)/layout.tsx
 import React from "react";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getAdminUser } from "@/app/(dashboard)/admin/_lib/auth";
@@ -42,15 +42,35 @@ export default async function DashboardRootLayout({
   let accentCss = "";
   if (!pathname.startsWith("/admin") && userSession?.user?.email) {
     try {
-      const email = userSession.user.email.toLowerCase();
-      const userRows = await sql`
-        SELECT t.accent_color
-        FROM admin_users u
-        JOIN tenants t ON u.tenant_id = t.id
-        WHERE LOWER(u.email) = ${email}
-        LIMIT 1
-      `;
-      accentCss = generateTenantThemeCss(userRows[0]?.accent_color || DEFAULT_ACCENT_HEX);
+      let resolvedColor: string | null = null;
+
+      // 1. Prioritize cookie for fastest, synchronous SSR matching
+      const cookieStore = await cookies();
+      const rawCookie = cookieStore.get("fb_accent_color")?.value;
+      if (rawCookie) {
+        const decoded = decodeURIComponent(rawCookie).trim();
+        if (/^#[0-9a-fA-F]{6}$/i.test(decoded)) {
+          resolvedColor = decoded.toUpperCase();
+        }
+      }
+
+      // 2. If cookie not set, query database
+      if (!resolvedColor) {
+        const email = userSession.user.email.toLowerCase();
+        const userRows = await sql`
+          SELECT t.accent_color
+          FROM admin_users u
+          JOIN tenants t ON u.tenant_id = t.id
+          WHERE LOWER(u.email) = ${email}
+          LIMIT 1
+        `;
+        const dbColor = userRows[0]?.accent_color;
+        if (dbColor && /^#[0-9a-fA-F]{6}$/i.test(dbColor.trim())) {
+          resolvedColor = dbColor.trim().toUpperCase();
+        }
+      }
+
+      accentCss = generateTenantThemeCss(resolvedColor || DEFAULT_ACCENT_HEX);
     } catch {
       accentCss = generateTenantThemeCss(DEFAULT_ACCENT_HEX);
     }

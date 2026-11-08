@@ -9,7 +9,8 @@ import { isSettingsSectionAllowed, SETTINGS_SLUG_TO_TAB } from "../settings-perm
 export const dynamic = "force-dynamic";
 
 const SECTION_METADATA: Record<string, { title: string; description: string }> = {
-  "profile": { title: "Account & Security | Framebooks", description: "Manage your profile, connected accounts, and app lock." },
+  "security": { title: "Security | Framebooks", description: "Manage App Lock and authentication passkeys." },
+  "profile": { title: "Security | Framebooks", description: "Manage App Lock and authentication passkeys." },
   "business": { title: "Business Profile | Framebooks", description: "Update business name, contact, branding, and details." },
   "appearance": { title: "Appearance & Layouts | Framebooks", description: "Customize dashboard accent colour, theme branding, and invoice layouts." },
   "invoice-layout": { title: "Invoice Layouts | Framebooks", description: "Design, customize, and arrange custom invoice templates and fields." },

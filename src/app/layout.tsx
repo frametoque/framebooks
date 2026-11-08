@@ -5,6 +5,7 @@ import type { Metadata, Viewport } from 'next'
 import { DM_Mono } from "next/font/google";
 import { ConfirmProvider } from "@/components/ui/ConfirmProvider";
 import PwaThemeSync from "@/components/pwa/PwaThemeSync";
+import { cookies } from "next/headers";
 
 const dmMono = DM_Mono({
   variable: "--font-geist-mono",
@@ -12,12 +13,26 @@ const dmMono = DM_Mono({
   weight: ["300", "400", "500"],
 });
 
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 5,
-  themeColor: '#00E35B',
-};
+export async function generateViewport(): Promise<Viewport> {
+  let themeColor = '#00E35B';
+  try {
+    const cookieStore = await cookies();
+    const cookieVal = cookieStore.get('fb_accent_color')?.value;
+    if (cookieVal) {
+      const decoded = decodeURIComponent(cookieVal).trim();
+      if (/^#[0-9a-fA-F]{6}$/i.test(decoded)) {
+        themeColor = decoded.toUpperCase();
+      }
+    }
+  } catch {}
+
+  return {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+    themeColor,
+  };
+}
 
 export const metadata: Metadata = {
   title: {
@@ -47,6 +62,23 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          id="tenant-accent-early-init"
+          dangerouslySetInnerHTML={{
+            __html: `(function(){
+              try {
+                if (window.location.pathname.indexOf('/user') === -1) return;
+                var m = document.cookie.match(/(?:^|;\\s*)fb_accent_color=([^;]+)/);
+                var c = m ? decodeURIComponent(m[1]) : (typeof localStorage !== 'undefined' ? localStorage.getItem('framebooks_accent_color') : null);
+                if (c && /^#[0-9a-fA-F]{6}$/i.test(c)) {
+                  document.documentElement.style.setProperty('--accent', c);
+                }
+              } catch(e){}
+            })();`,
+          }}
+        />
+      </head>
       <body suppressHydrationWarning
         className={`${dmMono.variable} font-sans antialiased tracking-tight`}
       >

@@ -57,7 +57,9 @@ export default function PwaThemeSync() {
 
     // 3. Set cookie so Next.js server actions & manifest SSR read the user's color
     try {
-      document.cookie = `fb_accent_color=${encodeURIComponent(syncColor)}; path=/; max-age=31536000; SameSite=Lax`;
+      if (syncColor && syncColor.toUpperCase() !== "#00E35B") {
+        document.cookie = `fb_accent_color=${encodeURIComponent(syncColor)}; path=/; max-age=31536000; SameSite=Lax`;
+      }
     } catch {}
 
     // 4. Update manifest link with version query to prompt browser cache invalidation
