@@ -100,11 +100,6 @@ export async function sendEmail({
   const mailer = getTransporter();
 
   if (!mailer) {
-    if (process.env.NODE_ENV !== "production") {
-      console.log(
-        `[EMAIL SERVICE - DEV FALLBACK (${category})] To: ${to} | Subject: ${subject}`
-      );
-    }
     return { success: true, simulated: true };
   }
 
@@ -127,9 +122,8 @@ export async function sendEmail({
     });
     return { success: true };
   } catch (error) {
-    console.error("Failed to send email via SMTP:", error);
+    console.error("Failed to send email via SMTP:", error instanceof Error ? error.message : "Unknown error");
     if (process.env.NODE_ENV !== "production") {
-      console.log(`[SMTP Error Fallback] Content: ${text}`);
       return { success: true, simulated: true };
     }
     throw error;
