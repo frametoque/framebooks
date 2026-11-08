@@ -26,6 +26,9 @@ const OPTIONAL_SERVER_VARS = [
   "STRIPE_WEBHOOK_SECRET",
   "PAYHERE_MERCHANT_ID",
   "PAYHERE_MERCHANT_SECRET",
+  "PAYMENTS_LK_ENV",
+  "BLIND_INDEX_KEY",
+  "R2_S3_API",
 ] as const;
 
 export function validateServerEnv(): { valid: boolean; missing: string[] } {
