@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test src/lib/security/crypto.test.ts src/lib/payment-gateway/fee.test.ts src/lib/payment-gateway/config.test.ts",
+    "test": "node --no-warnings --experimental-strip-types --test src/lib/security/crypto.test.ts src/lib/payment-gateway/fee.test.ts src/lib/payment-gateway/config.test.ts",
     "typecheck": "tsc --noEmit",
     "format:check": "eslint . --max-warnings 0"
   },
