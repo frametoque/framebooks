@@ -46,6 +46,9 @@ src/app/layout.js
 /backups/
 /migrations/
 /scripts/
+/exports/
+/data/
 *.sql
 *.dump
-/exports/
+*.enc
+*.bak
