@@ -25,3 +25,4 @@ This document defines performance budgets, compute limits, and best practices to
 
 4. **Vercel Functions Storage Clean-up**:
    Old preview deployments accumulate storage toward the 10 GB quota. Regularly prune deployments or configure automated branch deletion in Vercel.
+

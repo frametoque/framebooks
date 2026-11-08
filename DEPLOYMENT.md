@@ -68,3 +68,4 @@ Instead of Vercel cron, set up a standard cPanel / Linux crontab entry for daily
 # Runs daily at 02:00 AM UTC
 0 2 * * * curl -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" https://yourdomain.com/api/payments/cron/renewals >/dev/null 2>&1
 ```
+
