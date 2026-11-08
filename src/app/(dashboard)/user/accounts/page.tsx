@@ -34,8 +34,8 @@ export default function AccountsPage() {
   const [formData, setFormData] = useState({ name: "", type: "Cash Account", bankName: "", accountNumber: "", branch: "", initialBalance: 0 });
   const [transferData, setTransferData] = useState({ date: new Date().toISOString().split("T")[0], sourceAccountId: 0, destinationAccountId: 0, amount: 0, description: "" });
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (showSkeleton = false) => {
+    if (showSkeleton) setLoading(true);
     try {
       const [accs, trans] = await Promise.all([getAccounts(), getTransfers()]);
       setAccounts(accs);
@@ -43,12 +43,12 @@ export default function AccountsPage() {
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
+      if (showSkeleton) setLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
+    load(true);
     getLimitStatus('accounts').then(status => {
       if (!status.allowed) {
         window.dispatchEvent(new CustomEvent('upgrade-modal:open', { detail: status.error }));
@@ -162,8 +162,43 @@ export default function AccountsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader size="lg" />
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="bg-transparent border border-border p-6 rounded-3xl flex items-center gap-4 animate-pulse">
+              <div className="w-12 h-12 rounded-2xl bg-card flex-shrink-0" />
+              <div className="space-y-2 flex-1">
+                <div className="h-4 bg-card rounded-full w-24" />
+                <div className="h-6 bg-white/10 rounded-full w-32" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-transparent border border-border rounded-3xl p-7 flex flex-col h-48 animate-pulse">
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-card" />
+                  <div className="space-y-2">
+                    <div className="h-5 bg-white/10 rounded-full w-32" />
+                    <div className="h-3 bg-card rounded-full w-20" />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-auto flex justify-between items-end">
+                <div className="space-y-2">
+                  <div className="h-3 bg-card rounded-full w-16" />
+                  <div className="h-3 bg-card rounded-full w-16" />
+                </div>
+                <div className="space-y-2 text-right flex flex-col items-end">
+                  <div className="h-3 bg-card rounded-full w-20" />
+                  <div className="h-6 bg-white/10 rounded-full w-24" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
