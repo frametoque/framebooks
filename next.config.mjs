@@ -4,10 +4,13 @@ const nextConfig = {
     root: process.cwd(),
   },
   poweredByHeader: false,
+  output: 'standalone',
+  productionBrowserSourceMaps: false,
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+    optimizePackageImports: ['lucide-react', 'react-icons', 'recharts', 'framer-motion'],
   },
   async redirects() {
     return [
