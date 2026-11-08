@@ -14,6 +14,7 @@ const sql =
     max: 20,
     connect_timeout: 15,
     idle_timeout: 30,
+    onnotice: () => {},
   });
 
 globalThis._sql = sql;

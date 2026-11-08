@@ -5,17 +5,22 @@ import sql from "@/lib/db";
 import { logSystemAction } from "@/lib/logger";
 import { getTenantId } from "./actions";
 
+let inventoryColumnsChecked = false;
+
 export async function getInventoryItems() {
   const tenantId = await getTenantId();
   if (!tenantId) return [];
 
-  try {
-    await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS purchase_invoice_url TEXT`;
-    await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS warranty_letter_url TEXT`;
-    await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS expense_id INTEGER`;
-    await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS tenant_id INTEGER`;
-  } catch (e) {
-    console.error("Failed to add columns to admin_inventory", e);
+  if (!inventoryColumnsChecked) {
+    inventoryColumnsChecked = true;
+    try {
+      await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS purchase_invoice_url TEXT`;
+      await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS warranty_letter_url TEXT`;
+      await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS expense_id INTEGER`;
+      await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS tenant_id INTEGER`;
+    } catch (e) {
+      console.error("Failed to add columns to admin_inventory", e);
+    }
   }
 
   const items = await sql`

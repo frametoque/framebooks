@@ -836,27 +836,28 @@ export async function deleteExpense(id: number) {
   await logSystemAction(`Deleted expense record: "LKR ${expAmount}" for "${expDesc}" (ID: ${id})`);
 }
 
+let scheduledExpensesTableChecked = false;
 async function ensureScheduledExpensesTable() {
-  await sql`
-    CREATE TABLE IF NOT EXISTS admin_scheduled_expenses (
-      id SERIAL PRIMARY KEY,
-      title VARCHAR(255) NOT NULL,
-      amount DECIMAL(10, 2) NOT NULL,
-      category VARCHAR(255) NOT NULL,
-      frequency VARCHAR(50) NOT NULL,
-      next_due_date DATE NOT NULL,
-      payment_method VARCHAR(255),
-      status VARCHAR(50) DEFAULT 'active',
-      tenant_id INTEGER,
-      account_id INTEGER
-    )
-  `;
+  if (scheduledExpensesTableChecked) return;
+  scheduledExpensesTableChecked = true;
   try {
-    await sql`ALTER TABLE admin_scheduled_expenses ADD COLUMN IF NOT EXISTS tenant_id INTEGER`;
-  } catch (e) {}
-  try {
-    await sql`ALTER TABLE admin_scheduled_expenses ADD COLUMN IF NOT EXISTS account_id INTEGER`;
-  } catch (e) {}
+    await sql`
+      CREATE TABLE IF NOT EXISTS admin_scheduled_expenses (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        amount DECIMAL(10, 2) NOT NULL,
+        category VARCHAR(255) NOT NULL,
+        frequency VARCHAR(50) NOT NULL,
+        next_due_date DATE NOT NULL,
+        payment_method VARCHAR(255),
+        status VARCHAR(50) DEFAULT 'active',
+        tenant_id INTEGER,
+        account_id INTEGER
+      )
+    `;
+  } catch (e) {
+    console.error("Failed to ensure scheduled expenses table:", e);
+  }
 }
 
 export async function processRecurringExpenses() {
