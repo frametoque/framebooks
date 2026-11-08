@@ -50,29 +50,6 @@ export async function POST(req: NextRequest) {
     const proto = req.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
     const baseUrl = host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || "https://books.frametoque.com");
 
-    // Handle Wallet Top-Up Action
-    if (body.action === "wallet_topup") {
-      const topupAmount = Number(body.amount);
-      if (!topupAmount || topupAmount < 100) {
-        return NextResponse.json({ error: "Minimum wallet recharge is LKR 100." }, { status: 400 });
-      }
-
-      const userName = userRows[0]?.full_name || session?.user?.name || "Customer";
-      const result = await createCheckoutSession({
-        tenantId,
-        userId: userRows[0]?.id || null,
-        userEmail: email,
-        userName,
-        planName: "Wallet Recharge",
-        billingInterval: "monthly",
-        amount: topupAmount,
-        currency: "LKR",
-        successUrl: `${baseUrl}/billing/success?type=wallet_topup&amount=${topupAmount}`,
-        cancelUrl: `${baseUrl}/user/settings/billing?billing_status=cancelled`,
-      });
-      return NextResponse.json(result);
-    }
-
     // 2. Fetch plan details and pricing
     const planRows = await sql`
       SELECT id, name, key, price_monthly, price_yearly, currency 

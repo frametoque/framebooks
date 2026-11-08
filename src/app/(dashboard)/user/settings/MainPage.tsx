@@ -2284,17 +2284,13 @@ function BillingView({
   const [gatewayStatus, setGatewayStatus] = useState<any>(null);
   const [usage, setUsage] = useState<any>(null);
   const [subDetails, setSubDetails] = useState<any>(null);
-  const [togglingAutoRenew, setTogglingAutoRenew] = useState(false);
-  const [wallet, setWallet] = useState<any>(null);
-  const [topupAmountInput, setTopupAmountInput] = useState<string>("2500");
-  const [rechargingWallet, setRechargingWallet] = useState(false);
-  const [togglingAutoPull, setTogglingAutoPull] = useState(false);
+  const [cancelingSubscription, setCancelingSubscription] = useState(false);
+  const [savingBillingSettings, setSavingBillingSettings] = useState(false);
 
-  // Switch Billing Interval / Method Modal
+  // Switch Billing Interval Modal
   const [switchModalOpen, setSwitchModalOpen] = useState(false);
   const [switchTargetInterval, setSwitchTargetInterval] = useState<"monthly" | "yearly">("yearly");
   const [switchingCycle, setSwitchingCycle] = useState(false);
-  const [shortfallRecharging, setShortfallRecharging] = useState(false);
 
   // Coupon state
   const [couponInput, setCouponInput] = useState("");
@@ -2338,10 +2334,9 @@ function BillingView({
   const fetchHistoryAndUsage = async () => {
     try {
       setLoading(true);
-      const [histRes, subRes, walletRes, billRes] = await Promise.all([
+      const [histRes, subRes, billRes] = await Promise.all([
         import("../actions/billing").then(m => m.getSubscriptionHistory()),
         import("../actions/billing").then(m => m.getActiveSubscriptionDetails()),
-        import("../actions/billing").then(m => m.getWalletDetailsAction()),
         import("../actions/billing").then(m => m.getBillingSettingsAction()),
       ]);
 
@@ -2357,9 +2352,6 @@ function BillingView({
         } else {
           setAppliedCoupon(null);
         }
-      }
-      if (walletRes?.success) {
-        setWallet(walletRes.wallet || null);
       }
       if (billRes?.success && billRes.data) {
         setBillingSettings(billRes.data);
@@ -2381,130 +2373,60 @@ function BillingView({
     fetchHistoryAndUsage();
   }, [tenantInfo.plan]);
 
-  const handleToggleAutoRenew = async () => {
-    if (!subDetails) return;
-    setTogglingAutoRenew(true);
-    try {
-      const nextVal = !subDetails.auto_renew;
-      const res = await import("../actions/billing").then(m => m.toggleAutoRenewAction(nextVal));
-      if (res?.success) {
-        setSubDetails((prev: any) => ({ ...prev, auto_renew: nextVal }));
-        setStatusMessage({
-          type: "success",
-          text: nextVal ? "Automatic subscription renewal enabled." : "Automatic subscription renewal paused.",
-        });
-      }
-    } catch (err: any) {
-      console.error(err);
-      setStatusMessage({ type: "error", text: err.message || "Failed to update auto-renew." });
-    } finally {
-      setTogglingAutoRenew(false);
+  const handleCancelSubscription = async () => {
+    if (!confirm("Are you sure you want to cancel your subscription? You will continue to have access until the end of your current billing period, after which your workspace will revert to Free.")) {
+      return;
     }
-  };
-
-  const handleToggleAutoPull = async () => {
-    if (!wallet) return;
-    setTogglingAutoPull(true);
+    setCancelingSubscription(true);
+    setStatusMessage(null);
     try {
-      const nextVal = !wallet.autoPullCard;
-      const res = await import("../actions/billing").then(m => m.toggleAutoPullCardAction(nextVal));
-      if (res?.success) {
-        setWallet((prev: any) => ({ ...prev, autoPullCard: nextVal }));
-        setStatusMessage({
-          type: "success",
-          text: nextVal ? "Auto top-up from saved card enabled." : "Auto top-up from saved card disabled.",
-        });
-      }
-    } catch (err: any) {
-      console.error(err);
-      setStatusMessage({ type: "error", text: err.message || "Failed to toggle auto top-up." });
-    } finally {
-      setTogglingAutoPull(false);
-    }
-  };
-
-  const handleRechargeWalletCheckout = async (amount: number) => {
-    try {
-      setRechargingWallet(true);
-      setStatusMessage(null);
-
-      const res = await fetch("/api/payments/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "wallet_topup",
-          amount,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setStatusMessage({
-          type: "error",
-          text: data.error || "Failed to initiate wallet recharge.",
-        });
-        return;
-      }
-
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-      }
-    } catch (err: any) {
-      setStatusMessage({ type: "error", text: err.message || "Recharge failed." });
-    } finally {
-      setRechargingWallet(false);
-    }
-  };
-
-  const handleRechargeWithSavedCard = async (amount: number) => {
-    if (!wallet?.savedCard?.cardId) return;
-    try {
-      setRechargingWallet(true);
-      setStatusMessage(null);
-      const res = await import("../actions/billing").then(m => m.rechargeWalletWithSavedCardAction(amount));
+      const { cancelSubscriptionAction } = await import("../actions/billing");
+      const res = await cancelSubscriptionAction();
       if (res.success) {
         setStatusMessage({
           type: "success",
-          text: `Successfully recharged LKR ${amount.toLocaleString()} from your saved card!`,
+          text: res.message || "Your subscription has been canceled.",
         });
-        setWallet((prev: any) => ({
-          ...prev,
-          walletBalance: res.newBalance,
-        }));
         await fetchHistoryAndUsage();
       } else {
         setStatusMessage({
           type: "error",
-          text: res.error || "Recharge with saved card failed.",
+          text: res.error || "Failed to cancel subscription.",
         });
       }
     } catch (err: any) {
-      setStatusMessage({ type: "error", text: err.message || "Recharge error." });
+      setStatusMessage({
+        type: "error",
+        text: err.message || "An unexpected error occurred while canceling.",
+      });
     } finally {
-      setRechargingWallet(false);
+      setCancelingSubscription(false);
     }
   };
 
-  const handleRemoveCard = async () => {
-    if (!confirm("Are you sure you want to remove this payment method? Automatic renewals will stop.")) return;
+  const handleSaveBillingDetails = async () => {
+    setSavingBillingSettings(true);
     try {
-      const res = await import("../actions/billing").then(m => m.removeSavedCardAction());
-      if (res?.success) {
-        setSubDetails((prev: any) => ({
-          ...prev,
-          saved_card_id: null,
-          card_brand: null,
-          card_last4: null,
-          auto_renew: false,
-        }));
-        setWallet((prev: any) => ({
-          ...prev,
-          savedCard: null,
-        }));
-        setStatusMessage({ type: "success", text: "Saved card removed." });
+      const { updateBillingDetailsAction } = await import("../actions/billing");
+      const res = await updateBillingDetailsAction(billingSettings);
+      if (res.success) {
+        setStatusMessage({
+          type: "success",
+          text: "Billing details saved successfully.",
+        });
+      } else {
+        setStatusMessage({
+          type: "error",
+          text: res.error || "Failed to save billing details.",
+        });
       }
     } catch (err: any) {
-      setStatusMessage({ type: "error", text: err.message || "Failed to remove card." });
+      setStatusMessage({
+        type: "error",
+        text: err.message || "Failed to save billing details.",
+      });
+    } finally {
+      setSavingBillingSettings(false);
     }
   };
 
@@ -2605,18 +2527,21 @@ function BillingView({
     setSwitchModalOpen(true);
   };
 
-  const handleConfirmSwitchWithWallet = async () => {
+  const handleConfirmSwitchInterval = async () => {
     setSwitchingCycle(true);
+    setStatusMessage(null);
     try {
       const res = await import("../actions/billing").then(m =>
-        m.switchBillingIntervalWithWalletAction({ targetInterval: switchTargetInterval, couponCode: appliedCoupon?.code })
+        m.switchBillingIntervalAction({ targetInterval: switchTargetInterval, couponCode: appliedCoupon?.code })
       );
 
-      if (res.success) {
+      if (res.success && res.checkoutUrl) {
+        window.location.href = res.checkoutUrl;
+      } else if (res.success) {
         setSwitchModalOpen(false);
         setStatusMessage({
           type: "success",
-          text: res.message || `Successfully changed billing cycle to ${switchTargetInterval}!`,
+          text: res.message || `Switched billing cycle to ${switchTargetInterval}!`,
         });
         await fetchHistoryAndUsage();
       } else {
@@ -2632,40 +2557,6 @@ function BillingView({
       });
     } finally {
       setSwitchingCycle(false);
-    }
-  };
-
-  const handleRechargeShortfallAndSwitch = async (shortfall: number) => {
-    setShortfallRecharging(true);
-    try {
-      const res = await import("../actions/billing").then(m =>
-        m.rechargeAndSwitchBillingIntervalAction({
-          targetInterval: switchTargetInterval,
-          shortfall,
-          couponCode: appliedCoupon?.code,
-        })
-      );
-
-      if (res.success) {
-        setSwitchModalOpen(false);
-        setStatusMessage({
-          type: "success",
-          text: res.message || `Successfully recharged shortfall and switched to ${switchTargetInterval} billing!`,
-        });
-        await fetchHistoryAndUsage();
-      } else {
-        setStatusMessage({
-          type: "error",
-          text: res.error || "Failed to recharge from saved card.",
-        });
-      }
-    } catch (err: any) {
-      setStatusMessage({
-        type: "error",
-        text: err.message || "An unexpected error occurred.",
-      });
-    } finally {
-      setShortfallRecharging(false);
     }
   };
 
@@ -2715,21 +2606,16 @@ function BillingView({
   const getPercentage = (current: number, max: number) => Math.min(100, (current / max) * 100);
 
   const activePlanName = tenantInfo.plan || "Free";
-  const cardData = wallet?.savedCard || (subDetails?.saved_card_id ? {
-    cardId: subDetails.saved_card_id,
-    brand: subDetails.card_brand,
-    last4: subDetails.card_last4,
-    expMonth: subDetails.card_exp_month,
-    expYear: subDetails.card_exp_year,
-  } : null);
+  const isPaidPlan = activePlanName.toLowerCase() !== "free";
+  const subStatus = subDetails?.status || (isPaidPlan ? "active" : "free");
 
   const currentPlanDef = activePlans.find(
     p => p.name.toLowerCase() === activePlanName.toLowerCase()
   ) || activePlans.find(p => p.name.toLowerCase() === "pro plus") || activePlans[0];
 
   const baseTargetPriceNum = switchTargetInterval === "yearly"
-    ? (subDetails?.price_yearly ? Number(subDetails.price_yearly) : currentPlanDef?.yearlyPrice ? parseInt(String(currentPlanDef.yearlyPrice).replace(/[^0-9]/g, ""), 10) : 52000)
-    : (subDetails?.price_monthly ? Number(subDetails.price_monthly) : currentPlanDef?.price ? parseInt(String(currentPlanDef.price).replace(/[^0-9]/g, ""), 10) : 5200);
+    ? (subDetails?.price_yearly ? Number(subDetails.price_yearly) : currentPlanDef?.yearlyPrice ? parseInt(String(currentPlanDef.yearlyPrice).replace(/[^0-9]/g, ""), 10) : 25000)
+    : (subDetails?.price_monthly ? Number(subDetails.price_monthly) : currentPlanDef?.price ? parseInt(String(currentPlanDef.price).replace(/[^0-9]/g, ""), 10) : 2500);
 
   const normActivePlan = activePlanName.toLowerCase().replace(/[^a-z0-9]/g, "");
   const isCouponApplicableToTarget = Boolean(
@@ -2752,10 +2638,6 @@ function BillingView({
     }
     targetPriceNum = Math.max(0, baseTargetPriceNum - targetDiscountAmount);
   }
-
-  const walletBalanceNum = Number(wallet?.walletBalance || 0);
-  const hasSufficientWalletBalance = walletBalanceNum >= targetPriceNum;
-  const shortfallAmount = Math.max(0, targetPriceNum - walletBalanceNum);
 
   return (
     <div className="space-y-8">
@@ -2864,227 +2746,200 @@ function BillingView({
         </div>
       )}
 
-      {/* TWO CONTINUOUS COLUMNS: (Left: Wallet & Payment Method | Right: Plan Info & History) */}
+      {/* TWO CONTINUOUS COLUMNS: (Left: Active Subscription & Billing Details | Right: Available Plans & Invoices) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        {/* LEFT COLUMN: Workspace Prepaid Wallet & Payment Method */}
+        {/* LEFT COLUMN: Active Subscription & Billing Details */}
         <div className="space-y-6">
-          {/* Card 1: Workspace Prepaid Wallet */}
-          <div id="wallet-section" className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
+          {/* Card 1: Active Subscription Overview */}
+          <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Workspace Wallet</span>
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Current Subscription</span>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-3xl sm:text-4xl font-black text-foreground">
-                    LKR {Number(wallet?.walletBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <span className="text-2xl sm:text-3xl font-black text-foreground">
+                    {activePlanName} Plan
                   </span>
+                  {subDetails?.billing_interval && isPaidPlan && (
+                    <span className="text-xs sm:text-sm font-semibold text-muted-foreground capitalize">
+                      ({subDetails.billing_interval})
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <div className="flex flex-col items-end gap-1">
-                <button
-                  type="button"
-                  onClick={handleToggleAutoPull}
-                  disabled={togglingAutoPull}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${wallet?.autoPullCard
-                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+              <div>
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                    subStatus === "active"
+                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                      : subStatus === "past_due"
+                      ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                      : subStatus === "canceled"
+                      ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30"
                       : "bg-muted text-muted-foreground border-border"
-                    }`}
+                  }`}
                 >
-                  {togglingAutoPull ? "Saving..." : wallet?.autoPullCard ? "✓ Auto Top-Up: On" : "Auto Top-Up: Off"}
-                </button>
+                  {subStatus === "active" ? "Active" : subStatus === "past_due" ? "Past Due" : subStatus === "canceled" ? "Canceled" : "Free"}
+                </span>
               </div>
             </div>
 
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Funds in your wallet are automatically deducted first for renewal payments. If balance is insufficient, the remaining shortfall is pulled seamlessly from your saved card.
-            </p>
-
-            {/* Quick Top-up buttons */}
-            <div className="p-4 rounded-2xl bg-muted/20 border border-border space-y-3">
-              <span className="text-xs font-bold text-foreground block">Recharge Wallet</span>
-
-              <div className="grid grid-cols-3 gap-2">
-                {[1000, 2500, 5000].map((amt) => (
-                  <button
-                    key={amt}
-                    type="button"
-                    onClick={() => {
-                      if (cardData?.cardId) {
-                        handleRechargeWithSavedCard(amt);
-                      } else {
-                        handleRechargeWalletCheckout(amt);
-                      }
-                    }}
-                    disabled={rechargingWallet}
-                    className="py-2.5 px-2 rounded-xl bg-card hover:bg-muted border border-border text-xs font-bold text-foreground text-center transition-all cursor-pointer shadow-2xs"
-                  >
-                    + {amt.toLocaleString()} LKR
-                  </button>
-                ))}
+            {/* Renewal & Plan Summary */}
+            <div className="p-4 rounded-2xl bg-muted/20 border border-border space-y-2.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Renewal Frequency</span>
+                <span className="font-bold text-foreground capitalize">
+                  {subDetails?.billing_interval ? `${subDetails.billing_interval} billing` : "None"}
+                </span>
               </div>
 
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="number"
-                  min="100"
-                  step="any"
-                  value={topupAmountInput}
-                  onChange={(e) => setTopupAmountInput(e.target.value)}
-                  placeholder="Custom LKR"
-                  className="flex-1 px-3.5 py-2.5 rounded-xl bg-background border border-border text-xs font-semibold outline-none focus:border-brand-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const amt = Number(topupAmountInput);
-                    if (amt >= 100) {
-                      if (cardData?.cardId) {
-                        handleRechargeWithSavedCard(amt);
-                      } else {
-                        handleRechargeWalletCheckout(amt);
-                      }
-                    }
-                  }}
-                  disabled={rechargingWallet || Boolean(gatewayStatus?.cardPaymentsDisabled)}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    gatewayStatus?.cardPaymentsDisabled
-                      ? "opacity-50 cursor-not-allowed bg-muted border border-border text-muted-foreground"
-                      : "bg-brand-500 hover:bg-brand-400 text-brand-950 cursor-pointer"
-                  }`}
-                  title={gatewayStatus?.cardPaymentsDisabled ? "Card payments are disabled on live with test key" : undefined}
-                >
-                  {rechargingWallet ? "Processing..." : cardData?.cardId ? "1-Click Top-Up" : "Top-Up"}
-                </button>
+              {subDetails?.current_period_end && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    {subStatus === "canceled" ? "Access Until" : "Next Renewal Date"}
+                  </span>
+                  <span className="font-bold text-foreground">
+                    {new Date(subDetails.current_period_end).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+              )}
+
+              {subDetails?.provider_subscription_id && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Subscription ID</span>
+                  <span className="font-mono text-[11px] text-muted-foreground font-semibold">
+                    {subDetails.provider_subscription_id}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Sub Actions */}
+            {isPaidPlan && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {subStatus !== "canceled" && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenSwitchModal(subDetails?.billing_interval === "yearly" ? "monthly" : "yearly")}
+                    className="flex-1 min-w-[160px] py-2.5 px-3 rounded-xl border border-brand-500/40 bg-brand-500/10 text-brand-700 dark:text-brand-300 hover:bg-brand-500/20 font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Repeat className="w-3.5 h-3.5 text-brand-500" />
+                    <span>Switch to {subDetails?.billing_interval === "yearly" ? "Monthly" : "Yearly (-17%)"}</span>
+                  </button>
+                )}
+
+                {subStatus !== "canceled" ? (
+                  <button
+                    type="button"
+                    onClick={handleCancelSubscription}
+                    disabled={cancelingSubscription}
+                    className="py-2.5 px-3 rounded-xl border border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10 font-bold text-xs transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {cancelingSubscription ? "Canceling..." : "Cancel Subscription"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleUpgradePlan(activePlanName)}
+                    disabled={processingCheckout}
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    Reactivate Subscription
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Payments.lk Automation Notice */}
+            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-muted/20 border border-border/60 text-xs">
+              <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <span className="font-semibold text-foreground text-xs block">Automated Recurring Billing via Payments.lk</span>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Subscriptions are processed through <strong>Payments.lk</strong>. Invoices are emailed automatically upon renewal. In case of payment issues, automatic retries run on days 1, 3, 7, and 14 with zero interruption to your workflow.
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Card 2: Payment Method */}
+          {/* Card 2: Billing & Invoice Information */}
           <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-muted-foreground">Payment method</h3>
-              <button
-                type="button"
-                onClick={() => handleRechargeWalletCheckout(100)}
-                disabled={rechargingWallet || Boolean(gatewayStatus?.cardPaymentsDisabled)}
-                className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1 transition-colors ${
-                  gatewayStatus?.cardPaymentsDisabled
-                    ? "opacity-50 cursor-not-allowed bg-muted border-border text-muted-foreground"
-                    : "bg-card hover:bg-muted border-border text-foreground cursor-pointer"
-                }`}
-                title={gatewayStatus?.cardPaymentsDisabled ? "Card payments are disabled on live with test key" : undefined}
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add</span>
-              </button>
+            <div>
+              <h3 className="text-sm font-bold text-foreground">Billing Details</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">These details will appear on all your subscription invoices & receipts.</p>
             </div>
 
-            {gatewayStatus?.cardPaymentsDisabled && (
-              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>Card payments are disabled on live while Payments.lk test keys (<code>sk_test_*</code>) are configured.</span>
+            <div className="space-y-3.5">
+              <div>
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Company / Billing Name</label>
+                <input
+                  type="text"
+                  value={billingSettings.billingName}
+                  onChange={(e) => setBillingSettings(prev => ({ ...prev, billingName: e.target.value }))}
+                  placeholder="e.g. Acme Corp"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border text-xs font-semibold outline-none focus:border-brand-500"
+                />
               </div>
-            )}
 
-            <div className="space-y-3">
-              <span className="text-xs font-bold text-foreground">Primary</span>
+              <div>
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Billing Email (Invoices Sent Here)</label>
+                <input
+                  type="email"
+                  value={billingSettings.billingEmail}
+                  onChange={(e) => setBillingSettings(prev => ({ ...prev, billingEmail: e.target.value }))}
+                  placeholder="billing@example.com"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border text-xs font-semibold outline-none focus:border-brand-500"
+                />
+              </div>
 
-              {cardData ? (
-                <div className="w-full max-w-[360px] sm:max-w-[380px] aspect-[1.586/1] bg-gradient-to-br from-[#131a26] via-[#0d131d] to-[#080c14] border border-white/10 rounded-2xl p-5 sm:p-6 text-white shadow-2xl flex flex-col justify-between relative overflow-hidden group">
-                  {/* Subtle Background Glows */}
-                  <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-brand-500/10 rounded-full blur-2xl pointer-events-none" />
-                  <div className="absolute -left-10 -top-10 w-36 h-36 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
-                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.02] to-white/[0.05] pointer-events-none" />
+              <div>
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Billing Address</label>
+                <input
+                  type="text"
+                  value={billingSettings.billingAddress}
+                  onChange={(e) => setBillingSettings(prev => ({ ...prev, billingAddress: e.target.value }))}
+                  placeholder="123 Galle Road, Colombo"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border text-xs font-semibold outline-none focus:border-brand-500"
+                />
+              </div>
 
-                  {/* Top Row: EMV Chip & Brand */}
-                  <div className="flex items-center justify-between relative z-10">
-                    {/* EMV Chip */}
-                    <div className="w-10 h-7 rounded-md bg-gradient-to-br from-amber-200 via-amber-400 to-amber-500 p-[1px] shadow-sm">
-                      <div className="w-full h-full rounded-[5px] bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 relative overflow-hidden flex items-center justify-center">
-                        <div className="absolute inset-0 border border-amber-700/30 rounded-[4px]" />
-                        <div className="w-full h-[1px] bg-amber-700/40 my-auto" />
-                        <div className="absolute h-full w-[1px] bg-amber-700/40" />
-                        <div className="absolute w-3.5 h-3 border border-amber-700/40 rounded-sm" />
-                      </div>
-                    </div>
-
-                    <span className="font-mono text-xs font-black tracking-widest uppercase bg-white/10 px-2.5 py-1 rounded-md text-gray-200 border border-white/10 shadow-xs">
-                      {cardData.brand || "VISA"}
-                    </span>
-                  </div>
-
-                  {/* Middle Row: Card Number */}
-                  <div className="py-2 relative z-10">
-                    <div className="font-mono text-base sm:text-lg tracking-[0.22em] text-gray-100 font-medium drop-shadow-xs">
-                      •••• •••• •••• {cardData.last4 || "••••"}
-                    </div>
-                  </div>
-
-                  {/* Bottom Row: Cardholder & Expiry */}
-                  <div className="flex justify-between items-end gap-2 relative z-10">
-                    <div className="min-w-0">
-                      <div className="text-[9px] uppercase tracking-wider text-gray-400 font-semibold mb-0.5">Cardholder</div>
-                      <div className="font-mono text-xs sm:text-sm text-gray-200 font-bold uppercase tracking-wider truncate max-w-[200px]">
-                        {billingSettings.billingName || tenantInfo.name}
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <div className="text-[9px] uppercase tracking-wider text-gray-400 font-semibold mb-0.5">Expires</div>
-                      <div className="font-mono text-xs sm:text-sm text-gray-200 font-bold tracking-wider">
-                        {String(cardData.expMonth || 1).padStart(2, "0")}/{String(cardData.expYear || 2029).slice(-2)}
-                      </div>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">City</label>
+                  <input
+                    type="text"
+                    value={billingSettings.billingCity}
+                    onChange={(e) => setBillingSettings(prev => ({ ...prev, billingCity: e.target.value }))}
+                    placeholder="Colombo"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border text-xs font-semibold outline-none focus:border-brand-500"
+                  />
                 </div>
-              ) : (
-                <div className="p-6 rounded-2xl bg-muted/20 border border-dashed border-border text-center space-y-2">
-                  <CreditCard className="w-8 h-8 text-muted-foreground mx-auto" />
-                  <p className="text-xs font-medium text-muted-foreground">No primary card saved yet</p>
-                  <p className="text-[11px] text-muted-foreground/80">Add a card via Payments.lk to enable 1-click renewals.</p>
+                <div>
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Country</label>
+                  <input
+                    type="text"
+                    value={billingSettings.billingCountry}
+                    onChange={(e) => setBillingSettings(prev => ({ ...prev, billingCountry: e.target.value }))}
+                    placeholder="Sri Lanka"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border text-xs font-semibold outline-none focus:border-brand-500"
+                  />
                 </div>
-              )}
+              </div>
 
-              {/* Action Buttons */}
-              {cardData ? (
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => handleRechargeWalletCheckout(100)}
-                    disabled={rechargingWallet || Boolean(gatewayStatus?.cardPaymentsDisabled)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors ${
-                      gatewayStatus?.cardPaymentsDisabled
-                        ? "opacity-50 cursor-not-allowed bg-muted border-border text-muted-foreground"
-                        : "bg-muted hover:bg-muted/80 text-foreground border-border cursor-pointer"
-                    }`}
-                    title={gatewayStatus?.cardPaymentsDisabled ? "Card payments are disabled on live with test key" : undefined}
-                  >
-                    Update
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleRemoveCard}
-                    className="px-4 py-2 rounded-xl bg-[#ef4444] hover:bg-red-600 text-white text-xs font-bold cursor-pointer transition-colors"
-                  >
-                    Delete
-                  </button>
-                </div>
-              ) : null}
-
-              {!cardData && (
-                <p className="text-[11px] text-muted-foreground bg-muted/30 p-2.5 rounded-xl border border-border/50">
-                  💡 A nominal <strong>100 LKR</strong> card verification charge applies, which is <strong>100% credited</strong> to your Workspace Wallet balance for renewals and switches.
-                </p>
-              )}
-
-              {/* Security & Trust Notice */}
-              <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-muted/20 border border-border/60 text-xs">
-                <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <div className="space-y-0.5">
-                  <span className="font-semibold text-foreground text-xs block">PCI-DSS Compliant Security & Privacy</span>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    Your card details are <strong>never stored on our servers</strong>. All card data is securely encrypted and processed directly by <strong>Payments.lk</strong> (PCI-DSS certified).
-                  </p>
-                </div>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleSaveBillingDetails}
+                  disabled={savingBillingSettings}
+                  className="w-full py-2.5 px-4 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {savingBillingSettings ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  <span>{savingBillingSettings ? "Saving..." : "Save Billing Information"}</span>
+                </button>
               </div>
             </div>
           </div>
@@ -3101,31 +2956,17 @@ function BillingView({
 
                 {/* Action buttons (Switch to Yearly, Auto-Renew) */}
                 <div className="flex items-center gap-2">
-                  {subDetails && activePlanName.toLowerCase() !== "free" && (
+                  {subDetails && activePlanName.toLowerCase() !== "free" && subStatus !== "canceled" && (
                     <button
                       type="button"
                       onClick={() => handleOpenSwitchModal(subDetails?.billing_interval === "yearly" ? "monthly" : "yearly")}
                       className="px-3 py-1.5 rounded-xl text-xs font-bold border border-brand-500/40 bg-brand-500/10 text-brand-700 dark:text-brand-300 hover:bg-brand-500/20 transition-all cursor-pointer flex items-center gap-1.5"
-                      title="Change billing cycle using workspace wallet balance"
+                      title="Change subscription billing cycle"
                     >
                       <Repeat className="w-3.5 h-3.5 text-brand-500" />
                       <span>
                         Switch to {subDetails?.billing_interval === "yearly" ? "Monthly" : "Yearly (-17%)"}
                       </span>
-                    </button>
-                  )}
-                  {subDetails && cardData && (
-                    <button
-                      type="button"
-                      onClick={handleToggleAutoRenew}
-                      disabled={togglingAutoRenew}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${subDetails.auto_renew
-                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
-                          : "bg-muted text-muted-foreground border-border hover:text-foreground"
-                        }`}
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${togglingAutoRenew ? "animate-spin" : ""}`} />
-                      <span>{togglingAutoRenew ? "Saving..." : subDetails.auto_renew ? "Auto-Renew: On" : "Auto-Renew: Off"}</span>
                     </button>
                   )}
                 </div>
@@ -3475,7 +3316,7 @@ function BillingView({
               </div>
             </div>
 
-            {/* Plan Fee vs Wallet Balance */}
+            {/* Plan Fee & Coupon */}
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs py-1 border-b border-border/50">
                 <span className="text-muted-foreground font-medium">{activePlanName} ({switchTargetInterval}) Cost</span>
@@ -3487,6 +3328,9 @@ function BillingView({
                   )}
                   <span className="text-base font-black text-foreground">
                     LKR {targetPriceNum.toLocaleString()}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground ml-1">
+                    /{switchTargetInterval === "yearly" ? "yr" : "mo"}
                   </span>
                 </div>
               </div>
@@ -3556,96 +3400,31 @@ function BillingView({
                 )}
               </div>
 
-              <div className="flex items-center justify-between text-xs py-1 border-b border-border/50">
-                <span className="text-muted-foreground font-medium flex items-center gap-1.5">
-                  <Wallet className="w-3.5 h-3.5 text-brand-500" />
-                  <span>Workspace Wallet Balance</span>
-                </span>
-                <span className={`text-base font-black ${hasSufficientWalletBalance ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                  LKR {walletBalanceNum.toLocaleString()}
-                </span>
+              <div className="p-3.5 rounded-2xl bg-muted/20 border border-border text-xs text-muted-foreground leading-relaxed">
+                You will be redirected to Payments.lk hosted subscription checkout to authorize and activate your new {switchTargetInterval} subscription cycle.
               </div>
-
-              {hasSufficientWalletBalance ? (
-                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs space-y-1.5 text-emerald-800 dark:text-emerald-300">
-                  <div className="flex items-center gap-2 font-bold">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>Sufficient wallet balance available</span>
-                  </div>
-                  <p className="text-[11px] text-emerald-700 dark:text-emerald-400 pl-6">
-                    LKR {targetPriceNum.toLocaleString()} will be deducted from your workspace wallet. New remaining balance: LKR {(walletBalanceNum - targetPriceNum).toLocaleString()}.
-                  </p>
-                </div>
-              ) : (
-                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs space-y-2 text-amber-800 dark:text-amber-300">
-                  <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-300">
-                    <AlertTriangle className="w-4 h-4 shrink-0" />
-                    <span>Insufficient Wallet Balance</span>
-                  </div>
-                  <p className="text-[11px] leading-relaxed">
-                    You need <strong>LKR {shortfallAmount.toLocaleString()}</strong> more in your workspace wallet to switch to {switchTargetInterval} billing.
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Actions */}
             <div className="pt-2 border-t border-border flex flex-col gap-2.5">
-              {hasSufficientWalletBalance ? (
-                <button
-                  type="button"
-                  onClick={handleConfirmSwitchWithWallet}
-                  disabled={switchingCycle}
-                  className="w-full py-3.5 rounded-2xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {switchingCycle ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Deducting & Switching Billing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Wallet className="w-4 h-4" />
-                      <span>Confirm & Switch with Wallet (LKR {targetPriceNum.toLocaleString()})</span>
-                    </>
-                  )}
-                </button>
-              ) : (
-                <div className="space-y-2">
-                  {wallet?.savedCard?.cardId ? (
-                    <button
-                      type="button"
-                      onClick={() => handleRechargeShortfallAndSwitch(shortfallAmount)}
-                      disabled={shortfallRecharging}
-                      className="w-full py-3.5 rounded-2xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                    >
-                      {shortfallRecharging ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Recharging Shortfall & Switching...</span>
-                        </>
-                      ) : (
-                        <>
-                          <CreditCard className="w-4 h-4" />
-                          <span>Recharge LKR {shortfallAmount.toLocaleString()} from Saved Card & Switch</span>
-                        </>
-                      )}
-                    </button>
-                  ) : null}
-
-                  <a
-                    href="#wallet-section"
-                    onClick={() => {
-                      setSwitchModalOpen(false);
-                      setTopupAmountInput(String(shortfallAmount));
-                    }}
-                    className="w-full py-3 rounded-2xl bg-muted hover:bg-muted/80 text-foreground font-bold text-xs transition-all border border-border flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Top Up Wallet via Gateway (LKR {shortfallAmount.toLocaleString()})</span>
-                  </a>
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={handleConfirmSwitchInterval}
+                disabled={switchingCycle}
+                className="w-full py-3.5 rounded-2xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {switchingCycle ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Initiating Checkout...</span>
+                  </>
+                ) : (
+                  <>
+                    <Repeat className="w-4 h-4" />
+                    <span>Confirm & Switch on Payments.lk (LKR {targetPriceNum.toLocaleString()})</span>
+                  </>
+                )}
+              </button>
 
               <button
                 type="button"

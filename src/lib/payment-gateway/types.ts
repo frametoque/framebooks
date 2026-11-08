@@ -45,6 +45,7 @@ export interface ActivationParams {
   cardExpYear?: number;
   autoRenew?: boolean;
   couponCode?: string;
+  providerSubscriptionId?: string;
 }
 
 export interface GatewayStatus {

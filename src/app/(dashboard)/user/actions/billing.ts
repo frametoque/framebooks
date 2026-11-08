@@ -35,11 +35,11 @@ export async function getSubscriptionHistory() {
       return { success: false, error: "Unauthorized" };
     }
 
-    // 1. Query payments table for this tenant
+    // Query payments table for this tenant
     const paymentRows = await sql`
       SELECT 
         p.id, 
-        COALESCE(pl.name, 'Pro') AS plan_name, 
+        COALESCE(pl.name, 'Subscription') AS plan_name, 
         p.amount, 
         p.receipt_url, 
         p.method,
@@ -54,72 +54,17 @@ export async function getSubscriptionHistory() {
       ORDER BY p.created_at DESC
     `;
 
-    // 2. Query workspace wallet transactions
-    const walletRows = await sql`
-      SELECT 
-        id, 
-        amount, 
-        type, 
-        description, 
-        provider, 
-        provider_reference, 
-        balance_after, 
-        created_at
-      FROM workspace_wallet_transactions
-      WHERE tenant_id = ${tenantId}
-      ORDER BY created_at DESC
-    `;
-
-    // 3. Fallback to legacy tenant_subscriptions if payments is empty
-    let legacyRows: any[] = [];
-    if (paymentRows.length === 0) {
-      legacyRows = await sql`
-        SELECT id, plan_name, amount, slip_url AS receipt_url, 'card' AS method, 'online' AS provider, '' AS provider_reference, status, review_note, created_at
-        FROM tenant_subscriptions
-        WHERE tenant_id = ${tenantId}
-        ORDER BY created_at DESC
-      `;
-    }
-
-    const seenRefs = new Set<string>();
-    const combined: any[] = [];
-
-    // Add payment rows
-    for (const p of (paymentRows.length > 0 ? paymentRows : legacyRows)) {
-      if (p.provider_reference) seenRefs.add(p.provider_reference);
-      combined.push(p);
-    }
-
-    // Add wallet transactions (wallet recharges, auto card pulls, etc.)
-    for (const w of walletRows) {
-      if (w.provider_reference && seenRefs.has(w.provider_reference)) {
-        continue;
-      }
-      if (w.provider_reference) seenRefs.add(w.provider_reference);
-
-      const isTopup = w.type === "topup" || Number(w.amount) > 0;
-      combined.push({
-        id: `wallet_${w.id}`,
-        plan_name: isTopup ? "Wallet Recharge" : (w.description || "Wallet Payment"),
-        amount: Math.abs(Number(w.amount)),
-        receipt_url: null,
-        method: w.type === "auto_card_pull" ? "Saved Card (Auto Top-Up)" : (w.provider === "payments_lk" ? "Payments_lk (Card)" : "Wallet"),
-        provider: w.provider || "payments_lk",
-        provider_reference: w.provider_reference || `WAL-${w.id}`,
-        status: "paid",
-        review_note: w.description,
-        created_at: w.created_at,
-        is_wallet_tx: true,
-      });
-    }
-
-    // Sort all records by date descending
-    combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-    return { success: true, history: combined };
+    return {
+      success: true,
+      history: paymentRows.map((r: any) => ({
+        ...r,
+        amount: Number(r.amount),
+        date: r.created_at ? new Date(r.created_at).toISOString().split("T")[0] : "",
+      })),
+    };
   } catch (err: any) {
     console.error("Error fetching subscription history:", err);
-    return { success: false, error: err.message };
+    return { success: false, error: err.message, history: [] };
   }
 }
 
@@ -222,11 +167,8 @@ export async function getActiveSubscriptionDetails() {
         s.billing_interval,
         s.current_period_start,
         s.current_period_end,
-        s.saved_card_id,
-        s.card_brand,
-        s.card_last4,
-        s.card_exp_month,
-        s.card_exp_year,
+        s.provider_subscription_id,
+        s.source,
         s.auto_renew,
         s.coupon_code,
         pl.name AS plan_name,
@@ -239,45 +181,6 @@ export async function getActiveSubscriptionDetails() {
       ORDER BY s.id DESC
       LIMIT 1
     `;
-
-    // If subscription has no saved card, attempt to auto-sync with Payments.lk
-    if (rows.length > 0 && !rows[0].saved_card_id) {
-      const t = await sql`SELECT owner_email FROM tenants WHERE id = ${tenantId} LIMIT 1`;
-      if (t[0]?.owner_email) {
-        try {
-          const { syncCustomerSavedCard } = await import("@/lib/payment-gateway/payments-lk");
-          const syncRes = await syncCustomerSavedCard(Number(tenantId), t[0].owner_email);
-          if (syncRes.card) {
-            rows = await sql`
-              SELECT 
-                s.id,
-                s.status,
-                s.billing_interval,
-                s.current_period_start,
-                s.current_period_end,
-                s.saved_card_id,
-                s.card_brand,
-                s.card_last4,
-                s.card_exp_month,
-                s.card_exp_year,
-                s.auto_renew,
-                s.coupon_code,
-                pl.name AS plan_name,
-                pl.price_monthly,
-                pl.price_yearly,
-                pl.currency
-              FROM subscriptions s
-              LEFT JOIN plans pl ON s.plan_id = pl.id
-              WHERE s.tenant_id = ${tenantId}
-              ORDER BY s.id DESC
-              LIMIT 1
-            `;
-          }
-        } catch (e) {
-          console.error("[getActiveSubscriptionDetails] Error syncing saved card:", e);
-        }
-      }
-    }
 
     let couponCodeToVerify = rows[0]?.coupon_code || null;
     if (!couponCodeToVerify) {
@@ -350,6 +253,48 @@ export async function getActiveSubscriptionDetails() {
   } catch (err: any) {
     console.error("Error fetching active subscription details:", err);
     return { success: false, error: err.message };
+  }
+}
+
+export async function cancelSubscriptionAction(): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+}> {
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return { success: false, error: "Unauthorized" };
+
+    const subRows = await sql`
+      SELECT id, provider_subscription_id, source FROM subscriptions 
+      WHERE tenant_id = ${Number(tenantId)} AND status = 'active'
+      ORDER BY id DESC LIMIT 1
+    `;
+
+    if (subRows.length === 0) {
+      return { success: false, error: "No active subscription found to cancel." };
+    }
+
+    const sub = subRows[0];
+    if (sub.provider_subscription_id && (sub.source === "payments_lk" || !sub.source)) {
+      const { cancelPaymentsLkSubscription } = await import("@/lib/payment-gateway/payments-lk");
+      await cancelPaymentsLkSubscription(sub.provider_subscription_id).catch(() => {});
+    }
+
+    await sql`
+      UPDATE subscriptions 
+      SET auto_renew = false, status = 'canceled', updated_at = NOW()
+      WHERE id = ${sub.id}
+    `;
+
+    revalidatePath("/user/settings");
+    return {
+      success: true,
+      message: "Your subscription has been canceled. You will continue to have access until the end of your billing cycle.",
+    };
+  } catch (err: any) {
+    console.error("Error canceling subscription:", err);
+    return { success: false, error: err.message || "Failed to cancel subscription." };
   }
 }
 
@@ -754,20 +699,19 @@ export async function removeCouponFromSubscriptionAction() {
 }
 
 /**
- * Changes the billing interval (monthly <-> yearly) for an active subscription,
- * strictly verifying and deducting the required plan fee from the workspace wallet balance.
+ * Initiates switching the billing interval (monthly <-> yearly) for the workspace's active subscription.
+ * Using native Payments.lk Subscriptions (POST /v1/subscriptions), this redirects the customer
+ * to hosted checkout to authorize the subscription at the target interval.
  */
-export async function switchBillingIntervalWithWalletAction(params: {
+export async function switchBillingIntervalAction(params: {
   targetInterval: "monthly" | "yearly";
   couponCode?: string;
 }): Promise<{
   success: boolean;
-  insufficientFunds?: boolean;
-  requiredAmount?: number;
-  walletBalance?: number;
-  shortfall?: number;
+  checkoutUrl?: string;
+  sessionId?: string;
+  requiresRedirect?: boolean;
   newInterval?: "monthly" | "yearly";
-  newBalance?: number;
   error?: string;
   message?: string;
 }> {
@@ -780,7 +724,6 @@ export async function switchBillingIntervalWithWalletAction(params: {
       return { success: false, error: "Invalid billing cycle requested." };
     }
 
-    // 1. Fetch current subscription and tenant plan
     const [subRows, tenantRows] = await Promise.all([
       sql`
         SELECT 
@@ -788,32 +731,25 @@ export async function switchBillingIntervalWithWalletAction(params: {
           s.status,
           s.billing_interval,
           s.plan_id,
-          s.current_period_end,
+          s.provider_subscription_id,
           pl.id AS resolved_plan_id,
-          pl.name AS plan_name,
-          pl.price_monthly,
-          pl.price_yearly,
-          pl.currency
+          pl.name AS plan_name
         FROM subscriptions s
         LEFT JOIN plans pl ON s.plan_id = pl.id
         WHERE s.tenant_id = ${Number(tenantId)}
         ORDER BY s.id DESC
         LIMIT 1
       `,
-      sql`
-        SELECT id, plan, wallet_balance FROM tenants WHERE id = ${Number(tenantId)} LIMIT 1
-      `,
+      sql`SELECT id, plan FROM tenants WHERE id = ${Number(tenantId)} LIMIT 1`,
     ]);
 
     if (tenantRows.length === 0) {
       return { success: false, error: "Workspace tenant not found." };
     }
 
-    const currentTenant = tenantRows[0];
     const sub = subRows[0] || null;
+    const activePlanName = sub?.plan_name || tenantRows[0]?.plan || "Free";
 
-    // Check if free plan
-    const activePlanName = sub?.plan_name || currentTenant.plan || "Free";
     if (activePlanName.toLowerCase() === "free") {
       return {
         success: false,
@@ -821,7 +757,6 @@ export async function switchBillingIntervalWithWalletAction(params: {
       };
     }
 
-    // Check if already on requested interval
     const currentInterval = sub?.billing_interval || "monthly";
     if (currentInterval === targetInterval) {
       return {
@@ -830,322 +765,69 @@ export async function switchBillingIntervalWithWalletAction(params: {
       };
     }
 
-    // Resolve plan pricing
-    let priceMonthly = Number(sub?.price_monthly || 0);
-    let priceYearly = Number(sub?.price_yearly || 0);
-    let planId = sub?.resolved_plan_id || sub?.plan_id;
+    const planLookup = await sql`
+      SELECT id, name, price_monthly, price_yearly, currency 
+      FROM plans 
+      WHERE LOWER(name) = LOWER(${activePlanName}) OR LOWER(key) = LOWER(${activePlanName})
+      LIMIT 1
+    `;
+    const plan = planLookup[0];
+    const planId = plan?.id || sub?.resolved_plan_id || sub?.plan_id || 2;
+    const basePrice = targetInterval === "yearly" ? Number(plan?.price_yearly || 50000) : Number(plan?.price_monthly || 5000);
+    const amount = addPackageGatewayFee(basePrice, targetInterval);
 
-    if (!priceMonthly || !priceYearly || !planId) {
-      const planLookup = await sql`
-        SELECT id, name, price_monthly, price_yearly, currency
-        FROM plans
-        WHERE LOWER(name) = LOWER(${activePlanName}) OR LOWER(key) = LOWER(${activePlanName})
-        LIMIT 1
-      `;
-      if (planLookup.length > 0) {
-        planId = planLookup[0].id;
-        priceMonthly = Number(planLookup[0].price_monthly);
-        priceYearly = Number(planLookup[0].price_yearly);
-      }
-    }
+    const { createCheckoutSession } = await import("@/lib/payment-gateway");
+    const { session, userId } = await auth();
+    const email = session?.user?.email || "";
+    const userName = session?.user?.name || "Customer";
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://books.frametoque.com";
 
-    let requiredAmount = addPackageGatewayFee(targetInterval === "yearly" ? priceYearly : priceMonthly, targetInterval);
-    let appliedCouponRow: any = null;
-
-    if (params.couponCode) {
-      const cleanCoupon = String(params.couponCode).trim().toUpperCase();
-      const cRows = await sql`
-        SELECT * FROM coupons 
-        WHERE UPPER(code) = ${cleanCoupon} AND is_active = true
-        AND (valid_to IS NULL OR valid_to > NOW())
-        LIMIT 1
-      `;
-      if (cRows.length > 0) {
-        appliedCouponRow = cRows[0];
-        const rawPlans = appliedCouponRow.applicable_plans;
-        const normPlan = activePlanName.toLowerCase().replace(/[^a-z0-9]/g, "");
-        const isApplicable =
-          !rawPlans ||
-          !Array.isArray(rawPlans) ||
-          rawPlans.length === 0 ||
-          rawPlans.some((p: string) => p.toLowerCase().replace(/[^a-z0-9]/g, "") === normPlan);
-
-        if (isApplicable) {
-          if (appliedCouponRow.type === "percent" || appliedCouponRow.type === "percentage") {
-            requiredAmount = Math.round(requiredAmount * (1 - Number(appliedCouponRow.value) / 100));
-          } else if (appliedCouponRow.type === "fixed") {
-            requiredAmount = Math.max(0, requiredAmount - Number(appliedCouponRow.value));
-          }
-        }
-      }
-    }
-
-    if (requiredAmount < 0) {
-      return { success: false, error: "Invalid plan pricing for requested interval." };
-    }
-
-    const currentWalletBalance = Number(currentTenant.wallet_balance || 0);
-
-    // 2. Strict Wallet Balance Check
-    if (currentWalletBalance < requiredAmount) {
-      const shortfall = requiredAmount - currentWalletBalance;
-      return {
-        success: false,
-        insufficientFunds: true,
-        requiredAmount,
-        walletBalance: currentWalletBalance,
-        shortfall,
-        error: `Insufficient wallet balance. You have LKR ${currentWalletBalance.toLocaleString()}, but LKR ${requiredAmount.toLocaleString()} is required to switch to ${targetInterval} billing (Shortfall: LKR ${shortfall.toLocaleString()}). Please recharge your wallet first.`,
-      };
-    }
-
-    // 3. Atomically deduct and apply interval change
-    const { userId } = await auth();
-
-    return await sql.begin(async (sqlTx) => {
-      // Lock tenant row
-      const tLocked = await sqlTx`
-        SELECT wallet_balance FROM tenants WHERE id = ${Number(tenantId)} FOR UPDATE
-      `;
-      const freshBalance = Number(tLocked[0]?.wallet_balance || 0);
-      if (freshBalance < requiredAmount) {
-        return {
-          success: false,
-          insufficientFunds: true,
-          error: "Insufficient wallet balance during checkout.",
-        };
-      }
-
-      const newBalance = Math.round((freshBalance - requiredAmount) * 100) / 100;
-      await sqlTx`
-        UPDATE tenants SET wallet_balance = ${newBalance} WHERE id = ${Number(tenantId)}
-      `;
-
-      if (appliedCouponRow) {
-        try {
-          await sqlTx`
-            INSERT INTO coupon_redemptions (coupon_id, tenant_id, user_id, redeemed_at)
-            VALUES (${appliedCouponRow.id}, ${Number(tenantId)}, ${userId ? Number(userId) : null}, NOW())
-          `;
-          await sqlTx`
-            UPDATE coupons SET redeemed_count = redeemed_count + 1 WHERE id = ${appliedCouponRow.id}
-          `;
-        } catch (e) {
-          console.warn("Coupon redemption log error in switch:", e);
-        }
-      }
-
-      const ref = `SW_CYCLE_${tenantId}_${targetInterval.toUpperCase()}_${Date.now().toString().slice(-6)}`;
-      const description = `Switched billing cycle to ${targetInterval} for ${activePlanName}`;
-
-      // Insert wallet transaction
-      await sqlTx`
-        INSERT INTO workspace_wallet_transactions (
-          tenant_id,
-          amount,
-          type,
-          description,
-          provider,
-          provider_reference,
-          balance_after
-        ) VALUES (
-          ${Number(tenantId)},
-          ${-requiredAmount},
-          'subscription_fee',
-          ${description},
-          'wallet',
-          ${ref},
-          ${newBalance}
-        )
-      `;
-
-      // Calculate period end: +12 months for yearly, +1 month for monthly from now
-      const monthsToAdd = targetInterval === "yearly" ? 12 : 1;
-      const newEnd = new Date();
-      newEnd.setMonth(newEnd.getMonth() + monthsToAdd);
-
-      // Update or create subscription
-      if (sub?.id) {
-        await sqlTx`
-          UPDATE subscriptions SET
-            billing_interval = ${targetInterval},
-            current_period_start = NOW(),
-            current_period_end = ${newEnd},
-            status = 'active',
-            coupon_code = COALESCE(${appliedCouponRow?.code || null}, coupon_code),
-            updated_at = NOW()
-          WHERE id = ${sub.id}
-        `;
-      } else {
-        await sqlTx`
-          INSERT INTO subscriptions (
-            tenant_id,
-            user_id,
-            plan_id,
-            status,
-            billing_interval,
-            current_period_start,
-            current_period_end,
-            source,
-            coupon_code,
-            auto_renew,
-            created_at,
-            updated_at
-          ) VALUES (
-            ${Number(tenantId)},
-            ${userId ? Number(userId) : null},
-            ${planId || null},
-            'active',
-            ${targetInterval},
-            NOW(),
-            ${newEnd},
-            'workspace_wallet',
-            ${appliedCouponRow?.code || null},
-            true,
-            NOW(),
-            NOW()
-          )
-        `;
-      }
-
-      // Update tenant
-      await sqlTx`
-        UPDATE tenants SET
-          plan = ${activePlanName},
-          plan_expires_at = ${newEnd},
-          payment_status = 'paid'
-        WHERE id = ${Number(tenantId)}
-      `;
-
-      // Record payment
-      await sqlTx`
-        INSERT INTO payments (
-          tenant_id,
-          user_id,
-          plan_id,
-          amount,
-          currency,
-          method,
-          provider,
-          provider_reference,
-          status,
-          notes,
-          paid_at,
-          created_at
-        ) VALUES (
-          ${Number(tenantId)},
-          ${userId ? Number(userId) : null},
-          ${planId || null},
-          ${requiredAmount},
-          'LKR',
-          'wallet',
-          'workspace_wallet',
-          ${ref},
-          'paid',
-          ${`Billing cycle changed to ${targetInterval} (LKR ${requiredAmount.toLocaleString()} paid from workspace wallet)`},
-          NOW(),
-          NOW()
-        )
-      `;
-
-      return {
-        success: true,
-        newInterval: targetInterval,
-        amountDeducted: requiredAmount,
-        newBalance,
-        message: `Billing cycle changed to ${targetInterval}! LKR ${requiredAmount.toLocaleString()} was deducted from your wallet balance.`,
-      };
+    const sessionRes = await createCheckoutSession({
+      tenantId: Number(tenantId),
+      userId: userId ? Number(userId) : undefined,
+      userEmail: email,
+      userName,
+      planId,
+      planName: activePlanName,
+      billingInterval: targetInterval,
+      amount,
+      currency: plan?.currency || "LKR",
+      couponCode: params.couponCode,
+      successUrl: `${baseUrl}/user/settings?tab=billing&switched=true`,
+      cancelUrl: `${baseUrl}/user/settings?tab=billing`,
     });
+
+    if (!sessionRes.success) {
+      return { success: false, error: sessionRes.error || "Failed to initiate subscription switch." };
+    }
+
+    return {
+      success: true,
+      checkoutUrl: sessionRes.checkoutUrl,
+      sessionId: sessionRes.sessionId,
+      requiresRedirect: sessionRes.requiresRedirect,
+      newInterval: targetInterval,
+      message: "Redirecting to Payments.lk to confirm your new subscription interval...",
+    };
   } catch (err: any) {
-    console.error("Error switching billing interval with wallet:", err);
+    console.error("Error switching billing interval:", err);
     return { success: false, error: err.message || "Failed to switch billing cycle." };
-  } finally {
-    try {
-      revalidatePath("/user/settings");
-      revalidatePath("/user/dashboard");
-      revalidatePath("/admin/payments");
-      revalidatePath("/admin/subscriptions");
-    } catch {}
   }
 }
 
-/**
- * Recharges the wallet with the exact shortfall amount from the saved card
- * and immediately switches the billing interval to the target interval.
- */
+// Backwards compatibility aliases
+export async function switchBillingIntervalWithWalletAction(params: {
+  targetInterval: "monthly" | "yearly";
+  couponCode?: string;
+}) {
+  return await switchBillingIntervalAction(params);
+}
+
 export async function rechargeAndSwitchBillingIntervalAction(params: {
   targetInterval: "monthly" | "yearly";
   shortfall: number;
   couponCode?: string;
-}): Promise<{
-  success: boolean;
-  error?: string;
-  message?: string;
-  newBalance?: number;
-}> {
-  try {
-    const tenantId = await getTenantId();
-    if (!tenantId) return { success: false, error: "Unauthorized" };
-
-    const { targetInterval, shortfall, couponCode } = params;
-    if (shortfall <= 0) {
-      return await switchBillingIntervalWithWalletAction({ targetInterval, couponCode });
-    }
-
-    const { getGatewayConfig } = await import("@/lib/payment-gateway");
-    if (getGatewayConfig().paymentsLk.cardPaymentsDisabled) {
-      return { success: false, error: "Card payments are currently disabled on the live environment." };
-    }
-
-    // Check saved card
-    const subs = await sql`
-      SELECT saved_card_id, card_brand, card_last4 
-      FROM subscriptions 
-      WHERE tenant_id = ${Number(tenantId)} AND saved_card_id IS NOT NULL 
-      ORDER BY id DESC 
-      LIMIT 1
-    `;
-
-    if (subs.length === 0 || !subs[0].saved_card_id) {
-      return {
-        success: false,
-        error: "No saved card available to recharge the shortfall. Please top up your wallet manually.",
-      };
-    }
-
-    const { chargePaymentsLkSavedCard, creditWallet } = await import("@/lib/payment-gateway");
-    const amountCents = Math.round(shortfall * 100);
-    const reference = `WALLET_PULL_${tenantId}_${Date.now().toString().slice(-6)}`;
-
-    const charge = await chargePaymentsLkSavedCard({
-      cardId: subs[0].saved_card_id,
-      amountCents,
-      description: `Workspace Wallet Recharge for Billing Cycle Switch (LKR ${shortfall.toLocaleString()})`,
-      reference,
-    });
-
-    if (!charge.success) {
-      return {
-        success: false,
-        error: charge.error || "Failed to charge saved card for wallet shortfall.",
-      };
-    }
-
-    // Credit wallet with shortfall
-    await creditWallet({
-      tenantId: Number(tenantId),
-      amount: shortfall,
-      type: "auto_card_pull",
-      description: `Auto card pull for billing cycle switch (${subs[0].card_brand || "card"} •••• ${subs[0].card_last4 || ""})`,
-      provider: "payments_lk",
-      providerReference: charge.paymentId || reference,
-    });
-
-    // Now execute wallet switch
-    return await switchBillingIntervalWithWalletAction({ targetInterval, couponCode });
-  } catch (err: any) {
-    console.error("Error in rechargeAndSwitchBillingIntervalAction:", err);
-    return { success: false, error: err.message || "Failed to recharge and switch." };
-  }
+}) {
+  return await switchBillingIntervalAction(params);
 }
 

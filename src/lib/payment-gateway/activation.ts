@@ -24,9 +24,12 @@ export async function activateSubscriptionFromGateway(params: ActivationParams):
   } = params;
 
   try {
-    // Ensure slip_url is nullable in the database if it wasn't dropped yet
+    // Ensure slip_url is nullable and provider_subscription_id column exists
     try {
       await sql`ALTER TABLE tenant_subscriptions ALTER COLUMN slip_url DROP NOT NULL`;
+    } catch {}
+    try {
+      await sql`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS provider_subscription_id VARCHAR(255)`;
     } catch {}
 
     return await sql.begin(async (sqlTx) => {
@@ -132,6 +135,7 @@ export async function activateSubscriptionFromGateway(params: ActivationParams):
             current_period_start = NOW(),
             current_period_end = ${newEnd},
             source = ${provider},
+            provider_subscription_id = COALESCE(${params.providerSubscriptionId || null}, provider_subscription_id),
             saved_card_id = COALESCE(${params.savedCardId || null}, saved_card_id),
             card_brand = COALESCE(${params.cardBrand || null}, card_brand),
             card_last4 = COALESCE(${params.cardLast4 || null}, card_last4),
@@ -154,6 +158,7 @@ export async function activateSubscriptionFromGateway(params: ActivationParams):
             current_period_start,
             current_period_end,
             source,
+            provider_subscription_id,
             saved_card_id,
             card_brand,
             card_last4,
@@ -172,6 +177,7 @@ export async function activateSubscriptionFromGateway(params: ActivationParams):
             NOW(),
             ${newEnd},
             ${provider},
+            ${params.providerSubscriptionId || null},
             ${params.savedCardId || null},
             ${params.cardBrand || null},
             ${params.cardLast4 || null},

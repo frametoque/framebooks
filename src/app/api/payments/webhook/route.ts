@@ -82,7 +82,111 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // 2. Handle payment.succeeded event
+      // 1. Handle native subscription events from Payments.lk
+      if (
+        (event.type === "customer.subscription.created" ||
+          event.type === "customer.subscription.updated") &&
+        event.data
+      ) {
+        const sub = event.data;
+        const metadata = sub.metadata || {};
+        let tenantId = Number(metadata.tenantId) || 0;
+        const customerEmail = (sub.customerEmail || sub.customer?.email || "").toLowerCase().trim();
+
+        if (!tenantId && customerEmail) {
+          const tRows = await sql`SELECT id FROM tenants WHERE LOWER(owner_email) = ${customerEmail} LIMIT 1`;
+          if (tRows.length > 0) tenantId = tRows[0].id;
+        }
+
+        if (tenantId) {
+          const subStatus = sub.status === "past_due" ? "past_due" : sub.status === "canceled" ? "canceled" : "active";
+          const periodEnd = sub.currentPeriodEnd
+            ? new Date(Number(sub.currentPeriodEnd) * 1000)
+            : sub.current_period_end
+            ? new Date(sub.current_period_end)
+            : null;
+
+          await sql`
+            UPDATE subscriptions SET
+              status = ${subStatus},
+              provider_subscription_id = ${sub.id},
+              auto_renew = ${subStatus !== "canceled"},
+              current_period_end = COALESCE(${periodEnd}, current_period_end),
+              updated_at = NOW()
+            WHERE tenant_id = ${tenantId}
+          `;
+        }
+        return NextResponse.json({ received: true });
+      }
+
+      // 2. Handle subscription deletion / cancellation from Payments.lk
+      if (event.type === "customer.subscription.deleted" && event.data) {
+        const sub = event.data;
+        await sql`
+          UPDATE subscriptions SET
+            status = 'canceled',
+            auto_renew = false,
+            updated_at = NOW()
+          WHERE provider_subscription_id = ${sub.id}
+        `;
+        return NextResponse.json({ received: true });
+      }
+
+      // 3. Handle recurring invoice.paid event
+      if (event.type === "invoice.paid" && event.data) {
+        const inv = event.data;
+        const subId = inv.subscriptionId || inv.subscription?.id || "";
+        let tenantId = Number(inv.metadata?.tenantId) || 0;
+        const customerEmail = (inv.customerEmail || inv.customer?.email || "").toLowerCase().trim();
+
+        if (!tenantId && subId) {
+          const sRows = await sql`SELECT tenant_id FROM subscriptions WHERE provider_subscription_id = ${subId} LIMIT 1`;
+          if (sRows.length > 0) tenantId = sRows[0].tenant_id;
+        }
+
+        if (!tenantId && customerEmail) {
+          const tRows = await sql`SELECT id FROM tenants WHERE LOWER(owner_email) = ${customerEmail} LIMIT 1`;
+          if (tRows.length > 0) tenantId = tRows[0].id;
+        }
+
+        if (tenantId) {
+          const amount = inv.amountCents ? Number(inv.amountCents) / 100 : Number(inv.amount || 0);
+          const planName = inv.metadata?.planName || "Pro";
+          const billingInterval = (inv.metadata?.billingInterval || "monthly") as "monthly" | "yearly";
+
+          await activateSubscriptionFromGateway({
+            tenantId,
+            planName,
+            billingInterval,
+            amount,
+            currency: (inv.currency || "LKR").toUpperCase(),
+            provider: "payments_lk",
+            providerReference: inv.id || inv.paymentId || `INV_${Date.now()}`,
+            providerSubscriptionId: subId || undefined,
+            receiptUrl: inv.hostedInvoiceUrl || inv.receiptUrl || undefined,
+            notes: `Payments.lk subscription invoice paid (${inv.id || subId})`,
+            autoRenew: true,
+          });
+        }
+        return NextResponse.json({ received: true });
+      }
+
+      // 4. Handle invoice.payment_failed (Payments.lk retries on days 1, 3, 7, 14)
+      if (event.type === "invoice.payment_failed" && event.data) {
+        const inv = event.data;
+        const subId = inv.subscriptionId || inv.subscription?.id || "";
+        if (subId) {
+          await sql`
+            UPDATE subscriptions SET
+              status = 'past_due',
+              updated_at = NOW()
+            WHERE provider_subscription_id = ${subId}
+          `;
+        }
+        return NextResponse.json({ received: true });
+      }
+
+      // 5. Handle payment.succeeded event
       if (event.type === "payment.succeeded" && event.data) {
         const data = event.data;
         const metadata = data.metadata || {};
