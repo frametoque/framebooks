@@ -371,15 +371,6 @@ export default function DashboardPage() {
                     + {data.unpaidClients.length - 6} more clients
                   </div>
                 )}
-                <div className="pt-2">
-                  <Link
-                    href="/user/invoices?status=unpaid"
-                    className="w-full py-2 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <span>View all unpaid invoices</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
               </div>
             ) : (
               <div className="py-4 text-center">
