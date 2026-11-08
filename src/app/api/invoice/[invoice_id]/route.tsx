@@ -54,21 +54,10 @@ export async function GET(request, { params }) {
     `;
 
     if (result.length === 0) {
-      const invoiceExists = await sql`
-        SELECT user_email FROM public.invoices WHERE invoice_id = ${invoice_id}
-      `;
-      
-      if (invoiceExists.length > 0) {
-        return NextResponse.json(
-          { error: "Unauthorized - This invoice does not belong to you" },
-          { status: 403 }
-        );
-      } else {
-        return NextResponse.json(
-          { error: "Invoice not found" },
-          { status: 404 }
-        );
-      }
+      return NextResponse.json(
+        { error: "Invoice not found" },
+        { status: 404 }
+      );
     }
 
     const invoice = result[0] as any;

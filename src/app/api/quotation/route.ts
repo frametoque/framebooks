@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[quotation] client lookup/creation failed:", err);
     return NextResponse.json(
-      { error: "DB error resolving client.", detail: String(err) },
+      { error: "Failed to resolve client details. Please try again." },
       { status: 500 }
     );
   }
@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[quotation] admin_quotations INSERT failed:", err);
     return NextResponse.json(
-      { error: "DB error inserting quotation.", detail: String(err) },
+      { error: "Failed to create quotation record." },
       { status: 500 }
     );
   }
@@ -213,7 +213,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[quotation] quotation_items INSERT failed:", err);
     return NextResponse.json(
-      { error: "DB error inserting line items.", detail: String(err) },
+      { error: "Failed to create quotation line items." },
       { status: 500 }
     );
   }

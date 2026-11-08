@@ -33,10 +33,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "User already has a business profile" }, { status: 400 });
     }
 
-    // Insert new tenant
+    // Insert new tenant (strictly 'Free' by default; paid plans require verified payment or coupon)
     const newTenant = await sql`
       INSERT INTO tenants (name, plan, currency, address, created_at)
-      VALUES (${businessName}, ${plan || 'Free'}, 'LKR', ${address}, NOW())
+      VALUES (${businessName}, 'Free', 'LKR', ${address}, NOW())
       RETURNING id
     `;
     const tenantId = newTenant[0].id;
@@ -90,11 +90,16 @@ export async function POST(req: Request) {
         if (coupon.type === 'percent' && Number(coupon.value) >= 100) {
           isComplimentary = true;
           const planRows = await sql`
-            SELECT id FROM plans 
+            SELECT id, name FROM plans 
             WHERE LOWER(name) = LOWER(${plan || 'Free'}) OR LOWER(key) = LOWER(${plan || 'Free'})
             LIMIT 1
           `;
           const planId = planRows[0]?.id || 1;
+          const validatedPlanName = planRows[0]?.name || 'Pro';
+
+          await sql`
+            UPDATE tenants SET plan = ${validatedPlanName} WHERE id = ${tenantId}
+          `;
 
           await sql`
             INSERT INTO subscriptions (

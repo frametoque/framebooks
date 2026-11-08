@@ -28,6 +28,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "File size must be under 2MB." }, { status: 400 });
     }
 
+    // Inspect file binary magic bytes to prevent MIME-spoofing and reject malicious files
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    let detectedExt: string | null = null;
+    let detectedMime: string | null = null;
+
+    if (buffer.length >= 8 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+      detectedExt = "png";
+      detectedMime = "image/png";
+    } else if (buffer.length >= 3 && buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+      detectedExt = "jpg";
+      detectedMime = "image/jpeg";
+    } else if (buffer.length >= 4 && buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38) {
+      detectedExt = "gif";
+      detectedMime = "image/gif";
+    } else if (
+      buffer.length >= 12 &&
+      buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+      buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50
+    ) {
+      detectedExt = "webp";
+      detectedMime = "image/webp";
+    }
+
+    if (!detectedExt || !detectedMime) {
+      return NextResponse.json({ error: "Invalid image format. Only authentic JPG, PNG, GIF, or WebP images are allowed." }, { status: 400 });
+    }
+
     // Get tenant ID
     const userRows = await sql`SELECT tenant_id FROM admin_users WHERE id = ${Number(userId) || 0} LIMIT 1`;
     if (!userRows || userRows.length === 0) {
@@ -35,11 +64,11 @@ export async function POST(request: Request) {
     }
     const tenantId = userRows[0].tenant_id;
 
-    // Upload to Cloudflare R2
-    const ext = file.name.split(".").pop() || "png";
-    const customKey = `logos/tenant-${tenantId}.${ext}`;
+    // Upload to Cloudflare R2 with strict verified extension
+    const customKey = `logos/tenant-${tenantId}.${detectedExt}`;
     const result = await uploadToR2({
-      file,
+      file: buffer,
+      contentType: detectedMime,
       customKey,
       folder: "logos",
     });

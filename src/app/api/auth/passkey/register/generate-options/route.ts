@@ -36,7 +36,13 @@ export async function GET(req: Request) {
 
   // Need to save the challenge temporarily, simplified for demo using a cookie
   const response = NextResponse.json(options);
-  response.cookies.set('currentChallenge', options.challenge, { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 60 * 5 });
+  response.cookies.set('currentChallenge', options.challenge, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 60 * 5,
+  });
   
   return response;
 }

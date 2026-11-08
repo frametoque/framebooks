@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 
 export const ADMIN_COOKIE_NAME = "framebooks-admin-token";
 
+export const ADMIN_SESSION_MAX_AGE_SECONDS = 12 * 60 * 60; // 12 hours strict admin session
+
 function getSecret(): string {
   const secret = process.env.ADMIN_AUTH_SECRET || process.env.NEXTAUTH_SECRET;
   if (!secret) {
@@ -25,7 +27,7 @@ export interface AdminTokenPayload {
  */
 export function createAdminToken(user: { id: number; email: string; systemRole: string }): string {
   const iat = Math.floor(Date.now() / 1000);
-  const exp = iat + 30 * 24 * 60 * 60; // 30 days validity
+  const exp = iat + ADMIN_SESSION_MAX_AGE_SECONDS;
 
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
   const payload = Buffer.from(
@@ -92,7 +94,7 @@ export async function setAdminSessionCookie(token: string): Promise<void> {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: ADMIN_SESSION_MAX_AGE_SECONDS,
   });
 }
 
