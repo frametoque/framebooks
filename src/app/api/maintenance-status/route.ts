@@ -17,7 +17,10 @@ export async function GET() {
 
     const active = Boolean(map.maintenance_mode);
     if (!active) {
-      return NextResponse.json({ active: false, message: "", allowed: true });
+      return NextResponse.json(
+        { active: false, message: "", allowed: true },
+        { headers: { "Cache-Control": "private, s-maxage=60, stale-while-revalidate=300" } }
+      );
     }
 
     const message =

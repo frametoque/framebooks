@@ -2908,14 +2908,60 @@ export async function getTopClients() {
   }));
 }
 
-export async function getAllLimits() {
-  const resources = ['invoices', 'quotations', 'incomes', 'expenses', 'clients'] as const;
-  const exceeded: string[] = [];
-  for (const r of resources) {
-    const check = await checkLimit(r);
-    if (!check.allowed) exceeded.push(r);
+export async function getAllLimits(): Promise<string[]> {
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return [];
+
+    const plan = await getTenantPlan();
+    const limitsResult = await sql`SELECT * FROM plan_limits WHERE plan = ${plan} LIMIT 1`;
+    if (limitsResult.length === 0) return [];
+    const dbLimits = limitsResult[0];
+
+    const resources: Array<{ key: string; limit: number }> = [
+      { key: 'invoices', limit: dbLimits.max_invoices ?? -1 },
+      { key: 'quotations', limit: dbLimits.max_quotations ?? (dbLimits.plan?.toLowerCase() === 'free' ? 50 : -1) },
+      { key: 'incomes', limit: dbLimits.max_incomes ?? -1 },
+      { key: 'expenses', limit: dbLimits.max_expenses ?? -1 },
+      { key: 'clients', limit: dbLimits.max_clients ?? -1 },
+    ];
+
+    // If all limits are unlimited (-1), return immediately without any database counts
+    const capped = resources.filter(r => r.limit !== -1);
+    if (capped.length === 0) return [];
+
+    // Parallelize all checks in a single round-trip instead of 20 sequential queries
+    const [tenantRows, invCount, quotCount, incCount, expCount, clientCount] = await Promise.all([
+      sql`SELECT lifetime_invoices, lifetime_quotations, lifetime_incomes, lifetime_expenses, lifetime_clients FROM tenants WHERE id = ${tenantId} LIMIT 1`,
+      sql`SELECT COUNT(*)::int as count FROM invoices WHERE tenant_id = ${tenantId}`,
+      sql`SELECT COUNT(*)::int as count FROM admin_quotations WHERE tenant_id = ${tenantId}`,
+      sql`SELECT COUNT(*)::int as count FROM admin_incomes WHERE tenant_id = ${tenantId}`,
+      sql`SELECT COUNT(*)::int as count FROM admin_expenses WHERE tenant_id = ${tenantId}`,
+      sql`SELECT COUNT(*)::int as count FROM admin_clients WHERE tenant_id = ${tenantId}`,
+    ]);
+
+    const t = tenantRows[0] || {};
+    const exceeded: string[] = [];
+
+    const currentMap: Record<string, number> = {
+      invoices: Math.max(t.lifetime_invoices ?? 0, invCount[0]?.count || 0),
+      quotations: Math.max(t.lifetime_quotations ?? 0, quotCount[0]?.count || 0),
+      incomes: Math.max(t.lifetime_incomes ?? 0, incCount[0]?.count || 0),
+      expenses: Math.max(t.lifetime_expenses ?? 0, expCount[0]?.count || 0),
+      clients: Math.max(t.lifetime_clients ?? 0, clientCount[0]?.count || 0),
+    };
+
+    for (const r of capped) {
+      if ((currentMap[r.key] || 0) >= r.limit) {
+        exceeded.push(r.key);
+      }
+    }
+
+    return exceeded;
+  } catch (err) {
+    console.error("[getAllLimits] Fast lookup error, fallback:", err);
+    return [];
   }
-  return exceeded;
 }
 
 export async function getLimitStatus(resource: 'invoices' | 'quotations' | 'incomes' | 'expenses' | 'clients' | 'accounts') {

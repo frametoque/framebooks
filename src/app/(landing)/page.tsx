@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   }
 };
 
+export const revalidate = 3600; // 1-hour ISR cache: served instantly from CDN without running serverless lambda
+
 export default async function LandingPage() {
   const dynamicPlans = await getLandingPlansFormatted();
   return <LandingClient initialPlans={dynamicPlans} />;

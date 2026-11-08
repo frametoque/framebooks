@@ -226,18 +226,26 @@ function LayoutContent({ children }) {
   const showOwnerWarning = tenantInfo.plan !== 'Loading...' && tenantInfo.plan !== 'Pro Plus' && (tenantInfo.userRole === 'owner' || tenantInfo.userRole === 'Super Admin') && (tenantInfo.teamMembersCount || 0) > 1;
   const isMainDashboard = pathname === "/user/dashboard" || pathname === "/user";
 
-  // --- Maintenance mode ---
+  // --- Maintenance mode (optimized: visibility-aware, 5m interval) ---
   const [maintenance, setMaintenance] = useState<{ active: boolean; message: string; allowed: boolean } | null>(null);
   useEffect(() => {
     const check = () => {
+      if (typeof document !== "undefined" && document.hidden) return;
       fetch("/api/maintenance-status")
         .then((r) => r.json())
         .then(setMaintenance)
         .catch(() => {});
     };
     check();
-    const interval = setInterval(check, 60_000);
-    return () => clearInterval(interval);
+    const interval = setInterval(check, 300_000); // 5 minutes instead of 60s
+    const handleVisibility = () => {
+      if (!document.hidden) check();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, []);
 
   const showMaintenanceScreen = maintenance?.active && !maintenance?.allowed;

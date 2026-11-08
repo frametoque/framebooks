@@ -22,6 +22,7 @@ export function NotificationBell() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = async () => {
+    if (typeof document !== "undefined" && document.hidden) return;
     try {
       setLoading(true);
       const res = await getUserNotifications();
@@ -35,8 +36,15 @@ export function NotificationBell() {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchNotifications, 300000); // 5 minutes instead of 60s
+    const handleVisibility = () => {
+      if (!document.hidden) fetchNotifications();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, []);
 
   // Close popover on outside click

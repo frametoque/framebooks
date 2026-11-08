@@ -5,7 +5,6 @@ import type { Metadata, Viewport } from 'next'
 import { DM_Mono } from "next/font/google";
 import { ConfirmProvider } from "@/components/ui/ConfirmProvider";
 import PwaThemeSync from "@/components/pwa/PwaThemeSync";
-import { cookies } from "next/headers";
 
 const dmMono = DM_Mono({
   variable: "--font-geist-mono",
@@ -13,26 +12,12 @@ const dmMono = DM_Mono({
   weight: ["300", "400", "500"],
 });
 
-export async function generateViewport(): Promise<Viewport> {
-  let themeColor = '#00E35B';
-  try {
-    const cookieStore = await cookies();
-    const cookieVal = cookieStore.get('fb_accent_color')?.value;
-    if (cookieVal) {
-      const decoded = decodeURIComponent(cookieVal).trim();
-      if (/^#[0-9a-fA-F]{6}$/i.test(decoded)) {
-        themeColor = decoded.toUpperCase();
-      }
-    }
-  } catch {}
-
-  return {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 5,
-    themeColor,
-  };
-}
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: '#00E35B',
+};
 
 export const metadata: Metadata = {
   title: {
