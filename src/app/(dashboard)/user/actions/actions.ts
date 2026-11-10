@@ -1074,7 +1074,7 @@ export async function getInvoices() {
         i.invoice_id as id, 
         i.user_email as client_email, 
         COALESCE((SELECT full_name FROM admin_clients c WHERE (c.id = i.client_id OR c.id::text = i.client_id::text OR (i.user_email IS NOT NULL AND LOWER(c.email) = LOWER(i.user_email))) AND c.tenant_id = ${tenantId} LIMIT 1), i.user_email, 'Client') as client_name, 
-        i.project_name as service, i.subtotal, i.total, i.discount, i.advance, i.tax_rate, i.total_due, i.date as due_date, i.payment_status as status, i.legal_name, i.created_at
+        i.project_name as service, i.subtotal, i.total, i.discount, i.advance, i.tax_rate, i.total_due, i.date as due_date, i.payment_status as status, i.legal_name, i.created_at, i.bank_account_id
       FROM invoices i
       WHERE i.tenant_id = ${tenantId}
       ORDER BY i.date DESC, i.created_at DESC
@@ -1131,6 +1131,7 @@ export async function getInvoices() {
       total_due: calculatedTotalDue,
       due: r.due_date ? new Date(r.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Colombo' }) : '-',
       status: status,
+      bank_account_id: r.bank_account_id ? Number(r.bank_account_id) : null,
       
       overdue: r.status === 'overdue' || (r.due_date && new Date(r.due_date) < new Date() && status !== 'paid' && status !== 'fully paid')
     };
@@ -2366,7 +2367,8 @@ export async function recordInvoicePayment(
   paidAmount: number,
   paymentMethod: string,
   paymentDate: string,
-  isAdvance: boolean
+  isAdvance: boolean,
+  accountId?: number | null
 ) {
   const { error: rbacError } = await requirePermission('invoices', 'update');
   if (rbacError) throw new Error(rbacError);
@@ -2388,6 +2390,11 @@ export async function recordInvoicePayment(
     const totalAmount = parseFloat(invoice.total);
     const currentAdvance = parseFloat(invoice.advance || '0');
     const currentTotalDue = parseFloat(invoice.total_due != null ? invoice.total_due : invoice.total);
+
+    // Resolve target account
+    const targetAccountId = accountId !== undefined && accountId !== null
+      ? accountId
+      : (invoice.bank_account_id ? Number(invoice.bank_account_id) : null);
 
     // 2. Fetch or resolve client
     let clientId = null;
@@ -2421,7 +2428,7 @@ export async function recordInvoicePayment(
 
     await sql`
       INSERT INTO admin_incomes (date, amount, description, category, payment_method, invoice_id, client_id, receipt_url, account_id, tenant_id)
-      VALUES (${paymentDate}, ${paidAmount}, ${description}, ${category}, ${paymentMethod}, ${invoiceId}, ${clientId}, ${receiptUrlToAttach}, ${paymentMethod === 'Bank Transfer' ? invoice.bank_account_id : null}, ${tenantId})
+      VALUES (${paymentDate}, ${paidAmount}, ${description}, ${category}, ${paymentMethod}, ${invoiceId}, ${clientId}, ${receiptUrlToAttach}, ${targetAccountId}, ${tenantId})
     `;
     await incrementLifetimeUsage(Number(tenantId), 'incomes');
 
@@ -2445,6 +2452,7 @@ export async function recordInvoicePayment(
       SET payment_status = ${newStatus},
           advance = ${newAdvance},
           total_due = ${newTotalDue},
+          bank_account_id = COALESCE(${targetAccountId}, bank_account_id),
           layout_snapshot = COALESCE(layout_snapshot, (SELECT definition FROM invoice_layouts WHERE id = invoices.layout_id))
       WHERE invoice_id = ${invoiceId}
     `;
@@ -2455,6 +2463,8 @@ export async function recordInvoicePayment(
       revalidatePath('/user/invoices');
       revalidatePath(`/user/invoice/${invoiceId}`);
       revalidatePath('/user/dashboard');
+      revalidatePath('/user/income');
+      revalidatePath('/user/accounts');
     } catch (e) {
       console.warn("revalidatePath error:", e);
     }

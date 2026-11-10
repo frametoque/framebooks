@@ -10,6 +10,7 @@ import Link from "next/link";
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
 import { getInvoiceByIdAdmin, approveBankSlip, declineBankSlip, undoApprovedBankSlipPayment, recordInvoicePayment, deleteIncome, adminUploadPaymentSlip } from "../../actions/actions";
 import { getTenantInfo } from "../../actions/tenants";
+import { getAccounts } from "../../actions/accounts";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import Image from "next/image";
 import { InvoiceRenderer } from "@/lib/invoice-layout/renderer";
@@ -84,6 +85,8 @@ export default function AdminInvoicePage() {
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [isAdvance, setIsAdvance] = useState(false);
   const [savingIncome, setSavingIncome] = useState(false);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
 
   // Payment slip upload states
   const [slipFile, setSlipFile] = useState<File | null>(null);
@@ -200,11 +203,16 @@ export default function AdminInvoicePage() {
     if (!invoice_id) return;
     const fetchInvoice = async () => {
       try {
-        const [data, tInfo] = await Promise.all([getInvoiceByIdAdmin(invoice_id as string), getTenantInfo()]);
+        const [data, tInfo, accs] = await Promise.all([
+          getInvoiceByIdAdmin(invoice_id as string),
+          getTenantInfo(),
+          getAccounts(),
+        ]);
         if (!data) throw new Error("Invoice not found");
         setInvoice(data);
         setTenantPlan(tInfo?.plan || "Free");
         setTenantInfo(tInfo);
+        setAccounts(accs || []);
         if (data.layout_snapshot || data.active_layout_definition) {
           setActiveViewTab("layout");
         }
@@ -280,6 +288,16 @@ export default function AdminInvoicePage() {
     setSlipFile(null);
     setSlipPreview(null);
     setIncludeSlip(false);
+
+    let defaultAccId = "";
+    if (invoice?.bank_account_id) {
+      defaultAccId = String(invoice.bank_account_id);
+    } else {
+      const def = accounts.find((a: any) => a.isDefault || a.is_default);
+      defaultAccId = def ? String(def.id) : (accounts[0]?.id ? String(accounts[0].id) : "");
+    }
+    setSelectedAccountId(defaultAccId);
+
     setIncomeModalOpen(true);
   };
 
@@ -451,7 +469,8 @@ export default function AdminInvoicePage() {
         parseFloat(paidAmount) || 0,
         paymentMethod,
         paymentDate,
-        isAdvance
+        isAdvance,
+        selectedAccountId ? parseInt(selectedAccountId) : null
       );
 
       // Step 2: MdUpload slip if included (only for Bank Transfer)
@@ -1017,129 +1036,154 @@ export default function AdminInvoicePage() {
       {/* Income Modal */}
       {incomeModalOpen && invoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
-          <div className="bg-card dark:bg-[#11151f]/95 backdrop-blur-xl border border-border rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-card dark:bg-[#11151f]/95 backdrop-blur-xl border border-border rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-6 border-b border-border bg-transparent">
               <h2 className="text-xl font-semibold text-foreground">Create Income from Invoice</h2>
               <button onClick={() => setIncomeModalOpen(false)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-foreground">
                 <MdClose className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleCreateIncomeSubmit} className="p-6 space-y-4">
-              <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1 bg-black/[0.02] dark:bg-card p-4 rounded-2xl border border-border">
-                <p><span className="font-semibold text-gray-700 dark:text-gray-300">Invoice ID:</span> {invoice.invoice_id}</p>
-                <p><span className="font-semibold text-gray-700 dark:text-gray-300">Client:</span> {invoice.user_email}</p>
-                <p><span className="font-semibold text-gray-700 dark:text-gray-300">Due Amount:</span> {formatMoney(totalDue, invoice.currency)}</p>
-              </div>
+            <form onSubmit={handleCreateIncomeSubmit} className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column: Invoice Details & Amount */}
+                <div className="space-y-4">
+                  <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1 bg-black/[0.02] dark:bg-card p-4 rounded-2xl border border-border">
+                    <p><span className="font-semibold text-gray-700 dark:text-gray-300">Invoice ID:</span> {invoice.invoice_id}</p>
+                    <p><span className="font-semibold text-gray-700 dark:text-gray-300">Client:</span> {invoice.user_email}</p>
+                    <p><span className="font-semibold text-gray-700 dark:text-gray-300">Total Amount:</span> {formatMoney(total, invoice.currency)}</p>
+                    <p><span className="font-semibold text-gray-700 dark:text-gray-300">Due Amount:</span> {formatMoney(totalDue, invoice.currency)}</p>
+                  </div>
 
-              <div className="space-y-1">
-                <label className="text-sm text-gray-500 dark:text-gray-400 block font-medium">Income Amount ({invoice.currency || 'LKR'})</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  placeholder="0.00"
-                  value={paidAmount}
-                  onChange={(e) => setPaidAmount(e.target.value)}
-                  className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground shadow-2xs"
-                />
-              </div>
+                  <div className="space-y-1">
+                    <label className="text-sm text-gray-500 dark:text-gray-400 block font-medium">Income Amount ({invoice.currency || 'LKR'})</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      placeholder="0.00"
+                      value={paidAmount}
+                      onChange={(e) => setPaidAmount(e.target.value)}
+                      className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground shadow-2xs"
+                    />
+                  </div>
 
-              <div className="space-y-1">
-                <label className="text-sm text-gray-500 dark:text-gray-400 block font-medium">Date Received</label>
-                <input
-                  type="date"
-                  required
-                  value={paymentDate}
-                  onChange={(e) => setPaymentDate(e.target.value)}
-                  className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground shadow-2xs"
-                />
-              </div>
+                  <div className="space-y-1">
+                    <label className="text-sm text-gray-500 dark:text-gray-400 block font-medium">Date Received</label>
+                    <input
+                      type="date"
+                      required
+                      value={paymentDate}
+                      onChange={(e) => setPaymentDate(e.target.value)}
+                      className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground shadow-2xs"
+                    />
+                  </div>
 
-              <div className="space-y-1">
-                <label className="text-sm text-gray-500 dark:text-gray-400 block font-medium">Payment Method</label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground appearance-none shadow-2xs"
-                >
-                  <option value="Bank Transfer" className="bg-card text-foreground">Bank Transfer</option>
-                  <option value="Stripe" className="bg-card text-foreground">Stripe</option>
-                  <option value="PayPal" className="bg-card text-foreground">PayPal</option>
-                  <option value="Cash" className="bg-card text-foreground">Cash</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2 pb-2">
-                <input
-                  type="checkbox"
-                  id="isAdvance"
-                  checked={isAdvance}
-                  onChange={(e) => setIsAdvance(e.target.checked)}
-                  className="w-4 h-4 rounded border-border bg-card text-foreground focus:ring-brand-500 focus:ring-offset-card"
-                />
-                <label htmlFor="isAdvance" className="text-sm text-gray-700 dark:text-gray-300 font-medium select-none cursor-pointer">
-                  Payment is advance
-                </label>
-              </div>
-
-              {/* Payment Slip MdUpload Section */}
-              <div className="pt-2 border-t border-border">
-                <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm text-gray-300 font-medium flex items-center gap-2">
-                    <MdUpload className="w-4 h-4" />
-                    MdUpload Payment Slip (Optional)
-                  </label>
-                  {includeSlip && (
-                    <button
-                      type="button"
-                      onClick={removeSlipFile}
-                      className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                    >
-                      Remove
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="checkbox"
+                      id="isAdvance"
+                      checked={isAdvance}
+                      onChange={(e) => setIsAdvance(e.target.checked)}
+                      className="w-4 h-4 rounded border-border bg-card text-foreground focus:ring-brand-500 focus:ring-offset-card cursor-pointer"
+                    />
+                    <label htmlFor="isAdvance" className="text-sm text-gray-700 dark:text-gray-300 font-medium select-none cursor-pointer">
+                      Payment is advance
+                    </label>
+                  </div>
                 </div>
 
-                {convertingPdf ? (
-                  <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-brand-500/30 rounded-xl bg-brand-500/5">
-                    <Loader size="sm" />
-                    <span className="text-sm text-brand-400">Converting PDF to image...</span>
+                {/* Right Column: Account, Payment Method & Slip Upload */}
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-sm text-gray-500 dark:text-gray-400 block font-medium">Account</label>
+                    <select
+                      value={selectedAccountId}
+                      onChange={(e) => setSelectedAccountId(e.target.value)}
+                      className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground appearance-none shadow-2xs cursor-pointer"
+                    >
+                      <option value="" className="bg-card text-foreground">No Account (Unlinked)</option>
+                      {accounts.map((a: any) => (
+                        <option key={a.id} value={a.id} className="bg-card text-foreground">
+                          {a.name} ({a.type})
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                ) : !includeSlip ? (
-                  <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-brand-500/50 hover:bg-brand-500/5 transition-all relative">
-                    <MdUpload className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-400">Click to upload slip image or PDF</span>
-                    {tenantPlan !== 'Pro Plus' && (
-                      <span className="ml-2 text-[10px] uppercase font-bold tracking-wider text-brand-500 bg-brand-500/10 px-2 py-0.5 rounded-md">Pro Plus</span>
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*,application/pdf"
-                      onChange={handleSlipFileChange}
-                      className="hidden"
-                      disabled={tenantPlan !== 'Pro Plus'}
-                    />
-                  </label>
-                ) : slipPreview ? (
-                  <div className="relative rounded-xl overflow-hidden border border-border">
-                    <Image src={slipPreview} alt="Slip preview" className="w-full h-40 object-cover"  width={800} height={800} unoptimized={true} />
-                    <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 rounded-lg text-xs text-foreground flex items-center gap-1">
-                      <ImageIcon className="w-3 h-3" />
-                      {slipFile?.name}
+
+                  <div className="space-y-1">
+                    <label className="text-sm text-gray-500 dark:text-gray-400 block font-medium">Payment Method</label>
+                    <select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground appearance-none shadow-2xs cursor-pointer"
+                    >
+                      <option value="Bank Transfer" className="bg-card text-foreground">Bank Transfer</option>
+                      <option value="Stripe" className="bg-card text-foreground">Stripe</option>
+                      <option value="PayPal" className="bg-card text-foreground">PayPal</option>
+                      <option value="Cash" className="bg-card text-foreground">Cash</option>
+                    </select>
+                  </div>
+
+                  {/* Payment Slip Upload Section */}
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm text-gray-300 font-medium flex items-center gap-2">
+                        <MdUpload className="w-4 h-4" />
+                        Upload Payment Slip (Optional)
+                      </label>
+                      {includeSlip && (
+                        <button
+                          type="button"
+                          onClick={removeSlipFile}
+                          className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
                     </div>
+
+                    {convertingPdf ? (
+                      <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-brand-500/30 rounded-xl bg-brand-500/5">
+                        <Loader size="sm" />
+                        <span className="text-sm text-brand-400">Converting PDF to image...</span>
+                      </div>
+                    ) : !includeSlip ? (
+                      <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-brand-500/50 hover:bg-brand-500/5 transition-all relative">
+                        <MdUpload className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-400">Click to upload slip image or PDF</span>
+                        {tenantPlan !== 'Pro Plus' && (
+                          <span className="ml-2 text-[10px] uppercase font-bold tracking-wider text-brand-500 bg-brand-500/10 px-2 py-0.5 rounded-md">Pro Plus</span>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          onChange={handleSlipFileChange}
+                          className="hidden"
+                          disabled={tenantPlan !== 'Pro Plus'}
+                        />
+                      </label>
+                    ) : slipPreview ? (
+                      <div className="relative rounded-xl overflow-hidden border border-border">
+                        <Image src={slipPreview} alt="Slip preview" className="w-full h-32 object-cover" width={800} height={800} unoptimized={true} />
+                        <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 rounded-lg text-xs text-foreground flex items-center gap-1">
+                          <ImageIcon className="w-3 h-3" />
+                          {slipFile?.name}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3 px-4 py-3 bg-transparent border border-border rounded-xl">
+                        <FileIcon className="w-5 h-5 text-foreground" />
+                        <span className="text-sm text-gray-300 flex-1 truncate">{slipFile?.name}</span>
+                        <span className="text-xs text-gray-500">
+                          {slipFile ? (slipFile.size / 1024 / 1024).toFixed(2) + ' MB' : ''}
+                        </span>
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500">
+                      Max file size: 10MB. Supported: Images, PDF
+                    </p>
                   </div>
-                ) : (
-                  <div className="flex items-center gap-3 px-4 py-3 bg-transparent border border-border rounded-xl">
-                    <FileIcon className="w-5 h-5 text-foreground" />
-                    <span className="text-sm text-gray-300 flex-1 truncate">{slipFile?.name}</span>
-                    <span className="text-xs text-gray-500">
-                      {slipFile ? (slipFile.size / 1024 / 1024).toFixed(2) + ' MB' : ''}
-                    </span>
-                  </div>
-                )}
-                <p className="text-xs text-gray-500 mt-2">
-                  Max file size: 10MB. Supported: Images, PDF
-                </p>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-border justify-end">
