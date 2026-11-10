@@ -1016,9 +1016,9 @@ export default function AdminInvoicePage() {
 
       {/* Income Modal */}
       {incomeModalOpen && invoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-6 border-b border-border">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <div className="bg-card dark:bg-[#11151f]/95 backdrop-blur-xl border border-border rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-border bg-transparent">
               <h2 className="text-xl font-semibold text-foreground">Create Income from Invoice</h2>
               <button onClick={() => setIncomeModalOpen(false)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-foreground">
                 <MdClose className="w-5 h-5" />
