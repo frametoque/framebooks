@@ -1118,9 +1118,9 @@ export default function AdminInvoicePage() {
                       className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground appearance-none shadow-2xs cursor-pointer"
                     >
                       <option value="Bank Transfer" className="bg-card text-foreground">Bank Transfer</option>
-                      <option value="Stripe" className="bg-card text-foreground">Stripe</option>
-                      <option value="PayPal" className="bg-card text-foreground">PayPal</option>
                       <option value="Cash" className="bg-card text-foreground">Cash</option>
+                      <option value="PayPal" className="bg-card text-foreground">PayPal</option>
+                      <option value="Wise" className="bg-card text-foreground">Wise</option>
                     </select>
                   </div>
 

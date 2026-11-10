@@ -660,9 +660,9 @@ export default function IncomePage() {
                   <select value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })}
                     className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs">
                     <option className="bg-card text-foreground">Bank Transfer</option>
-                    <option className="bg-card text-foreground">Stripe</option>
-                    <option className="bg-card text-foreground">PayPal</option>
                     <option className="bg-card text-foreground">Cash</option>
+                    <option className="bg-card text-foreground">PayPal</option>
+                    <option className="bg-card text-foreground">Wise</option>
                   </select>
                 </div>
                 <div className="space-y-1">
