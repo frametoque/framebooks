@@ -72,7 +72,7 @@ function InvoicesPageContent() {
   const [includeSlip, setIncludeSlip] = useState(false);
   const [convertingPdf, setConvertingPdf] = useState(false);
 
-  const openRecordPaymentModal = (invoice: any) => {
+  const openRecordPaymentModal = async (invoice: any) => {
     setSelectedInvoice(invoice);
     const due = invoice.total_due != null ? invoice.total_due : invoice.amount;
     setPaidAmount(due > 0 ? due.toString() : (invoice.amount || 0).toString());
@@ -83,12 +83,25 @@ function InvoicesPageContent() {
     setSlipPreview(null);
     setIncludeSlip(false);
 
+    let currentAccounts = accounts;
+    if (!currentAccounts || currentAccounts.length === 0) {
+      try {
+        const accs = await getAccounts();
+        if (accs && accs.length > 0) {
+          currentAccounts = accs;
+          setAccounts(accs);
+        }
+      } catch (e) {
+        console.error("Failed to fetch accounts:", e);
+      }
+    }
+
     let defaultAccId = "";
     if (invoice.bank_account_id) {
       defaultAccId = String(invoice.bank_account_id);
     } else {
-      const def = accounts.find((a: any) => a.isDefault || a.is_default);
-      defaultAccId = def ? String(def.id) : (accounts[0]?.id ? String(accounts[0].id) : "");
+      const def = currentAccounts.find((a: any) => a.isDefault || a.is_default);
+      defaultAccId = def ? String(def.id) : (currentAccounts[0]?.id ? String(currentAccounts[0].id) : "");
     }
     setSelectedAccountId(defaultAccId);
 
@@ -269,11 +282,12 @@ function InvoicesPageContent() {
     let cancelled = false;
     async function load() {
       try {
-        const [res, tInfo] = await Promise.all([getInvoices(), getTenantInfo()]);
+        const [res, tInfo, accs] = await Promise.all([getInvoices(), getTenantInfo(), getAccounts()]);
         if (!cancelled) {
           setData(res);
           setTenantPlan(tInfo?.plan || "Free");
           setTenantInfo(tInfo);
+          setAccounts(accs || []);
           setLoading(false);
         }
       } catch (e) {
@@ -698,7 +712,7 @@ function InvoicesPageContent() {
                     >
                       <option value="" className="bg-card text-foreground">No Account (Unlinked)</option>
                       {accounts.map((a: any) => (
-                        <option key={a.id} value={a.id} className="bg-card text-foreground">
+                        <option key={a.id} value={String(a.id)} className="bg-card text-foreground">
                           {a.name} ({a.type})
                         </option>
                       ))}
