@@ -23,7 +23,8 @@ import {
   ArrowRight,
   ExternalLink,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  ChevronDown
 } from "lucide-react";
 import { MdArrowForward, MdKeyboardArrowLeft, MdCheck } from "react-icons/md";
 import {
@@ -48,7 +49,7 @@ export default function OnboardingPage() {
   const [businessName, setBusinessName] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState("Free");
+  const [selectedPlan, setSelectedPlan] = useState("Pro");
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -72,6 +73,7 @@ export default function OnboardingPage() {
   // Renewal Notice Modal before redirecting to Payments.lk checkout
   const [renewalNoticeModalOpen, setRenewalNoticeModalOpen] = useState(false);
   const [pendingCheckoutUrl, setPendingCheckoutUrl] = useState<string | null>(null);
+  const [showAllMobileFeatures, setShowAllMobileFeatures] = useState(false);
 
   useEffect(() => {
     getOnboardingPlansAction().then(res => {
@@ -607,254 +609,428 @@ export default function OnboardingPage() {
   // ─────────────────────────────────────────────────────────────
   if (step === 3) {
     const isPaid = selectedPlan !== "Free" && (!appliedCoupon || !appliedCoupon.isComplimentary);
+    const selectedPlanObj = displayPlans.find((p: any) => p.name === selectedPlan);
+    const selectedPriceInfo = getFinalPrice(selectedPlanObj?.monthlyPrice ?? selectedPlanObj?.price_monthly ?? 0, true);
 
     return (
-      <div className="min-h-screen bg-[#F9FAFB] text-[#082830] flex flex-col justify-between py-10 px-4 sm:px-6 lg:px-8 overflow-y-auto">
-        <div className="max-w-6xl w-full mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8 sm:mb-10">
-            <Image
-              src="/logos/ft/name-logo.png"
-              alt="FrameBooks"
-              width={160}
-              height={32}
-              className="h-8 w-auto"
-            />
-            <button
-              type="button"
-              onClick={handlePrev}
-              disabled={submitting}
-              className="text-gray-600 hover:text-[#082830] transition-colors flex items-center gap-1.5 text-sm font-semibold cursor-pointer px-3.5 py-2 rounded-xl hover:bg-gray-200/60"
-            >
-              <MdKeyboardArrowLeft className="w-5 h-5" />
-              <span>Back to Logo</span>
-            </button>
-          </div>
+      <div className="min-h-screen bg-[#F9FAFB] text-[#082830] flex flex-col">
 
-          {/* Heading */}
-          <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E6FDF0] text-[#007A31] border border-[#00E35B]/20 text-xs font-bold mb-3">
-              <span>Step 3 of 4</span>
-              <span>•</span>
-              <span>Workspace Setup</span>
+        {/* ── STICKY HEADER ── */}
+        <div className="sticky top-0 z-20 bg-[#F9FAFB]/95 backdrop-blur-sm border-b border-[#E5E7EB]/60 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+          <Image
+            src="/logos/ft/name-logo.png"
+            alt="FrameBooks"
+            width={130}
+            height={28}
+            className="h-7 w-auto"
+          />
+          <button
+            type="button"
+            onClick={handlePrev}
+            disabled={submitting}
+            className="text-gray-600 hover:text-[#082830] transition-colors flex items-center gap-1.5 text-sm font-semibold cursor-pointer px-3 py-1.5 rounded-xl hover:bg-gray-200/60"
+          >
+            <MdKeyboardArrowLeft className="w-5 h-5" />
+            <span>Back to Logo</span>
+          </button>
+        </div>
+
+        {/* ── SCROLLABLE CONTENT ── */}
+        {/* Extra bottom padding so sticky CTA doesn't overlap last content on mobile */}
+        <div className="flex-1 overflow-y-auto pb-36 md:pb-12 px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
+          <div className="max-w-6xl w-full mx-auto">
+
+            {/* Step badge + heading */}
+            <div className="text-center max-w-2xl mx-auto mb-7 sm:mb-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E6FDF0] text-[#007A31] border border-[#00E35B]/20 text-xs font-bold mb-3">
+                <span>Step 3 of 4</span>
+                <span>•</span>
+                <span>Workspace Setup</span>
+              </div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#082830] tracking-tight">
+                Start free. Upgrade when you grow<span className="text-[#00E35B]">.</span>
+              </h1>
+              <p className="text-gray-500 text-sm sm:text-base mt-2.5 leading-relaxed">
+                Select the pricing plan for <strong className="text-[#082830]">{businessName || "your business"}</strong>. Switch or cancel anytime.
+              </p>
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#082830] tracking-tight">
-              Start free. Upgrade when you grow<span className="text-[#00E35B]">.</span>
-            </h1>
-            <p className="text-gray-500 text-sm sm:text-base mt-2.5 leading-relaxed">
-              Select the pricing plan for <strong className="text-[#082830]">{businessName || "your business"}</strong>. You can switch plans or cancel anytime.
-            </p>
-          </div>
 
-          {errorMsg && (
-            <div className="max-w-md mx-auto text-red-600 bg-red-50 border border-red-200 px-4 py-3 rounded-2xl text-sm mb-8 text-center">
-              {errorMsg}
+            {errorMsg && (
+              <div className="max-w-md mx-auto text-red-600 bg-red-50 border border-red-200 px-4 py-3 rounded-2xl text-sm mb-6 text-center">
+                {errorMsg}
+              </div>
+            )}
+
+            {/* ════════════════════════════════════════════
+                MOBILE: Compact tap-to-select plan cards
+                (hidden on md+)
+                ════════════════════════════════════════════ */}
+            <div className="md:hidden space-y-3 mb-6">
+              {/* Instruction hint */}
+              <p className="text-center text-xs text-gray-400 font-medium mb-1">
+                Tap a plan to select it
+              </p>
+
+              {displayPlans.map((p: any, i: number) => {
+                const isSelected = selectedPlan === p.name;
+                const priceInfo = getFinalPrice(p.monthlyPrice ?? p.price_monthly ?? 0, isSelected);
+                const isExpanded = isSelected && showAllMobileFeatures;
+
+                return (
+                  <div
+                    key={p.name || i}
+                    onClick={() => {
+                      setSelectedPlan(p.name);
+                      setShowAllMobileFeatures(false);
+                    }}
+                    className={`relative rounded-2xl border transition-all cursor-pointer ${
+                      isSelected
+                        ? "border-[#00E35B] ring-2 ring-[#00E35B] bg-[#E6FDF0]/20 shadow-md"
+                        : p.highlight
+                        ? "border-[#00E35B]/40 bg-white shadow-xs"
+                        : "border-[#E5E7EB] bg-white shadow-xs"
+                    }`}
+                  >
+                    {/* Badge */}
+                    {p.badge && (
+                      <div className="absolute -top-2.5 left-4 bg-[#082830] text-white text-[9px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full">
+                        {p.badge}
+                      </div>
+                    )}
+
+                    {/* Card header row */}
+                    <div className="flex items-center justify-between p-4 gap-3">
+                      {/* Left: radio + name + description */}
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                          isSelected ? "border-[#00E35B] bg-[#00E35B]" : "border-gray-300 bg-white"
+                        }`}>
+                          {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base font-black text-[#082830]">{p.name}</span>
+                            {isSelected && (
+                              <span className="text-[10px] font-bold text-[#007A31] bg-[#E6FDF0] px-2 py-0.5 rounded-full border border-[#00E35B]/30">
+                                Selected
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: price */}
+                      <div className="text-right shrink-0">
+                        <div className="text-xl font-black text-[#082830] leading-none">
+                          {priceInfo.isFree ? "Free" : `LKR ${Number(priceInfo.finalPrice).toLocaleString()}`}
+                        </div>
+                        <div className="text-[10px] text-gray-400 font-medium mt-0.5">
+                          {priceInfo.isFree ? "forever" : "/mo"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expandable features (only on selected card) */}
+                    {isSelected && (
+                      <div className="px-4 pb-4">
+                        <div className={`space-y-0 overflow-hidden transition-all ${isExpanded ? "" : ""}`}>
+                          {/* Always show first 4 features */}
+                          {Array.isArray(p.features) && p.features.slice(0, isExpanded ? p.features.length : 4).map((f: any, j: number) => (
+                            <div
+                              key={j}
+                              className="flex items-center justify-between text-xs text-gray-700 border-b border-[#E5E7EB]/50 py-2 last:border-0 gap-2"
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 bg-[#E6FDF0] text-[#00C750] rounded-full flex items-center justify-center shrink-0">
+                                  <MdCheck className="w-2.5 h-2.5" />
+                                </div>
+                                <span className="text-gray-600">{f.label}</span>
+                              </div>
+                              <span className="font-bold text-gray-900 shrink-0">{f.value}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Show more / less toggle */}
+                        {Array.isArray(p.features) && p.features.length > 4 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowAllMobileFeatures(!showAllMobileFeatures);
+                            }}
+                            className="mt-2 text-[11px] text-[#007A31] font-bold flex items-center gap-1 cursor-pointer"
+                          >
+                            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllMobileFeatures ? "rotate-180" : ""}`} />
+                            {showAllMobileFeatures
+                              ? "Show less"
+                              : `+${p.features.length - 4} more features`}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          )}
 
-          {/* 3 Pricing Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 items-stretch max-w-5xl mx-auto mb-10">
-            {displayPlans.map((p: any, i: number) => {
-              const isSelected = selectedPlan === p.name;
-              const priceInfo = getFinalPrice(p.monthlyPrice ?? p.price_monthly ?? 0, isSelected);
+            {/* ════════════════════════════════════════════
+                DESKTOP: Full 3-column plan grid
+                (hidden on <md)
+                ════════════════════════════════════════════ */}
+            <div className="hidden md:grid md:grid-cols-3 gap-6 lg:gap-8 items-stretch max-w-5xl mx-auto mb-10">
+              {displayPlans.map((p: any, i: number) => {
+                const isSelected = selectedPlan === p.name;
+                const priceInfo = getFinalPrice(p.monthlyPrice ?? p.price_monthly ?? 0, isSelected);
 
-              return (
-                <div
-                  key={p.name || i}
-                  onClick={() => setSelectedPlan(p.name)}
-                  className={`bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-7 border relative shadow-xs hover:shadow-lg transition-all flex flex-col h-full cursor-pointer ${isSelected
-                      ? "border-[#00E35B] ring-2 ring-[#00E35B] shadow-md bg-[#E6FDF0]/10"
-                      : p.highlight
+                return (
+                  <div
+                    key={p.name || i}
+                    onClick={() => setSelectedPlan(p.name)}
+                    className={`bg-white rounded-3xl p-7 border relative shadow-xs hover:shadow-lg transition-all flex flex-col h-full cursor-pointer ${
+                      isSelected
+                        ? "border-[#00E35B] ring-2 ring-[#00E35B] shadow-md bg-[#E6FDF0]/10"
+                        : p.highlight
                         ? "border-[#00E35B]/50 ring-1 ring-[#00E35B]/20"
                         : "border-[#E5E7EB]"
                     }`}
-                >
-                  {/* Badge */}
-                  {p.badge && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#082830] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-xs">
-                      {p.badge}
-                    </div>
-                  )}
-
-                  {/* Header */}
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <h3 className="text-xl sm:text-2xl font-black text-[#082830]">{p.name}</h3>
-                    {isSelected && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#007A31] bg-[#E6FDF0] px-2.5 py-0.5 rounded-full border border-[#00E35B]/30">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#00C750]" /> Selected
-                      </span>
+                  >
+                    {p.badge && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#082830] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-xs">
+                        {p.badge}
+                      </div>
                     )}
-                  </div>
-                  <p className="text-xs sm:text-sm text-gray-500 mb-6 min-h-[32px] sm:min-h-[40px] leading-relaxed">
-                    {p.description}
-                  </p>
-
-                  {/* Pricing */}
-                  <div className="mb-6 pb-5 border-b border-[#E5E7EB]/60">
-                    <div className="flex items-baseline gap-1.5 flex-wrap">
-                      {priceInfo.isDiscounted && !priceInfo.isFree && (
-                        <span className="text-lg line-through text-gray-400 font-medium">
-                          LKR {Number(p.monthlyPrice ?? p.price_monthly).toLocaleString()}
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <h3 className="text-2xl font-black text-[#082830]">{p.name}</h3>
+                      {isSelected && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#007A31] bg-[#E6FDF0] px-2.5 py-0.5 rounded-full border border-[#00E35B]/30">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#00C750]" /> Selected
                         </span>
                       )}
-                      <span className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">
-                        {priceInfo.isFree
-                          ? "Free"
-                          : `LKR ${Number(priceInfo.finalPrice).toLocaleString()}`}
-                      </span>
-                      <span className="text-gray-500 font-medium text-xs sm:text-sm">
-                        {priceInfo.isFree ? "forever" : "/mo"}
-                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-6 min-h-[40px] leading-relaxed">{p.description}</p>
+
+                    <div className="mb-6 pb-5 border-b border-[#E5E7EB]/60">
+                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                        {priceInfo.isDiscounted && !priceInfo.isFree && (
+                          <span className="text-lg line-through text-gray-400 font-medium">
+                            LKR {Number(p.monthlyPrice ?? p.price_monthly).toLocaleString()}
+                          </span>
+                        )}
+                        <span className="text-4xl font-black text-gray-900 tracking-tight">
+                          {priceInfo.isFree ? "Free" : `LKR ${Number(priceInfo.finalPrice).toLocaleString()}`}
+                        </span>
+                        <span className="text-gray-500 font-medium text-sm">
+                          {priceInfo.isFree ? "forever" : "/mo"}
+                        </span>
+                      </div>
+                      {priceInfo.isDiscounted && priceInfo.text && (
+                        <p className="text-xs text-[#007A31] font-bold mt-1.5 flex items-center gap-1">
+                          <Tag className="w-3 h-3 text-[#00C750]" />
+                          <span>{priceInfo.text}</span>
+                        </p>
+                      )}
                     </div>
 
-                    {priceInfo.isDiscounted && priceInfo.text && (
-                      <p className="text-xs text-[#007A31] font-bold mt-1.5 flex items-center gap-1">
-                        <Tag className="w-3 h-3 text-[#00C750]" />
-                        <span>{priceInfo.text}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Features List */}
-                  <ul className="space-y-3 flex-1 mb-6 sm:mb-8">
-                    {Array.isArray(p.features) && p.features.map((f: any, j: number) => (
-                      <li
-                        key={j}
-                        className="flex items-center justify-between text-xs sm:text-sm font-medium text-gray-700 border-b border-[#E5E7EB]/40 pb-2.5 last:border-0 last:pb-0 gap-2"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#E6FDF0] text-[#00C750] rounded-full flex items-center justify-center shrink-0">
-                            <MdCheck className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    <ul className="space-y-3 flex-1 mb-8">
+                      {Array.isArray(p.features) && p.features.map((f: any, j: number) => (
+                        <li
+                          key={j}
+                          className="flex items-center justify-between text-sm font-medium text-gray-700 border-b border-[#E5E7EB]/40 pb-2.5 last:border-0 last:pb-0 gap-2"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-5 h-5 bg-[#E6FDF0] text-[#00C750] rounded-full flex items-center justify-center shrink-0">
+                              <MdCheck className="w-3 h-3" />
+                            </div>
+                            <span className="text-gray-600">{f.label}</span>
                           </div>
-                          <span className="text-gray-600">{f.label}</span>
-                        </div>
-                        <span className="font-bold text-gray-900 text-right shrink-0">{f.value}</span>
-                      </li>
-                    ))}
-                  </ul>
+                          <span className="font-bold text-gray-900 text-right shrink-0">{f.value}</span>
+                        </li>
+                      ))}
+                    </ul>
 
-                  {/* Button */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedPlan(p.name);
-                    }}
-                    className={`w-full py-3 sm:py-3.5 rounded-xl font-bold text-center mt-auto transition-all cursor-pointer text-xs sm:text-sm flex items-center justify-center gap-2 ${isSelected
-                        ? "bg-[#00E35B] text-[#041418] hover:bg-[#00C750] shadow-md shadow-[#00E35B]/20"
-                        : p.highlight
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setSelectedPlan(p.name); }}
+                      className={`w-full py-3.5 rounded-xl font-bold text-center mt-auto transition-all cursor-pointer text-sm flex items-center justify-center gap-2 ${
+                        isSelected
+                          ? "bg-[#00E35B] text-[#041418] hover:bg-[#00C750] shadow-md shadow-[#00E35B]/20"
+                          : p.highlight
                           ? "bg-[#082830] text-white hover:bg-black"
                           : "bg-white hover:bg-gray-50 border border-[#E5E7EB] text-[#082830]"
                       }`}
-                  >
-                    {isSelected ? (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 text-[#041418]" />
-                        <span>Selected Plan</span>
-                      </>
-                    ) : (
-                      <span>Select {p.name}</span>
-                    )}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                    >
+                      {isSelected ? (
+                        <><CheckCircle2 className="w-4 h-4 text-[#041418]" /><span>Selected Plan</span></>
+                      ) : (
+                        <span>Select {p.name}</span>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
 
-          {/* Bottom Coupon & Submit Section */}
-          <div className="max-w-md mx-auto w-full space-y-4">
-            {/* Coupon Code Section */}
-            <div className="p-3.5 rounded-2xl bg-white border border-[#E5E7EB] shadow-2xs space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#082830] flex items-center gap-1.5">
-                  <Tag className="w-3.5 h-3.5 text-[#00C750]" />
-                  Have a coupon code?
-                </span>
-                {appliedCoupon && (
-                  <button
-                    type="button"
-                    onClick={handleRemoveCoupon}
-                    className="text-[11px] text-gray-500 hover:text-red-500 font-semibold cursor-pointer"
-                  >
-                    Remove
-                  </button>
+            {/* ── Coupon section — inline on desktop, hidden on mobile (in sticky CTA) ── */}
+            <div className="hidden md:block max-w-md mx-auto w-full space-y-4 mb-6">
+              <div className="p-3.5 rounded-2xl bg-white border border-[#E5E7EB] shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#082830] flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5 text-[#00C750]" />
+                    Have a coupon code?
+                  </span>
+                  {appliedCoupon && (
+                    <button type="button" onClick={handleRemoveCoupon} className="text-[11px] text-gray-500 hover:text-red-500 font-semibold cursor-pointer">
+                      Remove
+                    </button>
+                  )}
+                </div>
+                {!appliedCoupon ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      placeholder="ENTER CODE"
+                      onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(""); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleApplyCoupon(); } }}
+                      className="flex-1 bg-[#F9FAFB] border border-[#E5E7EB] focus:border-[#00E35B] focus:bg-white rounded-xl px-3 py-2 text-xs font-mono font-bold text-[#082830] uppercase outline-none transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      disabled={validatingCoupon || !couponInput.trim()}
+                      className="px-4 py-2 bg-[#082830] hover:bg-black text-white text-xs font-bold rounded-xl disabled:opacity-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      {validatingCoupon && <Loader2 className="w-3 h-3 animate-spin" />}
+                      <span>Apply</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-[#E6FDF0] border border-[#00E35B]/30 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-[#00C750] shrink-0" />
+                      <span className="font-mono font-bold text-[#082830]">{appliedCoupon.code}</span>
+                      <span className="text-[#007A31] font-semibold">({appliedCoupon.discountText})</span>
+                    </div>
+                  </div>
+                )}
+                {couponError && (
+                  <p className="text-[11px] text-red-500 font-medium flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{couponError}</span>
+                  </p>
                 )}
               </div>
 
-              {!appliedCoupon ? (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={couponInput}
-                    placeholder="ENTER CODE"
-                    onChange={(e) => {
-                      setCouponInput(e.target.value.toUpperCase());
-                      setCouponError("");
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleApplyCoupon();
-                      }
-                    }}
-                    className="flex-1 bg-[#F9FAFB] border border-[#E5E7EB] focus:border-[#00E35B] focus:bg-white rounded-xl px-3 py-2 text-xs font-mono font-bold text-[#082830] uppercase outline-none transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleApplyCoupon}
-                    disabled={validatingCoupon || !couponInput.trim()}
-                    className="px-4 py-2 bg-[#082830] hover:bg-black text-white text-xs font-bold rounded-xl disabled:opacity-50 transition-colors flex items-center gap-1.5 cursor-pointer"
-                  >
-                    {validatingCoupon && <Loader2 className="w-3 h-3 animate-spin" />}
-                    <span>Apply</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between p-2 rounded-xl bg-[#E6FDF0] border border-[#00E35B]/30 text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-[#00C750] shrink-0" />
-                    <span className="font-mono font-bold text-[#082830]">{appliedCoupon.code}</span>
-                    <span className="text-[#007A31] font-semibold">({appliedCoupon.discountText})</span>
-                  </div>
-                </div>
-              )}
-
-              {couponError && (
-                <p className="text-[11px] text-red-500 font-medium flex items-center gap-1">
-                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                  <span>{couponError}</span>
-                </p>
-              )}
+              {/* Desktop CTA */}
+              <button
+                type="button"
+                onClick={() => handleSubmitPlan()}
+                disabled={submitting}
+                className="w-full rounded-2xl bg-[#00E35B] hover:bg-[#00C750] disabled:opacity-50 disabled:cursor-not-allowed text-[#041418] font-black py-4 text-sm transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.99] cursor-pointer"
+              >
+                {submitting ? (
+                  <><Loader size="sm" /> Finalizing Setup...</>
+                ) : isPaid ? (
+                  <><span>Continue to Billing for {selectedPlan}</span> <ArrowRight className="h-4 w-4" /></>
+                ) : (
+                  <><CheckCircle2 className="h-4 w-4" /> Complete Setup with {selectedPlan}</>
+                )}
+              </button>
+              <div className="flex items-center justify-center gap-4 text-[11px] text-gray-500 pt-1 font-medium text-center">
+                <span>✓ No hidden charges</span>
+                <span>•</span>
+                <span>Switch or cancel anytime</span>
+              </div>
             </div>
 
-            {/* Complete Setup or Continue to Billing */}
+          </div>
+        </div>
+
+        {/* ════════════════════════════════════════════
+            MOBILE STICKY BOTTOM CTA BAR
+            (hidden on md+)
+            ════════════════════════════════════════════ */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#E5E7EB] px-4 pt-3 pb-5 shadow-2xl">
+
+          {/* Coupon row */}
+          <div className="mb-3">
+            {!appliedCoupon && (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={couponInput}
+                  placeholder="Have a coupon code?"
+                  onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(""); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleApplyCoupon(); } }}
+                  className="flex-1 bg-[#F9FAFB] border border-[#E5E7EB] focus:border-[#00E35B] focus:bg-white rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-[#082830] uppercase outline-none transition-colors placeholder:normal-case placeholder:font-sans placeholder:font-semibold placeholder:text-gray-400 placeholder:not-italic"
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyCoupon}
+                  disabled={validatingCoupon || !couponInput.trim()}
+                  className="px-4 py-2 bg-[#082830] hover:bg-black text-white text-xs font-bold rounded-xl disabled:opacity-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  {validatingCoupon ? <Loader2 className="w-3 h-3 animate-spin" /> : <span>Apply</span>}
+                </button>
+              </div>
+            )}
+
+            {couponError && (
+              <p className="text-[11px] text-red-500 font-medium flex items-center gap-1 mt-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{couponError}</span>
+              </p>
+            )}
+
+            {appliedCoupon && (
+              <div className="flex items-center justify-between p-2 rounded-xl bg-[#E6FDF0] border border-[#00E35B]/30 text-xs mb-2">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-[#00C750] shrink-0" />
+                  <span className="font-mono font-bold text-[#082830]">{appliedCoupon.code}</span>
+                  <span className="text-[#007A31] font-semibold">({appliedCoupon.discountText})</span>
+                </div>
+                <button type="button" onClick={handleRemoveCoupon} className="text-[11px] text-gray-500 hover:text-red-500 font-semibold cursor-pointer">
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Selected plan summary + CTA */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] text-gray-500 font-medium">Selected plan</div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-sm font-black text-[#082830]">{selectedPlan}</span>
+                <span className="text-xs text-gray-500">
+                  — {selectedPriceInfo.isFree ? "Free forever" : `LKR ${Number(selectedPriceInfo.finalPrice).toLocaleString()}/mo`}
+                </span>
+              </div>
+            </div>
             <button
               type="button"
               onClick={() => handleSubmitPlan()}
               disabled={submitting}
-              className="w-full rounded-2xl bg-[#00E35B] hover:bg-[#00C750]
-                         disabled:opacity-50 disabled:cursor-not-allowed
-                         text-[#041418] font-black py-4 text-sm transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.99] cursor-pointer"
+              className="shrink-0 rounded-2xl bg-[#00E35B] hover:bg-[#00C750] disabled:opacity-50 disabled:cursor-not-allowed text-[#041418] font-black px-5 py-3.5 text-sm transition-all flex items-center justify-center gap-2 shadow-md active:scale-[0.98] cursor-pointer whitespace-nowrap"
             >
               {submitting ? (
-                <><Loader size="sm" /> Finalizing Setup...</>
+                <Loader size="sm" />
               ) : isPaid ? (
-                <><span>Continue to Billing for {selectedPlan}</span> <ArrowRight className="h-4 w-4" /></>
+                <><span>Continue</span><ArrowRight className="h-4 w-4" /></>
               ) : (
-                <><CheckCircle2 className="h-4 w-4" /> Complete Setup with {selectedPlan}</>
+                <><CheckCircle2 className="h-4 w-4" /><span>Complete Setup</span></>
               )}
             </button>
-
-            <div className="flex items-center justify-center gap-4 text-[11px] text-gray-500 pt-1 font-medium text-center">
-              <span>✓ No hidden charges</span>
-              <span>•</span>
-              <span>Switch or cancel anytime</span>
-            </div>
           </div>
+
+          <p className="text-center text-[10px] text-gray-400 font-medium mt-2">
+            ✓ No hidden charges · Switch or cancel anytime
+          </p>
         </div>
 
         {/* Progress Indicators */}
-        <div className="flex justify-center gap-2 mt-12 pb-4">
+        <div className="hidden md:flex justify-center gap-2 py-4">
           <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
           <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
           <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
@@ -970,7 +1146,7 @@ export default function OnboardingPage() {
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") handleNext(); }}
-                        placeholder="e.g. Acme Corp"
+                        placeholder="My Company (Pvt) Ltd."
                         className={inputCls + " pl-11"}
                       />
                       <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
