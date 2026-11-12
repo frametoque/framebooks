@@ -613,7 +613,7 @@ export default function OnboardingPage() {
     const selectedPriceInfo = getFinalPrice(selectedPlanObj?.monthlyPrice ?? selectedPlanObj?.price_monthly ?? 0, true);
 
     return (
-      <div className="min-h-screen bg-[#F9FAFB] text-[#082830] flex flex-col">
+      <div className="min-h-screen md:h-screen md:overflow-hidden bg-[#F9FAFB] text-[#082830] flex flex-col">
 
         {/* ── STICKY HEADER ── */}
         <div className="sticky top-0 z-20 bg-[#F9FAFB]/95 backdrop-blur-sm border-b border-[#E5E7EB]/60 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
@@ -635,22 +635,21 @@ export default function OnboardingPage() {
           </button>
         </div>
 
-        {/* ── SCROLLABLE CONTENT ── */}
-        {/* Extra bottom padding so sticky CTA doesn't overlap last content on mobile */}
-        <div className="flex-1 overflow-y-auto pb-36 md:pb-12 px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
-          <div className="max-w-6xl w-full mx-auto">
+        {/* ── CONTENT (mobile: scrollable · desktop: fixed height flex column) ── */}
+        <div className="flex-1 overflow-y-auto md:overflow-hidden pb-36 md:pb-0 px-4 sm:px-6 lg:px-8 pt-5 md:flex md:flex-col md:min-h-0">
+          <div className="max-w-6xl w-full mx-auto md:flex md:flex-col md:flex-1 md:min-h-0">
 
             {/* Step badge + heading */}
-            <div className="text-center max-w-2xl mx-auto mb-7 sm:mb-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E6FDF0] text-[#007A31] border border-[#00E35B]/20 text-xs font-bold mb-3">
+            <div className="text-center max-w-2xl mx-auto mb-5 md:mb-3 md:shrink-0">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E6FDF0] text-[#007A31] border border-[#00E35B]/20 text-xs font-bold mb-2">
                 <span>Step 3 of 4</span>
                 <span>•</span>
                 <span>Workspace Setup</span>
               </div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#082830] tracking-tight">
+              <h1 className="text-3xl sm:text-4xl lg:text-3xl font-black text-[#082830] tracking-tight">
                 Start free. Upgrade when you grow<span className="text-[#00E35B]">.</span>
               </h1>
-              <p className="text-gray-500 text-sm sm:text-base mt-2.5 leading-relaxed">
+              <p className="text-gray-500 text-sm mt-1.5 leading-relaxed">
                 Select the pricing plan for <strong className="text-[#082830]">{businessName || "your business"}</strong>. Switch or cancel anytime.
               </p>
             </div>
@@ -778,7 +777,7 @@ export default function OnboardingPage() {
                 DESKTOP: Full 3-column plan grid
                 (hidden on <md)
                 ════════════════════════════════════════════ */}
-            <div className="hidden md:grid md:grid-cols-3 gap-6 lg:gap-8 items-stretch max-w-5xl mx-auto mb-10">
+            <div className="hidden md:grid md:grid-cols-3 md:grid-rows-[minmax(0,1fr)] gap-4 lg:gap-5 items-stretch max-w-5xl mx-auto mb-3 md:flex-1 md:min-h-0 md:overflow-visible pt-4">
               {displayPlans.map((p: any, i: number) => {
                 const isSelected = selectedPlan === p.name;
                 const priceInfo = getFinalPrice(p.monthlyPrice ?? p.price_monthly ?? 0, isSelected);
@@ -787,7 +786,7 @@ export default function OnboardingPage() {
                   <div
                     key={p.name || i}
                     onClick={() => setSelectedPlan(p.name)}
-                    className={`bg-white rounded-3xl p-7 border relative shadow-xs hover:shadow-lg transition-all flex flex-col h-full cursor-pointer ${
+                    className={`bg-white rounded-3xl p-5 border relative shadow-xs hover:shadow-lg transition-all flex flex-col h-full min-h-0 cursor-pointer ${
                       isSelected
                         ? "border-[#00E35B] ring-2 ring-[#00E35B] shadow-md bg-[#E6FDF0]/10"
                         : p.highlight
@@ -808,16 +807,16 @@ export default function OnboardingPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500 mb-6 min-h-[40px] leading-relaxed">{p.description}</p>
+                    <p className="text-xs text-gray-500 mb-3 leading-relaxed shrink-0 hidden">{p.description}</p>
 
-                    <div className="mb-6 pb-5 border-b border-[#E5E7EB]/60">
+                    <div className="mb-3 pb-3 border-b border-[#E5E7EB]/60 shrink-0">
                       <div className="flex items-baseline gap-1.5 flex-wrap">
                         {priceInfo.isDiscounted && !priceInfo.isFree && (
                           <span className="text-lg line-through text-gray-400 font-medium">
                             LKR {Number(p.monthlyPrice ?? p.price_monthly).toLocaleString()}
                           </span>
                         )}
-                        <span className="text-4xl font-black text-gray-900 tracking-tight">
+                        <span className="text-3xl font-black text-gray-900 tracking-tight">
                           {priceInfo.isFree ? "Free" : `LKR ${Number(priceInfo.finalPrice).toLocaleString()}`}
                         </span>
                         <span className="text-gray-500 font-medium text-sm">
@@ -832,14 +831,16 @@ export default function OnboardingPage() {
                       )}
                     </div>
 
-                    <ul className="space-y-3 flex-1 mb-8">
-                      {Array.isArray(p.features) && p.features.map((f: any, j: number) => (
-                        <li
-                          key={j}
-                          className="flex items-center justify-between text-sm font-medium text-gray-700 border-b border-[#E5E7EB]/40 pb-2.5 last:border-0 last:pb-0 gap-2"
-                        >
+                    {/* Feature list with scroll-fade hint */}
+                    <div className="flex-1 min-h-0 relative">
+                      <ul className="space-y-0 h-full overflow-y-auto mb-3 pr-0.5 scrollbar-thin">
+                        {Array.isArray(p.features) && p.features.map((f: any, j: number) => (
+                          <li
+                            key={j}
+                            className="flex items-center justify-between text-xs font-medium text-gray-700 border-b border-[#E5E7EB]/40 py-2 last:border-0 gap-2"
+                          >
                           <div className="flex items-center gap-2.5">
-                            <div className="w-5 h-5 bg-[#E6FDF0] text-[#00C750] rounded-full flex items-center justify-center shrink-0">
+                            <div className="w-4 h-4 bg-[#E6FDF0] text-[#00C750] rounded-full flex items-center justify-center shrink-0">
                               <MdCheck className="w-3 h-3" />
                             </div>
                             <span className="text-gray-600">{f.label}</span>
@@ -847,7 +848,10 @@ export default function OnboardingPage() {
                           <span className="font-bold text-gray-900 text-right shrink-0">{f.value}</span>
                         </li>
                       ))}
-                    </ul>
+                      </ul>
+                      {/* Fade gradient — signals more features below */}
+                      <div className={`pointer-events-none absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t ${isSelected ? "from-[#f0fdf6]" : "from-white"} to-transparent rounded-b-xl`} />
+                    </div>
 
                     <button
                       type="button"
@@ -872,7 +876,7 @@ export default function OnboardingPage() {
             </div>
 
             {/* ── Coupon section — inline on desktop, hidden on mobile (in sticky CTA) ── */}
-            <div className="hidden md:block max-w-md mx-auto w-full space-y-4 mb-6">
+            <div className="hidden md:block max-w-md mx-auto w-full space-y-2 mb-1 md:shrink-0">
               <div className="p-3.5 rounded-2xl bg-white border border-[#E5E7EB] shadow-2xs space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[#082830] flex items-center gap-1.5">
@@ -927,7 +931,7 @@ export default function OnboardingPage() {
                 type="button"
                 onClick={() => handleSubmitPlan()}
                 disabled={submitting}
-                className="w-full rounded-2xl bg-[#00E35B] hover:bg-[#00C750] disabled:opacity-50 disabled:cursor-not-allowed text-[#041418] font-black py-4 text-sm transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.99] cursor-pointer"
+                className="w-full rounded-2xl bg-[#00E35B] hover:bg-[#00C750] disabled:opacity-50 disabled:cursor-not-allowed text-[#041418] font-black py-3 text-sm transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.99] cursor-pointer"
               >
                 {submitting ? (
                   <><Loader size="sm" /> Finalizing Setup...</>
@@ -1027,14 +1031,6 @@ export default function OnboardingPage() {
           <p className="text-center text-[10px] text-gray-400 font-medium mt-2">
             ✓ No hidden charges · Switch or cancel anytime
           </p>
-        </div>
-
-        {/* Progress Indicators */}
-        <div className="hidden md:flex justify-center gap-2 py-4">
-          <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
-          <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
-          <div className="h-1.5 rounded-full w-8 bg-[#00E35B] transition-all" />
-          <div className="h-1.5 rounded-full w-4 bg-[#F9FAFB] border border-[#E5E7EB] transition-all" />
         </div>
       </div>
     );
