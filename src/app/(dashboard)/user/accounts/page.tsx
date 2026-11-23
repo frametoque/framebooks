@@ -520,15 +520,6 @@ export default function AccountsPage() {
                   )}
                 </div>
               </div>
-              
-              {bank && (acc.ownerName || acc.bankName || acc.accountNumber || acc.branch) && (
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-6 space-y-1">
-                  {acc.ownerName && <p>Owner: <span className="text-foreground font-medium">{acc.ownerName}</span></p>}
-                  {acc.bankName && <p>Bank: {acc.bankName}</p>}
-                  {acc.accountNumber && <p>A/C: {acc.accountNumber}</p>}
-                  {acc.branch && <p>Branch: {acc.branch}</p>}
-                </div>
-              )}
 
               {debt && acc.branch && (
                 <div className="text-xs text-gray-500 dark:text-gray-400 mb-6 space-y-1">
