@@ -11,9 +11,9 @@ const sql =
   postgres(process.env.DATABASE_URL!, {
     prepare: false,
     ssl: "require",
-    max: 20,
+    max: process.env.NODE_ENV === "production" ? 5 : 20,
     connect_timeout: 15,
-    idle_timeout: 30,
+    idle_timeout: 20,
     onnotice: () => {},
   });
 
