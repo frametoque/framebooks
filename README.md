@@ -117,9 +117,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 7. Deployment Checklist
+## 7. Deployment & Operations
 
-1. **Environment Variables**: Configure all secrets in host provider (Vercel, Cloudflare, or Docker). Ensure `APP_MASTER_KEY` is securely backed up in an offline password manager.
-2. **Database Verification**: Ensure `DATABASE_URL` has `sslmode=require` and point-in-time recovery is enabled in the PostgreSQL host.
-3. **Automated CI**: GitHub Actions automatically runs `npm ci`, `npm test`, and `npm run typecheck` prior to production deployments.
-4. **Health Check**: Confirm `/api/health` returns HTTP 200 after deployment.
+1. **Deployment Architecture**: Refer to [DEPLOYMENT.md](DEPLOYMENT.md) for target configurations (Vercel serverless in `sin1` and standalone Node.js container hosting).
+2. **Performance Optimization**: Refer to [PERFORMANCE.md](PERFORMANCE.md) for Active CPU budget limits, prefetching guidelines, and database connection pooling.
+3. **Environment Variables**: Configure all secrets in host provider (Vercel, Cloudflare, or Docker). Ensure `APP_MASTER_KEY` is securely backed up in an offline password manager.
+4. **Database Verification**: Ensure `DATABASE_URL` has `sslmode=require` and point-in-time recovery is enabled in the PostgreSQL host.
+5. **Automated CI**: GitHub Actions automatically runs `npm ci`, `npm test`, and `npm run typecheck` prior to production deployments.
+6. **Health Check**: Confirm `/api/health` returns HTTP 200 after deployment.
