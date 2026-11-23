@@ -269,61 +269,205 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
     return (
       <div className="space-y-6">
         {/* Six Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-4 animate-pulse">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 animate-pulse">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-3xl p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 shrink-0" />
-              <div className="space-y-2 flex-1">
-                <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-20" />
-                <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-28" />
+            <div key={i} className="bg-card border border-border rounded-3xl p-4 sm:p-5 flex items-center gap-3.5 shadow-xs">
+              <div className="w-11 h-11 rounded-2xl bg-black/5 dark:bg-white/5 shrink-0" />
+              <div className="space-y-2 flex-1 min-w-0">
+                <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-16" />
+                <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-24" />
               </div>
             </div>
           ))}
         </div>
 
-        {/* Tab Buttons */}
-        <div className="flex flex-wrap gap-2 animate-pulse">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-9 bg-card border border-border rounded-full w-28" />
+        {/* Tab Buttons Row */}
+        <div className="flex flex-wrap items-center gap-2 animate-pulse mb-6">
+          {[140, 110, 125, 105, 105, 95, 110, 115].map((w, i) => (
+            <div
+              key={i}
+              className="h-9 bg-card border border-border rounded-full"
+              style={{ width: `${w}px` }}
+            />
           ))}
         </div>
-        
-        {/* Two side-by-side charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 animate-pulse">
-          <div className="bg-card border border-border rounded-3xl p-6 space-y-6">
-            <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-40" />
-            <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="h-4 bg-muted rounded-full w-20" />
-                  <div className="h-8 bg-black/10 dark:bg-white/10 rounded-2xl flex-1" />
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="bg-card border border-border rounded-3xl p-6 space-y-6">
-            <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-40" />
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="h-4 bg-muted rounded-full w-20" />
-                  <div className="h-8 bg-black/10 dark:bg-white/10 rounded-2xl flex-1" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
 
-        {/* Bottom Client Revenue Chart */}
-        <div className="bg-card border border-border rounded-3xl p-6 animate-pulse space-y-6">
-          <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-48" />
-          <div className="space-y-3">
-            {[...Array(2)].map((_, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <div className="h-4 bg-muted rounded-full w-20" />
-                <div className="h-8 bg-black/10 dark:bg-white/10 rounded-2xl flex-1" />
+        {/* 1. Hero Card: Cash Over Time */}
+        <div className="bg-card border border-border rounded-3xl p-6 shadow-xs space-y-6 animate-pulse">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-36" />
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="h-8 w-64 bg-black/5 dark:bg-white/5 border border-border rounded-2xl" />
+              <div className="h-8 w-44 bg-black/5 dark:bg-white/5 border border-border rounded-2xl" />
+            </div>
+          </div>
+
+          {/* Hero Chart Canvas Placeholder */}
+          <div className="h-64 sm:h-72 lg:h-80 w-full rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-border/60 flex items-end justify-between gap-4 p-6">
+            <div className="w-full h-full flex flex-col justify-between py-2">
+              <div className="h-px bg-black/5 dark:bg-white/5 w-full" />
+              <div className="h-px bg-black/5 dark:bg-white/5 w-full" />
+              <div className="h-px bg-black/5 dark:bg-white/5 w-full" />
+              <div className="h-px bg-black/5 dark:bg-white/5 w-full" />
+            </div>
+          </div>
+
+          {/* Highlight Insights Footer: 3 Metric Columns */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 border-t border-border pt-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="p-3 bg-black/[0.02] dark:bg-card border border-border rounded-2xl space-y-2">
+                <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-28" />
+                <div className="h-5 bg-black/10 dark:bg-white/10 rounded-full w-24" />
+                <div className="h-2.5 bg-black/5 dark:bg-white/5 rounded-full w-20" />
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* 2. Middle Row: Income & Expenses Breakdown (Monochromatic Donut Charts) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 animate-pulse">
+          {/* Income Breakdown Card */}
+          <div className="bg-card border border-border rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-6">
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <div className="h-5 bg-black/10 dark:bg-white/10 rounded-full w-24" />
+                <div className="h-7 w-40 rounded-2xl bg-black/5 dark:bg-white/5 border border-border" />
+              </div>
+
+              {/* Donut Chart Skeleton */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-4">
+                <div className="w-36 h-36 rounded-full border-[14px] border-black/10 dark:border-white/10 shrink-0 flex items-center justify-center">
+                  <div className="w-12 h-3 bg-black/10 dark:bg-white/10 rounded-full" />
+                </div>
+                <div className="space-y-3 w-full sm:w-48">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-black/15 dark:bg-white/15 shrink-0" />
+                        <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-20" />
+                      </div>
+                      <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-10" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Insight Footer */}
+            <div className="grid grid-cols-2 gap-3 border-t border-border pt-4">
+              <div className="p-3 bg-black/[0.02] dark:bg-card border border-border rounded-2xl space-y-1.5">
+                <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-20" />
+                <div className="h-4 bg-black/10 dark:bg-white/10 rounded-full w-16" />
+              </div>
+              <div className="p-3 bg-black/[0.02] dark:bg-card border border-border rounded-2xl space-y-1.5">
+                <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-20" />
+                <div className="h-4 bg-black/10 dark:bg-white/10 rounded-full w-16" />
+              </div>
+            </div>
+          </div>
+
+          {/* Expenses Breakdown Card */}
+          <div className="bg-card border border-border rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-6">
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <div className="h-5 bg-black/10 dark:bg-white/10 rounded-full w-28" />
+                <div className="h-7 w-40 rounded-2xl bg-black/5 dark:bg-white/5 border border-border" />
+              </div>
+
+              {/* Donut Chart Skeleton */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-4">
+                <div className="w-36 h-36 rounded-full border-[14px] border-black/10 dark:border-white/10 shrink-0 flex items-center justify-center">
+                  <div className="w-12 h-3 bg-black/10 dark:bg-white/10 rounded-full" />
+                </div>
+                <div className="space-y-3 w-full sm:w-48">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-black/15 dark:bg-white/15 shrink-0" />
+                        <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-20" />
+                      </div>
+                      <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-10" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Insight Footer */}
+            <div className="grid grid-cols-2 gap-3 border-t border-border pt-4">
+              <div className="p-3 bg-black/[0.02] dark:bg-card border border-border rounded-2xl space-y-1.5">
+                <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-20" />
+                <div className="h-4 bg-black/10 dark:bg-white/10 rounded-full w-16" />
+              </div>
+              <div className="p-3 bg-black/[0.02] dark:bg-card border border-border rounded-2xl space-y-1.5">
+                <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-20" />
+                <div className="h-4 bg-black/10 dark:bg-white/10 rounded-full w-16" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Bottom Row: Top Clients & Future Predictions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 animate-pulse">
+          {/* Top Clients Card */}
+          <div className="bg-card border border-border rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-6">
+            <div>
+              <div className="h-5 bg-black/10 dark:bg-white/10 rounded-full w-48 mb-6" />
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-32" />
+                      <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-16" />
+                    </div>
+                    <div className="h-2 bg-black/5 dark:bg-white/5 rounded-full w-full" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom Insight Footer */}
+            <div className="grid grid-cols-2 gap-3 border-t border-border pt-4">
+              <div className="p-3 bg-black/[0.02] dark:bg-card border border-border rounded-2xl space-y-1.5">
+                <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-24" />
+                <div className="h-4 bg-black/10 dark:bg-white/10 rounded-full w-16" />
+              </div>
+              <div className="p-3 bg-black/[0.02] dark:bg-card border border-border rounded-2xl space-y-1.5">
+                <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-24" />
+                <div className="h-4 bg-black/10 dark:bg-white/10 rounded-full w-16" />
+              </div>
+            </div>
+          </div>
+
+          {/* Future Predictions Card */}
+          <div className="bg-card border border-border rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-6">
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <div className="h-5 bg-black/10 dark:bg-white/10 rounded-full w-40" />
+                <div className="h-4 w-32 rounded-full bg-black/5 dark:bg-white/5" />
+              </div>
+
+              {/* Area Chart Skeleton Canvas */}
+              <div className="h-48 sm:h-56 lg:h-64 w-full rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-border/60 flex items-end justify-between gap-4 p-6">
+                <div className="w-full h-full flex flex-col justify-between py-2">
+                  <div className="h-px bg-black/5 dark:bg-white/5 w-full" />
+                  <div className="h-px bg-black/5 dark:bg-white/5 w-full" />
+                  <div className="h-px bg-black/5 dark:bg-white/5 w-full" />
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Insight Footer */}
+            <div className="grid grid-cols-2 gap-3 border-t border-border pt-4">
+              <div className="p-3 bg-black/[0.02] dark:bg-card border border-border rounded-2xl space-y-1.5">
+                <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-24" />
+                <div className="h-4 bg-black/10 dark:bg-white/10 rounded-full w-16" />
+              </div>
+              <div className="p-3 bg-black/[0.02] dark:bg-card border border-border rounded-2xl space-y-1.5">
+                <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-24" />
+                <div className="h-4 bg-black/10 dark:bg-white/10 rounded-full w-16" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -617,7 +761,7 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
                             {activeTab === 'general_ledger' && <td className="p-4 text-gray-700 dark:text-gray-300 text-xs">{displayAccount}</td>}
                             <td className="p-4 text-foreground">{t.description || "-"}</td>
                             <td className="p-4">
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${t.referenceType === 'Income' ? 'bg-emerald-100/80 text-emerald-800 border border-emerald-200/60 dark:bg-brand-500/20 dark:text-brand-500 dark:border-transparent' : t.referenceType === 'Expense' ? 'bg-rose-100/80 text-rose-800 border border-rose-200/60 dark:bg-red-500/20 dark:text-red-500 dark:border-transparent' : 'bg-purple-100/80 text-purple-800 border border-purple-200/60 dark:bg-purple-500/20 dark:text-purple-400 dark:border-transparent'}`}>
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${t.referenceType === 'Income' ? 'bg-emerald-100/80 text-emerald-800 border border-emerald-200/60 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-transparent' : t.referenceType === 'Expense' ? 'bg-rose-100/80 text-rose-800 border border-rose-200/60 dark:bg-red-500/20 dark:text-red-500 dark:border-transparent' : 'bg-purple-100/80 text-purple-800 border border-purple-200/60 dark:bg-purple-500/20 dark:text-purple-400 dark:border-transparent'}`}>
                                 {t.referenceType.toUpperCase()}
                               </span>
                             </td>

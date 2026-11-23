@@ -21,6 +21,19 @@ import {
   switchActiveTenant, 
   respondToTeamInvitation 
 } from "@/app/(dashboard)/user/actions/tenants";
+import { 
+  isGta6Palette, 
+  GTA6_PALETTE_ID, 
+  isF1Palette, 
+  F1_PALETTE_ID,
+  isSlCricketPalette,
+  SL_CRICKET_PALETTE_ID,
+  isSlFlagPalette,
+  SL_FLAG_PALETTE_ID,
+  isChristmasPalette,
+  CHRISTMAS_PALETTE_ID,
+  resolvePaletteId
+} from "@/lib/theme/accent";
 
 interface TenantInfoProps {
   name?: string | null;
@@ -119,8 +132,8 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
     setGeneralMessage(null);
     try {
       const targetBiz = businesses.find((b) => b.id === targetId);
-      if (targetBiz?.accent_color && /^#[0-9a-fA-F]{6}$/i.test(targetBiz.accent_color)) {
-        const clean = targetBiz.accent_color.toUpperCase();
+      const clean = resolvePaletteId(targetBiz?.accent_color);
+      if (clean) {
         document.cookie = `fb_accent_color=${encodeURIComponent(clean)}; path=/; max-age=31536000; SameSite=Lax`;
         try {
           localStorage.setItem("framebooks_accent_color", clean);

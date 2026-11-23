@@ -534,7 +534,7 @@ export default function OnboardingPage() {
               {gatewayStatus?.cardPaymentsDisabled && (
                 <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
-                  <span>Card payments are disabled on live while Payments.lk test keys (<code>sk_test_*</code>) are configured.</span>
+                  <span>Card payments are disabled on live.</span>
                 </div>
               )}
 
@@ -547,7 +547,7 @@ export default function OnboardingPage() {
                     ? "opacity-50 cursor-not-allowed bg-gray-300 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
                     : "bg-[#00E35B] hover:bg-[#00C750] text-[#041418] cursor-pointer"
                 }`}
-                title={gatewayStatus?.cardPaymentsDisabled ? "Card payments are disabled on live with test key" : undefined}
+                title={gatewayStatus?.cardPaymentsDisabled ? "Card payments are disabled on live" : undefined}
               >
                 {processingPayment ? (
                   <>

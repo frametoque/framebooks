@@ -3,8 +3,11 @@ export const SETTINGS_SLUG_TO_TAB: Record<string, string> = {
   "profile": "profile",
   "business": "business",
   "appearance": "appearance",
-  "invoice-layout": "appearance",
-  "invoice_layout": "appearance",
+  "theme": "appearance",
+  "notifications": "notifications",
+  "reminders": "notifications",
+  "invoice-layout": "invoice-layout",
+  "invoice_layout": "invoice-layout",
   "billing": "billing",
   "team": "team",
   "roles": "team",
@@ -20,6 +23,8 @@ export const SETTINGS_TAB_TO_SLUG: Record<string, string> = {
   "profile": "security",
   "business": "business",
   "appearance": "appearance",
+  "notifications": "notifications",
+  "invoice-layout": "invoice-layout",
   "billing": "billing",
   "team": "team",
   "audit_logs": "audit-logs",
@@ -31,7 +36,9 @@ export const SETTINGS_TAB_TO_SLUG: Record<string, string> = {
 export const SETTINGS_TAB_TITLES: Record<string, string> = {
   profile: "Security",
   business: "Business Profile",
-  appearance: "Appearance & Layouts",
+  appearance: "Appearance",
+  notifications: "Notifications & Reminders",
+  "invoice-layout": "Invoice Layouts & Fields",
   billing: "Billing & Plans",
   team: "Team & Permissions",
   audit_logs: "Audit Logs",
@@ -62,8 +69,8 @@ export function isSettingsSectionAllowed(
     return tab !== "export";
   }
 
-  // Profile & Appearance (theme/layouts) are accessible to all workspace members
-  if (tab === "profile" || tab === "appearance") {
+  // Profile, Theme, Invoice Layouts & Notifications are accessible to all workspace members
+  if (tab === "profile" || tab === "appearance" || tab === "invoice-layout" || tab === "notifications") {
     return true;
   }
 

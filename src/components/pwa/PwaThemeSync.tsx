@@ -28,7 +28,7 @@ export async function promptPwaInstall(): Promise<boolean> {
 }
 
 export default function PwaThemeSync() {
-  const { accent } = useAccentTheme();
+  const { accent, themeId } = useAccentTheme();
   const [canInstall, setCanInstall] = useState(false);
 
   // Sync theme-color and PWA manifest attributes with user selected color
@@ -36,6 +36,7 @@ export default function PwaThemeSync() {
     if (typeof window === "undefined") return;
 
     const syncColor = accent || "#00E35B";
+    const cookieColor = themeId || syncColor;
 
     // 1. Update or create <meta name="theme-color">
     let metaTheme = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
@@ -57,8 +58,8 @@ export default function PwaThemeSync() {
 
     // 3. Set cookie so Next.js server actions & manifest SSR read the user's color
     try {
-      if (syncColor && syncColor.toUpperCase() !== "#00E35B") {
-        document.cookie = `fb_accent_color=${encodeURIComponent(syncColor)}; path=/; max-age=31536000; SameSite=Lax`;
+      if (cookieColor && cookieColor.toUpperCase() !== "#00E35B") {
+        document.cookie = `fb_accent_color=${encodeURIComponent(cookieColor)}; path=/; max-age=31536000; SameSite=Lax`;
       }
     } catch {}
 
@@ -68,7 +69,7 @@ export default function PwaThemeSync() {
       const cleanHex = syncColor.replace("#", "");
       manifestLink.href = `/manifest.webmanifest?v=${encodeURIComponent(cleanHex)}`;
     }
-  }, [accent]);
+  }, [accent, themeId]);
 
   // Register service worker and listen for PWA install prompt
   useEffect(() => {

@@ -607,10 +607,6 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
               <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-10">
                 {/* Left: Text Content */}
                 <div className="max-w-2xl text-left">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#041418]/10 text-[#041418] text-xs font-bold uppercase tracking-wider mb-3">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#041418] animate-pulse" />
-                    Get Started Today
-                  </div>
                   <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#041418] tracking-tight leading-tight mb-2.5">
                     Ready to put your finances in order?
                   </h2>

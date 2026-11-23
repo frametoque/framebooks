@@ -13,8 +13,13 @@ export async function getAccounts(startDate?: string, endDate?: string) {
   const end = endDate || '2099-12-31';
 
   const tenantId = await getTenantId();
+
+  // Ensure owner_name columns exist
+  await sql`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS owner_name TEXT`.catch(() => {});
+  await sql`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS owner_name_enc TEXT`.catch(() => {});
+
   const rows = await sql`
-    SELECT id, name, type, bank_name, account_number, account_number_enc, branch, branch_enc, initial_balance, created_at, is_default, is_hidden
+    SELECT id, name, owner_name, owner_name_enc, type, bank_name, account_number, account_number_enc, branch, branch_enc, initial_balance, created_at, is_default, is_hidden
     FROM accounts
     WHERE is_hidden IS NOT TRUE AND tenant_id = ${tenantId}
     ORDER BY created_at ASC
@@ -23,6 +28,20 @@ export async function getAccounts(startDate?: string, endDate?: string) {
   const accounts = rows.map((r: any) => {
     let resolvedAccountNumber = r.account_number || "";
     let resolvedBranch = r.branch || "";
+    let resolvedOwnerName = r.owner_name || "";
+
+    if (r.owner_name_enc) {
+      try {
+        resolvedOwnerName = decryptField(r.owner_name_enc, {
+          tenantId: tenantId || 1,
+          table: "accounts",
+          column: "owner_name",
+          recordId: r.id,
+        });
+      } catch (e) {
+        console.error(`[Crypto] Failed to decrypt owner_name for account ${r.id}:`, e);
+      }
+    }
 
     if (r.account_number_enc) {
       try {
@@ -53,6 +72,7 @@ export async function getAccounts(startDate?: string, endDate?: string) {
     return {
       id: r.id,
       name: r.name,
+      ownerName: resolvedOwnerName,
       type: r.type,
       bankName: r.bank_name || "",
       accountNumber: resolvedAccountNumber,
@@ -103,43 +123,77 @@ export async function getAccounts(startDate?: string, endDate?: string) {
 
   for (const acc of accounts) {
     const id = acc.id;
-    acc.currentBalance += (incAllMap[id] || 0) + (trInAllMap[id] || 0);
-    acc.currentBalance -= (expAllMap[id] || 0) + (trOutAllMap[id] || 0);
-    acc.periodInflow = (incPerMap[id] || 0) + (trInPerMap[id] || 0);
-    acc.periodOutflow = (expPerMap[id] || 0) + (trOutPerMap[id] || 0);
+    const isDebt = String(acc.type || '').toLowerCase().includes('debt') || String(acc.type || '').toLowerCase().includes('loan');
+    const isDebtTaken = isDebt && (
+      String(acc.type || '').toLowerCase().includes('taken') ||
+      String(acc.type || '').toLowerCase().includes('borrow') ||
+      String(acc.type || '').toLowerCase().includes('payable')
+    );
+
+    if (isDebtTaken) {
+      // Debt Taken (Liability / Borrowed from others):
+      // Initial balance is what you owe.
+      // Transfers OUT of this debt account into Bank = borrowing funds (increases debt owed).
+      // Transfers INTO this debt account from Bank = repayments made (decreases debt owed).
+      acc.currentBalance += (trOutAllMap[id] || 0) + (expAllMap[id] || 0);
+      acc.currentBalance -= (trInAllMap[id] || 0) + (incAllMap[id] || 0);
+      acc.periodInflow = (trOutPerMap[id] || 0) + (expPerMap[id] || 0);
+      acc.periodOutflow = (trInPerMap[id] || 0) + (incPerMap[id] || 0);
+    } else {
+      // Normal accounts (Bank, Cash, and Debt Given / Receivable):
+      acc.currentBalance += (incAllMap[id] || 0) + (trInAllMap[id] || 0);
+      acc.currentBalance -= (expAllMap[id] || 0) + (trOutAllMap[id] || 0);
+      acc.periodInflow = (incPerMap[id] || 0) + (trInPerMap[id] || 0);
+      acc.periodOutflow = (expPerMap[id] || 0) + (trOutPerMap[id] || 0);
+    }
   }
 
   return accounts;
 }
 
-export async function createAccount(data: { name: string; type: string; bankName?: string; accountNumber?: string; branch?: string; initialBalance: number; }) {
+export async function createAccount(data: { name: string; ownerName?: string; type: string; bankName?: string; accountNumber?: string; branch?: string; initialBalance: number; }) {
   const { error: rbacError } = await requirePermission('accounts', 'update');
   if (rbacError) throw new Error(rbacError);
+
+  const isDebtType = String(data.type || '').toLowerCase().includes('debt') || String(data.type || '').toLowerCase().includes('loan');
+  if (isDebtType) {
+    const { getTenantPlan } = await import("./plan");
+    const plan = await getTenantPlan();
+    if (plan !== 'Pro Plus') {
+      return { error: 'PRO_PLUS_REQUIRED: Debt accounts are exclusively available on the Pro Plus plan. Please upgrade to Pro Plus to manage debt accounts.' };
+    }
+  }
 
   const limitCheck = await checkLimit('accounts');
   if (!limitCheck.allowed) return { error: limitCheck.error };
 
   const tenantId = await getTenantId();
 
+  // Ensure owner_name columns exist
+  await sql`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS owner_name TEXT`.catch(() => {});
+  await sql`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS owner_name_enc TEXT`.catch(() => {});
+
   // 1. Insert account record
   const inserted = await sql`
-    INSERT INTO accounts (name, type, bank_name, account_number, branch, initial_balance, tenant_id)
-    VALUES (${data.name}, ${data.type}, ${data.bankName || null}, ${data.accountNumber || null}, ${data.branch || null}, ${data.initialBalance || 0}, ${tenantId})
+    INSERT INTO accounts (name, owner_name, type, bank_name, account_number, branch, initial_balance, tenant_id)
+    VALUES (${data.name}, ${data.ownerName || null}, ${data.type}, ${data.bankName || null}, ${data.accountNumber || null}, ${data.branch || null}, ${data.initialBalance || 0}, ${tenantId})
     RETURNING id
   `;
   const newId = inserted[0]?.id;
 
   // 2. Encrypt sensitive fields with AES-256-GCM + blind index
-  if (newId && (data.accountNumber || data.branch)) {
+  if (newId && (data.accountNumber || data.branch || data.ownerName)) {
     const encAcc = data.accountNumber ? encryptField(data.accountNumber, { tenantId, table: "accounts", column: "account_number", recordId: newId }) : null;
     const bidxAcc = data.accountNumber ? blindIndex(data.accountNumber, tenantId) : null;
     const encBranch = data.branch ? encryptField(data.branch, { tenantId, table: "accounts", column: "branch", recordId: newId }) : null;
+    const encOwner = data.ownerName ? encryptField(data.ownerName, { tenantId, table: "accounts", column: "owner_name", recordId: newId }) : null;
 
     await sql`
       UPDATE accounts 
       SET account_number_enc = ${encAcc},
           account_number_bidx = ${bidxAcc},
-          branch_enc = ${encBranch}
+          branch_enc = ${encBranch},
+          owner_name_enc = ${encOwner}
       WHERE id = ${newId} AND tenant_id = ${tenantId}
     `;
   }
@@ -148,19 +202,35 @@ export async function createAccount(data: { name: string; type: string; bankName
   await logSystemAction(`Created account "${data.name}"`);
 }
 
-export async function updateAccount(id: number, data: { name: string; type: string; bankName?: string; accountNumber?: string; branch?: string; initialBalance?: number; }) {
+export async function updateAccount(id: number, data: { name: string; ownerName?: string; type: string; bankName?: string; accountNumber?: string; branch?: string; initialBalance?: number; }) {
   const { error: rbacError } = await requirePermission('accounts', 'update');
   if (rbacError) throw new Error(rbacError);
 
+  const isDebtType = String(data.type || '').toLowerCase().includes('debt') || String(data.type || '').toLowerCase().includes('loan');
+  if (isDebtType) {
+    const { getTenantPlan } = await import("./plan");
+    const plan = await getTenantPlan();
+    if (plan !== 'Pro Plus') {
+      return { error: 'PRO_PLUS_REQUIRED: Debt accounts are exclusively available on the Pro Plus plan. Please upgrade to Pro Plus to manage debt accounts.' };
+    }
+  }
+
   const tenantId = await getTenantId();
+
+  // Ensure owner_name columns exist
+  await sql`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS owner_name TEXT`.catch(() => {});
+  await sql`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS owner_name_enc TEXT`.catch(() => {});
 
   const encAcc = data.accountNumber ? encryptField(data.accountNumber, { tenantId, table: "accounts", column: "account_number", recordId: id }) : null;
   const bidxAcc = data.accountNumber ? blindIndex(data.accountNumber, tenantId) : null;
   const encBranch = data.branch ? encryptField(data.branch, { tenantId, table: "accounts", column: "branch", recordId: id }) : null;
+  const encOwner = data.ownerName ? encryptField(data.ownerName, { tenantId, table: "accounts", column: "owner_name", recordId: id }) : null;
 
   await sql`
     UPDATE accounts 
     SET name = ${data.name},
+        owner_name = ${data.ownerName || null},
+        owner_name_enc = ${encOwner},
         type = ${data.type},
         bank_name = ${data.bankName || null},
         account_number = ${data.accountNumber || null},

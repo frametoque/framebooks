@@ -21,12 +21,17 @@ export interface AnnouncementData {
   starts_at?: string | null;
   ends_at?: string | null;
   created_at: string;
+  send_push?: boolean;
+  push_sent_at?: string | null;
   dismissals_count?: number;
   reach_count?: number;
 }
 
 export async function getAnnouncementsList(): Promise<AnnouncementData[]> {
   await requireAdmin("manage_announcements");
+
+  await sql`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS send_push BOOLEAN DEFAULT true`.catch(() => {});
+  await sql`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS push_sent_at TIMESTAMP`.catch(() => {});
 
   const rows = await sql`
     SELECT 
@@ -66,6 +71,7 @@ export async function createAnnouncement({
   priority = 0,
   startsAt,
   endsAt,
+  sendPush = true,
 }: {
   title: string;
   body: string;
@@ -77,8 +83,12 @@ export async function createAnnouncement({
   priority?: number;
   startsAt?: string;
   endsAt?: string;
+  sendPush?: boolean;
 }) {
   const actor = await requireAdmin("manage_announcements");
+
+  await sql`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS send_push BOOLEAN DEFAULT true`.catch(() => {});
+  await sql`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS push_sent_at TIMESTAMP`.catch(() => {});
 
   const cleanTitle = title.trim();
   const cleanBody = body.trim();
@@ -112,7 +122,9 @@ export async function createAnnouncement({
       priority, 
       is_active, 
       starts_at, 
-      ends_at
+      ends_at,
+      send_push,
+      push_sent_at
     )
     VALUES (
       ${cleanTitle},
@@ -125,7 +137,9 @@ export async function createAnnouncement({
       ${Number(priority) || 0},
       true,
       ${startsAt ? new Date(startsAt) : new Date()},
-      ${endsAt ? new Date(endsAt) : null}
+      ${endsAt ? new Date(endsAt) : null},
+      ${Boolean(sendPush)},
+      ${sendPush ? new Date() : null}
     )
     RETURNING id
   `;
@@ -135,7 +149,30 @@ export async function createAnnouncement({
     action: "CREATE_ANNOUNCEMENT",
     targetType: "announcement",
     targetId: rows[0].id,
-    after: { title: cleanTitle, audience, type: finalType }
+    after: { title: cleanTitle, audience, type: finalType, send_push: Boolean(sendPush) }
+  });
+
+  revalidatePath("/admin/announcements");
+  revalidatePath("/user/dashboard");
+  return { success: true };
+}
+
+export async function triggerPushForAnnouncement(id: number) {
+  const actor = await requireAdmin("manage_announcements");
+  await sql`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS send_push BOOLEAN DEFAULT true`.catch(() => {});
+  await sql`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS push_sent_at TIMESTAMP`.catch(() => {});
+
+  await sql`
+    UPDATE announcements 
+    SET send_push = true, push_sent_at = NOW(), is_active = true 
+    WHERE id = ${id}
+  `;
+
+  await logAdminAction({
+    actor,
+    action: "SEND_PUSH_NOTIFICATION",
+    targetType: "announcement",
+    targetId: id,
   });
 
   revalidatePath("/admin/announcements");
@@ -299,6 +336,56 @@ export async function getUserNotifications() {
     }));
   } catch (err) {
     console.error("Failed to fetch notifications:", err);
+    return [];
+  }
+}
+
+/**
+ * Lightweight client query for pending push notifications.
+ * Runs in user browser upon visit — zero server cron/background CPU on Vercel.
+ */
+export async function getPendingPushNotifications(): Promise<Array<{ id: number; title: string; body: string; link_url?: string | null; created_at: string }>> {
+  try {
+    const session = await getServerSession(authOptions);
+    const user = session?.user as any;
+    const userId = user?.dbId;
+    const tenantId = user?.tenantId;
+
+    let userPlan = "Free";
+    if (tenantId) {
+      const tenantRow = await sql`SELECT plan FROM tenants WHERE id = ${tenantId} LIMIT 1`.catch(() => []);
+      if (tenantRow.length > 0 && tenantRow[0].plan) {
+        userPlan = tenantRow[0].plan;
+      }
+    }
+
+    const rows = await sql`
+      SELECT a.id, a.title, a.body, a.link_url, a.created_at
+      FROM announcements a
+      WHERE a.is_active = true
+        AND (a.send_push IS TRUE OR a.send_push IS NULL)
+        AND (a.starts_at IS NULL OR a.starts_at <= NOW())
+        AND (a.ends_at IS NULL OR a.ends_at >= NOW())
+        AND (
+          a.audience = 'all' 
+          OR a.audience = 'everyone'
+          OR ${userPlan} ILIKE a.audience
+          OR (${userId ? String(userId) : ''} != '' AND a.audience = ${userId ? String(userId) : ''})
+        )
+        AND a.created_at >= NOW() - INTERVAL '14 days'
+      ORDER BY a.priority DESC, a.created_at DESC
+      LIMIT 10
+    `.catch(() => []);
+
+    return rows.map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      body: r.body,
+      link_url: r.link_url,
+      created_at: r.created_at,
+    }));
+  } catch (err) {
+    console.error("Failed to fetch pending push notifications:", err);
     return [];
   }
 }

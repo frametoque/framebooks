@@ -7,6 +7,7 @@ import { auth } from '@/lib/auth';
 import { getTenantPlan } from "./plan";
 import { logSystemAction } from "@/lib/logger";
 import { getGravatarUrl } from "@/lib/gravatar";
+import { encryptField, decryptField, blindIndex } from "@/lib/security/crypto";
 
 export async function getTenantId() {
   const { userId, session } = await auth();
@@ -551,9 +552,18 @@ export async function createClient(data: { name: string; email: string; company?
 
   const tenantId = await getTenantId();
   const clientId = 'C-' + Date.now();
+
+  const encPhone = data.phone ? encryptField(data.phone, { tenantId: tenantId || 1, table: "admin_clients", column: "phone", recordId: clientId }) : null;
+  const bidxPhone = data.phone ? blindIndex(data.phone, tenantId || 1) : null;
+  const encAddress = data.address ? encryptField(data.address, { tenantId: tenantId || 1, table: "admin_clients", column: "address", recordId: clientId }) : null;
+
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS phone_enc TEXT`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS phone_bidx VARCHAR(64)`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS address_enc TEXT`.catch(() => {});
+
   await sql`
-    INSERT INTO admin_clients (id, full_name, email, company, phone, address, active, legal_name, tenant_id)
-    VALUES (${clientId}, ${data.name}, ${data.email}, ${data.company || null}, ${data.phone || null}, ${data.address || null}, true, ${data.legal_name || null}, ${tenantId})
+    INSERT INTO admin_clients (id, full_name, email, company, phone, phone_enc, phone_bidx, address, address_enc, active, legal_name, tenant_id)
+    VALUES (${clientId}, ${data.name}, ${data.email}, ${data.company || null}, ${data.phone || null}, ${encPhone}, ${bidxPhone}, ${data.address || null}, ${encAddress}, true, ${data.legal_name || null}, ${tenantId})
   `;
   await incrementLifetimeUsage(Number(tenantId), 'clients');
   await logSystemAction(`Created client: "${data.name}" (${data.email})`);
@@ -573,6 +583,14 @@ export async function updateClient(clientId: string, data: { name?: string; emai
   const newEmail = data.email?.trim() || oldEmail;
   const emailChanged = newEmail.toLowerCase() !== oldEmail.toLowerCase();
 
+  const encPhone = data.phone !== undefined ? (data.phone ? encryptField(data.phone, { tenantId: tenantId || 1, table: "admin_clients", column: "phone", recordId: clientId }) : null) : undefined;
+  const bidxPhone = data.phone !== undefined ? (data.phone ? blindIndex(data.phone, tenantId || 1) : null) : undefined;
+  const encAddress = data.address !== undefined ? (data.address ? encryptField(data.address, { tenantId: tenantId || 1, table: "admin_clients", column: "address", recordId: clientId }) : null) : undefined;
+
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS phone_enc TEXT`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS phone_bidx VARCHAR(64)`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS address_enc TEXT`.catch(() => {});
+
   // Update admin_clients row
   await sql`
     UPDATE admin_clients
@@ -581,7 +599,10 @@ export async function updateClient(clientId: string, data: { name?: string; emai
       email   = ${newEmail},
       company = ${data.company ?? null},
       phone   = ${data.phone   ?? null},
+      phone_enc = COALESCE(${encPhone ?? null}, phone_enc),
+      phone_bidx = COALESCE(${bidxPhone ?? null}, phone_bidx),
       address = ${data.address ?? null},
+      address_enc = COALESCE(${encAddress ?? null}, address_enc),
       legal_name = ${data.legal_name ?? null}
     WHERE id = ${clientId} AND tenant_id = ${tenantId}
   `;
@@ -1371,6 +1392,9 @@ export async function getInvoiceByIdAdmin(invoiceId: string) {
 export async function getClients() {
   const tenantId = await getTenantId();
 
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS phone_enc TEXT`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS address_enc TEXT`.catch(() => {});
+
   const rows = await sql`
     SELECT c.id,
            c.full_name as name,
@@ -1378,7 +1402,9 @@ export async function getClients() {
            c.active,
            c.company,
            c.phone,
+           c.phone_enc,
            c.address,
+           c.address_enc,
            c.legal_name,
            (SELECT COUNT(*) FROM invoices i WHERE (i.client_id = c.id OR (c.email IS NOT NULL AND LOWER(i.user_email) = LOWER(c.email))) AND i.tenant_id = ${tenantId}) as invoices,
            COALESCE((SELECT SUM(amount) FROM admin_incomes inc WHERE inc.client_id = c.id AND inc.tenant_id = ${tenantId}), 0) as revenue,
@@ -1390,10 +1416,34 @@ export async function getClients() {
   `;
 
   const clients = await Promise.all(
-    rows.map(async (r) => {
+    rows.map(async (r: any) => {
       let imageUrl: string | null = null;
       if (r.email) {
         imageUrl = getGravatarUrl(r.email.trim());
+      }
+
+      let resolvedPhone = r.phone;
+      if (r.phone_enc) {
+        try {
+          resolvedPhone = decryptField(r.phone_enc, {
+            tenantId: tenantId || 1,
+            table: "admin_clients",
+            column: "phone",
+            recordId: r.id,
+          });
+        } catch {}
+      }
+
+      let resolvedAddress = r.address;
+      if (r.address_enc) {
+        try {
+          resolvedAddress = decryptField(r.address_enc, {
+            tenantId: tenantId || 1,
+            table: "admin_clients",
+            column: "address",
+            recordId: r.id,
+          });
+        } catch {}
       }
 
       return {
@@ -1402,8 +1452,8 @@ export async function getClients() {
         email: r.email,
         active: r.active,
         company: r.company,
-        phone: r.phone,
-        address: r.address,
+        phone: resolvedPhone,
+        address: resolvedAddress,
         legalName: r.legal_name || "",
         imageUrl,
         invoices: parseInt(r.invoices),
@@ -1422,6 +1472,9 @@ export async function getClientById(clientId: string) {
   const tenantId = await getTenantId();
   if (!tenantId) return null;
 
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS phone_enc TEXT`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS address_enc TEXT`.catch(() => {});
+
   const rows = await sql`
     SELECT c.id,
            c.full_name as name,
@@ -1429,7 +1482,9 @@ export async function getClientById(clientId: string) {
            c.active,
            c.company,
            c.phone,
+           c.phone_enc,
            c.address,
+           c.address_enc,
            c.website,
            c.legal_name
     FROM admin_clients c
@@ -1438,6 +1493,32 @@ export async function getClientById(clientId: string) {
 
   if (rows.length === 0) return null;
   const c = rows[0];
+
+  let resolvedPhone = c.phone;
+  if (c.phone_enc) {
+    try {
+      resolvedPhone = decryptField(c.phone_enc, {
+        tenantId: tenantId || 1,
+        table: "admin_clients",
+        column: "phone",
+        recordId: c.id,
+      });
+    } catch {}
+  }
+
+  let resolvedAddress = c.address;
+  if (c.address_enc) {
+    try {
+      resolvedAddress = decryptField(c.address_enc, {
+        tenantId: tenantId || 1,
+        table: "admin_clients",
+        column: "address",
+        recordId: c.id,
+      });
+    } catch {}
+  }
+  c.phone = resolvedPhone;
+  c.address = resolvedAddress;
 
   let imageUrl = null;
   if (c.email) {

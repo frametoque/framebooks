@@ -107,5 +107,5 @@ export default function AnimatedNumber({
     );
   }
 
-  return <span className={className}>{finalRender}</span>;
+  return <span data-stat-value className={`privacy-blur-target ${className}`}>{finalRender}</span>;
 }

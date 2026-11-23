@@ -6,10 +6,11 @@ import RolesConfigurator from "../components/RolesConfigurator";
 import { useState, useEffect, useRef } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 import { useSession, signOut } from 'next-auth/react';
-import { IdCard, Globe, Save, Building, Copy, Terminal, Sliders, Upload, FileText, CheckCircle2, AlertCircle, X, ExternalLink, ArrowUp, ArrowDown, Palette, ChevronDown, Clock, ShieldOff, ShieldCheck, Sparkles, Info, Loader2, CreditCard, Plus, Repeat, Wallet, AlertTriangle, Tag, RefreshCw, ArrowRight } from "lucide-react";
+import { IdCard, Globe, Save, Building, Copy, Terminal, Sliders, Upload, FileText, CheckCircle2, AlertCircle, X, ExternalLink, ArrowUp, ArrowDown, Palette, ChevronDown, Clock, ShieldOff, ShieldCheck, Sparkles, Info, Loader2, CreditCard, Plus, Repeat, Wallet, AlertTriangle, Tag, RefreshCw, ArrowRight, Bell } from "lucide-react";
 import { MdPerson, MdMailOutline, MdKeyboardArrowRight, MdKeyboardArrowLeft, MdLocationOn, MdPhone, MdUpload, MdDownload, MdCheck, MdShowChart, MdCreditCard, MdGroup, MdBusiness, MdHistory, MdLogout, MdWarning, MdSecurity, MdDelete, MdLock } from "react-icons/md";
 import AppearanceTab from "./AppearanceTab";
 import InvoiceLayoutTab from "./invoice-layout/InvoiceLayoutTab";
+import { NotificationsTab } from "./NotificationsTab";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { updateTenantInfo, getTeamMembers, updateTeamMemberRole, removeTeamMember, leaveTeam, getCurrentUserRole, resetWorkspace, deleteWorkspace, deletePersonalAccount, deleteTeamInvitation } from "../actions/tenants";
@@ -352,11 +353,6 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
   const [activeTab, setActiveTab] = useState(isAllowedInitial && requestedTab ? requestedTab : "profile");
   const [activeView, setActiveView] = useState(isAllowedInitial && requestedTab ? "form" : "hub");
 
-  const [appearanceSubTab, setAppearanceSubTab] = useState<"theme" | "layouts">(() => {
-    if (searchParams.get("sub") === "theme") return "theme";
-    return "layouts";
-  });
-
   const [teamSubTab, setTeamSubTab] = useState<"members" | "roles">(() => {
     if (initialSection === "roles") return "roles";
     if (searchParams.get("sub") === "roles") return "roles";
@@ -390,13 +386,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
       }
       setActiveTab(mapped);
       setActiveView("form");
-      if (initialSection === "invoice-layout" || initialSection === "invoice_layout" || initialSection === "appearance") {
-        if (searchParams.get("sub") === "theme") {
-          setAppearanceSubTab("theme");
-        } else {
-          setAppearanceSubTab("layouts");
-        }
-      } else if (initialSection === "roles") {
+      if (initialSection === "roles") {
         setTeamSubTab("roles");
       } else if (initialSection === "team") {
         setTeamSubTab("members");
@@ -653,14 +643,6 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
           return;
         }
         setActiveTab(mapped);
-        if (mapped === "appearance") {
-          const urlParams = new URLSearchParams(window.location.search);
-          if (urlParams.get("sub") === "theme") {
-            setAppearanceSubTab("theme");
-          } else {
-            setAppearanceSubTab("layouts");
-          }
-        }
         setActiveView("form");
         const title = SETTINGS_TAB_TITLES[mapped] || "Settings";
         window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
@@ -1082,7 +1064,9 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               <div className="flex flex-col">
                 {[
                   { name: "Business Profile", sub: "Update business name, contact & details.", icon: MdBusiness, id: "business", allowed: isSettingsSectionAllowed("business", currentUserRole) },
-                  { name: "Appearance & Layouts", sub: "Customize dashboard accent colour, theme branding, and invoice layouts.", icon: Palette, id: "appearance", allowed: true },
+                  { name: "Invoice Layouts & Fields", sub: "Design, customize, and arrange custom invoice templates and fields.", icon: FileText, id: "invoice-layout", allowed: isSettingsSectionAllowed("invoice-layout", currentUserRole) },
+                  { name: "Appearance", sub: "Customize dashboard accent colour, theme branding, and palettes.", icon: Palette, id: "appearance", allowed: isSettingsSectionAllowed("appearance", currentUserRole) },
+                  { name: "Notifications & Reminders", sub: "Configure browser push notifications, transaction reminders, and automated expense alerts.", icon: Bell, id: "notifications", allowed: true },
                   { name: "Security", sub: "Manage App Lock and authentication passkeys.", icon: MdSecurity, id: "profile", allowed: true },
                   { name: "Billing & Plans", sub: "Manage your subscription and payments.", icon: MdCreditCard, id: "billing", allowed: isSettingsSectionAllowed("billing", currentUserRole) },
                   { name: "Team & Permissions", sub: "Manage team members, invitations, and custom roles.", icon: MdGroup, id: "team", allowed: isSettingsSectionAllowed("team", currentUserRole) },
@@ -1098,9 +1082,6 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                       onClick={() => {
                         const slug = SETTINGS_TAB_TO_SLUG[item.id] || item.id;
                         setActiveTab(item.id);
-                        if (item.id === "appearance") {
-                          setAppearanceSubTab("layouts");
-                        }
                         setActiveView("form");
                         window.history.pushState(null, '', `/user/settings/${slug}`);
                         const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
@@ -1150,7 +1131,9 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
             <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
               {[
                 { name: "Business", id: "business", icon: MdBusiness, allowed: isSettingsSectionAllowed("business", currentUserRole) },
-                { name: "Appearance & Layouts", id: "appearance", icon: Palette, allowed: true },
+                { name: "Invoice Layouts & Fields", id: "invoice-layout", icon: FileText, allowed: isSettingsSectionAllowed("invoice-layout", currentUserRole) },
+                { name: "Appearance", id: "appearance", icon: Palette, allowed: isSettingsSectionAllowed("appearance", currentUserRole) },
+                { name: "Notifications", id: "notifications", icon: Bell, allowed: true },
                 { name: "Security", id: "profile", icon: MdSecurity, allowed: true },
                 { name: "Billing", id: "billing", icon: MdCreditCard, allowed: isSettingsSectionAllowed("billing", currentUserRole) },
                 { name: "Team & Permissions", id: "team", icon: MdGroup, allowed: isSettingsSectionAllowed("team", currentUserRole) },
@@ -1169,9 +1152,6 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                       type="button"
                       onClick={() => {
                         setActiveTab(item.id);
-                        if (item.id === "appearance") {
-                          setAppearanceSubTab("layouts");
-                        }
                         window.history.pushState(null, '', `/user/settings/${slug}`);
                         const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
                         window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
@@ -1351,7 +1331,9 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
             <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
               {[
                 { name: "Business", id: "business", icon: MdBusiness, allowed: isSettingsSectionAllowed("business", currentUserRole) },
-                { name: "Appearance & Layouts", id: "appearance", icon: Palette, allowed: true },
+                { name: "Invoice Layouts & Fields", id: "invoice-layout", icon: FileText, allowed: isSettingsSectionAllowed("invoice-layout", currentUserRole) },
+                { name: "Appearance", id: "appearance", icon: Palette, allowed: isSettingsSectionAllowed("appearance", currentUserRole) },
+                { name: "Notifications", id: "notifications", icon: Bell, allowed: true },
                 { name: "Security", id: "profile", icon: MdSecurity, allowed: true },
                 { name: "Billing", id: "billing", icon: MdCreditCard, allowed: isSettingsSectionAllowed("billing", currentUserRole) },
                 { name: "Team & Permissions", id: "team", icon: MdGroup, allowed: isSettingsSectionAllowed("team", currentUserRole) },
@@ -1370,9 +1352,6 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                       type="button"
                       onClick={() => {
                         setActiveTab(item.id);
-                        if (item.id === "appearance") {
-                          setAppearanceSubTab("layouts");
-                        }
                         window.history.pushState(null, '', `/user/settings/${slug}`);
                         const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
                         window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
@@ -1715,7 +1694,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
             </div>
           )}
 
-            {activeTab === "appearance" && (
+            {activeTab === "invoice-layout" && isSettingsSectionAllowed("invoice-layout", currentUserRole) && (
               <div className="space-y-4">
                 {/* Pro Plus Upgrade Banner for Free and Pro Users */}
                 {tenantInfo.plan !== 'Pro Plus' && (
@@ -1730,7 +1709,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                           <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-purple-500/20 text-purple-400 border border-purple-500/30">PRO PLUS</span>
                         </h4>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          You are viewing theme branding and invoice layouts in preview mode. Upgrade to Pro Plus to change colours and use customized invoice layouts.
+                          You are viewing invoice layouts in preview mode. Upgrade to Pro Plus to customize and save invoice templates and fields.
                         </p>
                       </div>
                     </div>
@@ -1738,7 +1717,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                       type="button"
                       onClick={() => {
                         window.dispatchEvent(new CustomEvent('upgrade-modal:open', {
-                          detail: "Upgrade to Pro Plus to unlock custom workspace accent colors and customized invoice templates."
+                          detail: "Upgrade to Pro Plus to unlock custom invoice templates and layout builder."
                         }));
                       }}
                       className="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs shrink-0 transition-all shadow-md cursor-pointer flex items-center gap-2"
@@ -1749,50 +1728,58 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                   </div>
                 )}
 
-                <div>
-                  {/* Sub-tabs header for Appearance & Layouts */}
-                  <div className="flex items-center gap-2 mb-6">
+                <InvoiceLayoutTab
+                  canManage={currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin'}
+                  isProPlus={tenantInfo.plan === 'Pro Plus'}
+                />
+              </div>
+            )}
+
+            {activeTab === "appearance" && isSettingsSectionAllowed("appearance", currentUserRole) && (
+              <div className="space-y-4">
+                {/* Pro Upgrade Banner for Free Users */}
+                {tenantInfo.plan === 'Free' && (
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-brand-500/10 via-purple-500/10 to-blue-500/10 border border-brand-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-brand-500/20 text-brand-500 flex items-center justify-center shrink-0">
+                        <MdLock className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
+                          <span>Exclusive Pro Features</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-brand-500/20 text-brand-400 border border-brand-500/30">PRO</span>
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          You are viewing theme branding in preview mode. Upgrade to Pro to customize and save workspace accent colors and palettes.
+                        </p>
+                      </div>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => setAppearanceSubTab("layouts")}
-                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${appearanceSubTab === "layouts"
-                          ? "bg-brand-500 text-brand-900 font-bold shadow-xs"
-                          : "bg-card text-muted-foreground hover:text-foreground border border-border"
-                        }`}
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('upgrade-modal:open', {
+                          detail: "Upgrade to Pro to unlock custom workspace accent colors and themes."
+                        }));
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs shrink-0 transition-all shadow-md cursor-pointer flex items-center gap-2"
                     >
-                      Invoice Layouts & Fields
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAppearanceSubTab("theme")}
-                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${appearanceSubTab === "theme"
-                          ? "bg-brand-500 text-brand-900 font-bold shadow-xs"
-                          : "bg-card text-muted-foreground hover:text-foreground border border-border"
-                        }`}
-                    >
-                      Dashboard Theme & Accent
+                      <Sparkles className="w-4 h-4" />
+                      <span>Upgrade to Pro</span>
                     </button>
                   </div>
+                )}
 
-                  {appearanceSubTab === "theme" ? (
-                    <AppearanceTab
-                      initialAccent={tenantInfo?.accent_color || null}
-                      canManage={currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin'}
-                      isProPlus={tenantInfo.plan === 'Pro' || tenantInfo.plan === 'Pro Plus'}
-                      onAccentSaved={(hex) => {
-                        setTenantInfo(prev => ({ ...prev, accent_color: hex }));
-                        if (settingsMemoryCache) {
-                          settingsMemoryCache.tenantInfo = { ...settingsMemoryCache.tenantInfo, accent_color: hex };
-                        }
-                      }}
-                    />
-                  ) : (
-                    <InvoiceLayoutTab
-                      canManage={currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin'}
-                      isProPlus={tenantInfo.plan === 'Pro Plus'}
-                    />
-                  )}
-                </div>
+                <AppearanceTab
+                  initialAccent={tenantInfo?.accent_color || null}
+                  canManage={currentUserRole === 'owner' || currentUserRole === 'Super Admin' || currentUserRole === 'Admin'}
+                  isProPlus={tenantInfo.plan === 'Pro' || tenantInfo.plan === 'Pro Plus'}
+                  onAccentSaved={(hex) => {
+                    setTenantInfo(prev => ({ ...prev, accent_color: hex }));
+                    if (settingsMemoryCache) {
+                      settingsMemoryCache.tenantInfo = { ...settingsMemoryCache.tenantInfo, accent_color: hex };
+                    }
+                  }}
+                />
               </div>
             )}
 
@@ -2231,6 +2218,10 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                   );
                 })()}
               </div>
+            )}
+
+            {activeTab === "notifications" && (
+              <NotificationsTab />
             )}
 
             {activeTab === "audit_logs" && isSettingsSectionAllowed("audit_logs", currentUserRole) && (
@@ -3014,7 +3005,7 @@ function BillingView({
             {gatewayStatus?.cardPaymentsDisabled && (
               <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>Card payments are disabled on live while Payments.lk test keys (<code>sk_test_*</code>) are configured.</span>
+                <span>Card payments are disabled on live.</span>
               </div>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -3097,7 +3088,7 @@ function BillingView({
                         }
                       }}
                       disabled={(isCurrent && (!subDetails?.billing_interval || subDetails.billing_interval === billingCycle)) || processingCheckout || (!isCurrent && Boolean(gatewayStatus?.cardPaymentsDisabled))}
-                      title={!isCurrent && gatewayStatus?.cardPaymentsDisabled ? "Card payments are disabled on live with test key" : undefined}
+                      title={!isCurrent && gatewayStatus?.cardPaymentsDisabled ? "Card payments are disabled on live" : undefined}
                       className={`w-full py-2 rounded-xl font-bold transition-all text-xs cursor-pointer flex items-center justify-center gap-1 ${isCurrent && (!subDetails?.billing_interval || subDetails.billing_interval === billingCycle)
                           ? "bg-muted text-muted-foreground cursor-default opacity-80"
                           : isCurrent

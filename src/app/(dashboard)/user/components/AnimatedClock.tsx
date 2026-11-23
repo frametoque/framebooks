@@ -2,7 +2,6 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import { MdAccessTime } from "react-icons/md";
 
 export function AnimatedClock() {
   const [timeStr, setTimeStr] = useState("");
@@ -27,16 +26,14 @@ export function AnimatedClock() {
 
   if (!timeStr) {
     return (
-      <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
-        <MdAccessTime className="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" />
+      <div className="flex items-center text-gray-700 dark:text-gray-300">
         <span className="font-medium tabular-nums text-sm">Loading...</span>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300 overflow-hidden">
-      <MdAccessTime className="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" />
+    <div className="flex items-center text-gray-700 dark:text-gray-300 overflow-hidden">
       <div className="font-medium tabular-nums text-sm flex items-center h-[20px]">
         {timeStr.split("").map((char, index) => {
           if (isNaN(parseInt(char, 10))) {

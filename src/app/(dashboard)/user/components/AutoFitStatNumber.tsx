@@ -88,8 +88,9 @@ export default function AutoFitStatNumber({
     >
       <span
         ref={textRef}
+        data-stat-value
         style={{ fontSize: `${fontSize}px`, transition: "font-size 0.15s ease-out", ...style }}
-        className={`inline-block whitespace-nowrap font-bold tracking-tight ${colorClass}`}
+        className={`inline-block whitespace-nowrap font-bold tracking-tight privacy-blur-target ${colorClass}`}
       >
         <AnimatedNumber value={value} />
       </span>

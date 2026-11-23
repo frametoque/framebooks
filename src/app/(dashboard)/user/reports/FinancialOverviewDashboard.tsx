@@ -550,8 +550,8 @@ export default function FinancialOverviewDashboard({
               >
                 <defs>
                   <linearGradient id="heroIncomeGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={accent} stopOpacity={0.35} />
-                    <stop offset="95%" stopColor={accent} stopOpacity={0} />
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="heroExpenseGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.35} />
@@ -592,7 +592,7 @@ export default function FinancialOverviewDashboard({
                   type="monotone"
                   dataKey="income"
                   name="Income"
-                  stroke={accent}
+                  stroke="#10b981"
                   strokeWidth={2}
                   fill="url(#heroIncomeGrad)"
                   fillOpacity={1}
@@ -732,7 +732,7 @@ export default function FinancialOverviewDashboard({
         </div>
 
         {/* Highlight Insights Footer - Matches Screenshot 4 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-4 border-t border-border">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3">
           <div className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3.5 shadow-2xs">
             <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">BEST INCOME PERIOD</p>
             <p className="text-base font-bold tracking-tight tabular-nums" style={{ color: accent }}>
@@ -1154,7 +1154,7 @@ export default function FinancialOverviewDashboard({
           </div>
 
           {/* Concentration Stats */}
-          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border mt-5">
+          <div className="grid grid-cols-2 gap-3 mt-4">
             <div className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3.5 shadow-2xs">
               <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 TOP 5 CLIENTS SHARE
@@ -1184,7 +1184,7 @@ export default function FinancialOverviewDashboard({
               </h3>
               <div className="flex items-center gap-3.5 text-[11px] font-medium text-gray-400">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-1 rounded-full" style={{ backgroundColor: accent }} />
+                  <span className="w-2.5 h-1 rounded-full bg-[#10b981]" />
                   <span>Income</span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -1203,8 +1203,8 @@ export default function FinancialOverviewDashboard({
                 >
                   <defs>
                     <linearGradient id="predIncomeGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={accent} stopOpacity={0.35} />
-                      <stop offset="95%" stopColor={accent} stopOpacity={0} />
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="predExpenseGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.35} />
@@ -1239,7 +1239,7 @@ export default function FinancialOverviewDashboard({
                     type="monotone"
                     dataKey="income"
                     name="Income"
-                    stroke={accent}
+                    stroke="#10b981"
                     strokeWidth={2}
                     fill="url(#predIncomeGrad)"
                     fillOpacity={1}
@@ -1302,7 +1302,7 @@ export default function FinancialOverviewDashboard({
           </div>
 
           {/* 2 Forward Indicators */}
-          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border mt-4">
+          <div className="grid grid-cols-2 gap-3 mt-4">
             <div className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3.5 shadow-2xs">
               <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">CASH WILL LAST</p>
               <p className="text-base sm:text-lg font-bold tracking-tight tabular-nums" style={{ color: accent }}>
@@ -1329,7 +1329,7 @@ export default function FinancialOverviewDashboard({
 
 // --- Custom Tooltips using user's accent theme ---
 
-function MoneyInOutTooltip({ active, payload, label, accent = "#22c55e" }: any) {
+function MoneyInOutTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     const inc = payload.find((p: any) => p.dataKey === "income")?.value || 0;
     const exp = payload.find((p: any) => p.dataKey === "expenses")?.value || 0;
@@ -1340,8 +1340,7 @@ function MoneyInOutTooltip({ active, payload, label, accent = "#22c55e" }: any) 
         <div className="flex items-center gap-4 text-xs font-medium">
           <div className="flex items-center gap-1.5">
             <span
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: accent }}
+              className="w-2 h-2 rounded-full bg-[#10b981]"
             />
             <span className="text-gray-500 dark:text-gray-400">INC:</span>
             <span className="font-semibold text-foreground tabular-nums">{formatLKR(inc)}</span>
@@ -1356,7 +1355,7 @@ function MoneyInOutTooltip({ active, payload, label, accent = "#22c55e" }: any) 
           <span className="text-gray-500 dark:text-gray-400">Net Profit:</span>
           <span
             className="font-semibold tabular-nums"
-            style={{ color: profit >= 0 ? accent : "#f43f5e" }}
+            style={{ color: profit >= 0 ? "#10b981" : "#f43f5e" }}
           >
             {profit >= 0 ? "+" : ""}
             {formatLKR(profit)}
@@ -1368,7 +1367,7 @@ function MoneyInOutTooltip({ active, payload, label, accent = "#22c55e" }: any) 
   return null;
 }
 
-function ProfitMarginTooltip({ active, payload, label, accent = "#22c55e" }: any) {
+function ProfitMarginTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     const profitItem = payload.find((p: any) => p.dataKey === "netProfit");
     const marginItem = payload.find((p: any) => p.dataKey === "margin");
@@ -1381,7 +1380,7 @@ function ProfitMarginTooltip({ active, payload, label, accent = "#22c55e" }: any
           <span className="text-gray-500 dark:text-gray-400">Net Profit:</span>
           <span
             className="font-semibold tabular-nums"
-            style={{ color: profit >= 0 ? accent : "#f43f5e" }}
+            style={{ color: profit >= 0 ? "#10b981" : "#f43f5e" }}
           >
             {profit >= 0 ? "+" : ""}
             {formatLKR(profit)}
@@ -1397,7 +1396,7 @@ function ProfitMarginTooltip({ active, payload, label, accent = "#22c55e" }: any
   return null;
 }
 
-function TotalSavingsTooltip({ active, payload, label, accent = "#10b981" }: any) {
+function TotalSavingsTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     const savings = payload[0]?.value || 0;
     return (
@@ -1407,7 +1406,7 @@ function TotalSavingsTooltip({ active, payload, label, accent = "#10b981" }: any
           <span className="text-gray-500 dark:text-gray-400">Total Savings:</span>
           <span
             className="font-semibold tabular-nums"
-            style={{ color: savings >= 0 ? accent : "#f43f5e" }}
+            style={{ color: savings >= 0 ? "#10b981" : "#f43f5e" }}
           >
             {savings >= 0 ? "+" : ""}
             {formatLKR(savings)}
@@ -1419,7 +1418,7 @@ function TotalSavingsTooltip({ active, payload, label, accent = "#10b981" }: any
   return null;
 }
 
-function PredictionTooltip({ active, payload, label, accent = "#22c55e" }: any) {
+function PredictionTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     const inc = payload.find((p: any) => p.dataKey === "income")?.value || 0;
     const exp = payload.find((p: any) => p.dataKey === "expenses")?.value || 0;
@@ -1430,8 +1429,7 @@ function PredictionTooltip({ active, payload, label, accent = "#22c55e" }: any) 
         <div className="flex items-center gap-4 text-xs font-medium">
           <div className="flex items-center gap-1.5">
             <span
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: accent }}
+              className="w-2 h-2 rounded-full bg-[#10b981]"
             />
             <span className="text-gray-500 dark:text-gray-400">INC:</span>
             <span className="font-semibold text-foreground tabular-nums">{formatLKR(inc)}</span>
@@ -1446,7 +1444,7 @@ function PredictionTooltip({ active, payload, label, accent = "#22c55e" }: any) 
           <span className="text-gray-500 dark:text-gray-400">Expected Profit:</span>
           <span
             className="font-semibold tabular-nums"
-            style={{ color: profit >= 0 ? accent : "#f43f5e" }}
+            style={{ color: profit >= 0 ? "#10b981" : "#f43f5e" }}
           >
             {profit >= 0 ? "+" : ""}
             {formatLKR(profit)}

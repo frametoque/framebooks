@@ -1,5 +1,13 @@
 import Link from 'next/link';
 import { navigation } from '@/data/landing/content';
+import { FaFacebook, FaInstagram, FaTiktok, FaLinkedin } from 'react-icons/fa6';
+
+const socialLinks = [
+  { name: 'Facebook', href: 'https://facebook.com/framebooks', icon: FaFacebook },
+  { name: 'Instagram', href: 'https://instagram.com/framebooks', icon: FaInstagram },
+  { name: 'TikTok', href: 'https://tiktok.com/@framebooks', icon: FaTiktok },
+  { name: 'LinkedIn', href: 'https://linkedin.com/company/framebooks', icon: FaLinkedin },
+];
 
 export default function Footer() {
   return (
@@ -24,7 +32,7 @@ export default function Footer() {
                 rel="noopener noreferrer"
                 className="text-[#00C750] hover:underline"
               >
-                FrameToque Digital
+                Frametoque Digital
               </a>
             </p>
           </div>
@@ -56,8 +64,22 @@ export default function Footer() {
             </ul>
           </div>
         </div>
-        <div className="border-t border-[#E5E7EB] pt-6 sm:pt-8 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs sm:text-sm text-gray-500 text-center sm:text-left">
-          <p>© {new Date().getFullYear()} FrameToque Digital. All rights reserved.</p>
+        <div className="border-t border-[#E5E7EB] pt-6 sm:pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs sm:text-sm text-gray-500 text-center sm:text-left">
+          <p>© {new Date().getFullYear()} Frametoque Digital Productions. All rights reserved.</p>
+          <div className="flex items-center gap-4">
+            {socialLinks.map((item) => (
+              <a
+                key={item.name}
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={item.name}
+                className="text-gray-400 hover:text-[#00C750] transition-colors"
+              >
+                <item.icon className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </footer>

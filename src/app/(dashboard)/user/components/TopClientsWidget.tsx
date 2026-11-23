@@ -141,7 +141,7 @@ export default function TopClientsWidget({
 
       {/* Concentration Stats */}
       {!loading && top5Clients.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border mt-5">
+        <div className="grid grid-cols-2 gap-3 mt-4">
           <div className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3.5 shadow-2xs">
             <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
               TOP 5 CLIENTS SHARE

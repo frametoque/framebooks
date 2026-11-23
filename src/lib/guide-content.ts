@@ -620,13 +620,13 @@ export const guideGroups: GuideGroup[] = [
             title: '1. Accessing Appearance & Layouts',
             content: 'Go to Settings > Appearance & Layouts. This unified studio lets you manage your dashboard branding and customer-facing invoice layouts in one place.',
             bullets: [
-              'Dashboard Theme & Accent: Customize dark mode palettes and dynamic UI colors',
+              'Appearance: Customize dark mode palettes and dynamic UI colors',
               'Invoice Layouts & Fields: Design custom invoice formats and manage custom fields'
             ]
           },
           {
             title: '2. Customizing Dashboard Accent Colors & Themes',
-            content: 'Under the "Dashboard Theme & Accent" sub-tab, select your organization\'s signature brand color or choose from curated presets.',
+            content: 'Under the "Appearance" sub-tab, select your organization\'s signature brand color or choose from curated presets.',
             bullets: [
               'Select vibrant presets or pick any custom HEX brand color',
               'The entire dashboard—including sidebar highlights, buttons, cards, analytics charts, and date pickers—dynamically harmonizes with your accent color',

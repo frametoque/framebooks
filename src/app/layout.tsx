@@ -56,8 +56,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 if (window.location.pathname.indexOf('/user') === -1) return;
                 var m = document.cookie.match(/(?:^|;\\s*)fb_accent_color=([^;]+)/);
                 var c = m ? decodeURIComponent(m[1]) : (typeof localStorage !== 'undefined' ? localStorage.getItem('framebooks_accent_color') : null);
-                if (c && /^#[0-9a-fA-F]{6}$/i.test(c)) {
-                  document.documentElement.style.setProperty('--accent', c);
+                if (c) {
+                  var hero = null;
+                  if (c.indexOf('gta6') !== -1) hero = '#C9349B';
+                  else if (c.indexOf('f1') !== -1) hero = '#8C3041';
+                  else if (c.indexOf('cricket') !== -1) hero = '#0A50A1';
+                  else if (c.indexOf('flag') !== -1) hero = '#8D153A';
+                  else if (c.indexOf('xmas') !== -1 || c.indexOf('christmas') !== -1 || c.indexOf('chirtmas') !== -1) hero = '#A60311';
+                  else if (/^#[0-9a-fA-F]{6}$/i.test(c)) hero = c;
+                  if (hero) document.documentElement.style.setProperty('--accent', hero);
+                }
+                if (typeof localStorage !== 'undefined' && localStorage.getItem('framebooks_privacy_mode') === 'true') {
+                  document.documentElement.classList.add('privacy-mode');
                 }
               } catch(e){}
             })();`,

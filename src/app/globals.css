@@ -346,3 +346,13 @@ html {
 .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.35);
 }
+
+/* Privacy Blur Mode for stats numbers */
+html.privacy-mode [data-stat-value],
+html.privacy-mode .privacy-blur-target,
+html.privacy-mode .stat-value {
+  filter: blur(8px) !important;
+  user-select: none !important;
+  pointer-events: none !important;
+  transition: filter 0.2s ease-in-out;
+}

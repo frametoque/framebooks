@@ -1,7 +1,7 @@
 // src/app/manifest.ts
 import type { MetadataRoute } from 'next';
 import { cookies } from 'next/headers';
-import { DEFAULT_ACCENT_HEX } from '@/lib/theme/accent';
+import { DEFAULT_ACCENT_HEX, resolveHeroAccentHex } from '@/lib/theme/accent';
 import sql from '@/lib/db';
 
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
@@ -10,8 +10,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   try {
     const cookieStore = await cookies();
     const cookieColor = cookieStore.get('fb_accent_color')?.value;
-    if (cookieColor && /^#[0-9a-fA-F]{6}$/i.test(cookieColor)) {
-      themeColor = cookieColor.toUpperCase();
+    if (cookieColor) {
+      themeColor = resolveHeroAccentHex(cookieColor);
     } else {
       // Check session cookie to find user's tenant accent color from DB
       const sessionToken =
@@ -27,8 +27,9 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
           WHERE s."sessionToken" = ${sessionToken} OR s."session_token" = ${sessionToken}
           LIMIT 1
         `;
-        if (rows[0]?.accent_color) {
-          themeColor = rows[0].accent_color;
+        const dbColor = rows[0]?.accent_color;
+        if (dbColor) {
+          themeColor = resolveHeroAccentHex(dbColor);
         }
       }
     }
