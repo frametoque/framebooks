@@ -6,8 +6,6 @@ import { useEffect, useState, useMemo } from "react";
 import { Edit2, Loader2, CheckCircle2, FolderOpen, Printer } from "lucide-react";
 import { MdAccountBalanceWallet, MdTrendingUp, MdAdd, MdDelete, MdRemoveRedEye, MdClose, MdDownload } from "react-icons/md";
 import Link from "next/link";
-import domtoimage from 'dom-to-image-more';
-import { jsPDF } from 'jspdf';
 import { downloadInvoiceWithLayout, printInvoiceWithLayout, printPdfBlob } from "@/lib/invoice-layout/export-pdf";
 import { useRouter } from "next/navigation";
 import { 
@@ -141,6 +139,11 @@ export default function QuotationsPage() {
       
       document.body.appendChild(element);
       
+      const [{ default: domtoimage }, { jsPDF }] = await Promise.all([
+        import('dom-to-image-more'),
+        import('jspdf'),
+      ]);
+
       const imgData = await domtoimage.toJpeg(element, {
         bgcolor: '#ffffff',
         quality: 1.0,
@@ -270,6 +273,12 @@ export default function QuotationsPage() {
       `;
 
       document.body.appendChild(element);
+
+      const [{ default: domtoimage }, { jsPDF }] = await Promise.all([
+        import('dom-to-image-more'),
+        import('jspdf'),
+      ]);
+
       const imgData = await domtoimage.toPng(element, { quality: 1.0 });
       document.body.removeChild(element);
 

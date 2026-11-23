@@ -1,13 +1,10 @@
 // src/lib/invoice-layout/export-pdf.ts
 "use client";
 
-import domtoimage from "dom-to-image-more";
-import { jsPDF } from "jspdf";
 import { createRoot } from "react-dom/client";
 import React from "react";
 import { InvoiceRenderer } from "./renderer";
 import { InvoiceLayoutDefinition } from "./types";
-import { generateInvoicePDF } from "@/lib/generateInvoicePDF";
 
 interface DownloadInvoiceOptions {
   invoice: any;
@@ -191,6 +188,7 @@ export async function downloadInvoiceWithLayout({
 
   // If no custom active layout exists, use standard classic generator
   if (!resolvedLayout) {
+    const { generateInvoicePDF } = await import("@/lib/generateInvoicePDF");
     const pdfBytes = await generateInvoicePDF(invoice, plan, tenantInfo);
     const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
@@ -266,6 +264,11 @@ export async function downloadInvoiceWithLayout({
     });
 
     const targetEl = (container.firstElementChild || container) as HTMLElement;
+
+    const [{ default: domtoimage }, { jsPDF }] = await Promise.all([
+      import("dom-to-image-more"),
+      import("jspdf"),
+    ]);
 
     const imgData = await domtoimage.toPng(targetEl, {
       bgcolor: inlinedLayout.theme?.backgroundColor || "#ffffff",
@@ -377,6 +380,7 @@ export async function printInvoiceWithLayout({
   }
 
   if (!resolvedLayout) {
+    const { generateInvoicePDF } = await import("@/lib/generateInvoicePDF");
     const pdfBytes = await generateInvoicePDF(invoice, plan, tenantInfo);
     const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
     printPdfBlob(blob);
@@ -442,6 +446,11 @@ export async function printInvoiceWithLayout({
     });
 
     const targetEl = (container.firstElementChild || container) as HTMLElement;
+
+    const [{ default: domtoimage }, { jsPDF }] = await Promise.all([
+      import("dom-to-image-more"),
+      import("jspdf"),
+    ]);
 
     const imgData = await domtoimage.toPng(targetEl, {
       bgcolor: inlinedLayout.theme?.backgroundColor || "#ffffff",

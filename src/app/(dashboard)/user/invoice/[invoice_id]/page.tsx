@@ -7,7 +7,6 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Loader2, CheckCircle2, ShieldCheck, Image as ImageIcon, FileText as FileIcon, Layout, FileText, Sparkles, Printer } from "lucide-react";
 import { MdDownload, MdArrowBack, MdInsertDriveFile, MdCalendarToday, MdLocalOffer, MdWorkOutline, MdImage, MdCancel, MdAttachMoney, MdClose, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdDelete, MdUpload } from "react-icons/md";
 import Link from "next/link";
-import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
 import { getInvoiceByIdAdmin, approveBankSlip, declineBankSlip, undoApprovedBankSlipPayment, recordInvoicePayment, deleteIncome, adminUploadPaymentSlip } from "../../actions/actions";
 import { getTenantInfo } from "../../actions/tenants";
 import { getAccounts } from "../../actions/accounts";
@@ -56,7 +55,14 @@ const formatDateTime = (dateString: string | Date | null | undefined) => {
   });
 };
 
-import { formatMoney, hexToRgb, formatMoneySlash, wrapText, generateInvoicePDF } from "@/lib/generateInvoicePDF";
+const formatMoney = (value: any, currency = "LKR") => {
+  if (!value || isNaN(parseFloat(value))) return "N/A";
+  const currencySymbol = currency === "LKR" ? "Rs." : currency;
+  return `${currencySymbol} ${parseFloat(value).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
 import { downloadInvoiceWithLayout, printInvoiceWithLayout } from "@/lib/invoice-layout/export-pdf";
 import { useRole } from "../../context/RoleContext";
 

@@ -14,7 +14,6 @@ import { getTenantInfo } from "../actions/tenants";
 import { useAppLock } from "../components/AppLockProvider";
 import AnimatedNumber from "../components/AnimatedNumber";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
-import { generateInvoicePDF } from "@/lib/generateInvoicePDF";
 import { downloadInvoiceWithLayout, printInvoiceWithLayout } from "@/lib/invoice-layout/export-pdf";
 import Image from "next/image";
 
