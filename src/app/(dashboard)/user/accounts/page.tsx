@@ -703,13 +703,6 @@ export default function AccountsPage() {
                 <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Account Name</label>
                 <input
                   type="text"
-                  placeholder={
-                    isDebtTaken(formData.type)
-                      ? "e.g. Commercial Bank Facility or Director Debt"
-                      : isDebt(formData.type)
-                        ? "e.g. Kasun Perera - Equipment Debt"
-                        : "e.g. Main Operating"
-                  }
                   value={formData.name}
                   onChange={e => setFormData({...formData, name: e.target.value})}
                   className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs"
@@ -787,7 +780,6 @@ export default function AccountsPage() {
                     <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Account Owner Name</label>
                     <input
                       type="text"
-                      placeholder="e.g. Kasun Perera or Framebooks LLC"
                       value={formData.ownerName}
                       onChange={e => setFormData({...formData, ownerName: e.target.value})}
                       className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs"

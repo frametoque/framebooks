@@ -357,7 +357,7 @@ export const guideGroups: GuideGroup[] = [
           },
           {
             title: 'Bank Account Details & One-Click Copy',
-            content: 'Keep track of both your internal Account Name (e.g. Operational Primary) and legal Account Owner Name (e.g. Kasun Perera or Enterprise LLC). Every bank card features a quick copy button.',
+            content: 'Keep track of both your internal Account Name (e.g. Operational Primary) and legal Account Owner Name (e.g. Primary Beneficiary or Enterprise LLC). Every bank card features a quick copy button.',
             bullets: [
               'Click the copy icon on any bank account card to copy clean formatted details (Owner Name, Account Number, Bank Name, Branch) directly to your clipboard',
               'Instantly share payment details with clients via WhatsApp, email, or invoices without typing mistakes',
