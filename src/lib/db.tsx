@@ -1,9 +1,14 @@
 import postgres from "postgres";
 import { unstable_cache } from "next/cache";
+import { validateServerEnv } from "./env";
 
 declare global {
   // eslint-disable-next-line no-var
   var _sql: ReturnType<typeof postgres> | undefined;
+}
+
+if (typeof window === "undefined") {
+  validateServerEnv();
 }
 
 const sql =
