@@ -834,46 +834,6 @@ export default function AccountsPage() {
                 </select>
               </div>
 
-              {(() => {
-                const src = accounts.find(a => a.id === transferData.sourceAccountId);
-                const dest = accounts.find(a => a.id === transferData.destinationAccountId);
-                if (!src || !dest) return null;
-
-                if ((isBank(src.type) || isCash(src.type)) && isDebtGiven(dest.type)) {
-                  return (
-                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300">
-                      💸 <strong className="font-semibold text-amber-900 dark:text-amber-200">Debt Issuance</strong>: Moving money into &ldquo;{dest.name}&rdquo; increases the outstanding debt receivable without creating an expense.
-                    </div>
-                  );
-                }
-
-                if (isDebtGiven(src.type) && (isBank(dest.type) || isCash(dest.type))) {
-                  return (
-                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300">
-                      💰 <strong className="font-semibold text-emerald-900 dark:text-emerald-200">Debt Settlement</strong>: Moving money from &ldquo;{src.name}&rdquo; records repayment and reduces the outstanding debt receivable without creating taxable income.
-                    </div>
-                  );
-                }
-
-                if (isDebtTaken(src.type) && (isBank(dest.type) || isCash(dest.type))) {
-                  return (
-                    <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-800 dark:text-purple-300">
-                      📥 <strong className="font-semibold text-purple-900 dark:text-purple-200">Debt Received</strong>: Receiving borrowed money from &ldquo;{src.name}&rdquo; into your account increases available funds and records debt payable without creating taxable income.
-                    </div>
-                  );
-                }
-
-                if ((isBank(src.type) || isCash(src.type)) && isDebtTaken(dest.type)) {
-                  return (
-                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300">
-                      📤 <strong className="font-semibold text-emerald-900 dark:text-emerald-200">Debt Repayment</strong>: Moving money into &ldquo;{dest.name}&rdquo; pays down borrowed debt and reduces your outstanding liability without creating an expense.
-                    </div>
-                  );
-                }
-
-                return null;
-              })()}
-
               <div>
                 <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Amount (LKR)</label>
                 <input type="number" value={Number.isNaN(Number(transferData.amount)) ? transferData.amount : transferData.amount} onChange={e => setTransferData({...transferData, amount: e.target.value === "" ? "" : e.target.value as any})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
