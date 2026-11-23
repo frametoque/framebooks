@@ -31,7 +31,6 @@ import {
   MdClose,
   MdMenu,
   MdSettings,
-  MdCalendarToday,
   MdLockOutline,
   MdAdd,
   MdLocalOffer,
@@ -279,6 +278,7 @@ export function DashboardShell({
                   )}
                   <Link
                     href={item.href}
+                    prefetch={false}
                     onClick={() => setMobileMenuOpen(false)}
                     className={`relative z-10 flex items-center gap-3 pl-3.5 pr-3 py-2 rounded-full transition-colors duration-150 overflow-hidden w-full justify-start
                       ${active
@@ -326,6 +326,7 @@ export function DashboardShell({
               <div className="flex items-center gap-2">
                 <Link
                   href="/user/settings/profile"
+                  prefetch={false}
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex-1 flex items-center gap-2.5 p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-2xl transition-colors min-w-0"
                 >
@@ -368,14 +369,9 @@ export function DashboardShell({
 
             {/* Right: Actions, Clock, Date, Theme, User */}
             <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-              {/* Time */}
-              <AnimatedClock />
-
-              <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
-
-              {/* Date */}
-              <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
-                <MdCalendarToday className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              {/* Time & Date */}
+              <div className="flex items-center gap-3 text-gray-700 dark:text-gray-300">
+                <AnimatedClock />
                 <span className="font-medium text-xs sm:text-sm">{currentDate || "Loading..."}</span>
               </div>
 
@@ -384,7 +380,6 @@ export function DashboardShell({
               {/* Action Icons */}
               <div className="flex items-center gap-1">
                 <NotificationBell />
-                <ThemeToggle />
               </div>
 
               {/* Profile pill on top bar (User only) */}

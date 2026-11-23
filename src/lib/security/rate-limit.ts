@@ -9,22 +9,19 @@ interface RateLimitRecord {
 
 const stores = new Map<string, Map<string, RateLimitRecord>>();
 
-// Periodic cleanup of stale stores (runs once every 5 minutes)
-if (typeof setInterval !== "undefined") {
-  const cleanupInterval = setInterval(() => {
-    const now = Date.now();
-    for (const [, store] of stores.entries()) {
-      for (const [key, record] of store.entries()) {
-        record.timestamps = record.timestamps.filter(t => now - t < 15 * 60 * 1000);
-        if (record.timestamps.length === 0) {
-          store.delete(key);
-        }
+let lastCleanup = Date.now();
+function cleanupStaleStores(now: number) {
+  // Throttle in-memory store cleanup to at most once every 60 seconds on active requests
+  // Avoids background setInterval timers that keep serverless execution alive
+  if (now - lastCleanup < 60_000) return;
+  lastCleanup = now;
+  for (const [, store] of stores.entries()) {
+    for (const [key, record] of store.entries()) {
+      record.timestamps = record.timestamps.filter(t => now - t < 15 * 60 * 1000);
+      if (record.timestamps.length === 0) {
+        store.delete(key);
       }
     }
-  }, 5 * 60 * 1000);
-
-  if (cleanupInterval.unref) {
-    cleanupInterval.unref();
   }
 }
 
@@ -88,13 +85,14 @@ export function checkRateLimit(
 
   const max = options.limit !== undefined ? options.limit : (options.max !== undefined ? options.max : 10);
   const windowMs = options.windowMs || 15 * 60 * 1000;
+  const now = Date.now();
+  cleanupStaleStores(now);
 
   if (!stores.has(namespace)) {
     stores.set(namespace, new Map<string, RateLimitRecord>());
   }
 
   const store = stores.get(namespace)!;
-  const now = Date.now();
   const cutoff = now - windowMs;
 
   let record = store.get(identifier);

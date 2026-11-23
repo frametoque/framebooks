@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import sql from "@/lib/db";
 import { auth } from '@/lib/auth';
 import { revalidatePath } from "next/cache";
@@ -7,6 +8,19 @@ import { cookies } from "next/headers";
 import { logSystemAction } from "@/lib/logger";
 
 import { requirePermission } from "./rbac";
+import { 
+  isGta6Palette, 
+  GTA6_PALETTE_ID, 
+  isF1Palette, 
+  F1_PALETTE_ID,
+  isSlCricketPalette,
+  SL_CRICKET_PALETTE_ID,
+  isSlFlagPalette,
+  SL_FLAG_PALETTE_ID,
+  isChristmasPalette,
+  CHRISTMAS_PALETTE_ID,
+  resolvePaletteId
+} from "@/lib/theme/accent";
 
 async function resolveGraceAndReadOnly(plan: string, planExpiresAt: any, tenantId?: number | null, paymentStatus?: string | null) {
   let is_grace_period = false;
@@ -99,7 +113,7 @@ async function resolveGraceAndReadOnly(plan: string, planExpiresAt: any, tenantI
   };
 }
 
-export async function getTenantInfo() {
+export const getTenantInfo = cache(async function getTenantInfo() {
   try {
     const { userId, session } = await auth();
     if (!userId && !session?.user?.email) {
@@ -232,7 +246,7 @@ export async function getTenantInfo() {
       teamMembersCount: 1
     };
   }
-}
+});
 
 export async function updateTenantInfo(data: { 
   name?: string; 
@@ -829,8 +843,9 @@ export async function switchActiveTenant(targetTenantId: number) {
     const targetAccent = targetRows[0]?.accent_color;
     try {
       const cookieStore = await cookies();
-      if (targetAccent && /^#[0-9a-fA-F]{6}$/i.test(targetAccent)) {
-        cookieStore.set("fb_accent_color", targetAccent.toUpperCase(), { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+      const clean = resolvePaletteId(targetAccent);
+      if (clean) {
+        cookieStore.set("fb_accent_color", clean, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
       } else {
         cookieStore.delete("fb_accent_color");
       }
@@ -976,8 +991,21 @@ export async function getTenantAccent(): Promise<{ accentColor: string | null; c
   }
 }
 
+let accentColumnWidened = false;
+
+async function ensureAccentColumnWidth() {
+  if (accentColumnWidened) return;
+  accentColumnWidened = true;
+  try {
+    await sql`ALTER TABLE tenants ALTER COLUMN accent_color TYPE VARCHAR(50)`;
+  } catch (err) {
+    // Column may already be VARCHAR(50) or restricted
+  }
+}
+
 export async function updateTenantAccent(accentColor: string | null): Promise<{ success: boolean; accentColor?: string | null; error?: string }> {
   try {
+    await ensureAccentColumnWidth();
     const { userId, session } = await auth();
     const email = session?.user?.email?.trim().toLowerCase();
     if (!userId && !email) return { success: false, error: "Unauthorized" };
@@ -1013,15 +1041,13 @@ export async function updateTenantAccent(accentColor: string | null): Promise<{ 
       return { success: false, error: "Custom workspace accent colors require a Pro or Pro Plus plan. Upgrade to Pro to save custom branding." };
     }
 
-    // Validate hex format (e.g. #00E35B) or null (default)
+    // Validate hex format (e.g. #00E35B) or named palette or null (default)
     let cleanHex: string | null = null;
     if (accentColor && accentColor.trim()) {
-      let raw = accentColor.trim();
-      if (!raw.startsWith("#")) raw = `#${raw}`;
-      if (!/^#[0-9a-fA-F]{6}$/.test(raw)) {
+      cleanHex = resolvePaletteId(accentColor.trim());
+      if (!cleanHex) {
         return { success: false, error: "Invalid hex color format. Example: #00E35B" };
       }
-      cleanHex = raw.toUpperCase();
     }
 
     const beforeRows = await sql`SELECT plan, accent_color FROM tenants WHERE id = ${tenantId} LIMIT 1`;

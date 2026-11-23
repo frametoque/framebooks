@@ -7,7 +7,22 @@ import { AnimatedClock } from "./components/AnimatedClock";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from 'next-auth/react';
 import { getTenantInfo, leaveTeam } from "./actions/tenants";
-import { generateTenantThemeCss, DEFAULT_ACCENT_HEX } from "@/lib/theme/accent";
+import { 
+  generateTenantThemeCss, 
+  DEFAULT_ACCENT_HEX, 
+  isGta6Palette, 
+  GTA6_PALETTE_ID, 
+  isF1Palette, 
+  F1_PALETTE_ID,
+  isSlCricketPalette,
+  SL_CRICKET_PALETTE_ID,
+  isSlFlagPalette,
+  SL_FLAG_PALETTE_ID,
+  isChristmasPalette,
+  CHRISTMAS_PALETTE_ID,
+  resolvePaletteId,
+  resolveHeroAccentHex
+} from "@/lib/theme/accent";
 import {
   motion,
   AnimatePresence,
@@ -21,7 +36,9 @@ import { RoleProvider } from "./context/RoleContext";
 import { User as UserIcon, Building2, Receipt, Droplets, BarChart3, NotepadTextDashed, FolderOpenDot, Layers, FilePenLine, ChartLine, CalendarPlus, ExternalLink, Globe, RefreshCw, Server, Cloud, Megaphone, Terminal, Printer } from "lucide-react";
 import { MdCreditCard, MdNotifications, MdMenu, MdSearch, MdDashboard, MdAccountBalanceWallet, MdInsertDriveFile, MdGroup, MdInventory2, MdLogout, MdClose, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdWorkOutline, MdKeyboardDoubleArrowLeft, MdKeyboardDoubleArrowRight, MdCalendarToday, MdAdd, MdAccessTime, MdSettings, MdAttachMoney, MdDownload, MdMenuBook, MdAccountBalance, MdLockOutline, MdLock, MdWarning } from "react-icons/md";
 import { AppLockProvider, useAppLock, LockScreen } from "./components/AppLockProvider";
-import { ThemeToggle } from "./components/ThemeToggle";
+import { PrivacyBlurToggle } from "./components/PrivacyBlurToggle";
+import { ChristmasSnowfall } from "./components/ChristmasSnowfall";
+import { NotificationScheduler } from "./components/NotificationScheduler";
 import { UpgradeModal } from "./components/UpgradeModal";
 import ClientAvatar from "@/components/ClientAvatar";
 import { TenantLogo } from "@/components/TenantLogo";
@@ -155,8 +172,8 @@ function LayoutContent({ children }) {
         ...info,
         accent_color: info.accent_color || prev.accent_color || null,
       }));
-      if (info.accent_color && /^#[0-9a-fA-F]{6}$/i.test(info.accent_color)) {
-        const clean = info.accent_color.toUpperCase();
+      const clean = resolvePaletteId(info.accent_color);
+      if (clean) {
         try {
           document.cookie = `fb_accent_color=${encodeURIComponent(clean)}; path=/; max-age=31536000; SameSite=Lax`;
           localStorage.setItem("framebooks_accent_color", clean);
@@ -174,8 +191,9 @@ function LayoutContent({ children }) {
   // Synchronize workspace accent color dynamically across client navigations
   useEffect(() => {
     const applyClientAccent = (hex: string | null | undefined) => {
-      if (!hex || !/^#[0-9a-fA-F]{6}$/i.test(hex)) return;
-      const cleanHex = hex.toUpperCase();
+      if (!hex) return;
+      const cleanHex = resolvePaletteId(hex);
+      if (!cleanHex) return;
       const newCss = generateTenantThemeCss(cleanHex);
       let tag = (document.getElementById("tenant-accent-theme-ssr") || document.getElementById("tenant-accent-theme-client")) as HTMLStyleElement | null;
       if (tag) {
@@ -186,24 +204,26 @@ function LayoutContent({ children }) {
         document.head.appendChild(tag);
         tag.innerHTML = newCss;
       }
-      document.documentElement.style.setProperty("--accent", cleanHex);
+      document.documentElement.style.setProperty("--accent", resolveHeroAccentHex(cleanHex));
     };
 
     try {
       const match = document.cookie.match(/(?:^|;\s*)fb_accent_color=([^;]+)/);
       const cookieVal = match ? decodeURIComponent(match[1]).trim() : null;
       const cached = cookieVal || localStorage.getItem("framebooks_accent_color");
-      if (cached && /^#[0-9a-fA-F]{6}$/i.test(cached)) {
-        setTenantInfo((prev: any) => ({ ...prev, accent_color: cached.toUpperCase() }));
-        applyClientAccent(cached);
+      const resolved = resolvePaletteId(cached);
+      if (resolved) {
+        setTenantInfo((prev: any) => ({ ...prev, accent_color: resolved }));
+        applyClientAccent(resolved);
       }
     } catch { }
 
     const handleAccentChange = (e: Event) => {
       const custom = e as CustomEvent<string>;
       const newHex = custom.detail || DEFAULT_ACCENT_HEX;
-      setTenantInfo((prev: any) => ({ ...prev, accent_color: newHex }));
-      applyClientAccent(newHex);
+      const resolved = resolvePaletteId(newHex) || DEFAULT_ACCENT_HEX;
+      setTenantInfo((prev: any) => ({ ...prev, accent_color: resolved }));
+      applyClientAccent(resolved);
     };
 
     window.addEventListener("accent:change", handleAccentChange);
@@ -226,7 +246,7 @@ function LayoutContent({ children }) {
   const showOwnerWarning = tenantInfo.plan !== 'Loading...' && tenantInfo.plan !== 'Pro Plus' && (tenantInfo.userRole === 'owner' || tenantInfo.userRole === 'Super Admin') && (tenantInfo.teamMembersCount || 0) > 1;
   const isMainDashboard = pathname === "/user/dashboard" || pathname === "/user";
 
-  // --- Maintenance mode (optimized: visibility-aware, 5m interval) ---
+  // --- Maintenance mode (optimized: visibility-aware on tab switch, zero background timer) ---
   const [maintenance, setMaintenance] = useState<{ active: boolean; message: string; allowed: boolean } | null>(null);
   useEffect(() => {
     const check = () => {
@@ -237,13 +257,11 @@ function LayoutContent({ children }) {
         .catch(() => {});
     };
     check();
-    const interval = setInterval(check, 300_000); // 5 minutes instead of 60s
     const handleVisibility = () => {
       if (!document.hidden) check();
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => {
-      clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, []);
@@ -295,6 +313,8 @@ function LayoutContent({ children }) {
         planName={tenantInfo.plan || "Free"}
       >
         <PlanLockProvider>
+          <ChristmasSnowfall />
+          <NotificationScheduler />
           <div className={`min-h-screen bg-background text-foreground font-sans antialiased${showMaintenanceScreen ? " pointer-events-none select-none" : ""}`}>
             {!isLocked && !showMaintenanceScreen && (
               <Sidebar
@@ -353,7 +373,7 @@ function LayoutContent({ children }) {
                             <p className="text-gray-600 dark:text-gray-400 text-sm">You have active team members, but your current plan doesn't support them. Upgrade to restore their access.</p>
                           </div>
                         </div>
-                        <Link href="/user/settings/billing" className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
+                        <Link href="/user/settings/billing" prefetch={false} className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
                           Upgrade Now
                         </Link>
                       </div>
@@ -409,7 +429,7 @@ function LayoutContent({ children }) {
                             <p className="text-gray-600 dark:text-gray-400 text-sm">You have active team members, but your current plan doesn't support them. Upgrade to restore their access.</p>
                           </div>
                         </div>
-                        <Link href="/user/settings/billing" className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
+                        <Link href="/user/settings/billing" prefetch={false} className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
                           Upgrade Now
                         </Link>
                       </div>
@@ -699,7 +719,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
 
               {pathname === "/user/social-media/new" && (
                 <div className="flex items-center gap-2 text-gray-400">
-                  <Link href="/user/social-media" className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors flex items-center justify-center hover:text-foreground" title="Go Back">
+                  <Link href="/user/social-media" prefetch={false} className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors flex items-center justify-center hover:text-foreground" title="Go Back">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>
                   </Link>
                   <span className="text-sm font-semibold tracking-tight text-gray-300">Create New Post</span>
@@ -707,7 +727,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
               )}
               {isInvoiceDetail && (
                 <div className="flex items-center gap-2">
-                  <Link href="/user/invoices" className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors flex items-center justify-center text-gray-400 hover:text-foreground mr-2" title="Back to Invoices">
+                  <Link href="/user/invoices" prefetch={false} className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors flex items-center justify-center text-gray-400 hover:text-foreground mr-2" title="Back to Invoices">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>
                   </Link>
                   {tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
@@ -841,14 +861,9 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
             </>
           )}
 
-          {/* Current Time */}
-          <AnimatedClock />
-
-          <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
-
-          {/* Current Date (showing Day Name e.g. Fri, Sat, Sun) */}
-          <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
-            <MdCalendarToday className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          {/* Current Time & Date */}
+          <div className="flex items-center gap-3 text-gray-700 dark:text-gray-300">
+            <AnimatedClock />
             <span className="font-medium text-sm">{currentDate || "Loading..."}</span>
           </div>
 
@@ -856,8 +871,8 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
 
           {/* Action Icons */}
           <div className="flex items-center gap-1">
+            <PrivacyBlurToggle />
             <NotificationBell />
-            <ThemeToggle />
           </div>
 
           {/* Business Profile Switcher & Info */}
@@ -950,7 +965,7 @@ const Sidebar = ({
 
           {/* Logo + Collapse toggle */}
           <div className="flex items-center h-20 flex-shrink-0 px-3 overflow-hidden relative">
-            <Link href="/" className="flex items-center h-full w-full overflow-hidden relative">
+            <Link href="/" prefetch={false} className="flex items-center h-full w-full overflow-hidden relative">
               {/* Folded icon */}
               <motion.div
                 initial={false}
@@ -1024,6 +1039,7 @@ const Sidebar = ({
                   )}
                   <Link
                     href={item.href}
+                    prefetch={false}
                     onClick={() => {
                       setMobileMenuOpen(false);
                       setIsHovered(false);
@@ -1065,6 +1081,7 @@ const Sidebar = ({
             <div className={`flex items-center w-full ${isExpanded ? "gap-2" : "justify-center"}`}>
               <Link
                 href="/user/settings/profile"
+                prefetch={false}
                 onClick={() => {
                   setMobileMenuOpen(false);
                   setIsHovered(false);

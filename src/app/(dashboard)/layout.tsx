@@ -1,5 +1,5 @@
 // src/app/(dashboard)/layout.tsx
-import React from "react";
+import React, { cache } from "react";
 import { headers, cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -7,9 +7,25 @@ import { getAdminUser } from "@/app/(dashboard)/admin/_lib/auth";
 import { redirect } from "next/navigation";
 
 import sql from "@/lib/db";
-import { generateTenantThemeCss, DEFAULT_ACCENT_HEX } from "@/lib/theme/accent";
+import { generateTenantThemeCss, DEFAULT_ACCENT_HEX, resolvePaletteId } from "@/lib/theme/accent";
 
 export const dynamic = "force-dynamic";
+
+// Request-level memoized accent query to avoid duplicate database hits across layout evaluations
+const getCachedUserAccent = cache(async (email: string) => {
+  try {
+    const userRows = await sql`
+      SELECT t.accent_color
+      FROM admin_users u
+      JOIN tenants t ON u.tenant_id = t.id
+      WHERE LOWER(u.email) = ${email.toLowerCase()}
+      LIMIT 1
+    `;
+    return userRows[0]?.accent_color || null;
+  } catch {
+    return null;
+  }
+});
 
 export default async function DashboardRootLayout({
   children,
@@ -48,25 +64,14 @@ export default async function DashboardRootLayout({
       const cookieStore = await cookies();
       const rawCookie = cookieStore.get("fb_accent_color")?.value;
       if (rawCookie) {
-        const decoded = decodeURIComponent(rawCookie).trim();
-        if (/^#[0-9a-fA-F]{6}$/i.test(decoded)) {
-          resolvedColor = decoded.toUpperCase();
-        }
+        resolvedColor = resolvePaletteId(decodeURIComponent(rawCookie));
       }
 
-      // 2. If cookie not set, query database
+      // 2. If cookie not set, query database (memoized per request)
       if (!resolvedColor) {
-        const email = userSession.user.email.toLowerCase();
-        const userRows = await sql`
-          SELECT t.accent_color
-          FROM admin_users u
-          JOIN tenants t ON u.tenant_id = t.id
-          WHERE LOWER(u.email) = ${email}
-          LIMIT 1
-        `;
-        const dbColor = userRows[0]?.accent_color;
-        if (dbColor && /^#[0-9a-fA-F]{6}$/i.test(dbColor.trim())) {
-          resolvedColor = dbColor.trim().toUpperCase();
+        const dbColor = await getCachedUserAccent(userSession.user.email);
+        if (dbColor) {
+          resolvedColor = resolvePaletteId(dbColor);
         }
       }
 

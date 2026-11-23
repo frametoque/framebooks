@@ -517,7 +517,7 @@ export default function IncomePage() {
                   </td>
                   <td className="p-4">
                     {row.invoice ? (
-                      <Link href={`/user/invoice/${row.invoice}`} className="flex items-center gap-1 text-sm font-medium text-emerald-700 dark:text-brand-400 hover:text-emerald-800 dark:hover:text-brand-300 transition-colors">
+                      <Link href={`/user/invoice/${row.invoice}`} prefetch={false} className="flex items-center gap-1 text-sm font-medium text-emerald-700 dark:text-brand-400 hover:text-emerald-800 dark:hover:text-brand-300 transition-colors">
                         <MdInsertDriveFile className="w-4 h-4" />{row.invoice}
                       </Link>
                     ) : '-'}
@@ -1044,7 +1044,7 @@ export default function IncomePage() {
                 {viewingReceipt.invoice && (
                   <div>
                     <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Linked Invoice</p>
-                    <Link href={`/user/invoice/${viewingReceipt.invoice}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 text-sm font-medium text-brand-400 hover:bg-brand-500/20 transition-colors">
+                    <Link href={`/user/invoice/${viewingReceipt.invoice}`} prefetch={false} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 text-sm font-medium text-brand-400 hover:bg-brand-500/20 transition-colors">
                       <MdInsertDriveFile className="w-4 h-4" />{viewingReceipt.invoice}
                     </Link>
                   </div>

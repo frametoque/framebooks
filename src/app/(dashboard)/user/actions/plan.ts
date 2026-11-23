@@ -1,10 +1,11 @@
 "use server";
 
+import { cache } from "react";
 import sql from "@/lib/db";
 import { getTenantId } from "@/app/(dashboard)/user/actions/actions";
 import { PlanType } from "@/lib/plans";
 
-export async function getTenantPlan(): Promise<PlanType> {
+export const getTenantPlan = cache(async function getTenantPlan(): Promise<PlanType> {
   const tenantId = await getTenantId();
   if (!tenantId) return 'Free';
   
@@ -13,4 +14,4 @@ export async function getTenantPlan(): Promise<PlanType> {
   
   const plan = result[0].plan;
   return (plan === 'Pro Plus' || plan === 'Pro') ? plan as PlanType : 'Free';
-}
+});

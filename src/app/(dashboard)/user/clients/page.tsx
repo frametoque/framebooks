@@ -349,6 +349,7 @@ export default function ClientsPage() {
                         {/* View profile */}
                         <Link
                           href={`/user/clients/${client.id}`}
+                          prefetch={false}
                           title="View client profile & history"
                           className="p-2 hover:bg-emerald-500/10 rounded-xl transition-colors text-gray-400 hover:text-emerald-700 dark:hover:text-brand-400"
                         >

@@ -482,6 +482,7 @@ const handleDelete = async (id: number) => {
         {role !== 'Viewer' && (
           <Link
             href="/user/quotations/new"
+            prefetch={false}
             className="flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors w-full sm:w-auto shadow-xs"
           >
             <MdAdd className="w-5 h-5" />

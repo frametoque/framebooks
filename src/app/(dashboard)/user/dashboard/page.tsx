@@ -288,7 +288,7 @@ export default function DashboardPage() {
                   minFontSize={13}
                 />
                 {stat.subtext && (
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 truncate" title={stat.subtext}>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 truncate" title={stat.subtext} data-stat-value>
                     {stat.subtext}
                   </p>
                 )}
@@ -299,7 +299,7 @@ export default function DashboardPage() {
           return (
             <motion.div variants={itemVariants} key={i} className="min-w-0 h-full">
               {stat.href ? (
-                <Link href={stat.href} className="block h-full focus:outline-none">
+                <Link href={stat.href} prefetch={false} className="block h-full focus:outline-none">
                   {cardContent}
                 </Link>
               ) : (
@@ -315,6 +315,7 @@ export default function DashboardPage() {
         >
           <Link
             href="/user/invoices"
+            prefetch={false}
             className="bg-card border border-border rounded-3xl p-4 sm:p-5 xl:p-6 flex items-center gap-3.5 hover:shadow-md hover:border-amber-500/30 transition-all shadow-xs cursor-pointer min-w-0 h-full w-full block focus:outline-none"
           >
             <div className="flex items-center gap-3.5 min-w-0 w-full">
@@ -344,6 +345,7 @@ export default function DashboardPage() {
               </p>
               <Link 
                 href="/user/invoices?status=unpaid"
+                prefetch={false}
                 className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-500 flex items-center gap-1 transition-colors"
               >
                 <span>View all</span>
@@ -377,6 +379,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-muted-foreground mb-3">No unpaid invoices at the moment.</p>
                 <Link
                   href="/user/invoices?status=unpaid"
+                  prefetch={false}
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline"
                 >
                   <span>View all invoices</span>
@@ -465,8 +468,8 @@ export default function DashboardPage() {
               <AreaChart data={data.chartData.filter((d: any) => d.year === chartYear)} margin={{ top: 10, right: 10, left: 15, bottom: 0 }}>
                 <defs>
                   <linearGradient id="dashIncomeGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={accent} stopOpacity={0.35} />
-                    <stop offset="95%" stopColor={accent} stopOpacity={0} />
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="dashExpenseGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.35} />
@@ -497,7 +500,7 @@ export default function DashboardPage() {
                           <p className="font-semibold text-gray-400">{label}</p>
                           <div className="flex items-center gap-4 text-xs font-medium">
                             <div className="flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: accent }} />
+                              <span className="w-2 h-2 rounded-full bg-[#10b981]" />
                               <span className="text-gray-400">INC:</span>
                               <span className="font-semibold text-white tabular-nums">{formatLKR(inc)}</span>
                             </div>
@@ -511,7 +514,7 @@ export default function DashboardPage() {
                             <span className="text-gray-400">Net Profit:</span>
                             <span
                               className="font-semibold tabular-nums"
-                              style={{ color: profit >= 0 ? accent : "#f43f5e" }}
+                              style={{ color: profit >= 0 ? "#10b981" : "#f43f5e" }}
                             >
                               {profit >= 0 ? "+" : ""}
                               {formatLKR(profit)}
@@ -524,7 +527,7 @@ export default function DashboardPage() {
                   }}
                 />
                 <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: '12px', paddingBottom: '10px' }}/>
-                <Area type="monotone" dataKey="income" name="Income" stroke={accent} strokeWidth={2} fill="url(#dashIncomeGrad)" fillOpacity={1} />
+                <Area type="monotone" dataKey="income" name="Income" stroke="#10b981" strokeWidth={2} fill="url(#dashIncomeGrad)" fillOpacity={1} />
                 <Area type="monotone" dataKey="expenses" name="Expenses" stroke="#f43f5e" strokeWidth={2} fill="url(#dashExpenseGrad)" fillOpacity={1} />
               </AreaChart>
             </ResponsiveContainer>
@@ -679,9 +682,9 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-4">
                   <div className="text-foreground flex shrink-0">
                     {tx.type === 'income' ? (
-                      <MdCallReceived className="w-5 h-5 text-emerald-600 dark:text-brand-500" />
+                      <MdCallReceived className="w-5 h-5 text-emerald-600 dark:text-green-400" />
                     ) : (
-                      <MdCallMade className="w-5 h-5 text-red-600 dark:text-red-500" />
+                      <MdCallMade className="w-5 h-5 text-red-600 dark:text-red-400" />
                     )}
                   </div>
                   <div>

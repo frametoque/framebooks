@@ -506,6 +506,7 @@ function InvoicesPageContent() {
         {role !== 'Viewer' && (
           <Link
             href="/user/invoices/new"
+            prefetch={false}
             className="flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-950 rounded-3xl font-bold transition-colors w-full sm:w-auto self-end lg:self-auto shadow-xs"
           >
             <MdInsertDriveFile className="w-5 h-5" />
@@ -543,7 +544,7 @@ function InvoicesPageContent() {
                 return (
                   <tr key={row.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
                     <td className="p-4">
-                      <Link href={`/user/invoice/${row.id}`} className="font-semibold text-emerald-700 dark:text-brand-400 hover:text-emerald-800 dark:hover:text-brand-300 transition-colors">
+                      <Link href={`/user/invoice/${row.id}`} prefetch={false} className="font-semibold text-emerald-700 dark:text-brand-400 hover:text-emerald-800 dark:hover:text-brand-300 transition-colors">
                         {row.id}
                       </Link>
                     </td>
@@ -581,12 +582,12 @@ function InvoicesPageContent() {
                             <MdAttachMoney className="w-4 h-4" />
                           </button>
                         )}
-                        <Link href={`/user/invoice/${row.id}`} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground" title="View">
+                        <Link href={`/user/invoice/${row.id}`} prefetch={false} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground" title="View">
                           <MdRemoveRedEye className="w-4 h-4" />
                         </Link>
                         {role !== 'Viewer' && (
                           <>
-                            <Link href={`/user/invoices/${row.id}/edit`} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground" title="Edit">
+                            <Link href={`/user/invoices/${row.id}/edit`} prefetch={false} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground" title="Edit">
                               <Edit2 className="w-4 h-4" />
                             </Link>
                             <button onClick={() => handleSend(row.id)} className="p-2 hover:bg-brand-500/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-brand-700 dark:hover:text-brand-400" title="Copy Link">

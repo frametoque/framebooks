@@ -10,7 +10,8 @@ import {
   AlertOctagon, 
   ExternalLink,
   Check,
-  X
+  X,
+  Settings
 } from "lucide-react";
 import Link from "next/link";
 import { getUserNotifications, dismissAnnouncement } from "@/app/(dashboard)/admin/announcements/actions";
@@ -36,13 +37,11 @@ export function NotificationBell() {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 300000); // 5 minutes instead of 60s
     const handleVisibility = () => {
       if (!document.hidden) fetchNotifications();
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => {
-      clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, []);
@@ -191,6 +190,17 @@ export function NotificationBell() {
                 </div>
               ))
             )}
+          </div>
+
+          <div className="px-4 py-2.5 bg-muted/30 border-t border-border flex items-center justify-between text-[11px]">
+            <Link
+              href="/user/settings/notifications"
+              onClick={() => setOpen(false)}
+              className="text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 transition-colors"
+            >
+              <Settings className="w-3.5 h-3.5 text-muted-foreground" />
+              <span>Notification Settings</span>
+            </Link>
           </div>
         </div>
       )}
