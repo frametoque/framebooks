@@ -22,9 +22,6 @@ export default function ClientAvatar({
 }: ClientAvatarProps) {
   const gravatarUrl = useMemo(() => (email ? getGravatarUrl(email, size) : null), [email, size]);
 
-  const [primaryFailed, setPrimaryFailed] = useState(false);
-  const [gravatarFailed, setGravatarFailed] = useState(false);
-
   const cleanImageUrl = useMemo(() => {
     if (!imageUrl) return null;
     const trimmed = String(imageUrl).trim();
@@ -39,7 +36,14 @@ export default function ClientAvatar({
     return trimmed.replace(/^http:\/\//i, "https://");
   }, [gravatarUrl]);
 
+  const [primarySrc, setPrimarySrc] = useState<string | null>(cleanImageUrl);
+  const [retriedPrimaryProxy, setRetriedPrimaryProxy] = useState(false);
+  const [primaryFailed, setPrimaryFailed] = useState(false);
+  const [gravatarFailed, setGravatarFailed] = useState(false);
+
   useEffect(() => {
+    setPrimarySrc(cleanImageUrl);
+    setRetriedPrimaryProxy(false);
     setPrimaryFailed(false);
   }, [cleanImageUrl]);
 
@@ -47,16 +51,25 @@ export default function ClientAvatar({
     setGravatarFailed(false);
   }, [cleanGravatarUrl]);
 
+  const handlePrimaryError = () => {
+    if (!retriedPrimaryProxy && cleanImageUrl && !cleanImageUrl.startsWith("/") && typeof window !== "undefined" && !cleanImageUrl.startsWith(window.location.origin)) {
+      setRetriedPrimaryProxy(true);
+      setPrimarySrc(`/api/proxy-image?url=${encodeURIComponent(cleanImageUrl)}`);
+    } else {
+      setPrimaryFailed(true);
+    }
+  };
+
   const initial = (name || email || "?").trim().charAt(0).toUpperCase() || "?";
 
-  if (cleanImageUrl && !primaryFailed) {
+  if (primarySrc && !primaryFailed) {
     return (
       <img
-        src={cleanImageUrl}
+        src={primarySrc}
         alt={name || "Client Avatar"}
         className={className}
         referrerPolicy="no-referrer"
-        onError={() => setPrimaryFailed(true)}
+        onError={handlePrimaryError}
       />
     );
   }

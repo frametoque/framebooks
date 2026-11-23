@@ -68,6 +68,7 @@ export const authOptions: NextAuthOptions = {
           id: String(user.id),
           email: user.email,
           name: user.full_name || 'Admin',
+          image: user.avatar_url || null,
           dbId: user.id,
           systemRole: user.system_role || 'user',
           isBanned: !!user.is_banned,
@@ -144,7 +145,7 @@ export const authOptions: NextAuthOptions = {
 
         try {
           const dbUser = await sql`
-            SELECT id, tenant_id, role, system_role, is_banned, full_name 
+            SELECT id, tenant_id, role, system_role, is_banned, full_name, avatar_url 
             FROM admin_users 
             WHERE LOWER(email) = ${email} 
             LIMIT 1
@@ -158,6 +159,9 @@ export const authOptions: NextAuthOptions = {
             (session.user as any).isBanned = !!dbUser[0].is_banned;
             if (dbUser[0].full_name && !session.user.name) {
               session.user.name = dbUser[0].full_name;
+            }
+            if (dbUser[0].avatar_url) {
+              session.user.image = dbUser[0].avatar_url;
             }
           }
         } catch (err) {

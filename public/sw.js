@@ -1,5 +1,5 @@
 // public/sw.js
-const CACHE_NAME = "framebooks-pwa-v2";
+const CACHE_NAME = "framebooks-pwa-v3";
 
 const PRECACHE_ASSETS = [
   "/offline.html",
@@ -47,8 +47,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Skip Next.js internal development hot-reloads and API actions
+  // Only handle same-origin requests; let cross-origin CDN/R2/external images pass directly to browser
   const url = new URL(request.url);
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // Skip Next.js internal development hot-reloads and API actions
   if (
     url.pathname.startsWith("/_next/webpack-hmr") ||
     url.pathname.startsWith("/api/auth")

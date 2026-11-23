@@ -20,8 +20,6 @@ export function TenantLogo({
   fallbackClassName = "w-9 h-9 rounded-full bg-card flex items-center justify-center border border-border/50",
   iconClassName = "w-4 h-4 text-gray-400",
 }: TenantLogoProps) {
-  const [hasError, setHasError] = useState(false);
-
   const cleanUrl = React.useMemo(() => {
     if (!logoUrl) return null;
     const trimmed = String(logoUrl).trim();
@@ -29,20 +27,35 @@ export function TenantLogo({
     return trimmed.replace(/^http:\/\//i, "https://");
   }, [logoUrl]);
 
+  const [currentSrc, setCurrentSrc] = useState<string | null>(cleanUrl);
+  const [retriedProxy, setRetriedProxy] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
   useEffect(() => {
+    setCurrentSrc(cleanUrl);
+    setRetriedProxy(false);
     setHasError(false);
   }, [cleanUrl]);
 
-  if (cleanUrl && !hasError) {
+  const handleError = () => {
+    if (!retriedProxy && cleanUrl && !cleanUrl.startsWith("/") && typeof window !== "undefined" && !cleanUrl.startsWith(window.location.origin)) {
+      setRetriedProxy(true);
+      setCurrentSrc(`/api/proxy-image?url=${encodeURIComponent(cleanUrl)}`);
+    } else {
+      setHasError(true);
+    }
+  };
+
+  if (currentSrc && !hasError) {
     return (
       <img
-        src={cleanUrl}
+        src={currentSrc}
         alt={name || "Business Logo"}
         width={size}
         height={size}
         className={className}
         referrerPolicy="no-referrer"
-        onError={() => setHasError(true)}
+        onError={handleError}
       />
     );
   }
