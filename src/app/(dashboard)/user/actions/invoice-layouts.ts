@@ -17,7 +17,7 @@ const MAX_LAYOUTS_PER_TENANT = 10;
 /**
  * Helper to upload a base64 Data URL to Cloudflare R2 under invoice-layouts/{tenantId}/{fileName}
  */
-export async function uploadBase64ToR2(
+async function uploadBase64ToR2(
   dataUrl: string,
   tenantId: string | number,
   prefix = "asset"
@@ -339,7 +339,7 @@ export async function saveInvoiceLayout(data: {
  * Helper to sync format assignments so only one format can exist for invoice,
  * and only one format can exist for quotation.
  */
-export async function syncLayoutFormatAssignments(
+async function syncLayoutFormatAssignments(
   tenantId: string,
   targetLayoutId: string | null,
   targetType: 'invoice' | 'quotation' | 'both' | 'off'

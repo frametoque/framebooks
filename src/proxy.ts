@@ -7,8 +7,8 @@ export default function middleware(req: NextRequest) {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
 
-  // Freely allow admin login page
-  if (pathname.startsWith("/admin/login")) {
+  // Freely allow admin login page and logout endpoint
+  if (pathname.startsWith("/admin/login") || pathname === "/api/admin/auth/logout") {
     return NextResponse.next({
       request: {
         headers: requestHeaders,
@@ -17,10 +17,31 @@ export default function middleware(req: NextRequest) {
   }
 
   // Admin routes: protected strictly by framebooks-admin-token
-  if (pathname.startsWith("/admin")) {
+  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
     const adminSession = req.cookies.get("framebooks-admin-token")?.value;
+    let isValid = false;
 
-    if (!adminSession) {
+    if (adminSession) {
+      try {
+        const parts = adminSession.split(".");
+        if (parts.length === 3) {
+          // Decode payload and verify expiration
+          const payloadJson = Buffer.from(parts[1], "base64url").toString("utf8");
+          const payload = JSON.parse(payloadJson);
+          const now = Math.floor(Date.now() / 1000);
+          if (payload.id && payload.exp && payload.exp > now) {
+            isValid = true;
+          }
+        }
+      } catch {
+        isValid = false;
+      }
+    }
+
+    if (!isValid) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ error: "Unauthorized. Staff session required." }, { status: 401 });
+      }
       const loginUrl = new URL("/admin/login", req.url);
       if (pathname !== "/admin") {
         loginUrl.searchParams.set("callbackUrl", pathname);
@@ -53,5 +74,6 @@ export const config = {
   matcher: [
     "/user/:path*",
     "/admin/:path*",
+    "/api/admin/:path*",
   ],
 };

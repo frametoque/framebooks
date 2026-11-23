@@ -83,7 +83,7 @@ export async function getDashboardData(startDate?: string, endDate?: string) {
   return await _getDashboardData(tenantId, start, end);
 }
 
-export async function _getDashboardData(tenantId: string, start: string, end: string) {
+async function _getDashboardData(tenantId: string, start: string, end: string) {
   const [result] = await sql`
     WITH
     range_inc AS (

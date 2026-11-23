@@ -1,6 +1,15 @@
 import crypto from "crypto";
 
-const OTP_SECRET = process.env.APP_SECRET_KEY || process.env.NEXTAUTH_SECRET || "framebooks_otp_secure_secret_key_default";
+function getOtpSecret(): string {
+  const secret = process.env.APP_SECRET_KEY || process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("Missing required authentication secret (NEXTAUTH_SECRET or APP_SECRET_KEY)");
+    }
+    return "framebooks_otp_secure_dev_secret_32_bytes";
+  }
+  return secret;
+}
 const OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
 
 export interface OtpChallengePayload {
@@ -37,7 +46,7 @@ export function maskEmail(email: string): string {
  */
 function computeSignature(userId: string, otp: string, expiresAt: number): string {
   return crypto
-    .createHmac("sha256", OTP_SECRET)
+    .createHmac("sha256", getOtpSecret())
     .update(`${userId}:${otp}:${expiresAt}`)
     .digest("hex");
 }
@@ -58,7 +67,7 @@ export function createOtpChallenge(userId: string, otp: string, email: string): 
 
   // Sign the entire payload so client cookies cannot tamper with attempts or expiry
   const rawJson = JSON.stringify(payload);
-  const payloadSig = crypto.createHmac("sha256", OTP_SECRET).update(rawJson).digest("hex");
+  const payloadSig = crypto.createHmac("sha256", getOtpSecret()).update(rawJson).digest("hex");
   return Buffer.from(JSON.stringify({ rawJson, payloadSig })).toString("base64");
 }
 
@@ -69,7 +78,7 @@ export function unpackChallenge(cookieValue: string): OtpChallengePayload | null
   try {
     const decoded = Buffer.from(cookieValue, "base64").toString("utf8");
     const { rawJson, payloadSig } = JSON.parse(decoded);
-    const expectedSig = crypto.createHmac("sha256", OTP_SECRET).update(rawJson).digest("hex");
+    const expectedSig = crypto.createHmac("sha256", getOtpSecret()).update(rawJson).digest("hex");
 
     if (
       !crypto.timingSafeEqual(
@@ -91,7 +100,7 @@ export function unpackChallenge(cookieValue: string): OtpChallengePayload | null
  */
 export function packChallenge(payload: OtpChallengePayload): string {
   const rawJson = JSON.stringify(payload);
-  const payloadSig = crypto.createHmac("sha256", OTP_SECRET).update(rawJson).digest("hex");
+  const payloadSig = crypto.createHmac("sha256", getOtpSecret()).update(rawJson).digest("hex");
   return Buffer.from(JSON.stringify({ rawJson, payloadSig })).toString("base64");
 }
 

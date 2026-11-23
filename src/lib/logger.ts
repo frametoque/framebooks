@@ -4,6 +4,18 @@ import { auth } from '@/lib/auth';
 
 let isTableEnsured = false;
 
+function redactSensitiveLog(text: string): string {
+  if (!text || typeof text !== "string") return text;
+  return text
+    .replace(/bearer\s+[a-zA-Z0-9_\-\.]+/gi, "Bearer [REDACTED]")
+    .replace(/[a-zA-Z0-9_\-]{20,}\.[a-zA-Z0-9_\-]{20,}\.[a-zA-Z0-9_\-]{20,}/g, "[REDACTED_JWT]")
+    .replace(/(?:key|secret|password|token)\s*[:=]\s*['"]?[^\s'",;]+['"]?/gi, (match) => {
+      const parts = match.split(/[:=]/);
+      return `${parts[0]}: [REDACTED]`;
+    })
+    .replace(/\b\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{4}\b/g, "•••• •••• •••• [CARD]");
+}
+
 export async function ensureSystemLogsTable() {
   if (isTableEnsured) return;
   isTableEnsured = true;
@@ -11,6 +23,7 @@ export async function ensureSystemLogsTable() {
 
 export async function logSystemAction(task: string) {
   try {
+    const cleanTask = redactSensitiveLog(task);
     // Ensure table exists (cached)
     await ensureSystemLogsTable();
 
@@ -64,7 +77,7 @@ export async function logSystemAction(task: string) {
 
     await sql`
       INSERT INTO admin_system_logs (task, device_ip, device_os, device_type, user_email, tenant_id)
-      VALUES (${task}, ${ip}, ${os}, ${device === "Desktop" ? type : `${device} (${type})`}, ${userEmail}, ${tenantId})
+      VALUES (${cleanTask}, ${ip}, ${os}, ${device === "Desktop" ? type : `${device} (${type})`}, ${userEmail}, ${tenantId})
     `;
   } catch (error) {
     console.error("Failed to log system action:", error);

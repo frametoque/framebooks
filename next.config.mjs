@@ -32,10 +32,24 @@ const nextConfig = {
   },
 
   async headers() {
+    const cspHeader = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com https://va.vercel-scripts.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "img-src 'self' data: blob: https://*.r2.dev https://*.public.blob.vercel-storage.com https://*.googleusercontent.com https://*.gravatar.com https://*.youtube.com https://*.ytimg.com",
+      "connect-src 'self' https://*.r2.cloudflarestorage.com https://app.payments.lk https://api.payments.lk https://sandbox.payments.lk https://va.vercel-scripts.com https://*.google.com https://vitals.vercel-insights.com",
+      "frame-ancestors 'self'",
+      "form-action 'self' https://app.payments.lk https://sandbox.payments.lk https://accounts.google.com",
+      "base-uri 'self'",
+      "object-src 'none'",
+    ].join("; ");
+
     return [
       {
         source: '/:path*',
         headers: [
+          { key: 'Content-Security-Policy', value: cspHeader },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },

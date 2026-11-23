@@ -50,11 +50,21 @@ export async function POST(req: NextRequest) {
     .map((i) => `${i.serviceTitle} – ${i.tier}`)
     .join(", ")}`;
 
+  // Determine target tenant context
+  const { session } = await auth();
+  let targetTenantId = (session?.user as any)?.tenantId;
+  if (!targetTenantId) {
+    const defaultTenant = await sql`SELECT id FROM tenants ORDER BY id ASC LIMIT 1`;
+    targetTenantId = defaultTenant[0]?.id || 1;
+  }
+
   // Get or Create Client
   let clientId: string;
   try {
     const existing = await sql`
-      SELECT id FROM admin_clients WHERE LOWER(email) = LOWER(${quoteEmail}) LIMIT 1
+      SELECT id FROM admin_clients 
+      WHERE LOWER(email) = LOWER(${quoteEmail}) AND tenant_id = ${targetTenantId}
+      LIMIT 1
     `;
     if (existing.length > 0) {
       clientId = existing[0].id;
@@ -102,7 +112,7 @@ export async function POST(req: NextRequest) {
     } else {
       clientId = "C-" + Date.now();
       await sql`
-        INSERT INTO admin_clients (id, name, company, email, phone, address, active)
+        INSERT INTO admin_clients (id, name, company, email, phone, address, active, tenant_id)
         VALUES (
           ${clientId},
           ${quoteName},
@@ -110,7 +120,8 @@ export async function POST(req: NextRequest) {
           ${quoteEmail},
           ${quotePhone},
           null,
-          true
+          true,
+          ${targetTenantId}
         )
       `;
     }
@@ -163,7 +174,8 @@ export async function POST(req: NextRequest) {
         status,
         project_confirmed,
         advance,
-        total_due
+        total_due,
+        tenant_id
       ) VALUES (
         CURRENT_DATE,
         ${subtotalLKR},
@@ -174,7 +186,8 @@ export async function POST(req: NextRequest) {
         'client-draft',
         false,
         0,
-        ${subtotalLKR}
+        ${subtotalLKR},
+        ${targetTenantId}
       )
       RETURNING id
     `;
