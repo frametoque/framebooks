@@ -388,14 +388,8 @@ export function AnnouncementsClient({ announcements }: { announcements: Announce
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
           <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto space-y-5 animate-in fade-in-50 duration-200">
             <div className="flex items-center justify-between border-b border-border pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-sky-500/10 text-sky-500 border border-sky-500/20">
-                  <Bell className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-foreground">Send Push Notification</h3>
-                  <p className="text-[11px] text-muted-foreground">Broadcast directly to user devices with zero server CPU overhead</p>
-                </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground">Send Push Notification</h3>
               </div>
               <button
                 onClick={() => setPushModalOpen(false)}
