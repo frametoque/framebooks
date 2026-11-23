@@ -52,3 +52,5 @@ src/app/layout.js
 *.dump
 *.enc
 *.bak
+*.csv
+*.log
