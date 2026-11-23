@@ -12,7 +12,8 @@ if (typeof console !== "undefined" && !(console as unknown as { __scriptTagFilte
   console.error = (...args: unknown[]) => {
     if (
       typeof args[0] === "string" &&
-      args[0].includes("Encountered a script tag while rendering React component")
+      (args[0].includes("Encountered a script tag while rendering React component") ||
+        args[0].includes("[next-auth][error][CLIENT_FETCH_ERROR]"))
     ) {
       return;
     }
@@ -22,7 +23,7 @@ if (typeof console !== "undefined" && !(console as unknown as { __scriptTagFilte
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
+    <SessionProvider refetchOnWindowFocus={false}>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange={false}>
         {children}
       </ThemeProvider>

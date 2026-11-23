@@ -187,42 +187,96 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         <div className="border-b border-gray-200 w-full" />
                       </div>
 
-                      {/* Bar Columns */}
-                      <div className="relative z-10 w-full h-[85%] flex items-end justify-between gap-1.5 sm:gap-3 pb-6">
-                        {[
-                          { month: 'May', inc: 72, exp: 32, incVal: '1.30M', expVal: '580K' },
-                          { month: 'Jun', inc: 88, exp: 40, incVal: '1.60M', expVal: '720K' },
-                          { month: 'Jul', inc: 55, exp: 26, incVal: '1.00M', expVal: '460K' },
-                          { month: 'Aug', inc: 95, exp: 48, incVal: '1.75M', expVal: '860K' },
-                          { month: 'Sep', inc: 78, exp: 36, incVal: '1.42M', expVal: '650K' },
-                          { month: 'Oct', inc: 92, exp: 44, incVal: '1.68M', expVal: '790K' },
-                        ].map((item, i) => (
-                          <div key={i} className="flex-1 flex flex-col items-center h-full justify-end group relative cursor-pointer">
-                            {/* Hover tooltip */}
-                            <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none absolute -top-8 z-20 bg-[#082830] text-white text-[9px] sm:text-[10px] font-semibold py-1 px-2 rounded-lg shadow-lg whitespace-nowrap flex items-center gap-1.5">
-                              <span className="text-[#00E35B]">+{item.incVal}</span>
-                              <span className="text-gray-400">/</span>
-                              <span className="text-red-400">-{item.expVal}</span>
-                            </div>
+                      {/* Smooth Line / Area Chart SVG */}
+                      <div className="relative z-10 w-full h-[85%] pb-6">
+                        <svg
+                          viewBox="0 0 500 135"
+                          preserveAspectRatio="none"
+                          className="w-full h-full overflow-visible pointer-events-none"
+                        >
+                          <defs>
+                            <linearGradient id="landingIncGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#00E35B" stopOpacity="0.32" />
+                              <stop offset="100%" stopColor="#00E35B" stopOpacity="0.0" />
+                            </linearGradient>
+                            <linearGradient id="landingExpGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#EF4444" stopOpacity="0.22" />
+                              <stop offset="100%" stopColor="#EF4444" stopOpacity="0.0" />
+                            </linearGradient>
+                          </defs>
 
-                            {/* Bar pairs */}
-                            <div className="w-full flex items-end justify-center gap-1 sm:gap-1.5 h-full">
-                              <div
-                                className="w-full max-w-[10px] sm:max-w-[14px] bg-gradient-to-t from-[#00C750] to-[#00E35B] rounded-t-sm sm:rounded-t-md transition-all duration-300 group-hover:brightness-110 shadow-xs"
-                                style={{ height: `${item.inc}%` }}
-                              />
-                              <div
-                                className="w-full max-w-[10px] sm:max-w-[14px] bg-gradient-to-t from-[#DC2626] to-[#EF4444] rounded-t-sm sm:rounded-t-md transition-all duration-300 group-hover:brightness-110 shadow-xs"
-                                style={{ height: `${item.exp}%` }}
-                              />
-                            </div>
+                          {/* Gradient Areas */}
+                          <path
+                            d="M 25,49 C 40.0,45.7 85.0,25.7 115,29 C 145.0,32.3 175.0,70.3 205,69 C 235.0,67.7 265.0,25.7 295,21 C 325.0,16.3 355.0,40.3 385,41 C 415.0,41.7 460.0,27.7 475,25 L 475,135 L 25,135 Z"
+                            fill="url(#landingIncGrad)"
+                          />
+                          <path
+                            d="M 25,97 C 40.0,95.3 85.0,85.8 115,87 C 145.0,88.2 175.0,105.7 205,104 C 235.0,102.3 265.0,79.0 295,77 C 325.0,75.0 355.0,91.2 385,92 C 415.0,92.8 460.0,83.7 475,82 L 475,135 L 25,135 Z"
+                            fill="url(#landingExpGrad)"
+                          />
 
-                            {/* Month Label */}
-                            <span className="absolute -bottom-5 text-[10px] sm:text-xs font-semibold text-gray-500 group-hover:text-[#082830] transition-colors">
-                              {item.month}
-                            </span>
-                          </div>
-                        ))}
+                          {/* Lines */}
+                          <path
+                            d="M 25,49 C 40.0,45.7 85.0,25.7 115,29 C 145.0,32.3 175.0,70.3 205,69 C 235.0,67.7 265.0,25.7 295,21 C 325.0,16.3 355.0,40.3 385,41 C 415.0,41.7 460.0,27.7 475,25"
+                            fill="none"
+                            stroke="#00E35B"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M 25,97 C 40.0,95.3 85.0,85.8 115,87 C 145.0,88.2 175.0,105.7 205,104 C 235.0,102.3 265.0,79.0 295,77 C 325.0,75.0 355.0,91.2 385,92 C 415.0,92.8 460.0,83.7 475,82"
+                            fill="none"
+                            stroke="#EF4444"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+
+                          {/* Point Markers */}
+                          {[
+                            { x: 25, incY: 49, expY: 97 },
+                            { x: 115, incY: 29, expY: 87 },
+                            { x: 205, incY: 69, expY: 104 },
+                            { x: 295, incY: 21, expY: 77 },
+                            { x: 385, incY: 41, expY: 92 },
+                            { x: 475, incY: 25, expY: 82 },
+                          ].map((pt, i) => (
+                            <g key={i}>
+                              <circle cx={pt.x} cy={pt.incY} r="3" fill="#FFFFFF" stroke="#00E35B" strokeWidth="2" />
+                              <circle cx={pt.x} cy={pt.expY} r="3" fill="#FFFFFF" stroke="#EF4444" strokeWidth="2" />
+                            </g>
+                          ))}
+                        </svg>
+
+                        {/* Interactive Columns & Labels */}
+                        <div className="absolute inset-0 flex items-end justify-between pb-6">
+                          {[
+                            { month: 'May', incVal: '1.30M', expVal: '580K' },
+                            { month: 'Jun', incVal: '1.60M', expVal: '720K' },
+                            { month: 'Jul', incVal: '1.00M', expVal: '460K' },
+                            { month: 'Aug', incVal: '1.75M', expVal: '860K' },
+                            { month: 'Sep', incVal: '1.42M', expVal: '650K' },
+                            { month: 'Oct', incVal: '1.68M', expVal: '790K' },
+                          ].map((item, i) => (
+                            <div key={i} className="flex-1 flex flex-col items-center h-full justify-end group relative cursor-pointer">
+                              {/* Hover guideline */}
+                              <div className="absolute inset-y-0 w-px bg-gray-300/0 group-hover:bg-gray-300/80 transition-colors pointer-events-none" />
+
+                              {/* Hover tooltip */}
+                              <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none absolute -top-8 z-20 bg-[#082830] text-white text-[9px] sm:text-[10px] font-semibold py-1 px-2 rounded-lg shadow-lg whitespace-nowrap flex items-center gap-1.5">
+                                <span className="text-[#00E35B]">+{item.incVal}</span>
+                                <span className="text-gray-400">/</span>
+                                <span className="text-red-400">-{item.expVal}</span>
+                              </div>
+
+                              {/* Month Label */}
+                              <span className="absolute -bottom-5 text-[10px] sm:text-xs font-semibold text-gray-500 group-hover:text-[#082830] transition-colors">
+                                {item.month}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -458,7 +512,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                   Adjust your total invoice volume, active clients, and feature needs to get an instant tailored recommendation.
                 </p>
               </div>
-              <PlanFinderWidget />
+              <PlanFinderWidget plans={displayPlans} isYearly={yearly} />
             </div>
 
             {/* Enterprise & Custom */}
