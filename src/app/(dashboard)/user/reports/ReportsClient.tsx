@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { Loader } from "@/components/ui/Loader";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Percent, Link as LinkIcon, Calculator, Building2, User, Info } from "lucide-react";
-import { MdTrendingUp, MdTrendingDown, MdAttachMoney, MdDownload, MdInsertDriveFile, MdCalendarToday, MdGroup, MdMenuBook, MdSearch, MdCallMade, MdCallReceived, MdShowChart } from "react-icons/md";
+import { formatCurrencyLKR } from "@/components/Formatters";
+import { MdTrendingUp, MdTrendingDown, MdAttachMoney, MdDownload, MdInsertDriveFile, MdCalendarToday, MdGroup, MdMenuBook, MdSearch, MdCallMade, MdCallReceived, MdShowChart, MdCreditCard } from "react-icons/md";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { getReports, getClients } from "../actions/actions";
 import AnimatedNumber from "../components/AnimatedNumber";
+import AutoFitStatNumber from "../components/AutoFitStatNumber";
 import { useAdminDateRange } from "../context/AdminDateRangeContext";
 import { useTaxEstimator } from "../context/TaxEstimatorContext";
 import WheelDatePicker from "../components/WheelDatePicker";
@@ -50,11 +52,11 @@ export const SLUG_TO_REPORT_TAB: Record<string, ReportTab> = {
   "account_ledger": "account_ledger",
 };
 
-const formatLKR = (amount: number) => {
+const formatLKR = (amount: number | null | undefined) => {
   const num = new Intl.NumberFormat('en-LK', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount || 0);
+  }).format(Math.round(amount || 0));
   return `${num} LKR`;
 };
 
@@ -88,7 +90,7 @@ const reportsDataCache = new Map<string, { data: any; clients: any[]; accounts: 
 const ledgerDataCache = new Map<string, any[]>();
 
 export default function ReportsClient({ initialTab = "overview" }: { initialTab?: ReportTab }) {
-  const { chartPalette } = useAccentTheme();
+  const { chartPalette, accent } = useAccentTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryTab = searchParams.get("tab") ? SLUG_TO_REPORT_TAB[searchParams.get("tab")!] : undefined;
@@ -265,15 +267,15 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
 
   if (loading || !data) {
     return (
-      <div className="space-y-4">
-        {/* Four Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-pulse">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-transparent border border-border rounded-3xl p-7 flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-card w-12 h-12" />
+      <div className="space-y-6">
+        {/* Six Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-4 animate-pulse">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-card border border-border rounded-3xl p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 shrink-0" />
               <div className="space-y-2 flex-1">
-                <div className="h-4 bg-card rounded-full w-24" />
-                <div className="h-6 bg-white/10 rounded-full w-32" />
+                <div className="h-3 bg-black/10 dark:bg-white/10 rounded-full w-20" />
+                <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-28" />
               </div>
             </div>
           ))}
@@ -281,31 +283,31 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
 
         {/* Tab Buttons */}
         <div className="flex flex-wrap gap-2 animate-pulse">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-10 bg-transparent border border-border rounded-full w-32" />
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="h-9 bg-card border border-border rounded-full w-28" />
           ))}
         </div>
         
         {/* Two side-by-side charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 animate-pulse">
-          <div className="bg-transparent border border-border rounded-3xl p-6 space-y-6">
-            <div className="h-6 bg-white/10 rounded-full w-40" />
+          <div className="bg-card border border-border rounded-3xl p-6 space-y-6">
+            <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-40" />
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="flex items-center gap-4">
-                  <div className="h-4 bg-card rounded-full w-20" />
-                  <div className="h-8 bg-white/10 rounded-2xl flex-1" />
+                  <div className="h-4 bg-muted rounded-full w-20" />
+                  <div className="h-8 bg-black/10 dark:bg-white/10 rounded-2xl flex-1" />
                 </div>
               ))}
             </div>
           </div>
-          <div className="bg-transparent border border-border rounded-3xl p-6 space-y-6">
-            <div className="h-6 bg-white/10 rounded-full w-40" />
+          <div className="bg-card border border-border rounded-3xl p-6 space-y-6">
+            <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-40" />
             <div className="space-y-3">
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="flex items-center gap-4">
-                  <div className="h-4 bg-card rounded-full w-20" />
-                  <div className="h-8 bg-white/10 rounded-2xl flex-1" />
+                  <div className="h-4 bg-muted rounded-full w-20" />
+                  <div className="h-8 bg-black/10 dark:bg-white/10 rounded-2xl flex-1" />
                 </div>
               ))}
             </div>
@@ -313,13 +315,13 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
         </div>
 
         {/* Bottom Client Revenue Chart */}
-        <div className="bg-transparent border border-border rounded-3xl p-6 animate-pulse space-y-6">
-          <div className="h-6 bg-white/10 rounded-full w-48" />
+        <div className="bg-card border border-border rounded-3xl p-6 animate-pulse space-y-6">
+          <div className="h-6 bg-black/10 dark:bg-white/10 rounded-full w-48" />
           <div className="space-y-3">
             {[...Array(2)].map((_, i) => (
               <div key={i} className="flex items-center gap-4">
-                <div className="h-4 bg-card rounded-full w-20" />
-                <div className="h-8 bg-white/10 rounded-2xl flex-1" />
+                <div className="h-4 bg-muted rounded-full w-20" />
+                <div className="h-8 bg-black/10 dark:bg-white/10 rounded-2xl flex-1" />
               </div>
             ))}
           </div>
@@ -357,12 +359,17 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
       return matchesSearch;
     });
 
-  const stats = [
-    { label: "Total Income", value: formatLKR(data.totalIncome), icon: MdTrendingUp, color: "text-emerald-700 dark:text-green-400", bg: "bg-emerald-100/70 dark:bg-green-400/10" },
-    { label: "Total Expenses", value: formatLKR(data.totalExpenses), icon: MdTrendingDown, color: "text-red-700 dark:text-red-400", bg: "bg-red-100/70 dark:bg-red-400/10" },
-    { label: "Net Profit", value: formatLKR(data.netProfit), icon: MdAttachMoney, color: "text-emerald-700 dark:text-brand-400", bg: "bg-emerald-100/70 dark:bg-brand-400/10" },
-    { label: "Profit Margin", value: `${data.profitMargin}%`, icon: Percent, color: "text-blue-700 dark:text-blue-400", bg: "bg-blue-100/70 dark:bg-blue-400/10" },
-  ];
+  // Top stats calculations
+  const totalIncome = Number(data?.totalIncome || 0);
+  const totalExpenses = Number(data?.totalExpenses || 0);
+  const netProfit = totalIncome - totalExpenses;
+  const profitMargin =
+    totalIncome > 0 ? ((netProfit / totalIncome) * 100).toFixed(1) : "0.0";
+  const spendingRatio =
+    totalIncome > 0 ? ((totalExpenses / totalIncome) * 100).toFixed(1) : "0.0";
+
+  const incomeTxCount = (data?.journalEntries || []).filter((e: any) => e.type === "income").length;
+  const averageSale = incomeTxCount > 0 ? totalIncome / incomeTxCount : 0;
 
   // Top 5 clients by revenue for the chart
   const topClientsChart = [...clients]
@@ -371,40 +378,97 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
     .slice(0, 5)
     .map((c) => ({ name: c.name, revenue: c.revenue }));
 
+  const statCards = [
+    {
+      label: "Total Income",
+      value: formatLKR(totalIncome),
+      icon: MdTrendingUp,
+      color: "text-emerald-700 dark:text-green-400",
+      bg: "bg-emerald-100/70 dark:bg-green-400/10",
+    },
+    {
+      label: "Total Expenses",
+      value: formatLKR(totalExpenses),
+      icon: MdTrendingDown,
+      color: "text-red-700 dark:text-red-400",
+      bg: "bg-red-100/70 dark:bg-red-400/10",
+    },
+    {
+      label: "Net Profit",
+      value: `${netProfit < 0 ? "-" : ""}${formatLKR(Math.abs(netProfit))}`,
+      icon: MdAttachMoney,
+      color: "text-brand-800 dark:text-brand-400",
+      bg: "bg-brand-500/15 dark:bg-brand-400/10",
+    },
+    {
+      label: "Profit Margin",
+      value: `${profitMargin}%`,
+      icon: Percent,
+      color: "text-blue-700 dark:text-blue-400",
+      bg: "bg-blue-100/70 dark:bg-blue-400/10",
+    },
+    {
+      label: "Spending Ratio",
+      value: `${spendingRatio}%`,
+      icon: MdTrendingDown,
+      color: "text-rose-700 dark:text-rose-400",
+      bg: "bg-rose-100/70 dark:bg-rose-400/10",
+    },
+    {
+      label: "Average Sale",
+      value: formatLKR(averageSale),
+      icon: MdCreditCard,
+      color: "text-cyan-700 dark:text-cyan-400",
+      bg: "bg-cyan-100/70 dark:bg-cyan-400/10",
+    },
+  ];
+
   const content = (
     <div className="space-y-6 print:p-0 print:m-0">
-      {/* Stats Cards - Displayed on non-overview tabs */}
-      {activeTab !== "overview" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {stats.map((stat, i) => (
-            <div key={i} className="bg-card border border-border rounded-3xl p-5 sm:p-6 flex items-center gap-3.5 sm:gap-4 shadow-xs hover:shadow-md transition-all min-w-0">
-              <div className={`p-3 rounded-2xl flex-shrink-0 ${stat.bg}`}>
-                <stat.icon className={`w-5 h-5 ${stat.color}`} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium truncate" title={stat.label}>{stat.label}</p>
-                <p className="text-lg sm:text-xl 2xl:text-2xl font-bold tracking-tight text-foreground whitespace-nowrap overflow-visible" title={stat.value}>
-                  <AnimatedNumber value={stat.value} />
-                </p>
-              </div>
+      {/* 6 Stats Cards - Styled and sized to match other pages */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+        {statCards.map((stat, i) => (
+          <div
+            key={i}
+            className="bg-card border border-border rounded-3xl p-4 sm:p-5 flex items-center gap-3.5 shadow-xs hover:shadow-md transition-all min-w-0"
+          >
+            <div
+              className={`p-2.5 sm:p-3 rounded-2xl flex-shrink-0 ${stat.bg}`}
+              style={stat.label === "Net Profit" ? { backgroundColor: `${accent}18`, color: accent } : undefined}
+            >
+              <stat.icon
+                className={`w-5 h-5 ${stat.color}`}
+                style={stat.label === "Net Profit" ? { color: accent } : undefined}
+              />
             </div>
-          ))}
-        </div>
-      )}
+            <div className="min-w-0 flex-1">
+              <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium truncate mb-1" title={stat.label}>
+                {stat.label}
+              </p>
+              <AutoFitStatNumber
+                value={stat.value}
+                maxFontSize={24}
+                minFontSize={13}
+                style={stat.label === "Net Profit" ? { color: accent } : undefined}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
 
-      {/* Tabs Row - Pill styled like expenses page categories */}
+      {/* Tabs Row - Styled like Screenshot 5 */}
       <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 print:hidden">
         {/* Main Tabs */}
         <div className="flex flex-wrap items-center gap-2">
           {[
-            { id: "overview", label: "Overview", icon: <MdShowChart className="w-4 h-4" /> },
+            { id: "overview", label: "Overview Dashboard", icon: <MdShowChart className="w-4 h-4" /> },
+            { id: "general_ledger", label: "General Ledger", icon: <MdMenuBook className="w-4 h-4" /> },
+            { id: "account_ledger", label: "Account Ledgers", icon: <MdGroup className="w-4 h-4" /> },
             { id: "profit_loss", label: "Profit & Loss", icon: <MdTrendingUp className="w-4 h-4" /> },
+            { id: "trial_balance", label: "Trial Balance", icon: <MdInsertDriveFile className="w-4 h-4" /> },
             { id: "cash_flow", label: "Cash Flow", icon: <MdAttachMoney className="w-4 h-4" /> },
             { id: "balance_sheet", label: "Balance Sheet", icon: <MdMenuBook className="w-4 h-4" /> },
             { id: "tax_summary", label: "Tax Estimator", icon: <Calculator className="w-4 h-4" /> },
-            { id: "trial_balance", label: "Trial Balance", icon: <MdInsertDriveFile className="w-4 h-4" /> },
-            { id: "general_ledger", label: "General Ledger", icon: <MdMenuBook className="w-4 h-4" /> },
-            { id: "account_ledger", label: "Account Ledger", icon: <MdGroup className="w-4 h-4" /> }
           ].map(t => (
             <button
               key={t.id}
@@ -419,11 +483,16 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
                 }
                 window.history.pushState(null, '', `/user/reports/${REPORT_TAB_TO_SLUG[targetTab]}`);
               }}
-              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
+              className={`px-5 py-2.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
                 activeTab === t.id
-                  ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs"
-                  : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
+                  ? "bg-brand-500 text-accent-foreground border-brand-500 font-bold shadow-xs"
+                  : "bg-card text-foreground border-border dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 shadow-2xs"
               }`}
+              style={
+                activeTab === t.id
+                  ? { backgroundColor: accent, borderColor: accent, color: "var(--accent-foreground, #ffffff)" }
+                  : undefined
+              }
             >
               {t.label}
             </button>

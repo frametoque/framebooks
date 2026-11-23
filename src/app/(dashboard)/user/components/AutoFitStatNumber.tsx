@@ -10,6 +10,7 @@ interface AutoFitStatNumberProps {
   className?: string; // extra classes
   colorClass?: string; // text color (default "text-foreground")
   title?: string;
+  style?: React.CSSProperties;
 }
 
 /**
@@ -23,6 +24,7 @@ export default function AutoFitStatNumber({
   className = "",
   colorClass = "text-foreground",
   title,
+  style,
 }: AutoFitStatNumberProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
@@ -86,7 +88,7 @@ export default function AutoFitStatNumber({
     >
       <span
         ref={textRef}
-        style={{ fontSize: `${fontSize}px`, transition: "font-size 0.15s ease-out" }}
+        style={{ fontSize: `${fontSize}px`, transition: "font-size 0.15s ease-out", ...style }}
         className={`inline-block whitespace-nowrap font-bold tracking-tight ${colorClass}`}
       >
         <AnimatedNumber value={value} />

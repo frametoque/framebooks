@@ -17,8 +17,25 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { formatLKR } from "@/components/Formatters";
 import { useAccentTheme } from "@/lib/theme/useAccentTheme";
+
+const formatCurrencyLKR = (amount: number | null | undefined): string => {
+  if (amount === null || amount === undefined || isNaN(amount)) return "LKR 0";
+  const num = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(amount));
+  return `LKR ${num}`;
+};
+
+const formatLKR = (amount: number | null | undefined): string => {
+  if (amount === null || amount === undefined || isNaN(amount)) return "0 LKR";
+  const num = new Intl.NumberFormat("en-LK", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(amount));
+  return `${num} LKR`;
+};
 
 interface FinancialOverviewDashboardProps {
   data: {
@@ -442,118 +459,81 @@ export default function FinancialOverviewDashboard({
   return (
     <div className="space-y-6">
       {/* =========================================================================
-          2. Top Stats Bar (Unified 6-Card Grid)
+          Hero Chart: "Money Over Time"
           ========================================================================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {/* 1. Total Income */}
-        <div className="bg-[#0a0a0f] border border-white/10 backdrop-blur-xl rounded-3xl p-5 hover:border-white/20 transition-all shadow-lg">
-          <p className="text-xs font-medium text-gray-400 mb-1">Total Income</p>
-          <p className="text-xl sm:text-2xl font-bold text-white tracking-tight tabular-nums">
-            {formatLKR(totalIncome)}
-          </p>
-        </div>
-
-        {/* 2. Total Expenses */}
-        <div className="bg-[#0a0a0f] border border-white/10 backdrop-blur-xl rounded-3xl p-5 hover:border-white/20 transition-all shadow-lg">
-          <p className="text-xs font-medium text-gray-400 mb-1">Total Expenses</p>
-          <p className="text-xl sm:text-2xl font-bold text-white tracking-tight tabular-nums">
-            {formatLKR(totalExpenses)}
-          </p>
-        </div>
-
-        {/* 3. Net Profit */}
-        <div className="bg-[#0a0a0f] border border-white/10 backdrop-blur-xl rounded-3xl p-5 hover:border-white/20 transition-all shadow-lg">
-          <p className="text-xs font-medium text-gray-400 mb-1">Net Profit</p>
-          <p
-            className="text-xl sm:text-2xl font-bold tracking-tight tabular-nums"
-            style={{ color: netProfit >= 0 ? accent : "#f43f5e" }}
-          >
-            {netProfit < 0 ? "-" : ""}
-            {formatLKR(Math.abs(netProfit))}
-          </p>
-        </div>
-
-        {/* 4. Profit Margin */}
-        <div className="bg-[#0a0a0f] border border-white/10 backdrop-blur-xl rounded-3xl p-5 hover:border-white/20 transition-all shadow-lg">
-          <p className="text-xs font-medium text-gray-400 mb-1">Profit Margin</p>
-          <p className="text-xl sm:text-2xl font-bold text-white tracking-tight tabular-nums">
-            {profitMargin}%
-          </p>
-        </div>
-
-        {/* 5. Spending Ratio */}
-        <div className="bg-[#0a0a0f] border border-white/10 backdrop-blur-xl rounded-3xl p-5 hover:border-white/20 transition-all shadow-lg">
-          <p className="text-xs font-medium text-gray-400 mb-1">Spending Ratio</p>
-          <p className="text-xl sm:text-2xl font-bold text-white tracking-tight tabular-nums">
-            {spendingRatio}%
-          </p>
-        </div>
-
-        {/* 6. Average Sale */}
-        <div className="bg-[#0a0a0f] border border-white/10 backdrop-blur-xl rounded-3xl p-5 hover:border-white/20 transition-all shadow-lg">
-          <p className="text-xs font-medium text-gray-400 mb-1">Average Sale</p>
-          <p className="text-xl sm:text-2xl font-bold text-white tracking-tight tabular-nums">
-            {formatLKR(averageSale)}
-          </p>
-        </div>
-      </div>
-
-      {/* =========================================================================
-          3. Hero Chart: "Money Over Time"
-          ========================================================================= */}
-      <div className="bg-[#0a0a0f] border border-white/10 backdrop-blur-xl rounded-3xl p-6 shadow-xl space-y-6">
+      <div className="bg-card border border-border rounded-3xl p-6 shadow-xs space-y-6">
         {/* Header Controls */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h2 className="text-xl font-bold text-white tracking-tight">Money Over Time</h2>
+          <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">Cash Over Time</h2>
 
           <div className="flex flex-wrap items-center gap-2">
             {/* View Mode Switcher */}
-            <div className="flex items-center bg-white/5 border border-white/10 p-1 rounded-2xl">
+            <div className="flex items-center bg-black/5 dark:bg-white/5 border border-border p-1 rounded-2xl">
               <button
                 onClick={() => setHeroViewMode("money_in_out")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs transition-all ${
                   heroViewMode === "money_in_out"
-                    ? "bg-white/20 text-white font-semibold shadow-xs"
-                    : "text-gray-400 hover:text-white"
+                    ? "bg-brand-500 text-accent-foreground font-bold shadow-xs"
+                    : "text-gray-400 hover:text-foreground"
                 }`}
+                style={
+                  heroViewMode === "money_in_out"
+                    ? { backgroundColor: accent, color: "var(--accent-foreground, #ffffff)" }
+                    : undefined
+                }
               >
-                Money In vs Out
+                Cash In vs Out
               </button>
               <button
                 onClick={() => setHeroViewMode("profit_margin")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs transition-all ${
                   heroViewMode === "profit_margin"
-                    ? "bg-white/20 text-white font-semibold shadow-xs"
-                    : "text-gray-400 hover:text-white"
+                    ? "bg-brand-500 text-accent-foreground font-bold shadow-xs"
+                    : "text-gray-400 hover:text-foreground"
                 }`}
+                style={
+                  heroViewMode === "profit_margin"
+                    ? { backgroundColor: accent, color: "var(--accent-foreground, #ffffff)" }
+                    : undefined
+                }
               >
                 Profit &amp; Margin
               </button>
               <button
                 onClick={() => setHeroViewMode("total_savings")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs transition-all ${
                   heroViewMode === "total_savings"
-                    ? "bg-white/20 text-white font-semibold shadow-xs"
-                    : "text-gray-400 hover:text-white"
+                    ? "bg-brand-500 text-accent-foreground font-bold shadow-xs"
+                    : "text-gray-400 hover:text-foreground"
                 }`}
+                style={
+                  heroViewMode === "total_savings"
+                    ? { backgroundColor: accent, color: "var(--accent-foreground, #ffffff)" }
+                    : undefined
+                }
               >
                 Total Savings
               </button>
             </div>
 
             {/* Granularity Switcher */}
-            <div className="flex items-center bg-white/5 border border-white/10 p-1 rounded-2xl">
+            <div className="flex items-center bg-black/5 dark:bg-white/5 border border-border p-1 rounded-2xl">
               {(["auto", "month", "week", "day"] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setGranularity(g)}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs capitalize transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-all ${
                     granularity === g
-                      ? "bg-white/20 text-white font-semibold shadow-xs"
-                      : "text-gray-400 hover:text-white"
+                      ? "bg-brand-500 text-accent-foreground font-bold shadow-xs"
+                      : "text-gray-400 hover:text-foreground"
                   }`}
+                  style={
+                    granularity === g
+                      ? { backgroundColor: accent, color: "var(--accent-foreground, #ffffff)" }
+                      : undefined
+                  }
                 >
-                  {g}
+                  {g === "auto" ? "Auto (Month)" : g}
                 </button>
               ))}
             </div>
@@ -580,7 +560,7 @@ export default function FinancialOverviewDashboard({
                 </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="rgba(255,255,255,0.07)"
+                  stroke="rgba(128,128,128,0.15)"
                   vertical={false}
                 />
                 <XAxis
@@ -634,7 +614,7 @@ export default function FinancialOverviewDashboard({
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="rgba(255,255,255,0.07)"
+                  stroke="rgba(128,128,128,0.15)"
                   vertical={false}
                 />
                 <XAxis
@@ -709,7 +689,7 @@ export default function FinancialOverviewDashboard({
                 </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="rgba(255,255,255,0.07)"
+                  stroke="rgba(128,128,128,0.15)"
                   vertical={false}
                 />
                 <XAxis
@@ -751,53 +731,39 @@ export default function FinancialOverviewDashboard({
           </ResponsiveContainer>
         </div>
 
-        {/* Highlight Insights Footer */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-4 border-t border-white/10">
-          <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
-            <p className="text-xs font-medium text-gray-400 mb-1">Best Income Period</p>
-            <p className="text-base font-bold text-white tracking-tight">
-              {heroInsights.bestIncome.name}
+        {/* Highlight Insights Footer - Matches Screenshot 4 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-4 border-t border-border">
+          <div className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3.5 shadow-2xs">
+            <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">BEST INCOME PERIOD</p>
+            <p className="text-base font-bold tracking-tight tabular-nums" style={{ color: accent }}>
+              {formatCurrencyLKR(heroInsights.bestIncome.value)}
             </p>
-            <p
-              className="text-xs font-semibold mt-0.5 tabular-nums"
-              style={{ color: accent }}
-            >
-              {formatLKR(heroInsights.bestIncome.value)}
-            </p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">{heroInsights.bestIncome.name || "—"}</p>
           </div>
 
-          <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
-            <p className="text-xs font-medium text-gray-400 mb-1">Highest Spending Period</p>
-            <p className="text-base font-bold text-white tracking-tight">
-              {heroInsights.highestSpending.name}
+          <div className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3.5 shadow-2xs">
+            <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">HIGHEST SPENDING PERIOD</p>
+            <p className="text-base font-bold text-rose-500 dark:text-rose-400 tracking-tight tabular-nums">
+              {formatCurrencyLKR(heroInsights.highestSpending.value)}
             </p>
-            <p className="text-xs font-semibold text-[#f43f5e] mt-0.5 tabular-nums">
-              {formatLKR(heroInsights.highestSpending.value)}
-            </p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">{heroInsights.highestSpending.name || "—"}</p>
           </div>
 
-          <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
-            <p className="text-xs font-medium text-gray-400 mb-1">Most Profitable Period</p>
-            <p className="text-base font-bold text-white tracking-tight">
-              {heroInsights.mostProfitable.name}
-            </p>
-            <p
-              className="text-xs font-semibold mt-0.5 tabular-nums"
-              style={{
-                color: heroInsights.mostProfitable.value >= 0 ? accent : "#f43f5e",
-              }}
-            >
+          <div className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3.5 shadow-2xs">
+            <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">MOST PROFITABLE PERIOD</p>
+            <p className="text-base font-bold tracking-tight tabular-nums" style={{ color: accent }}>
               {heroInsights.mostProfitable.value < 0 ? "-" : "+"}
-              {formatLKR(Math.abs(heroInsights.mostProfitable.value))}
+              {formatCurrencyLKR(Math.abs(heroInsights.mostProfitable.value))}
             </p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">{heroInsights.mostProfitable.name || "—"}</p>
           </div>
 
-          <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
-            <p className="text-xs font-medium text-gray-400 mb-1">Average Profit Margin</p>
-            <p className="text-base font-bold text-white tracking-tight">
+          <div className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3.5 shadow-2xs">
+            <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">AVERAGE PROFIT MARGIN</p>
+            <p className="text-base font-bold text-foreground tracking-tight tabular-nums">
               {heroInsights.avgMargin}
             </p>
-            <p className="text-xs font-medium text-gray-400 mt-0.5">Across active periods</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Normal profit rate</p>
           </div>
         </div>
       </div>
@@ -807,28 +773,38 @@ export default function FinancialOverviewDashboard({
           ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         {/* Income Breakdown Card */}
-        <div className="bg-[#0a0a0f] border border-white/10 backdrop-blur-xl rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+        <div className="bg-card border border-border rounded-3xl p-6 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-white tracking-tight">Income</h3>
-              <div className="flex items-center bg-white/5 border border-white/10 p-1 rounded-2xl">
+              <h3 className="text-base sm:text-lg font-bold text-foreground tracking-tight">Income</h3>
+              <div className="flex items-center bg-black/5 dark:bg-white/5 border border-border p-1 rounded-2xl">
                 <button
                   onClick={() => setIncomeDimension("service")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs transition-all ${
                     incomeDimension === "service"
-                      ? "bg-white/20 text-white font-semibold shadow-xs"
-                      : "text-gray-400 hover:text-white"
+                      ? "bg-brand-500 text-accent-foreground font-bold shadow-xs"
+                      : "text-gray-400 hover:text-foreground"
                   }`}
+                  style={
+                    incomeDimension === "service"
+                      ? { backgroundColor: accent, color: "var(--accent-foreground, #ffffff)" }
+                      : undefined
+                  }
                 >
                   By Service
                 </button>
                 <button
                   onClick={() => setIncomeDimension("method")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs transition-all ${
                     incomeDimension === "method"
-                      ? "bg-white/20 text-white font-semibold shadow-xs"
-                      : "text-gray-400 hover:text-white"
+                      ? "bg-brand-500 text-accent-foreground font-bold shadow-xs"
+                      : "text-gray-400 hover:text-foreground"
                   }`}
+                  style={
+                    incomeDimension === "method"
+                      ? { backgroundColor: accent, color: "var(--accent-foreground, #ffffff)" }
+                      : undefined
+                  }
                 >
                   By Payment Method
                 </button>
@@ -876,16 +852,13 @@ export default function FinancialOverviewDashboard({
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                   {hoveredIncomeSlice !== null && incomeBreakdownData[hoveredIncomeSlice] ? (
                     <>
-                      <span className="text-[11px] font-medium text-gray-400 truncate max-w-[110px]">
+                      <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate max-w-[110px]">
                         {incomeBreakdownData[hoveredIncomeSlice].name}
                       </span>
-                      <span className="text-sm font-bold text-white mt-0.5 tabular-nums">
-                        {formatLKR(incomeBreakdownData[hoveredIncomeSlice].value, true)}
+                      <span className="text-sm font-bold text-foreground mt-0.5 tabular-nums">
+                        {formatCurrencyLKR(incomeBreakdownData[hoveredIncomeSlice].value)}
                       </span>
-                      <span
-                        className="text-[10px] font-semibold"
-                        style={{ color: accent }}
-                      >
+                      <span className="text-[10px] font-semibold" style={{ color: accent }}>
                         {(
                           (incomeBreakdownData[hoveredIncomeSlice].value /
                             totalIncomeBreakdown) *
@@ -896,10 +869,11 @@ export default function FinancialOverviewDashboard({
                     </>
                   ) : (
                     <>
-                      <span className="text-xs font-medium text-gray-400">Total Income</span>
-                      <span className="text-base font-bold text-white mt-0.5 tabular-nums">
-                        {formatLKR(totalIncome, true)}
+                      <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">TOTAL INCOME</span>
+                      <span className="text-sm sm:text-base font-bold text-foreground mt-0.5 tabular-nums">
+                        {formatCurrencyLKR(totalIncome)}
                       </span>
+                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mt-0.5">100%</span>
                     </>
                   )}
                 </div>
@@ -922,7 +896,7 @@ export default function FinancialOverviewDashboard({
                         onMouseEnter={() => setHoveredIncomeSlice(index)}
                         onMouseLeave={() => setHoveredIncomeSlice(null)}
                         className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer ${
-                          isHovered ? "bg-white/10 ring-1 ring-white/20" : "hover:bg-white/5"
+                          isHovered ? "bg-black/5 dark:bg-white/10 ring-1 ring-border" : "hover:bg-black/[0.03] dark:hover:bg-white/5"
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 pr-2">
@@ -930,15 +904,15 @@ export default function FinancialOverviewDashboard({
                             className="w-2.5 h-2.5 rounded-full shrink-0"
                             style={{ backgroundColor: color }}
                           />
-                          <span className="text-xs font-medium text-gray-200 truncate">
+                          <span className="text-[11px] font-medium text-foreground truncate">
                             {item.name}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs font-semibold text-white tabular-nums">
-                            {formatLKR(item.value)}
+                          <span className="text-[11px] font-semibold text-foreground tabular-nums">
+                            {formatCurrencyLKR(item.value)}
                           </span>
-                          <span className="text-[11px] font-medium text-gray-400 w-11 text-right tabular-nums">
+                          <span className="text-[10px] font-semibold w-11 text-right tabular-nums" style={{ color: accent }}>
                             {pct}%
                           </span>
                         </div>
@@ -952,28 +926,38 @@ export default function FinancialOverviewDashboard({
         </div>
 
         {/* Expenses Breakdown Card */}
-        <div className="bg-[#0a0a0f] border border-white/10 backdrop-blur-xl rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+        <div className="bg-card border border-border rounded-3xl p-6 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-white tracking-tight">Expenses</h3>
-              <div className="flex items-center bg-white/5 border border-white/10 p-1 rounded-2xl">
+              <h3 className="text-base sm:text-lg font-bold text-foreground tracking-tight">Expenses</h3>
+              <div className="flex items-center bg-black/5 dark:bg-white/5 border border-border p-1 rounded-2xl">
                 <button
                   onClick={() => setExpenseDimension("category")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs transition-all ${
                     expenseDimension === "category"
-                      ? "bg-white/20 text-white font-semibold shadow-xs"
-                      : "text-gray-400 hover:text-white"
+                      ? "bg-brand-500 text-accent-foreground font-bold shadow-xs"
+                      : "text-gray-400 hover:text-foreground"
                   }`}
+                  style={
+                    expenseDimension === "category"
+                      ? { backgroundColor: accent, color: "var(--accent-foreground, #ffffff)" }
+                      : undefined
+                  }
                 >
                   By Category
                 </button>
                 <button
                   onClick={() => setExpenseDimension("method")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs transition-all ${
                     expenseDimension === "method"
-                      ? "bg-white/20 text-white font-semibold shadow-xs"
-                      : "text-gray-400 hover:text-white"
+                      ? "bg-brand-500 text-accent-foreground font-bold shadow-xs"
+                      : "text-gray-400 hover:text-foreground"
                   }`}
+                  style={
+                    expenseDimension === "method"
+                      ? { backgroundColor: accent, color: "var(--accent-foreground, #ffffff)" }
+                      : undefined
+                  }
                 >
                   By Payment Method
                 </button>
@@ -1023,13 +1007,13 @@ export default function FinancialOverviewDashboard({
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                   {hoveredExpenseSlice !== null && expenseBreakdownData[hoveredExpenseSlice] ? (
                     <>
-                      <span className="text-[11px] font-medium text-gray-400 truncate max-w-[110px]">
+                      <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate max-w-[110px]">
                         {expenseBreakdownData[hoveredExpenseSlice].name}
                       </span>
-                      <span className="text-sm font-bold text-white mt-0.5 tabular-nums">
-                        {formatLKR(expenseBreakdownData[hoveredExpenseSlice].value, true)}
+                      <span className="text-sm font-bold text-foreground mt-0.5 tabular-nums">
+                        {formatCurrencyLKR(expenseBreakdownData[hoveredExpenseSlice].value)}
                       </span>
-                      <span className="text-[10px] font-semibold text-[#f43f5e]">
+                      <span className="text-[10px] font-semibold text-rose-500 dark:text-rose-400">
                         {(
                           (expenseBreakdownData[hoveredExpenseSlice].value /
                             totalExpenseBreakdown) *
@@ -1040,10 +1024,11 @@ export default function FinancialOverviewDashboard({
                     </>
                   ) : (
                     <>
-                      <span className="text-xs font-medium text-gray-400">Total Spent</span>
-                      <span className="text-base font-bold text-white mt-0.5 tabular-nums">
-                        {formatLKR(totalExpenses, true)}
+                      <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">TOTAL SPENT</span>
+                      <span className="text-sm sm:text-base font-bold text-foreground mt-0.5 tabular-nums">
+                        {formatCurrencyLKR(totalExpenses)}
                       </span>
+                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mt-0.5">100%</span>
                     </>
                   )}
                 </div>
@@ -1067,7 +1052,7 @@ export default function FinancialOverviewDashboard({
                         onMouseEnter={() => setHoveredExpenseSlice(index)}
                         onMouseLeave={() => setHoveredExpenseSlice(null)}
                         className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer ${
-                          isHovered ? "bg-white/10 ring-1 ring-white/20" : "hover:bg-white/5"
+                          isHovered ? "bg-black/5 dark:bg-white/10 ring-1 ring-border" : "hover:bg-black/[0.03] dark:hover:bg-white/5"
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 pr-2">
@@ -1075,15 +1060,15 @@ export default function FinancialOverviewDashboard({
                             className="w-2.5 h-2.5 rounded-full shrink-0"
                             style={{ backgroundColor: color }}
                           />
-                          <span className="text-xs font-medium text-gray-200 truncate">
+                          <span className="text-[11px] font-medium text-foreground truncate">
                             {item.name}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs font-semibold text-white tabular-nums">
-                            {formatLKR(item.value)}
+                          <span className="text-[11px] font-semibold text-foreground tabular-nums">
+                            {formatCurrencyLKR(item.value)}
                           </span>
-                          <span className="text-[11px] font-medium text-gray-400 w-11 text-right tabular-nums">
+                          <span className="text-[10px] font-semibold text-rose-500 dark:text-rose-400 w-11 text-right tabular-nums">
                             {pct}%
                           </span>
                         </div>
@@ -1102,14 +1087,14 @@ export default function FinancialOverviewDashboard({
           ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         {/* Top Clients & Sales Share Card */}
-        <div className="bg-[#0a0a0f] border border-white/10 backdrop-blur-xl rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+        <div className="bg-card border border-border rounded-3xl p-6 shadow-xs flex flex-col justify-between">
           <div>
-            <h3 className="text-xl font-bold text-white tracking-tight mb-6">
+            <h3 className="text-base sm:text-lg font-bold text-foreground tracking-tight mb-4 sm:mb-5">
               Top Clients &amp; Sales Share
             </h3>
 
             {/* Ranked Horizontal Bars */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {rankedClients.length === 0 ? (
                 <p className="text-xs text-gray-400 text-center py-8">
                   No client sales recorded for this period
@@ -1121,33 +1106,43 @@ export default function FinancialOverviewDashboard({
                       ? ((client.revenue / totalIncome) * 100).toFixed(1)
                       : "0.0";
                   return (
-                    <div key={client.id || idx} className="space-y-1.5">
+                    <div key={client.id || idx} className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3.5 space-y-2 shadow-2xs">
                       <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-white/10 text-white shrink-0">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span
+                            className="px-2 py-0.5 rounded-lg text-[11px] font-bold border shrink-0"
+                            style={{
+                              backgroundColor: `${accent}18`,
+                              color: accent,
+                              borderColor: `${accent}35`,
+                            }}
+                          >
                             #{idx + 1}
                           </span>
-                          <span className="font-semibold text-white truncate">
+                          <span className="font-semibold text-xs text-foreground truncate">
                             {client.name}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <span className="font-semibold text-white tabular-nums">
-                            {formatLKR(client.revenue)}
+                        <div className="flex items-center gap-2.5 shrink-0">
+                          <span className="font-bold text-xs text-foreground tabular-nums">
+                            {formatCurrencyLKR(client.revenue)}
                           </span>
-                          <span className="text-gray-400 font-medium tabular-nums w-12 text-right">
+                          <span
+                            className="font-bold text-xs tabular-nums w-11 text-right"
+                            style={{ color: accent }}
+                          >
                             {share}%
                           </span>
                         </div>
                       </div>
 
-                      {/* Accent Gradient Fill Bar */}
-                      <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                      {/* Accent Fill Bar */}
+                      <div className="h-1.5 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
                             width: `${Math.min(100, Math.max(4, Number(share)))}%`,
-                            background: `linear-gradient(to right, ${accent}, ${chartPalette[1] || accent})`,
+                            backgroundColor: accent,
                           }}
                         />
                       </div>
@@ -1159,91 +1154,52 @@ export default function FinancialOverviewDashboard({
           </div>
 
           {/* Concentration Stats */}
-          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/10 mt-6">
-            <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
-              <p className="text-xs font-medium text-gray-400 mb-1">
-                Top 5 Clients Share (%)
+          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border mt-5">
+            <div className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3.5 shadow-2xs">
+              <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                TOP 5 CLIENTS SHARE
               </p>
-              <p className="text-lg font-bold text-white tracking-tight tabular-nums">
+              <p className="text-lg font-bold text-foreground tracking-tight tabular-nums">
                 {top5Share}%
               </p>
             </div>
 
-            <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
-              <p className="text-xs font-medium text-gray-400 mb-1">
-                Average Sale per Client
+            <div className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3.5 shadow-2xs">
+              <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                AVERAGE SALE PER CLIENT
               </p>
-              <p className="text-lg font-bold text-white tracking-tight tabular-nums">
-                {formatLKR(avgSalePerClient)}
+              <p className="text-lg font-bold tracking-tight tabular-nums" style={{ color: accent }}>
+                {formatCurrencyLKR(avgSalePerClient)}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Future Predictions Card (Forecasting) */}
-        <div className="bg-[#0a0a0f] border border-white/10 backdrop-blur-xl rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+        {/* Future Predictions Card (Forecasting) - Matches Screenshot 2 */}
+        <div className="bg-card border border-border rounded-3xl p-6 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-white tracking-tight">
+              <h3 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
                 Future Predictions
               </h3>
-            </div>
-
-            {/* 3 Target Next-Month Metric Boxes */}
-            <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mb-4">
-              <div className="bg-white/5 border border-white/5 rounded-2xl p-3 sm:p-3.5">
-                <div className="flex items-center justify-between gap-1 mb-1">
-                  <p className="text-[11px] font-medium text-gray-400 truncate">Expected Income</p>
-                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-white/10 text-gray-300 shrink-0">
-                    {predictionsData.targetMonthBadge}
-                  </span>
+              <div className="flex items-center gap-3.5 text-[11px] font-medium text-gray-400">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-1 rounded-full" style={{ backgroundColor: accent }} />
+                  <span>Income</span>
                 </div>
-                <p
-                  className="text-xs sm:text-sm font-bold tabular-nums truncate"
-                  style={{ color: accent }}
-                >
-                  {formatLKR(predictionsData.projectedNextIncome)}
-                </p>
-              </div>
-
-              <div className="bg-white/5 border border-white/5 rounded-2xl p-3 sm:p-3.5">
-                <div className="flex items-center justify-between gap-1 mb-1">
-                  <p className="text-[11px] font-medium text-gray-400 truncate">Expected Expenses</p>
-                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-white/10 text-gray-300 shrink-0">
-                    {predictionsData.targetMonthBadge}
-                  </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-1 rounded-full bg-[#f43f5e]" />
+                  <span>Expenses</span>
                 </div>
-                <p className="text-xs sm:text-sm font-bold text-[#f43f5e] tabular-nums truncate">
-                  {formatLKR(predictionsData.projectedNextExpense)}
-                </p>
-              </div>
-
-              <div className="bg-white/5 border border-white/5 rounded-2xl p-3 sm:p-3.5">
-                <div className="flex items-center justify-between gap-1 mb-1">
-                  <p className="text-[11px] font-medium text-gray-400 truncate">Expected Profit</p>
-                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-white/10 text-gray-300 shrink-0">
-                    {predictionsData.targetMonthBadge}
-                  </span>
-                </div>
-                <p
-                  className="text-xs sm:text-sm font-bold tabular-nums truncate"
-                  style={{
-                    color:
-                      predictionsData.projectedNextProfit >= 0 ? accent : "#f43f5e",
-                  }}
-                >
-                  {predictionsData.projectedNextProfit < 0 ? "-" : "+"}
-                  {formatLKR(Math.abs(predictionsData.projectedNextProfit))}
-                </p>
               </div>
             </div>
 
-            {/* AreaChart of Upcoming 6 Future Months purely (250px height) */}
-            <div className="h-[250px] w-full">
+            {/* AreaChart of Upcoming 6 Future Months purely (on top) */}
+            <div className="h-[230px] w-full mt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                   data={predictionsData.chartPoints}
-                  margin={{ top: 10, right: 10, left: 15, bottom: 0 }}
+                  margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
                 >
                   <defs>
                     <linearGradient id="predIncomeGrad" x1="0" y1="0" x2="0" y2="1">
@@ -1257,7 +1213,7 @@ export default function FinancialOverviewDashboard({
                   </defs>
                   <CartesianGrid
                     strokeDasharray="3 3"
-                    stroke="rgba(255,255,255,0.07)"
+                    stroke="rgba(128,128,128,0.15)"
                     vertical={false}
                   />
                   <XAxis
@@ -1279,12 +1235,6 @@ export default function FinancialOverviewDashboard({
                     }}
                   />
                   <Tooltip content={<PredictionTooltip accent={accent} />} />
-                  <Legend
-                    verticalAlign="top"
-                    align="right"
-                    iconType="circle"
-                    wrapperStyle={{ fontSize: "11px", paddingBottom: "8px" }}
-                  />
                   <Area
                     type="monotone"
                     dataKey="income"
@@ -1306,25 +1256,68 @@ export default function FinancialOverviewDashboard({
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+
+            {/* 3 Target Next-Month Metric Boxes Below Chart */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 mt-4">
+              <div className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3 shadow-2xs">
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate">EXPECTED INCOME</p>
+                  <span className="text-[11px] font-semibold shrink-0" style={{ color: accent }}>
+                    {predictionsData.targetMonthBadge}
+                  </span>
+                </div>
+                <p className="text-sm sm:text-base font-bold tabular-nums truncate" style={{ color: accent }}>
+                  {formatCurrencyLKR(predictionsData.projectedNextIncome)}
+                </p>
+              </div>
+
+              <div className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3 shadow-2xs">
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate">EXPECTED EXPENSES</p>
+                  <span className="text-[11px] font-semibold shrink-0" style={{ color: accent }}>
+                    {predictionsData.targetMonthBadge}
+                  </span>
+                </div>
+                <p className="text-sm sm:text-base font-bold text-rose-500 dark:text-rose-400 tabular-nums truncate">
+                  {formatCurrencyLKR(predictionsData.projectedNextExpense)}
+                </p>
+              </div>
+
+              <div className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3 shadow-2xs">
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate">EXPECTED PROFIT</p>
+                  <span className="text-[11px] font-semibold shrink-0" style={{ color: accent }}>
+                    {predictionsData.targetMonthBadge}
+                  </span>
+                </div>
+                <p
+                  className="text-sm sm:text-base font-bold tabular-nums truncate"
+                  style={{ color: predictionsData.projectedNextProfit >= 0 ? accent : "#f43f5e" }}
+                >
+                  {predictionsData.projectedNextProfit < 0 ? "-" : "+"}
+                  {formatCurrencyLKR(Math.abs(predictionsData.projectedNextProfit))}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* 2 Forward Indicators */}
-          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/10 mt-4">
-            <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
-              <p className="text-xs font-medium text-gray-400 mb-1">Money Will Last</p>
-              <p className="text-lg font-bold text-white tracking-tight tabular-nums">
+          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border mt-4">
+            <div className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3.5 shadow-2xs">
+              <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">CASH WILL LAST</p>
+              <p className="text-base sm:text-lg font-bold tracking-tight tabular-nums" style={{ color: accent }}>
                 {predictionsData.moneyWillLastMonths === "Stable"
                   ? "Stable"
                   : `${predictionsData.moneyWillLastMonths} Months`}
               </p>
             </div>
 
-            <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
-              <p className="text-xs font-medium text-gray-400 mb-1">
-                Expected Yearly Sales
+            <div className="bg-black/[0.02] dark:bg-card border border-border rounded-2xl p-3.5 shadow-2xs">
+              <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                EXPECTED YEARLY SALES
               </p>
-              <p className="text-lg font-bold text-white tracking-tight tabular-nums">
-                {formatLKR(predictionsData.annualRunRate)}
+              <p className="text-base sm:text-lg font-bold text-foreground tracking-tight tabular-nums">
+                {formatCurrencyLKR(predictionsData.annualRunRate)}
               </p>
             </div>
           </div>
@@ -1342,25 +1335,25 @@ function MoneyInOutTooltip({ active, payload, label, accent = "#22c55e" }: any) 
     const exp = payload.find((p: any) => p.dataKey === "expenses")?.value || 0;
     const profit = inc - exp;
     return (
-      <div className="bg-[#0a0a0f]/95 border border-white/10 rounded-2xl p-3.5 shadow-2xl backdrop-blur-xl text-xs space-y-2">
-        <p className="font-semibold text-gray-400">{label}</p>
+      <div className="bg-popover border border-border rounded-2xl p-3.5 shadow-2xl backdrop-blur-xl text-xs space-y-2 text-foreground">
+        <p className="font-semibold text-gray-500 dark:text-gray-400">{label}</p>
         <div className="flex items-center gap-4 text-xs font-medium">
           <div className="flex items-center gap-1.5">
             <span
               className="w-2 h-2 rounded-full"
               style={{ backgroundColor: accent }}
             />
-            <span className="text-gray-400">INC:</span>
-            <span className="font-semibold text-white tabular-nums">{formatLKR(inc)}</span>
+            <span className="text-gray-500 dark:text-gray-400">INC:</span>
+            <span className="font-semibold text-foreground tabular-nums">{formatLKR(inc)}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-[#f43f5e]" />
-            <span className="text-gray-400">EXP:</span>
-            <span className="font-semibold text-white tabular-nums">{formatLKR(exp)}</span>
+            <span className="text-gray-500 dark:text-gray-400">EXP:</span>
+            <span className="font-semibold text-foreground tabular-nums">{formatLKR(exp)}</span>
           </div>
         </div>
-        <div className="pt-2 border-t border-white/10 flex justify-between items-center gap-4">
-          <span className="text-gray-400">Net Profit:</span>
+        <div className="pt-2 border-t border-border flex justify-between items-center gap-4">
+          <span className="text-gray-500 dark:text-gray-400">Net Profit:</span>
           <span
             className="font-semibold tabular-nums"
             style={{ color: profit >= 0 ? accent : "#f43f5e" }}
@@ -1382,10 +1375,10 @@ function ProfitMarginTooltip({ active, payload, label, accent = "#22c55e" }: any
     const profit = profitItem ? Number(profitItem.value || 0) : 0;
     const margin = marginItem ? Number(marginItem.value || 0).toFixed(1) : "0.0";
     return (
-      <div className="bg-[#0a0a0f]/95 border border-white/10 rounded-2xl p-3.5 shadow-2xl backdrop-blur-xl text-xs space-y-2">
-        <p className="font-semibold text-gray-400">{label}</p>
+      <div className="bg-popover border border-border rounded-2xl p-3.5 shadow-2xl backdrop-blur-xl text-xs space-y-2 text-foreground">
+        <p className="font-semibold text-gray-500 dark:text-gray-400">{label}</p>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-gray-400">Net Profit:</span>
+          <span className="text-gray-500 dark:text-gray-400">Net Profit:</span>
           <span
             className="font-semibold tabular-nums"
             style={{ color: profit >= 0 ? accent : "#f43f5e" }}
@@ -1395,7 +1388,7 @@ function ProfitMarginTooltip({ active, payload, label, accent = "#22c55e" }: any
           </span>
         </div>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-gray-400">Margin:</span>
+          <span className="text-gray-500 dark:text-gray-400">Margin:</span>
           <span className="font-semibold text-[#38bdf8] tabular-nums">{margin}%</span>
         </div>
       </div>
@@ -1408,10 +1401,10 @@ function TotalSavingsTooltip({ active, payload, label, accent = "#10b981" }: any
   if (active && payload && payload.length) {
     const savings = payload[0]?.value || 0;
     return (
-      <div className="bg-[#0a0a0f]/95 border border-white/10 rounded-2xl p-3.5 shadow-2xl backdrop-blur-xl text-xs space-y-1">
-        <p className="font-semibold text-gray-400">{label}</p>
+      <div className="bg-popover border border-border rounded-2xl p-3.5 shadow-2xl backdrop-blur-xl text-xs space-y-1 text-foreground">
+        <p className="font-semibold text-gray-500 dark:text-gray-400">{label}</p>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-gray-400">Total Savings:</span>
+          <span className="text-gray-500 dark:text-gray-400">Total Savings:</span>
           <span
             className="font-semibold tabular-nums"
             style={{ color: savings >= 0 ? accent : "#f43f5e" }}
@@ -1432,25 +1425,25 @@ function PredictionTooltip({ active, payload, label, accent = "#22c55e" }: any) 
     const exp = payload.find((p: any) => p.dataKey === "expenses")?.value || 0;
     const profit = inc - exp;
     return (
-      <div className="bg-[#0a0a0f]/95 border border-white/10 rounded-2xl p-3.5 shadow-2xl backdrop-blur-xl text-xs space-y-2">
-        <p className="font-semibold text-gray-400">{label}</p>
+      <div className="bg-popover border border-border rounded-2xl p-3.5 shadow-2xl backdrop-blur-xl text-xs space-y-2 text-foreground">
+        <p className="font-semibold text-gray-500 dark:text-gray-400">{label}</p>
         <div className="flex items-center gap-4 text-xs font-medium">
           <div className="flex items-center gap-1.5">
             <span
               className="w-2 h-2 rounded-full"
               style={{ backgroundColor: accent }}
             />
-            <span className="text-gray-400">INC:</span>
-            <span className="font-semibold text-white tabular-nums">{formatLKR(inc)}</span>
+            <span className="text-gray-500 dark:text-gray-400">INC:</span>
+            <span className="font-semibold text-foreground tabular-nums">{formatLKR(inc)}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-[#f43f5e]" />
-            <span className="text-gray-400">EXP:</span>
-            <span className="font-semibold text-white tabular-nums">{formatLKR(exp)}</span>
+            <span className="text-gray-500 dark:text-gray-400">EXP:</span>
+            <span className="font-semibold text-foreground tabular-nums">{formatLKR(exp)}</span>
           </div>
         </div>
-        <div className="pt-2 border-t border-white/10 flex justify-between items-center gap-4">
-          <span className="text-gray-400">Expected Profit:</span>
+        <div className="pt-2 border-t border-border flex justify-between items-center gap-4">
+          <span className="text-gray-500 dark:text-gray-400">Expected Profit:</span>
           <span
             className="font-semibold tabular-nums"
             style={{ color: profit >= 0 ? accent : "#f43f5e" }}

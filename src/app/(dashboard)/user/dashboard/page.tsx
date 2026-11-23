@@ -699,7 +699,7 @@ export default function DashboardPage() {
         </motion.div>
 
         {/* Top Clients Widget */}
-        <TopClientsWidget initialData={data.topClients} />
+        <TopClientsWidget initialData={data.topClients} totalIncome={data.totalIncome} />
       </div>
 
       {/* Modal Overlay */}

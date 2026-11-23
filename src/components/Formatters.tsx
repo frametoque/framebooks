@@ -12,6 +12,15 @@ export function formatLKR(amount: number | null | undefined, compact: boolean = 
   return `${num} LKR`;
 }
 
+export function formatCurrencyLKR(amount: number | null | undefined): string {
+  if (amount === null || amount === undefined || isNaN(amount)) return "LKR 0.00";
+  const num = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+  return `LKR ${num}`;
+}
+
 export function Money({ amount, compact = false, className = "" }: { amount: number | null | undefined; compact?: boolean; className?: string }) {
   return <span className={`font-semibold tabular-nums ${className}`}>{formatLKR(amount, compact)}</span>;
 }
