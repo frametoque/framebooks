@@ -152,7 +152,7 @@ export function NotificationBell() {
                         {item.body}
                       </p>
 
-                      <div className="flex items-center justify-between gap-2 mt-2 pt-1 border-t border-border/40">
+                      <div className="flex items-center justify-between gap-2 mt-2">
                         {item.link_url ? (
                           item.link_url.startsWith("https://") ? (
                             <a
