@@ -82,7 +82,7 @@ export async function createPaymentsLkCheckoutSession(
 
     // If saveCard is not enabled or causes validation failure, retry without saveCard
     if (!res.ok && payload.saveCard) {
-      console.warn("[Payments.lk] Retrying checkout request without saveCard...", data);
+      console.warn("[Payments.lk] Retrying checkout request without saveCard");
       const retryPayload = { ...payload };
       delete retryPayload.saveCard;
       const retryRes = await fetch("https://api.payments.lk/v1/checkouts", {
