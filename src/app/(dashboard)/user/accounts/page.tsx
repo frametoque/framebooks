@@ -733,36 +733,6 @@ export default function AccountsPage() {
                 </select>
               </div>
 
-              {isDebt(formData.type) && (
-                <div className="space-y-1.5">
-                  <label className="text-xs text-gray-500 dark:text-gray-400 block font-medium">Debt Direction</label>
-                  <div className="grid grid-cols-2 gap-2 p-1 bg-black/[0.03] dark:bg-white/[0.03] border border-border rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, type: "Debt Given" }))}
-                      className={`py-2 px-3 text-xs font-semibold rounded-lg transition-colors cursor-pointer text-center ${
-                        isDebtGiven(formData.type)
-                          ? "bg-amber-500 text-amber-950 shadow-xs"
-                          : "text-gray-500 dark:text-gray-400 hover:text-foreground"
-                      }`}
-                    >
-                      Debt Given (Receivable)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, type: "Debt Taken" }))}
-                      className={`py-2 px-3 text-xs font-semibold rounded-lg transition-colors cursor-pointer text-center ${
-                        isDebtTaken(formData.type)
-                          ? "bg-purple-500 text-purple-950 shadow-xs"
-                          : "text-gray-500 dark:text-gray-400 hover:text-foreground"
-                      }`}
-                    >
-                      Debt Taken (Payable)
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {isDebt(formData.type) ? (
                 <div>
                   <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Terms / Notes (Optional)</label>
