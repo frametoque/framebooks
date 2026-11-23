@@ -219,17 +219,31 @@ export default function AccountsPage() {
   };
 
   const handleCopyBankDetails = async (acc: any) => {
-    const details: string[] = [];
-    if (acc.ownerName) {
-      details.push(`Owner Name: ${acc.ownerName}`);
-    } else if (acc.name) {
-      details.push(`Account Name: ${acc.name}`);
-    }
-    if (acc.accountNumber) details.push(`Account Number: ${acc.accountNumber}`);
-    if (acc.bankName) details.push(`Bank: ${acc.bankName}`);
-    if (acc.branch) details.push(`Branch: ${acc.branch}`);
+    const lines: string[] = [];
 
-    const text = details.join("\n");
+    // Line 1: Account Number
+    if (acc.accountNumber) {
+      lines.push(String(acc.accountNumber).trim());
+    }
+
+    // Line 2: Account Owner Name (or Account Name fallback)
+    const ownerOrName = (acc.ownerName || acc.name || "").trim();
+    if (ownerOrName) {
+      lines.push(ownerOrName);
+    }
+
+    // Line 3: Bank Name - Branch
+    const bank = (acc.bankName || "").trim();
+    const branch = (acc.branch || "").trim();
+    if (bank && branch) {
+      lines.push(`${bank} - ${branch}`);
+    } else if (bank) {
+      lines.push(bank);
+    } else if (branch) {
+      lines.push(branch);
+    }
+
+    const text = lines.join("\n");
     if (!text) return;
 
     try {
