@@ -1000,6 +1000,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                     alt="Profile"
                     className="w-full h-full object-cover"
                     width={800} height={800} unoptimized={true}
+                    referrerPolicy="no-referrer"
                     onError={(e) => {
                       e.currentTarget.src = "/logos/ft/logo.png";
                       e.currentTarget.onerror = null;
@@ -1639,6 +1640,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                             alt="Profile"
                             className="w-full h-full object-cover"
                             width={800} height={800} unoptimized={true}
+                            referrerPolicy="no-referrer"
                             onError={(e) => { e.currentTarget.src = "/logos/ft/logo.png"; e.currentTarget.onerror = null; }}
                           />
                         </div>

@@ -22,18 +22,26 @@ export function TenantLogo({
 }: TenantLogoProps) {
   const [hasError, setHasError] = useState(false);
 
-  useEffect(() => {
-    setHasError(false);
+  const cleanUrl = React.useMemo(() => {
+    if (!logoUrl) return null;
+    const trimmed = String(logoUrl).trim();
+    if (!trimmed) return null;
+    return trimmed.replace(/^http:\/\//i, "https://");
   }, [logoUrl]);
 
-  if (logoUrl && !hasError) {
+  useEffect(() => {
+    setHasError(false);
+  }, [cleanUrl]);
+
+  if (cleanUrl && !hasError) {
     return (
       <img
-        src={logoUrl}
+        src={cleanUrl}
         alt={name || "Business Logo"}
         width={size}
         height={size}
         className={className}
+        referrerPolicy="no-referrer"
         onError={() => setHasError(true)}
       />
     );

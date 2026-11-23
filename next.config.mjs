@@ -1,4 +1,16 @@
 /** @type {import('next').NextConfig} */
+
+const r2PublicUrl = process.env.R2_PUBLIC_URL || '';
+let r2PublicOrigin = '';
+let r2PublicHostname = '';
+if (r2PublicUrl) {
+  try {
+    const parsed = new URL(r2PublicUrl);
+    r2PublicOrigin = parsed.origin;
+    r2PublicHostname = parsed.hostname;
+  } catch {}
+}
+
 const nextConfig = {
   turbopack: {
     root: process.cwd(),
@@ -32,13 +44,56 @@ const nextConfig = {
   },
 
   async headers() {
+    const r2PublicEnvUrl = process.env.R2_PUBLIC_URL || '';
+    let dynamicR2Origin = '';
+    if (r2PublicEnvUrl) {
+      try {
+        dynamicR2Origin = new URL(r2PublicEnvUrl).origin;
+      } catch {}
+    }
+
+    const imgSrcList = [
+      "'self'",
+      "data:",
+      "blob:",
+      "https://pub-f6c8c42107ba4907896e1f606327fa43.r2.dev",
+      ...(dynamicR2Origin ? [dynamicR2Origin] : []),
+      "https://*.r2.dev",
+      "https://*.r2.cloudflarestorage.com",
+      "https://*.public.blob.vercel-storage.com",
+      "https://*.googleusercontent.com",
+      "https://lh3.googleusercontent.com",
+      "https://*.gravatar.com",
+      "https://gravatar.com",
+      "https://*.githubusercontent.com",
+      "https://*.youtube.com",
+      "https://*.ytimg.com",
+    ].filter(Boolean);
+
+    const connectSrcList = [
+      "'self'",
+      "https://pub-f6c8c42107ba4907896e1f606327fa43.r2.dev",
+      ...(dynamicR2Origin ? [dynamicR2Origin] : []),
+      "https://*.r2.cloudflarestorage.com",
+      "https://*.r2.dev",
+      "https://app.payments.lk",
+      "https://api.payments.lk",
+      "https://sandbox.payments.lk",
+      "https://va.vercel-scripts.com",
+      "https://*.google.com",
+      "https://vitals.vercel-insights.com",
+    ].filter(Boolean);
+
+    const uniqueImgSrc = [...new Set(imgSrcList)].join(" ");
+    const uniqueConnectSrc = [...new Set(connectSrcList)].join(" ");
+
     const cspHeader = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com https://va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com data:",
-      "img-src 'self' data: blob: https://*.r2.dev https://*.public.blob.vercel-storage.com https://*.googleusercontent.com https://*.gravatar.com https://*.youtube.com https://*.ytimg.com",
-      "connect-src 'self' https://*.r2.cloudflarestorage.com https://app.payments.lk https://api.payments.lk https://sandbox.payments.lk https://va.vercel-scripts.com https://*.google.com https://vitals.vercel-insights.com",
+      `img-src ${uniqueImgSrc}`,
+      `connect-src ${uniqueConnectSrc}`,
       "frame-ancestors 'self'",
       "form-action 'self' https://app.payments.lk https://sandbox.payments.lk https://accounts.google.com",
       "base-uri 'self'",
@@ -102,6 +157,48 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'pub-f6c8c42107ba4907896e1f606327fa43.r2.dev',
+        port: '',
+        pathname: '/**',
+      },
+      ...(r2PublicHostname && r2PublicHostname !== 'pub-f6c8c42107ba4907896e1f606327fa43.r2.dev' ? [{
+        protocol: 'https',
+        hostname: r2PublicHostname,
+        port: '',
+        pathname: '/**',
+      }] : []),
+      {
+        protocol: 'https',
+        hostname: '**.googleusercontent.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.gravatar.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'gravatar.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.githubusercontent.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.r2.cloudflarestorage.com',
         port: '',
         pathname: '/**',
       },

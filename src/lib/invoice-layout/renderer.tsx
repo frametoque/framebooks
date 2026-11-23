@@ -126,13 +126,14 @@ export function InvoiceRenderer({
 
     switch (block.type) {
       case "logo": {
-        const logoUrl = tenantInfo?.logo_url;
+        const logoUrl = tenantInfo?.logo_url ? tenantInfo.logo_url.trim().replace(/^http:\/\//i, "https://") : null;
         const maxHeight = block.props?.maxHeight || 50;
         content = logoUrl ? (
           <img
             src={logoUrl}
             alt="Business Logo"
             crossOrigin="anonymous"
+            referrerPolicy="no-referrer"
             style={{ maxHeight: `${maxHeight}px`, objectFit: "contain" }}
             className="block"
           />
