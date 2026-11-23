@@ -354,6 +354,60 @@ export const guideGroups: GuideGroup[] = [
               'Both account ledgers update synchronously',
               'Add transfer notes (e.g. "ATM withdrawal for petty cash float")'
             ]
+          },
+          {
+            title: 'Bank Account Details & One-Click Copy',
+            content: 'Keep track of both your internal Account Name (e.g. Operational Primary) and legal Account Owner Name (e.g. Kasun Perera or Enterprise LLC). Every bank card features a quick copy button.',
+            bullets: [
+              'Click the copy icon on any bank account card to copy clean formatted details (Owner Name, Account Number, Bank Name, Branch) directly to your clipboard',
+              'Instantly share payment details with clients via WhatsApp, email, or invoices without typing mistakes',
+              'Account numbers and branch details are protected with AES-256-GCM encryption in the database'
+            ]
+          }
+        ]
+      },
+      {
+        slug: 'debt-management',
+        title: 'Debt Accounts & Dual-Direction Tracking',
+        intro: 'Track borrowed money from creditors and loans given to clients, employees, or partners without distorting your Profit & Loss statements.',
+        plan: 'Pro Plus',
+        readTime: '4 min read',
+        steps: [
+          {
+            title: 'Understanding Debt Accounts',
+            content: 'In standard accounting, moving money to pay a debt or disburse a loan is not income or expense—it is a change in assets and liabilities. Framebooks isolates debt transactions so your net profit and taxable revenue remain 100% accurate.',
+            bullets: [
+              'Debt Given (Receivable): Money lent out to others that they owe back to you (Asset)',
+              'Debt Taken (Payable): Money borrowed by your business from banks, directors, or third parties (Liability)',
+              'Keeps your profit & loss statements free from artificial distortion'
+            ]
+          },
+          {
+            title: 'Debt Given (Receivables) Operations',
+            content: 'When lending funds or giving advances to employees, partners, or debtors:',
+            bullets: [
+              'Click "Issue Debt" to transfer funds from Bank or Cash into the Debt account (increases receivable without creating an expense)',
+              'Click "Settle Debt" when the borrower repays you (moves funds back into Bank/Cash and reduces outstanding balance without creating taxable income)',
+              'Track total issued vs settled amounts directly on the account card'
+            ]
+          },
+          {
+            title: 'Debt Taken (Payables / Borrowings) Operations',
+            content: 'When your business obtains a credit facility, director advance, or bank loan:',
+            bullets: [
+              'Click "Receive Debt" to record borrowed funds deposited into your Bank or Cash (increases available cash and records liability without recording false revenue)',
+              'Click "Repay Debt" to record installment payments from your Bank account (reduces outstanding debt owed without creating a duplicate expense)',
+              'View period inflows and outflows with real-time outstanding balance calculation'
+            ]
+          },
+          {
+            title: 'Consolidated Debts Summary Header',
+            content: 'The Accounts dashboard header computes real-time aggregates across all debt accounts.',
+            bullets: [
+              'Debts Balance: Shows net debt position (Given minus Taken)',
+              'Separate indicators for total Debt Given (Receivable) and total Debt Taken (Payable)',
+              'Instant filtering between Bank, Cash, and Debt accounts with one click'
+            ]
           }
         ]
       },
@@ -634,7 +688,25 @@ export const guideGroups: GuideGroup[] = [
             ]
           },
           {
-            title: '3. Visual Invoice Layout Builder Studio',
+            title: '3. Hero Logo Customization & Festive Themes',
+            content: 'Personalize the main workspace branding with special edition logos or seasonal festive themes.',
+            bullets: [
+              'Choose from Sri Lanka Flag edition, Sri Lanka Cricket edition, F1 Movie edition, GTA VI edition, or Christmas Edition',
+              'Toggle the interactive Christmas Snowfall effect for an ambient winter workspace experience',
+              'Seamlessly syncs across all dashboard views and the mobile Progressive Web App (PWA)'
+            ]
+          },
+          {
+            title: '4. Privacy Blur Mode for Public Workspaces',
+            content: 'Work comfortably in cafes, shared office spaces, or during screen presentations without exposing your company\'s sensitive financial figures.',
+            bullets: [
+              'Click the Privacy Blur eye toggle in the top status bar or Appearance settings',
+              'Instantly blurs revenue totals, net profit numbers, bank balances, and client amounts with a frosted glass masking filter',
+              'Hover over any blurred figure to temporarily inspect its value, or toggle it off when back in private'
+            ]
+          },
+          {
+            title: '5. Visual Invoice Layout Builder Studio',
             content: 'Switch to the "Invoice Layouts & Fields" sub-tab to view your layout library. Click "Create Layout" or "Edit Format" to launch the drag-and-drop Visual Builder.',
             bullets: [
               'Build multi-column sections (1-column, 2-column, or 3-column rows)',
@@ -644,7 +716,7 @@ export const guideGroups: GuideGroup[] = [
             ]
           },
           {
-            title: '4. Uploading Pre-Designed Letterhead & Stationery Overlays',
+            title: '6. Uploading Pre-Designed Letterhead & Stationery Overlays',
             content: 'Have an existing letterhead designed in Canva, Adobe, or Figma? Upload your stationery background directly into the layout builder.',
             bullets: [
               'Upload your PNG, JPG, or WebP letterhead background image',
@@ -653,7 +725,7 @@ export const guideGroups: GuideGroup[] = [
             ]
           },
           {
-            title: '5. Managing Standard & Custom Invoice Fields',
+            title: '7. Managing Standard & Custom Invoice Fields',
             content: 'View all 21 built-in standard invoice fields (Invoice ID, Client Name, Billing Address, Tax Rate, Bank Account, etc.) alongside your user-defined custom fields.',
             bullets: [
               'Standard fields are built into the accounting core and safely locked against accidental deletion',
@@ -662,13 +734,52 @@ export const guideGroups: GuideGroup[] = [
             ]
           },
           {
-            title: '6. Active Default Layout & Plan Rules',
+            title: '8. Active Default Layout & Plan Rules',
             content: 'Set which layout applies automatically to new invoices using the interactive Active Default toggle switch.',
             bullets: [
               'Free Plan: Uses Standard Classic layout with non-removable "Generated by Framebooks" footer',
               'Pro Plan: Unlocks Custom Invoice Layout Builder, custom templates, custom fields, and clean watermark-free invoices',
               'Pro Plus Plan: Full ERP suite with Custom Invoice Layout Builder, unlimited templates, team members & roles, inventory tracking, and audit logs'
             ]
+          }
+        ]
+      },
+      {
+        slug: 'notifications-reminders',
+        title: 'Push Notifications & Automated Financial Reminders',
+        intro: 'Configure browser and mobile push alerts, automated daily expense check reminders, and weekly financial digest digests delivered directly to your device.',
+        readTime: '3 min read',
+        steps: [
+          {
+            title: '1. Enabling Native Push Notifications',
+            content: 'Framebooks supports native Web Push alerts on desktop browsers (Chrome, Edge, Firefox, Safari) and mobile devices (Android and iOS PWA).',
+            bullets: [
+              'Navigate to Settings > Notifications to grant notification permissions on your device',
+              'Service workers receive alerts even when your browser tab is closed',
+              'Click "Send Test Notification" to immediately confirm end-to-end device delivery'
+            ]
+          },
+          {
+            title: '2. Daily Expense Logging Reminders',
+            content: 'Keep your cash flow records current by scheduling an automated daily reminder prompt.',
+            bullets: [
+              'Select your preferred notification time (e.g. 18:00 at close of business)',
+              'Tapping the notification opens Framebooks directly to the Quick Expense form',
+              'Eliminates end-of-month receipt backlogs by prompting daily entry'
+            ]
+          },
+          {
+            title: '3. Scheduled Weekly Financial Digest',
+            content: 'Receive a scheduled weekly summary highlighting executive financial metrics.',
+            bullets: [
+              'Configure the trigger day (e.g. Every Monday at 09:00 or Friday at 17:00)',
+              'Delivers a snapshot of total revenue collected, expense outflows, and pending receivables',
+              'Provides high-level business intelligence directly to business owners on the go'
+            ]
+          },
+          {
+            title: '4. Overdue Invoice Settlement Alerts',
+            content: 'Receive automatic alerts when client invoices pass their scheduled due dates, allowing your sales team to follow up on outstanding collections without delay.'
           }
         ]
       },
@@ -720,6 +831,15 @@ export const guideGroups: GuideGroup[] = [
             bullets: [
               'Touch your fingerprint sensor or enter your PIN to immediately restore your working session',
               'Protects confidential payroll, profit, and client revenue figures from unauthorized eyes'
+            ]
+          },
+          {
+            title: '6. Field-Level Authenticated Encryption (AES-256-GCM)',
+            content: 'Your confidential records are protected with multi-layer application encryption before reaching database disks.',
+            bullets: [
+              'Highly sensitive fields (bank account numbers, client phone numbers, addresses, tax IDs, and profile details) are encrypted using AES-256-GCM',
+              'Data Encryption Keys (DEKs) are uniquely derived per tenant using HKDF-SHA256, ensuring absolute multi-tenant cryptographic isolation',
+              'Fast searchable lookups operate via tenant-isolated HMAC-SHA256 blind indexes without ever exposing plaintext'
             ]
           }
         ]

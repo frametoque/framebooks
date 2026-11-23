@@ -51,14 +51,14 @@ export const modulesData = [
   },
   {
     id: 'accounts',
-    title: 'Accounts',
-    benefits: ['Maintain multiple bank and cash accounts.', 'Track real-time inflow, outflow, and balances.', 'Transfer cash between accounts securely.'],
+    title: 'Accounts & Debt Ledgers',
+    benefits: ['Maintain multiple bank and cash accounts with one-click bank detail sharing.', 'Track real-time inflow, outflow, net debt, and account balances.', 'Manage dual-direction debts (receivables & payables) without skewing P&L.'],
     align: 'left'
   },
   {
     id: 'clients',
     title: 'Clients',
-    benefits: ['Store contact details and track lifetime revenue.', 'See who your top clients are instantly.', 'Manage active and inactive client statuses.'],
+    benefits: ['Store contact details and track lifetime revenue.', 'See who your top clients are instantly.', 'Manage active and inactive client statuses with field-level encryption.'],
     align: 'right'
   },
   {
@@ -75,8 +75,8 @@ export const modulesData = [
   },
   {
     id: 'security',
-    title: 'Security & Logs',
-    benefits: ['Review comprehensive system audit logs.', 'Protect accounts with two-factor authentication.', 'Data is secured with TLS in transit and AES-256 encryption at rest.'],
+    title: 'Security & Privacy',
+    benefits: ['Field-level AES-256-GCM authenticated encryption for sensitive client and banking PII.', 'Hardware-backed biometric passkeys (Touch ID / Face ID) and app lock PIN.', 'Privacy blur mode for public spaces and comprehensive system audit logs.'],
     align: 'left'
   }
 ];
@@ -90,12 +90,13 @@ export const workflowSteps = [
 
 export const securityFeatures = [
   'Roles & Permissions (custom roles)',
-  'Team Settings',
-  'Audit Logs',
-  'App lock',
-  'Two-factor authentication',
+  'Team Settings & Invitations',
+  'Audit Logs & Traceability',
+  'App Lock & Biometric Passkeys',
+  'Privacy Blur Mode',
+  'Push Notifications & Financial Reminders',
   'Data Export to CSV',
-  'AES-256 & TLS Encryption'
+  'AES-256-GCM Field-Level & TLS Encryption'
 ];
 
 export const plans = [
