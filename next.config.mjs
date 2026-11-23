@@ -4,8 +4,17 @@ const nextConfig = {
     root: process.cwd(),
   },
   poweredByHeader: false,
-  output: 'standalone',
   productionBrowserSourceMaps: false,
+  outputFileTracingExcludes: {
+    '*': [
+      './backups/**/*',
+      './scripts/**/*',
+      './docs/**/*',
+      './*.md',
+      './*.log',
+      './tsconfig.tsbuildinfo',
+    ],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',
@@ -49,7 +58,7 @@ const nextConfig = {
   },
 
   images: {
-    qualities: [100, 75],
+    qualities: [75, 85],
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       {

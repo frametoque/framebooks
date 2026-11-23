@@ -5,7 +5,6 @@ import { requirePermission, checkTenantReadOnly } from "./rbac";
 import sql from "@/lib/db";
 import { auth } from '@/lib/auth';
 import { getTenantPlan } from "./plan";
-import { uploadToR2, deleteFromR2 } from '@/lib/r2';
 import { logSystemAction } from "@/lib/logger";
 import { getGravatarUrl } from "@/lib/gravatar";
 
@@ -53,6 +52,7 @@ export async function uploadReceipt(formData: FormData, type: 'income' | 'expens
   }
 
   try {
+    const { uploadToR2 } = await import('@/lib/r2');
     const randomSuffix = crypto.randomUUID().slice(0, 12);
     const cleanBaseName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').slice(0, 50);
     const cleanFileName = `${tenantId ? `tenant-${tenantId}-` : ''}${Date.now()}-${randomSuffix}-${cleanBaseName}`;
@@ -864,14 +864,16 @@ async function ensureScheduledExpensesTable() {
   }
 }
 
-export async function processRecurringExpenses() {
+export async function processRecurringExpenses(): Promise<Array<{ id: number; title: string; amount: number; date: string }>> {
   const { error: rbacError } = await requirePermission('expenses', 'delete');
-  if (rbacError) return; // Skip automatic processing if user lacks write access
+  if (rbacError) return []; // Skip automatic processing if user lacks write access
 
   const tenantId = await getTenantId();
-  if (!tenantId) return;
+  if (!tenantId) return [];
 
   await ensureScheduledExpensesTable();
+  const newlyLogged: Array<{ id: number; title: string; amount: number; date: string }> = [];
+
   try {
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
@@ -892,6 +894,13 @@ export async function processRecurringExpenses() {
           INSERT INTO admin_expenses (date, amount, description, category, payment_method, account_id, tenant_id)
           VALUES (${occurrenceDate}, ${item.amount}, ${item.title + ' (Recurring)'}, ${item.category}, ${item.payment_method}, ${item.account_id || null}, ${tenantId})
         `;
+
+        newlyLogged.push({
+          id: item.id,
+          title: item.title,
+          amount: Number(item.amount),
+          date: occurrenceDate,
+        });
 
         // 2. Roll date forward
         if (item.frequency === 'weekly') {
@@ -915,6 +924,12 @@ export async function processRecurringExpenses() {
   } catch (e) {
     console.error("Failed to process recurring expenses:", e);
   }
+
+  return newlyLogged;
+}
+
+export async function checkAndProcessRecurringExpenses() {
+  return await processRecurringExpenses();
 }
 
 export async function getScheduledExpenses() {
@@ -2502,6 +2517,7 @@ export async function submitBankSlip(invoiceId: string, slipBase64: string, amou
       const fileExtension = mimeType.split('/')[1].split('+')[0] || 'png';
       const binary = Buffer.from(base64Data, 'base64');
       const cleanFileName = `${Date.now()}-${invoiceId}.${fileExtension}`;
+      const { uploadToR2 } = await import('@/lib/r2');
       const result = await uploadToR2({
         file: binary,
         fileName: cleanFileName,
@@ -2574,6 +2590,7 @@ export async function declineBankSlip(invoiceId: string, slipId?: string | numbe
     const slipUrl = slip.slip_url;
     if (slipUrl) {
       try {
+        const { deleteFromR2 } = await import('@/lib/r2');
         await deleteFromR2(slipUrl);
       } catch (storageErr) {
         console.warn("Failed to delete slip image from storage:", storageErr);
@@ -2698,6 +2715,7 @@ export async function adminUploadPaymentSlip(invoiceId: string, slipBase64: stri
       const fileExtension = mimeType.split('/')[1].split('+')[0] || 'png';
       const binary = Buffer.from(base64Data, 'base64');
       const cleanFileName = `${Date.now()}-${invoiceId}.${fileExtension}`;
+      const { uploadToR2 } = await import('@/lib/r2');
       const result = await uploadToR2({
         file: binary,
         fileName: cleanFileName,
@@ -2744,6 +2762,7 @@ export async function submitPaymentSlip(invoiceId: string, amount: number, slipB
       const fileExtension = mimeType.split('/')[1].split('+')[0] || 'png';
       const binary = Buffer.from(base64Data, 'base64');
       const cleanFileName = `${Date.now()}-${invoiceId}.${fileExtension}`;
+      const { uploadToR2 } = await import('@/lib/r2');
       const result = await uploadToR2({
         file: binary,
         fileName: cleanFileName,
