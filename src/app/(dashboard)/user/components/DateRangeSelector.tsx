@@ -108,14 +108,13 @@ export default function DateRangeSelector({
               <span>{formatDateFriendly(tempStartDate)}</span>
             </button>
             {activePicker === "start" && (
-              <div className="absolute left-0 z-50">
-                <WheelDatePicker
-                  value={tempStartDate}
-                  onChange={(date) => setTempStartDate(date)}
-                  onClose={() => setActivePicker(null)}
-                  label="Start Date"
-                />
-              </div>
+              <WheelDatePicker
+                value={tempStartDate}
+                onChange={(date) => setTempStartDate(date)}
+                onClose={() => setActivePicker(null)}
+                label="Start Date"
+                align="left"
+              />
             )}
           </div>
 
@@ -132,14 +131,13 @@ export default function DateRangeSelector({
               <span>{formatDateFriendly(tempEndDate)}</span>
             </button>
             {activePicker === "end" && (
-              <div className="absolute right-0 z-50 w-[310px]">
-                <WheelDatePicker
-                  value={tempEndDate}
-                  onChange={(date) => setTempEndDate(date)}
-                  onClose={() => setActivePicker(null)}
-                  label="End Date"
-                />
-              </div>
+              <WheelDatePicker
+                value={tempEndDate}
+                onChange={(date) => setTempEndDate(date)}
+                onClose={() => setActivePicker(null)}
+                label="End Date"
+                align="right"
+              />
             )}
           </div>
 

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Receipt, Folder, CheckSquare, Droplets, ArrowRight } from "lucide-react";
 import { MdAccountBalance, MdAccountBalanceWallet, MdTrendingUp, MdErrorOutline, MdCallMade, MdCallReceived, MdInsertDriveFile, MdGroup, MdRemoveRedEye, MdCalendarToday, MdLocationOn, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdCheck } from "react-icons/md";
 import { motion, Variants } from "framer-motion";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from "recharts";
 import { getDashboardData } from "../actions/actions";
 import { useAdminDateRange } from "../context/AdminDateRangeContext";
 import ExpenseBreakdownWidget from "../components/ExpenseBreakdownWidget";
@@ -462,7 +462,17 @@ export default function DashboardPage() {
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.chartData.filter((d: any) => d.year === chartYear)} margin={{ top: 10, right: 10, left: 15, bottom: 0 }}>
+              <AreaChart data={data.chartData.filter((d: any) => d.year === chartYear)} margin={{ top: 10, right: 10, left: 15, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="dashIncomeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={accent} stopOpacity={0.35} />
+                    <stop offset="95%" stopColor={accent} stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="dashExpenseGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" vertical={false} />
                 <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis 
@@ -477,15 +487,46 @@ export default function DashboardPage() {
                   }} 
                 />
                 <Tooltip 
-                  cursor={{fill: 'rgba(150,150,150,0.06)'}}
-                  contentStyle={{ backgroundColor: 'var(--popover-bg, #0b2f38)', borderColor: 'var(--border-color, #e2e8f0)', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}
-                  itemStyle={{ color: 'var(--text-primary, #000)' }}
-                  formatter={(value: any) => formatLKR(value)}
+                  content={({ active, payload, label }: any) => {
+                    if (active && payload && payload.length) {
+                      const inc = payload.find((p: any) => p.dataKey === 'income')?.value || 0;
+                      const exp = payload.find((p: any) => p.dataKey === 'expenses')?.value || 0;
+                      const profit = inc - exp;
+                      return (
+                        <div className="bg-[#0a0a0f]/95 border border-white/10 rounded-2xl p-3.5 shadow-2xl backdrop-blur-xl text-xs space-y-2">
+                          <p className="font-semibold text-gray-400">{label}</p>
+                          <div className="flex items-center gap-4 text-xs font-medium">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: accent }} />
+                              <span className="text-gray-400">INC:</span>
+                              <span className="font-semibold text-white tabular-nums">{formatLKR(inc)}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-[#f43f5e]" />
+                              <span className="text-gray-400">EXP:</span>
+                              <span className="font-semibold text-white tabular-nums">{formatLKR(exp)}</span>
+                            </div>
+                          </div>
+                          <div className="pt-2 border-t border-white/10 flex justify-between items-center gap-4">
+                            <span className="text-gray-400">Net Profit:</span>
+                            <span
+                              className="font-semibold tabular-nums"
+                              style={{ color: profit >= 0 ? accent : "#f43f5e" }}
+                            >
+                              {profit >= 0 ? "+" : ""}
+                              {formatLKR(profit)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
                 />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}/>
-                <Bar dataKey="income" name="Income" fill={accent} radius={[4, 4, 0, 0]} barSize={20} />
-                <Bar dataKey="expenses" name="Expenses" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={20} />
-              </BarChart>
+                <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: '12px', paddingBottom: '10px' }}/>
+                <Area type="monotone" dataKey="income" name="Income" stroke={accent} strokeWidth={2} fill="url(#dashIncomeGrad)" fillOpacity={1} />
+                <Area type="monotone" dataKey="expenses" name="Expenses" stroke="#f43f5e" strokeWidth={2} fill="url(#dashExpenseGrad)" fillOpacity={1} />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </motion.div>

@@ -15,6 +15,7 @@ import { PlanType } from "@/lib/plans";
 import { getTenantPlan } from "../actions/plan";
 import { UpgradeOverlay } from "../components/UpgradeOverlay";
 import { useAccentTheme } from "@/lib/theme/useAccentTheme";
+import FinancialOverviewDashboard from "./FinancialOverviewDashboard";
 
 export type ReportTab = "overview" | "profit_loss" | "trial_balance" | "general_ledger" | "account_ledger" | "cash_flow" | "balance_sheet" | "tax_summary";
 
@@ -372,27 +373,29 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
 
   const content = (
     <div className="space-y-6 print:p-0 print:m-0">
-      {/* Stats Cards - Displayed on all tabs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {stats.map((stat, i) => (
-          <div key={i} className="bg-card border border-border rounded-3xl p-5 sm:p-6 flex items-center gap-3.5 sm:gap-4 shadow-xs hover:shadow-md transition-all min-w-0">
-            <div className={`p-3 rounded-2xl flex-shrink-0 ${stat.bg}`}>
-              <stat.icon className={`w-5 h-5 ${stat.color}`} />
+      {/* Stats Cards - Displayed on non-overview tabs */}
+      {activeTab !== "overview" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {stats.map((stat, i) => (
+            <div key={i} className="bg-card border border-border rounded-3xl p-5 sm:p-6 flex items-center gap-3.5 sm:gap-4 shadow-xs hover:shadow-md transition-all min-w-0">
+              <div className={`p-3 rounded-2xl flex-shrink-0 ${stat.bg}`}>
+                <stat.icon className={`w-5 h-5 ${stat.color}`} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium truncate" title={stat.label}>{stat.label}</p>
+                <p className="text-lg sm:text-xl 2xl:text-2xl font-bold tracking-tight text-foreground whitespace-nowrap overflow-visible" title={stat.value}>
+                  <AnimatedNumber value={stat.value} />
+                </p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium truncate" title={stat.label}>{stat.label}</p>
-              <p className="text-lg sm:text-xl 2xl:text-2xl font-bold tracking-tight text-foreground whitespace-nowrap overflow-visible" title={stat.value}>
-                <AnimatedNumber value={stat.value} />
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Tabs Row - Pill styled like expenses page categories */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 print:hidden">
+      <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 print:hidden">
         {/* Main Tabs */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-border pb-4">
+        <div className="flex flex-wrap items-center gap-2">
           {[
             { id: "overview", label: "Overview", icon: <MdShowChart className="w-4 h-4" /> },
             { id: "profit_loss", label: "Profit & Loss", icon: <MdTrendingUp className="w-4 h-4" /> },
@@ -452,124 +455,12 @@ export default function ReportsClient({ initialTab = "overview" }: { initialTab?
       ) : (
         <>
           {activeTab === "overview" && (
-        <>
-
-          {/* Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {/* Income Chart */}
-            <div className="bg-card border border-border rounded-3xl p-6 shadow-xs">
-              <h2 className="text-xl font-semibold mb-6 text-foreground">Income by Service</h2>
-              <div style={{ height: Math.max(300, (data.incomeByService?.length || 0) * 45) }} className="w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.incomeByService} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" horizontal={false} />
-                    <XAxis type="number" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `LKR ${value / 1000}k`} />
-                    <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={11} tickLine={false} axisLine={false} width={150} />
-                    <Tooltip
-                      cursor={{ fill: 'rgba(150,150,150,0.08)' }}
-                      contentStyle={{
-                        backgroundColor: 'var(--card-bg, #ffffff)',
-                        borderColor: 'var(--border-color, rgba(0,0,0,0.1))',
-                        borderRadius: '16px',
-                        color: 'var(--text-main, #111827)',
-                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
-                      }}
-                      itemStyle={{ color: 'var(--text-main, #111827)' }}
-                      formatter={(value: any) => [formatLKR(value), 'Income']}
-                    />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
-                      {data.incomeByService?.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={chartPalette[index % chartPalette.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Expenses Chart */}
-            <div className="bg-card border border-border rounded-3xl p-6 shadow-xs">
-              <h2 className="text-xl font-semibold mb-6 text-foreground">Expenses Breakdown</h2>
-              <div style={{ height: Math.max(300, (data.expensesBreakdown?.length || 0) * 45) }} className="w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.expensesBreakdown} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" horizontal={false} />
-                    <XAxis type="number" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `LKR ${value / 1000}k`} />
-                    <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={11} tickLine={false} axisLine={false} width={150} />
-                    <Tooltip
-                      cursor={{ fill: 'rgba(150,150,150,0.08)' }}
-                      contentStyle={{
-                        backgroundColor: 'var(--card-bg, #ffffff)',
-                        borderColor: 'var(--border-color, rgba(0,0,0,0.1))',
-                        borderRadius: '16px',
-                        color: 'var(--text-main, #111827)',
-                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
-                      }}
-                      itemStyle={{ color: 'var(--text-main, #111827)' }}
-                      formatter={(value: any) => [formatLKR(value), 'Expense']}
-                    />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
-                      {data.expensesBreakdown?.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={RED_PALETTE[index % RED_PALETTE.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-
-          {/* Top Clients by Revenue Chart */}
-          {topClientsChart.length > 0 && (
-            <div className="bg-card border border-border rounded-3xl p-6 shadow-xs">
-              <div className="flex items-center gap-3 mb-6">
-                <h2 className="text-xl font-semibold text-foreground">Top Clients by Revenue</h2>
-              </div>
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={topClientsChart} layout="vertical" margin={{ top: 0, right: 30, left: 20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" horizontal={false} />
-                    <XAxis
-                      type="number"
-                      stroke="#9ca3af"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `LKR ${value / 1000}k`}
-                    />
-                    <YAxis
-                      dataKey="name"
-                      type="category"
-                      stroke="#9ca3af"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                      width={100}
-                    />
-                    <Tooltip
-                      cursor={{ fill: 'rgba(150,150,150,0.08)' }}
-                      contentStyle={{
-                        backgroundColor: 'var(--card-bg, #ffffff)',
-                        borderColor: 'var(--border-color, rgba(0,0,0,0.1))',
-                        borderRadius: '16px',
-                        color: 'var(--text-main, #111827)',
-                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
-                      }}
-                      itemStyle={{ color: 'var(--text-main, #111827)' }}
-                      formatter={(value: any) => [formatLKR(value), 'Revenue']}
-                    />
-                    <Bar dataKey="revenue" radius={[0, 4, 4, 0]} barSize={24}>
-                      {topClientsChart.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={chartPalette[index % chartPalette.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+            <FinancialOverviewDashboard
+              data={data}
+              clients={clients}
+              accounts={accounts}
+            />
           )}
-        </>
-      )}
 
       {(activeTab === "general_ledger" || activeTab === "account_ledger") && (
         <div className="space-y-4">

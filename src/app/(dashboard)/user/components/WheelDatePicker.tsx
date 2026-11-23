@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useAccentTheme } from "@/lib/theme/useAccentTheme";
 
 interface WheelDatePickerProps {
   value: string; // "YYYY-MM-DD"
   onChange: (date: string) => void;
   onClose: () => void;
   label?: string;
+  align?: "left" | "right";
 }
 
 const MONTHS = [
@@ -32,19 +34,31 @@ export default function WheelDatePicker({
   value,
   onChange,
   onClose,
-  label = "Select Date"
+  label = "Select Date",
+  align = "left",
 }: WheelDatePickerProps) {
+  const { accent } = useAccentTheme();
+
   // Parse initial date
   const initialParts = value ? value.split("-") : [];
   const initialYear = parseInt(initialParts[0]) || new Date().getFullYear();
-  const initialMonth = parseInt(initialParts[1]) || (new Date().getMonth() + 1);
+  const initialMonth = parseInt(initialParts[1]) || new Date().getMonth() + 1;
   const initialDay = parseInt(initialParts[2]) || new Date().getDate();
 
   const [selectedYear, setSelectedYear] = useState(initialYear);
   const [selectedMonth, setSelectedMonth] = useState(initialMonth);
   const [selectedDay, setSelectedDay] = useState(initialDay);
 
-  // Generate Year range (e.g. currentYear - 20 to currentYear + 15)
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  // Generate Year range
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 45 }, (_, i) => currentYear - 25 + i);
 
@@ -59,7 +73,6 @@ export default function WheelDatePicker({
     }
   }, [selectedMonth, selectedYear, daysInMonth, selectedDay]);
 
-  // Construct standard date string when values change
   const handleConfirm = () => {
     const formattedMonth = String(selectedMonth).padStart(2, "0");
     const formattedDay = String(selectedDay).padStart(2, "0");
@@ -69,10 +82,17 @@ export default function WheelDatePicker({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-
+      {/* Invisible click-outside backdrop (NO background color, NO blur) */}
       <div
-        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-popover border border-border dark:border-white/15 rounded-2xl shadow-2xl p-4 w-[310px] animate-in zoom-in-95 duration-200 overscroll-contain"
+        className="fixed inset-0 z-40 cursor-default"
+        onClick={onClose}
+      />
+
+      {/* Anchored Dropdown Popover */}
+      <div
+        className={`absolute top-full mt-2 ${
+          align === "right" ? "right-0" : "left-0"
+        } z-50 bg-popover border border-border dark:border-white/15 rounded-2xl shadow-2xl p-4 w-[310px] animate-in fade-in-0 zoom-in-95 duration-150 overscroll-contain`}
         onWheel={(e) => e.stopPropagation()}
         onTouchMove={(e) => e.stopPropagation()}
       >
@@ -80,56 +100,59 @@ export default function WheelDatePicker({
           {label}
         </div>
 
-      <div className="relative flex justify-center items-center gap-1 h-[200px] overflow-hidden rounded-xl border border-border bg-black/5 dark:bg-black/40">
-        {/* Highlight selection bar in the center */}
-        <div className="absolute left-0 right-0 h-10 border-y border-border bg-black/5 dark:bg-white/10 pointer-events-none z-10" />
+        <div className="relative flex justify-center items-center gap-1 h-[200px] overflow-hidden rounded-xl border border-border bg-black/5 dark:bg-black/40">
+          {/* Highlight selection bar in the center */}
+          <div className="absolute left-0 right-0 h-10 border-y border-border bg-black/5 dark:bg-white/10 pointer-events-none z-10" />
 
-        {/* Top and bottom gradient fade-out masks */}
-        <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-popover to-transparent pointer-events-none z-20" />
-        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-popover to-transparent pointer-events-none z-20" />
+          {/* Top and bottom gradient fade-out masks */}
+          <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-popover to-transparent pointer-events-none z-20" />
+          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-popover to-transparent pointer-events-none z-20" />
 
-        {/* Month Wheel */}
-        <ScrollWheel
-          options={MONTHS}
-          value={selectedMonth}
-          onChange={setSelectedMonth}
-          displayKey="name"
-          valueKey="value"
-          widthClass="w-[110px]"
-        />
+          {/* Month Wheel */}
+          <ScrollWheel
+            options={MONTHS}
+            value={selectedMonth}
+            onChange={setSelectedMonth}
+            displayKey="name"
+            valueKey="value"
+            widthClass="w-[110px]"
+          />
 
-        {/* Day Wheel */}
-        <ScrollWheel
-          options={days}
-          value={selectedDay}
-          onChange={setSelectedDay}
-          widthClass="w-[60px]"
-        />
+          {/* Day Wheel */}
+          <ScrollWheel
+            options={days}
+            value={selectedDay}
+            onChange={setSelectedDay}
+            widthClass="w-[60px]"
+          />
 
-        {/* Year Wheel */}
-        <ScrollWheel
-          options={years}
-          value={selectedYear}
-          onChange={setSelectedYear}
-          widthClass="w-[80px]"
-        />
+          {/* Year Wheel */}
+          <ScrollWheel
+            options={years}
+            value={selectedYear}
+            onChange={setSelectedYear}
+            widthClass="w-[80px]"
+          />
+        </div>
+
+        <div className="flex gap-2 mt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 bg-card hover:bg-black/10 dark:hover:bg-white/10 border border-border text-foreground rounded-xl py-2 text-sm font-medium transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            className="flex-1 hover:brightness-110 active:brightness-95 rounded-xl py-2 text-sm font-bold transition-all cursor-pointer shadow-md"
+            style={{ backgroundColor: accent, color: "#FFFFFF" }}
+          >
+            Done
+          </button>
+        </div>
       </div>
-
-      <div className="flex gap-2 mt-4">
-        <button
-          onClick={onClose}
-          className="flex-1 bg-card hover:bg-black/10 dark:hover:bg-white/10 border border-border text-foreground rounded-xl py-2 text-sm font-medium transition-colors cursor-pointer"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleConfirm}
-          className="flex-1 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-xl py-2 text-sm font-bold transition-colors cursor-pointer"
-        >
-          Done
-        </button>
-      </div>
-    </div>
     </>
   );
 }
@@ -149,14 +172,13 @@ function ScrollWheel<T>({
   onChange,
   displayKey,
   valueKey,
-  widthClass
+  widthClass,
 }: ScrollWheelProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const isScrollingRef = useRef(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Map option to display label and comparison value
   const getOptionLabel = (opt: T) => {
     if (typeof opt === "object" && opt !== null && displayKey) {
       return (opt as any)[displayKey];
@@ -226,7 +248,6 @@ function ScrollWheel<T>({
         const isActive = i === activeIndex;
         const diff = Math.abs(i - activeIndex);
 
-        // Styling scaling & fading based on distance to center
         let itemStyle = "text-gray-400 dark:text-gray-500 scale-90 opacity-40";
         if (isActive) {
           itemStyle = "text-foreground scale-110 font-bold opacity-100";
