@@ -675,7 +675,7 @@ export const guideGroups: GuideGroup[] = [
             content: 'Go to Settings > Appearance & Layouts. This unified studio lets you manage your dashboard branding and customer-facing invoice layouts in one place.',
             bullets: [
               'Appearance: Customize dark mode palettes and dynamic UI colors',
-              'Invoice Layouts & Fields: Design custom invoice formats and manage custom fields'
+              'Invoice Layouts: Design custom invoice formats and manage custom fields'
             ]
           },
           {
@@ -707,7 +707,7 @@ export const guideGroups: GuideGroup[] = [
           },
           {
             title: '5. Visual Invoice Layout Builder Studio',
-            content: 'Switch to the "Invoice Layouts & Fields" sub-tab to view your layout library. Click "Create Layout" or "Edit Format" to launch the drag-and-drop Visual Builder.',
+            content: 'Switch to the "Invoice Layouts" sub-tab to view your layout library. Click "Create Layout" or "Edit Format" to launch the drag-and-drop Visual Builder.',
             bullets: [
               'Build multi-column sections (1-column, 2-column, or 3-column rows)',
               'Add standard blocks (Business Header, Logo, Bill-To, Items Table, Totals, Bank Details, Notes, Terms)',

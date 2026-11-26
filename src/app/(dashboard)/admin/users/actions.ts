@@ -4,6 +4,7 @@
 import sql from "@/lib/db";
 import { requireAdmin, logAdminAction } from "@/app/(dashboard)/admin/_lib/auth";
 import { revalidatePath } from "next/cache";
+import { grantPosAddon, revokePosAddon, getPosAddonStatus } from "@/lib/pos/entitlement";
 
 export async function getUsersList({
   search = "",
@@ -904,7 +905,28 @@ export async function getBusinessDetails(tenantId: number) {
     appliedCoupon: appliedCoupons[0] || null,
     appliedCoupons,
     passkeysCount: parseInt(businessPasskeys[0]?.count || '0', 10),
+    addons: await sql`SELECT * FROM tenant_addons WHERE tenant_id = ${tenantId}`.catch(() => []),
   };
+}
+
+export async function toggleTenantAddonAction(tenantId: number, addonKey: string, enable: boolean) {
+  const actor = await requireAdmin("manage_subscriptions");
+  if (enable) {
+    await grantPosAddon(tenantId);
+  } else {
+    await revokePosAddon(tenantId);
+  }
+
+  await logAdminAction({
+    actor,
+    action: enable ? "GRANT_ADDON" : "REVOKE_ADDON",
+    targetType: "tenant",
+    targetId: tenantId,
+    after: { addonKey, enable },
+  });
+
+  revalidatePath(`/admin/businesses/${tenantId}`);
+  return { success: true };
 }
 
 export async function addBusinessNote(tenantId: number, body: string) {

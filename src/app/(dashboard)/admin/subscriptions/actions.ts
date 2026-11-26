@@ -210,7 +210,27 @@ export async function getWorkspacesAndSubscriptionsList({
 export async function checkDowngradeEligibility(tenantId: number, targetPlanKey: string) {
   await requireAdmin("view_subscriptions");
 
-  const planRows = await sql`SELECT * FROM plans WHERE key = ${targetPlanKey} LIMIT 1`;
+  if (!tenantId || !targetPlanKey) {
+    return {
+      isEligible: true,
+      exceeded: [],
+      currentUsage: {
+        invoices: 0,
+        incomes: 0,
+        expenses: 0,
+        clients: 0,
+        accounts: 0,
+        team_members: 0,
+      },
+      targetPlan: null,
+    };
+  }
+
+  const planRows = await sql`
+    SELECT * FROM plans 
+    WHERE key = ${targetPlanKey} OR LOWER(name) = LOWER(${targetPlanKey}) 
+    LIMIT 1
+  `;
   if (planRows.length === 0) throw new Error("Plan not found");
   const targetPlan = planRows[0];
   const limits = targetPlan.limits || {};
@@ -252,6 +272,7 @@ export async function checkDowngradeEligibility(tenantId: number, targetPlanKey:
 
 export async function changeSubscriptionPlan({
   subscriptionId,
+  tenantId,
   newPlanKey,
   interval,
   effectiveNow,
@@ -260,7 +281,8 @@ export async function changeSubscriptionPlan({
   reason,
   overrideLimits = false,
 }: {
-  subscriptionId: number;
+  subscriptionId?: number;
+  tenantId?: number;
   newPlanKey: string;
   interval: "monthly" | "yearly";
   effectiveNow: boolean;
@@ -271,34 +293,73 @@ export async function changeSubscriptionPlan({
 }) {
   const actor = await requireAdmin("manage_subscriptions");
 
-  if (!reason.trim()) throw new Error("A reason is required for plan changes.");
+  if (!reason?.trim()) throw new Error("A reason is required for plan changes.");
 
-  const subRows = await sql`
-    SELECT s.*, p.key AS current_plan_key, p.name AS current_plan_name
-    FROM subscriptions s
-    LEFT JOIN plans p ON s.plan_id = p.id
-    WHERE s.id = ${subscriptionId}
+  // Look up subscription if ID was provided
+  let sub: any = null;
+  if (subscriptionId && Number(subscriptionId) > 0) {
+    const subRows = await sql`
+      SELECT s.*, p.key AS current_plan_key, p.name AS current_plan_name
+      FROM subscriptions s
+      LEFT JOIN plans p ON s.plan_id = p.id
+      WHERE s.id = ${Number(subscriptionId)}
+      LIMIT 1
+    `;
+    if (subRows.length > 0) {
+      sub = subRows[0];
+    }
+  }
+
+  // Fallback to finding subscription by tenantId
+  const effectiveTenantId = tenantId || sub?.tenant_id;
+  if (!sub && effectiveTenantId) {
+    const subRows = await sql`
+      SELECT s.*, p.key AS current_plan_key, p.name AS current_plan_name
+      FROM subscriptions s
+      LEFT JOIN plans p ON s.plan_id = p.id
+      WHERE s.tenant_id = ${effectiveTenantId}
+      ORDER BY s.id DESC
+      LIMIT 1
+    `;
+    if (subRows.length > 0) {
+      sub = subRows[0];
+    }
+  }
+
+  if (!sub && !effectiveTenantId) {
+    throw new Error("Subscription or workspace not found");
+  }
+
+  // Verify workspace exists
+  let tenant: any = null;
+  if (effectiveTenantId) {
+    const tenantRows = await sql`SELECT * FROM tenants WHERE id = ${effectiveTenantId} LIMIT 1`;
+    if (tenantRows.length > 0) {
+      tenant = tenantRows[0];
+    }
+  }
+
+  // Target plan lookup
+  const targetPlanRows = await sql`
+    SELECT * FROM plans 
+    WHERE key = ${newPlanKey} OR LOWER(name) = LOWER(${newPlanKey}) 
     LIMIT 1
   `;
-  if (subRows.length === 0) throw new Error("Subscription not found");
-  const sub = subRows[0];
-
-  const targetPlanRows = await sql`SELECT * FROM plans WHERE key = ${newPlanKey} LIMIT 1`;
   if (targetPlanRows.length === 0) throw new Error("Target plan not found");
   const targetPlan = targetPlanRows[0];
 
   // If downgrading, verify limits unless explicitly overridden
-  if (!overrideLimits && sub.tenant_id) {
-    const check = await checkDowngradeEligibility(sub.tenant_id, newPlanKey);
+  if (!overrideLimits && effectiveTenantId) {
+    const check = await checkDowngradeEligibility(effectiveTenantId, newPlanKey);
     if (!check.isEligible) {
       throw new Error(`LIMIT_EXCEEDED: Tenant exceeds limits for ${newPlanKey}: ${JSON.stringify(check.exceeded)}`);
     }
   }
 
   // Calculate new period end date
-  let newEndDate = customEndDate ? new Date(customEndDate) : null;
-  if (!newEndDate) {
-    const base = effectiveNow ? new Date() : (sub.current_period_end ? new Date(sub.current_period_end) : new Date());
+  let newEndDate: Date | null = customEndDate ? new Date(customEndDate) : null;
+  if (!newEndDate || isNaN(newEndDate.getTime())) {
+    const base = effectiveNow ? new Date() : (sub?.current_period_end ? new Date(sub.current_period_end) : new Date());
     newEndDate = new Date(base);
     if (interval === "yearly") {
       newEndDate.setFullYear(newEndDate.getFullYear() + 1);
@@ -307,40 +368,75 @@ export async function changeSubscriptionPlan({
     }
   }
 
-  // Update subscription record
-  await sql`
-    UPDATE subscriptions SET
-      plan_id = ${targetPlan.id},
-      billing_interval = ${interval},
-      current_period_end = ${newEndDate},
-      status = 'active',
-      source = ${isComp ? 'admin_comp' : 'admin'},
-      updated_at = NOW()
-    WHERE id = ${subscriptionId}
-  `;
+  let activeSubId: number;
+
+  if (sub) {
+    // Update existing subscription record
+    await sql`
+      UPDATE subscriptions SET
+        plan_id = ${targetPlan.id},
+        billing_interval = ${interval},
+        current_period_end = ${newEndDate},
+        status = 'active',
+        source = ${isComp ? 'admin_comp' : 'admin'},
+        updated_at = NOW()
+      WHERE id = ${sub.id}
+    `;
+    activeSubId = sub.id;
+  } else {
+    // Create new subscription record if workspace didn't have one
+    const userRows = await sql`
+      SELECT id FROM admin_users 
+      WHERE tenant_id = ${effectiveTenantId} AND deleted_at IS NULL
+      ORDER BY (CASE WHEN role = 'owner' THEN 1 ELSE 2 END), id ASC 
+      LIMIT 1
+    `;
+    const ownerUserId = userRows[0]?.id || null;
+
+    const newSubRows = await sql`
+      INSERT INTO subscriptions (
+        tenant_id, user_id, plan_id, status, billing_interval, current_period_start, current_period_end, source, created_at, updated_at
+      )
+      VALUES (
+        ${effectiveTenantId},
+        ${ownerUserId},
+        ${targetPlan.id},
+        'active',
+        ${interval},
+        NOW(),
+        ${newEndDate},
+        ${isComp ? 'admin_comp' : 'admin'},
+        NOW(),
+        NOW()
+      )
+      RETURNING id
+    `;
+    activeSubId = newSubRows[0].id;
+  }
 
   // Also update tenant's active plan and expiration in tenants table
-  if (sub.tenant_id) {
+  if (effectiveTenantId) {
     await sql`
       UPDATE tenants SET
         plan = ${targetPlan.name},
         plan_expires_at = ${newEndDate}
-      WHERE id = ${sub.tenant_id}
+      WHERE id = ${effectiveTenantId}
     `;
   }
 
   // Record subscription event audit
+  const fromPlan = sub?.current_plan_name || sub?.current_plan_key || tenant?.plan || 'Free';
   await sql`
     INSERT INTO subscription_events (
       subscription_id, tenant_id, from_plan, to_plan, reason, changed_by, effective_at, proration_note
     )
     VALUES (
-      ${subscriptionId},
-      ${sub.tenant_id},
-      ${sub.current_plan_name || sub.current_plan_key},
+      ${activeSubId},
+      ${effectiveTenantId || null},
+      ${fromPlan},
       ${targetPlan.name},
-      ${reason},
-      ${actor.email},
+      ${reason.trim()},
+      ${actor?.email || 'admin'},
       NOW(),
       ${isComp ? "Comped by Admin" : "Standard Admin Update"}
     )
@@ -350,13 +446,16 @@ export async function changeSubscriptionPlan({
     actor,
     action: "CHANGE_SUBSCRIPTION_PLAN",
     targetType: "subscription",
-    targetId: subscriptionId,
-    before: { plan: sub.current_plan_name, interval: sub.billing_interval },
-    after: { plan: targetPlan.name, interval, reason, isComp }
+    targetId: activeSubId,
+    before: { plan: fromPlan, interval: sub?.billing_interval || 'monthly' },
+    after: { plan: targetPlan.name, interval, reason: reason.trim(), isComp }
   });
 
   revalidatePath("/admin/subscriptions");
   revalidatePath("/admin/users");
+  if (effectiveTenantId) {
+    revalidatePath(`/admin/businesses/${effectiveTenantId}`);
+  }
   return { success: true };
 }
 

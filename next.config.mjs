@@ -22,16 +22,28 @@ const nextConfig = {
       './backups/**/*',
       './scripts/**/*',
       './docs/**/*',
+      './tests/**/*',
       './*.md',
       './*.log',
+      './*.sql',
       './tsconfig.tsbuildinfo',
+      './.git/**/*',
+      './coverage/**/*',
     ],
   },
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',
     },
-    optimizePackageImports: ['lucide-react', 'react-icons', 'recharts', 'framer-motion'],
+    optimizePackageImports: [
+      'lucide-react',
+      'react-icons',
+      'recharts',
+      'framer-motion',
+      'date-fns',
+      'jspdf',
+      'pdf-lib',
+    ],
   },
   async redirects() {
     return [
@@ -40,6 +52,37 @@ const nextConfig = {
         destination: '/onboarding',
         permanent: false,
       },
+    ];
+  },
+
+  async rewrites() {
+    return [
+      // Clean top-level user routes matching /pos convention
+      { source: '/dashboard', destination: '/user/dashboard' },
+      { source: '/invoices', destination: '/user/invoices' },
+      { source: '/invoices/:path*', destination: '/user/invoices/:path*' },
+      { source: '/invoice/:path*', destination: '/user/invoice/:path*' },
+      { source: '/income', destination: '/user/income' },
+      { source: '/income/:path*', destination: '/user/income/:path*' },
+      { source: '/expenses', destination: '/user/expenses' },
+      { source: '/expenses/:path*', destination: '/user/expenses/:path*' },
+      { source: '/accounts', destination: '/user/accounts' },
+      { source: '/accounts/:path*', destination: '/user/accounts/:path*' },
+      { source: '/quotations', destination: '/user/quotations' },
+      { source: '/quotations/:path*', destination: '/user/quotations/:path*' },
+      { source: '/clients', destination: '/user/clients' },
+      { source: '/clients/:path*', destination: '/user/clients/:path*' },
+      { source: '/inventory', destination: '/user/inventory' },
+      { source: '/inventory/:path*', destination: '/user/inventory/:path*' },
+      { source: '/stock', destination: '/user/stock' },
+      { source: '/stock/:path*', destination: '/user/stock/:path*' },
+      { source: '/reports', destination: '/user/reports' },
+      { source: '/reports/:path*', destination: '/user/reports/:path*' },
+      { source: '/settings', destination: '/user/settings' },
+      { source: '/settings/:path*', destination: '/user/settings/:path*' },
+      { source: '/logs', destination: '/user/logs' },
+      { source: '/logs/:path*', destination: '/user/logs/:path*' },
+      { source: '/user/pos', destination: '/pos' },
     ];
   },
 
@@ -86,10 +129,11 @@ const nextConfig = {
 
     const uniqueImgSrc = [...new Set(imgSrcList)].join(" ");
     const uniqueConnectSrc = [...new Set(connectSrcList)].join(" ");
+    const isDev = process.env.NODE_ENV !== "production";
 
     const cspHeader = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com https://va.vercel-scripts.com",
+      `script-src 'self' ${isDev ? "'unsafe-eval'" : ""} 'unsafe-inline' https://cdnjs.cloudflare.com https://va.vercel-scripts.com`.replace(/\s+/g, " ").trim(),
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com data:",
       `img-src ${uniqueImgSrc}`,
@@ -109,7 +153,7 @@ const nextConfig = {
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=()' },
         ],
       },
       {

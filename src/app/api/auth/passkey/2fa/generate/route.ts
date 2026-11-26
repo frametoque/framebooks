@@ -19,7 +19,7 @@ export async function GET(req: Request) {
       LIMIT 1
     `;
     if (userRows.length === 0) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ error: "No passkeys configured" }, { status: 400 });
     }
     userId = String(userRows[0].id);
   } else {

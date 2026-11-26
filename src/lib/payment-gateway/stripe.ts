@@ -25,7 +25,7 @@ export async function createStripeCheckoutSession(
     `${config.appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}&provider=stripe`;
   const cancelUrl =
     params.cancelUrl ||
-    `${config.appUrl}/user/settings?billing_status=cancelled`;
+    `${config.appUrl}/settings?billing_status=cancelled`;
 
   // Build urlencoded body for Stripe Checkout Session
   const bodyParams = new URLSearchParams();

@@ -6,7 +6,9 @@ import RolesConfigurator from "../components/RolesConfigurator";
 import { useState, useEffect, useRef } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 import { useSession, signOut } from 'next-auth/react';
-import { IdCard, Globe, Save, Building, Copy, Terminal, Sliders, Upload, FileText, CheckCircle2, AlertCircle, X, ExternalLink, ArrowUp, ArrowDown, Palette, ChevronDown, Clock, ShieldOff, ShieldCheck, Sparkles, Info, Loader2, CreditCard, Plus, Repeat, Wallet, AlertTriangle, Tag, RefreshCw, ArrowRight, Bell } from "lucide-react";
+import { IdCard, Globe, Save, Building, Copy, Terminal, Store, Sliders, Upload, FileText, CheckCircle2, AlertCircle, X, ExternalLink, ArrowUp, ArrowDown, Palette, ChevronDown, Clock, ShieldOff, ShieldCheck, Sparkles, Info, Loader2, CreditCard, Plus, Repeat, Wallet, AlertTriangle, Tag, RefreshCw, ArrowRight, Bell, QrCode, Plug } from "lucide-react";
+import IntegrationsTab from "./IntegrationsTab";
+import { TeamPosCodeModal } from "@/components/pos/TeamPosCodeModal";
 import { MdPerson, MdMailOutline, MdKeyboardArrowRight, MdKeyboardArrowLeft, MdLocationOn, MdPhone, MdUpload, MdDownload, MdCheck, MdShowChart, MdCreditCard, MdGroup, MdBusiness, MdHistory, MdLogout, MdWarning, MdSecurity, MdDelete, MdLock } from "react-icons/md";
 import AppearanceTab from "./AppearanceTab";
 import InvoiceLayoutTab from "./invoice-layout/InvoiceLayoutTab";
@@ -367,7 +369,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
       setActiveTab("profile");
       setActiveView("hub");
       if (typeof window !== "undefined") {
-        window.history.replaceState(null, '', '/user/settings');
+        window.history.replaceState(null, '', '/settings');
         window.dispatchEvent(new CustomEvent("update-title", { detail: "Settings" }));
       }
     }
@@ -380,7 +382,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
         setActiveTab("profile");
         setActiveView("hub");
         if (typeof window !== "undefined") {
-          window.history.replaceState(null, '', '/user/settings');
+          window.history.replaceState(null, '', '/settings');
         }
         return;
       }
@@ -393,7 +395,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
       }
     } else {
       if (typeof window !== "undefined") {
-        const match = window.location.pathname.match(/\/user\/settings\/?([^/]*)/);
+        const match = window.location.pathname.match(/(?:\/user)?\/settings\/?([^/]*)/);
         const slug = match ? match[1] : "";
         if (!slug) {
           setActiveView("hub");
@@ -410,7 +412,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
         setActiveTab("profile");
         setActiveView("hub");
         if (typeof window !== "undefined") {
-          window.history.replaceState(null, '', '/user/settings');
+          window.history.replaceState(null, '', '/settings');
         }
         return;
       }
@@ -421,14 +423,14 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
 
   useEffect(() => {
     if (!initialSection && !searchParams.get("tab") && typeof window !== "undefined") {
-      const match = window.location.pathname.match(/\/user\/settings\/?([^/]*)/);
+      const match = window.location.pathname.match(/(?:\/user)?\/settings\/?([^/]*)/);
       const slug = match ? match[1] : "";
       if (slug && SETTINGS_SLUG_TO_TAB[slug]) {
         const mapped = SETTINGS_SLUG_TO_TAB[slug];
         if (currentUserRole && !isSettingsSectionAllowed(mapped, currentUserRole)) {
           setActiveTab("profile");
           setActiveView("hub");
-          window.history.replaceState(null, '', '/user/settings');
+          window.history.replaceState(null, '', '/settings');
           return;
         }
         setActiveTab(mapped);
@@ -443,7 +445,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
   const [userNameSuccess, setUserNameSuccess] = useState(false);
   const [customPasskeys, setCustomPasskeys] = useState<any[]>(() => settingsMemoryCache?.passkeys || []);
   const { autoLockDuration, setAutoLockDuration, highSecurityMode, setHighSecurityMode, requireAuth } = useAppLock();
-  const [tenantInfo, setTenantInfo] = useState<{ plan: string, name: string, logo_url: string | null, industry: string | null, phone: string | null, email: string | null, website: string | null, address: string | null, accent_color?: string | null }>(() => settingsMemoryCache?.tenantInfo || { plan: "Free", name: "My Business", logo_url: null, industry: null, phone: null, email: null, website: null, address: null, accent_color: null });
+  const [tenantInfo, setTenantInfo] = useState<{ plan: string, name: string, logo_url: string | null, industry: string | null, phone: string | null, email: string | null, website: string | null, address: string | null, accent_color?: string | null, has_pos_addon?: boolean }>(() => settingsMemoryCache?.tenantInfo || { plan: "Free", name: "My Business", logo_url: null, industry: null, phone: null, email: null, website: null, address: null, accent_color: null, has_pos_addon: false });
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("Viewer");
   const [isInviting, setIsInviting] = useState(false);
@@ -451,6 +453,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [sentInvitations, setSentInvitations] = useState<any[]>(() => settingsMemoryCache?.teamData?.sent || []);
   const [teamMembers, setTeamMembers] = useState<any[]>(() => settingsMemoryCache?.teamData?.members || []);
+  const [managingPosCodeMember, setManagingPosCodeMember] = useState<any | null>(null);
   const [availableRoles, setAvailableRoles] = useState<any[]>(() => settingsMemoryCache?.teamData?.roles || []);
 
   const [reportType, setReportType] = useState<"profit_loss" | "cash_flow" | "balance_sheet" | "">("");
@@ -587,9 +590,9 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
           };
 
           const fetchTenantAndRole = async () => {
-            const { getTenantInfo } = await import("../actions/tenants");
+            const { getClientTenantInfo } = await import("@/lib/tenant/clientTenantInfo");
             const [data, role] = await Promise.all([
-              getTenantInfo(),
+              getClientTenantInfo(),
               getCurrentUserRole()
             ]);
             if (data) {
@@ -628,7 +631,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
   useEffect(() => {
     const handlePopState = () => {
       const pathname = window.location.pathname;
-      const match = pathname.match(/\/user\/settings\/?([^/]*)/);
+      const match = pathname.match(/(?:\/user)?\/settings\/?([^/]*)/);
       const slug = match ? match[1] : "";
       if (!slug) {
         setActiveView("hub");
@@ -638,7 +641,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
         if (currentUserRole && !isSettingsSectionAllowed(mapped, currentUserRole)) {
           setActiveTab("profile");
           setActiveView("hub");
-          window.history.replaceState(null, '', '/user/settings');
+          window.history.replaceState(null, '', '/settings');
           window.dispatchEvent(new CustomEvent("update-title", { detail: "Settings" }));
           return;
         }
@@ -710,6 +713,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
       });
 
       if (res.success) {
+        import("@/lib/tenant/clientTenantInfo").then(m => m.invalidateClientTenantInfo()).catch(() => {});
         setTenantInfo(prev => ({ ...prev, ...tenantFormData }));
         if (settingsMemoryCache) {
           settingsMemoryCache.tenantInfo = { ...settingsMemoryCache.tenantInfo, ...tenantFormData };
@@ -1065,12 +1069,13 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               <div className="flex flex-col">
                 {[
                   { name: "Business Profile", sub: "Update business name, contact & details.", icon: MdBusiness, id: "business", allowed: isSettingsSectionAllowed("business", currentUserRole) },
-                  { name: "Invoice Layouts & Fields", sub: "Design, customize, and arrange custom invoice templates and fields.", icon: FileText, id: "invoice-layout", allowed: isSettingsSectionAllowed("invoice-layout", currentUserRole) },
+                  { name: "Invoice Layouts", sub: "Design, customize, and arrange custom invoice templates and fields.", icon: FileText, id: "invoice-layout", allowed: isSettingsSectionAllowed("invoice-layout", currentUserRole) },
                   { name: "Appearance", sub: "Customize dashboard accent colour, theme branding, and palettes.", icon: Palette, id: "appearance", allowed: isSettingsSectionAllowed("appearance", currentUserRole) },
-                  { name: "Notifications & Reminders", sub: "Configure browser push notifications, transaction reminders, and automated expense alerts.", icon: Bell, id: "notifications", allowed: true },
+                  { name: "Notifications", sub: "Configure browser push notifications, transaction reminders, and automated expense alerts.", icon: Bell, id: "notifications", allowed: true },
                   { name: "Security", sub: "Manage App Lock and authentication passkeys.", icon: MdSecurity, id: "profile", allowed: true },
                   { name: "Billing & Plans", sub: "Manage your subscription and payments.", icon: MdCreditCard, id: "billing", allowed: isSettingsSectionAllowed("billing", currentUserRole) },
                   { name: "Team & Permissions", sub: "Manage team members, invitations, and custom roles.", icon: MdGroup, id: "team", allowed: isSettingsSectionAllowed("team", currentUserRole) },
+                  { name: "3rd Party Integrations", sub: "Two-way stock and order synchronization for online stores.", icon: Plug, id: "integrations", allowed: isSettingsSectionAllowed("integrations", currentUserRole) },
                   { name: "Admin Preferences", sub: "Configure default dashboard date range and display preferences.", icon: Sliders, id: "prefs", allowed: isSettingsSectionAllowed("prefs", currentUserRole) },
                   { name: "Audit Logs", sub: "View system and user activity.", icon: MdHistory, id: "audit_logs", allowed: isSettingsSectionAllowed("audit_logs", currentUserRole) },
                   { name: "Data Export", sub: "Export your workspace data to CSV.", icon: MdDownload, id: "export", allowed: isSettingsSectionAllowed("export", currentUserRole) },
@@ -1084,7 +1089,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                         const slug = SETTINGS_TAB_TO_SLUG[item.id] || item.id;
                         setActiveTab(item.id);
                         setActiveView("form");
-                        window.history.pushState(null, '', `/user/settings/${slug}`);
+                        window.history.pushState(null, '', `/settings/${slug}`);
                         const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
                         window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
                         window.scrollTo({ top: 0, behavior: "instant" });
@@ -1120,7 +1125,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                 e.preventDefault();
                 setActiveTab("profile");
                 setActiveView("hub");
-                window.history.pushState(null, '', "/user/settings");
+                window.history.pushState(null, '', "/settings");
                 window.dispatchEvent(new CustomEvent("update-title", { detail: "Settings" }));
                 window.scrollTo({ top: 0, behavior: "instant" });
               }}
@@ -1132,12 +1137,13 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
             <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
               {[
                 { name: "Business", id: "business", icon: MdBusiness, allowed: isSettingsSectionAllowed("business", currentUserRole) },
-                { name: "Invoice Layouts & Fields", id: "invoice-layout", icon: FileText, allowed: isSettingsSectionAllowed("invoice-layout", currentUserRole) },
+                { name: "Invoice Layouts", id: "invoice-layout", icon: FileText, allowed: isSettingsSectionAllowed("invoice-layout", currentUserRole) },
                 { name: "Appearance", id: "appearance", icon: Palette, allowed: isSettingsSectionAllowed("appearance", currentUserRole) },
                 { name: "Notifications", id: "notifications", icon: Bell, allowed: true },
                 { name: "Security", id: "profile", icon: MdSecurity, allowed: true },
                 { name: "Billing", id: "billing", icon: MdCreditCard, allowed: isSettingsSectionAllowed("billing", currentUserRole) },
                 { name: "Team & Permissions", id: "team", icon: MdGroup, allowed: isSettingsSectionAllowed("team", currentUserRole) },
+                { name: "3rd Party Integrations", id: "integrations", icon: Plug, allowed: isSettingsSectionAllowed("integrations", currentUserRole) },
                 { name: "Preferences", id: "prefs", icon: Sliders, allowed: isSettingsSectionAllowed("prefs", currentUserRole) },
                 { name: "Audit Logs", id: "audit_logs", icon: MdHistory, allowed: isSettingsSectionAllowed("audit_logs", currentUserRole) },
                 { name: "Export", id: "export", icon: MdDownload, allowed: isSettingsSectionAllowed("export", currentUserRole) },
@@ -1153,7 +1159,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                       type="button"
                       onClick={() => {
                         setActiveTab(item.id);
-                        window.history.pushState(null, '', `/user/settings/${slug}`);
+                        window.history.pushState(null, '', `/settings/${slug}`);
                         const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
                         window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
                         window.scrollTo({ top: 0, behavior: "instant" });
@@ -1320,7 +1326,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
             <button
               onClick={() => {
                 setActiveView("hub");
-                window.history.pushState(null, '', "/user/settings");
+                window.history.pushState(null, '', "/settings");
                 window.dispatchEvent(new CustomEvent("update-title", { detail: "Settings" }));
                 window.scrollTo({ top: 0, behavior: "instant" });
               }}
@@ -1332,12 +1338,13 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
             <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
               {[
                 { name: "Business", id: "business", icon: MdBusiness, allowed: isSettingsSectionAllowed("business", currentUserRole) },
-                { name: "Invoice Layouts & Fields", id: "invoice-layout", icon: FileText, allowed: isSettingsSectionAllowed("invoice-layout", currentUserRole) },
+                { name: "Invoice Layouts", id: "invoice-layout", icon: FileText, allowed: isSettingsSectionAllowed("invoice-layout", currentUserRole) },
                 { name: "Appearance", id: "appearance", icon: Palette, allowed: isSettingsSectionAllowed("appearance", currentUserRole) },
                 { name: "Notifications", id: "notifications", icon: Bell, allowed: true },
                 { name: "Security", id: "profile", icon: MdSecurity, allowed: true },
                 { name: "Billing", id: "billing", icon: MdCreditCard, allowed: isSettingsSectionAllowed("billing", currentUserRole) },
                 { name: "Team & Permissions", id: "team", icon: MdGroup, allowed: isSettingsSectionAllowed("team", currentUserRole) },
+                { name: "3rd Party Integrations", id: "integrations", icon: Plug, allowed: isSettingsSectionAllowed("integrations", currentUserRole) },
                 { name: "Preferences", id: "prefs", icon: Sliders, allowed: isSettingsSectionAllowed("prefs", currentUserRole) },
                 { name: "Audit Logs", id: "audit_logs", icon: MdHistory, allowed: isSettingsSectionAllowed("audit_logs", currentUserRole) },
                 { name: "Export", id: "export", icon: MdDownload, allowed: isSettingsSectionAllowed("export", currentUserRole) },
@@ -1353,7 +1360,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                       type="button"
                       onClick={() => {
                         setActiveTab(item.id);
-                        window.history.pushState(null, '', `/user/settings/${slug}`);
+                        window.history.pushState(null, '', `/settings/${slug}`);
                         const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
                         window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
                         window.scrollTo({ top: 0, behavior: "instant" });
@@ -1980,6 +1987,18 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                                       </span>
                                     )}
 
+                                    {Boolean(tenantInfo?.has_pos_addon) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setManagingPosCodeMember(member)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold text-foreground transition-all cursor-pointer shadow-2xs"
+                                        title="Manage POS Manager Access Code and QR Badge"
+                                      >
+                                        <QrCode className="w-3.5 h-3.5 text-brand-500" />
+                                        <span className="hidden sm:inline">POS Code & QR</span>
+                                      </button>
+                                    )}
+
                                     {(currentUserRole === 'owner' || currentUserRole === 'Super Admin') && member.role !== 'owner' && member.role !== 'Super Admin' && (
                                       <button
                                         onClick={() => handleRemoveMember(member.id, member.full_name)}
@@ -2003,6 +2022,22 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                             </div>
                           </div>
                         )}
+
+                        {/* POS Manager Access Code & QR Badge Modal */}
+                        <TeamPosCodeModal
+                          isOpen={Boolean(managingPosCodeMember)}
+                          onClose={() => setManagingPosCodeMember(null)}
+                          member={managingPosCodeMember}
+                          tenantName={tenantInfo?.name || "Framebooks POS"}
+                          onUpdated={(memberId, newCode) => {
+                            setTeamMembers((prev) =>
+                              prev.map((m) => (m.id === memberId ? { ...m, pos_manager_code: newCode } : m))
+                            );
+                            if (managingPosCodeMember?.id === memberId) {
+                              setManagingPosCodeMember((prev: any) => ({ ...prev, pos_manager_code: newCode }));
+                            }
+                          }}
+                        />
 
                         {sentInvitations.length > 0 && (
                           <div className="mt-8 bg-card border border-border rounded-3xl p-8 shadow-xs">
@@ -2242,6 +2277,10 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               <AdminPreferencesView />
             )}
 
+            {activeTab === "integrations" && isSettingsSectionAllowed("integrations", currentUserRole) && (
+              <IntegrationsTab />
+            )}
+
             {currentUserRole && !isSettingsSectionAllowed(activeTab, currentUserRole) && (
               <div className="bg-card border border-border rounded-3xl p-8 text-center max-w-lg mx-auto my-12 animate-in fade-in">
                 <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto mb-4">
@@ -2257,7 +2296,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                     setActiveTab("profile");
                     setActiveView("hub");
                     if (typeof window !== "undefined") {
-                      window.history.replaceState(null, '', '/user/settings');
+                      window.history.replaceState(null, '', '/settings');
                     }
                   }}
                   className="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-brand-950 font-bold rounded-xl text-sm transition-colors cursor-pointer"
@@ -2318,6 +2357,9 @@ function BillingView({
   } | null>(null);
 
   // Billing address & email details
+  const [posAddonStatus, setPosAddonStatus] = useState<any>(null);
+  const [enablingPosAddon, setEnablingPosAddon] = useState(false);
+
   const [billingSettings, setBillingSettings] = useState<{
     billingEmail: string;
     billingName: string;
@@ -2345,11 +2387,16 @@ function BillingView({
   const fetchHistoryAndUsage = async () => {
     try {
       setLoading(true);
-      const [histRes, subRes, billRes] = await Promise.all([
+      const [histRes, subRes, billRes, posAddonRes] = await Promise.all([
         import("../actions/billing").then(m => m.getSubscriptionHistory()),
         import("../actions/billing").then(m => m.getActiveSubscriptionDetails()),
         import("../actions/billing").then(m => m.getBillingSettingsAction()),
+        import("../actions/billing").then(m => m.getTenantPosAddonAction()),
       ]);
+
+      if (posAddonRes?.success && posAddonRes.status) {
+        setPosAddonStatus(posAddonRes.status);
+      }
 
       if (histRes.success) {
         setHistory(histRes.history || []);
@@ -2438,6 +2485,33 @@ function BillingView({
       });
     } finally {
       setSavingBillingSettings(false);
+    }
+  };
+
+  const handleEnablePosAddon = async () => {
+    setEnablingPosAddon(true);
+    try {
+      const { enablePosAddonAction } = await import("../actions/billing");
+      const res = await enablePosAddonAction();
+      if (res.success) {
+        setStatusMessage({
+          type: "success",
+          text: "Point of Sale (POS) add-on activated successfully! You can now access POS from the top bar.",
+        });
+        setPosAddonStatus((prev: any) => ({ ...prev, hasAddon: true, status: "active" }));
+      } else {
+        setStatusMessage({
+          type: "error",
+          text: res.error || "Failed to activate POS add-on.",
+        });
+      }
+    } catch (err: any) {
+      setStatusMessage({
+        type: "error",
+        text: err.message || "Failed to activate POS add-on.",
+      });
+    } finally {
+      setEnablingPosAddon(false);
     }
   };
 
@@ -3007,7 +3081,11 @@ function BillingView({
             {gatewayStatus?.cardPaymentsDisabled && (
               <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>Card payments are disabled on live.</span>
+                <span>
+                  {appliedCoupon && Number(appliedCoupon.value) >= 100
+                    ? "Card payments are disabled on live, but you can activate plans for free with your 100% off coupon!"
+                    : "Card payments are disabled on live."}
+                </span>
               </div>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -3024,6 +3102,9 @@ function BillingView({
                 const currentTier = getPlanTier(activePlanName);
                 const targetTier = getPlanTier(plan.name);
                 const isDowngrade = !isCurrent && targetTier < currentTier;
+                const isCardBlocked = !isCurrent && priceInfo.finalPrice > 0 && Boolean(gatewayStatus?.cardPaymentsDisabled);
+                const isSamePlanAndCycle = isCurrent && (!subDetails?.billing_interval || subDetails.billing_interval === billingCycle);
+                const isButtonDisabled = isSamePlanAndCycle || processingCheckout || isCardBlocked;
 
                 return (
                   <div
@@ -3089,33 +3170,44 @@ function BillingView({
                           handleOpenSwitchModal(billingCycle);
                         }
                       }}
-                      disabled={(isCurrent && (!subDetails?.billing_interval || subDetails.billing_interval === billingCycle)) || processingCheckout || (!isCurrent && Boolean(gatewayStatus?.cardPaymentsDisabled))}
-                      title={!isCurrent && gatewayStatus?.cardPaymentsDisabled ? "Card payments are disabled on live" : undefined}
-                      className={`w-full py-2 rounded-xl font-bold transition-all text-xs cursor-pointer flex items-center justify-center gap-1 ${isCurrent && (!subDetails?.billing_interval || subDetails.billing_interval === billingCycle)
+                      disabled={isButtonDisabled}
+                      title={isCardBlocked ? "Card payments are disabled on live" : undefined}
+                      className={`w-full py-2 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-1 ${isSamePlanAndCycle
                           ? "bg-muted text-muted-foreground cursor-default opacity-80"
-                          : isCurrent
-                            ? "bg-brand-500/15 border border-brand-500/40 text-brand-700 dark:text-brand-300 hover:bg-brand-500/25 shadow-xs"
-                            : isDowngrade
-                              ? "bg-muted/70 hover:bg-muted text-foreground border border-border shadow-2xs"
-                              : "bg-brand-500 text-brand-950 hover:bg-brand-400 shadow-xs"
+                          : isCardBlocked
+                            ? "bg-muted text-muted-foreground cursor-not-allowed opacity-60 border border-border"
+                            : isCurrent
+                              ? "bg-brand-500/15 border border-brand-500/40 text-brand-700 dark:text-brand-300 hover:bg-brand-500/25 shadow-xs cursor-pointer"
+                              : isDowngrade
+                                ? "bg-muted/70 hover:bg-muted text-foreground border border-border shadow-2xs cursor-pointer"
+                                : "bg-brand-500 text-brand-950 hover:bg-brand-400 shadow-xs cursor-pointer"
                         }`}
                     >
-                      <span>
-                        {isCurrent
-                          ? subDetails?.billing_interval && subDetails.billing_interval !== billingCycle
-                            ? `Switch`
-                            : `Active`
-                          : isDowngrade
-                            ? `Downgrade`
-                            : `Upgrade`}
-                      </span>
-                      {isCurrent && subDetails?.billing_interval && subDetails.billing_interval !== billingCycle ? (
-                        <Repeat className="w-3 h-3 text-brand-500" />
-                      ) : isDowngrade ? (
-                        <ArrowDown className="w-3 h-3 text-muted-foreground" />
-                      ) : !isCurrent ? (
-                        <ArrowUp className="w-3 h-3" />
-                      ) : null}
+                      {processingCheckout && !isCurrent ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>
+                            {isCurrent
+                              ? subDetails?.billing_interval && subDetails.billing_interval !== billingCycle
+                                ? `Switch`
+                                : `Active`
+                              : isDowngrade
+                                ? `Downgrade`
+                                : `Upgrade`}
+                          </span>
+                          {isCurrent && subDetails?.billing_interval && subDetails.billing_interval !== billingCycle ? (
+                            <Repeat className="w-3 h-3 text-brand-500" />
+                          ) : isDowngrade ? (
+                            <ArrowDown className="w-3 h-3 text-muted-foreground" />
+                          ) : !isCurrent ? (
+                            <ArrowUp className="w-3 h-3" />
+                          ) : null}
+                        </>
+                      )}
                     </button>
                   </div>
                 );
@@ -3185,6 +3277,75 @@ function BillingView({
                 <span>{couponError}</span>
               </div>
             )}
+
+            {/* Add-ons & Extensions: Point of Sale (POS) */}
+            <div id="pos-addon" className="pt-5 border-t border-border space-y-4 scroll-mt-24">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Add-ons & Extensions</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <h3 className="text-xl font-bold text-foreground">Point of Sale (POS)</h3>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                      posAddonStatus?.hasAddon
+                        ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30"
+                        : "bg-brand-500/15 text-brand-500 border border-brand-500/30"
+                    }`}>
+                      {posAddonStatus?.hasAddon ? "Active" : "Available"}
+                    </span>
+                  </div>
+                </div>
+                <div className="p-3 bg-brand-500/10 text-brand-500 rounded-2xl border border-brand-500/20">
+                  <Store className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-black/5 dark:bg-white/5 border border-border rounded-2xl flex items-center justify-between text-xs">
+                <span className="text-gray-400 font-medium">Add-on Price:</span>
+                <span className="font-bold text-foreground">LKR 3,000 / month</span>
+              </div>
+
+              {posAddonStatus?.hasAddon ? (
+                <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <span className="text-xs text-emerald-500 font-semibold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Add-on Active on Workspace
+                  </span>
+                  <Link
+                    href="/pos"
+                    className="px-5 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5"
+                  >
+                    <Store className="w-4 h-4" />
+                    <span>Open POS Terminal</span>
+                  </Link>
+                </div>
+              ) : tenantInfo.plan !== "Free" ? (
+                <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <span className="text-xs text-gray-400">Ready to activate on your {tenantInfo.plan} plan</span>
+                  <button
+                    type="button"
+                    onClick={handleEnablePosAddon}
+                    disabled={enablingPosAddon}
+                    className="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+                  >
+                    {enablingPosAddon ? "Activating..." : "Get POS Add-on (LKR 3,000/mo)"}
+                  </button>
+                </div>
+              ) : (
+                <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <span className="text-xs text-amber-500 flex items-center gap-1">
+                    <MdLock className="w-3.5 h-3.5" />
+                    Requires Pro or Pro Plus plan
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPlan("Pro")}
+                    className="px-5 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs"
+                  >
+                    Upgrade to Pro
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Card 2: Payment & Billing History */}

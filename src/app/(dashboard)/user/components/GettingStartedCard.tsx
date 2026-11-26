@@ -7,7 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MdClose, MdArrowForward } from "react-icons/md";
 import { Check } from "lucide-react";
 import { useAppLock } from "./AppLockProvider";
-import { getTenantInfo, dismissGettingStartedGuideAction } from "../actions/tenants";
+import { dismissGettingStartedGuideAction } from "../actions/tenants";
+import { getClientTenantInfo } from "@/lib/tenant/clientTenantInfo";
 
 interface GettingStartedCardProps {
   tenantId?: number | string | null;
@@ -42,7 +43,7 @@ export default function GettingStartedCard({
     if (propTenantInfo) {
       setInternalTenantInfo(propTenantInfo);
     } else {
-      getTenantInfo()
+      getClientTenantInfo()
         .then((info) => {
           if (info) setInternalTenantInfo(info);
         })
@@ -152,7 +153,7 @@ export default function GettingStartedCard({
       stepIndex: 0,
       title: "Set up your business profile",
       subtitle: "Save your company name, logo, currency and address.",
-      href: "/user/settings",
+      href: "/settings",
       actionLabel: "Go to Settings",
       isCompleted: manualCompleted["profile"] !== undefined 
         ? manualCompleted["profile"] 
@@ -196,7 +197,7 @@ export default function GettingStartedCard({
       stepIndex: 4,
       title: "Set up App Lock",
       subtitle: "Secure your dashboard with passkeys or biometrics.",
-      href: "/user/settings/profile",
+      href: "/settings/security",
       actionLabel: "Set up App Lock",
       isCompleted: manualCompleted["app_lock"] !== undefined 
         ? manualCompleted["app_lock"] 

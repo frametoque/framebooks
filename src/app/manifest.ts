@@ -1,42 +1,8 @@
 // src/app/manifest.ts
 import type { MetadataRoute } from 'next';
-import { cookies } from 'next/headers';
-import { DEFAULT_ACCENT_HEX, resolveHeroAccentHex } from '@/lib/theme/accent';
-import sql from '@/lib/db';
+import { DEFAULT_ACCENT_HEX } from '@/lib/theme/accent';
 
-export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  let themeColor = DEFAULT_ACCENT_HEX;
-
-  try {
-    const cookieStore = await cookies();
-    const cookieColor = cookieStore.get('fb_accent_color')?.value;
-    if (cookieColor) {
-      themeColor = resolveHeroAccentHex(cookieColor);
-    } else {
-      // Check session cookie to find user's tenant accent color from DB
-      const sessionToken =
-        cookieStore.get('next-auth.session-token')?.value ||
-        cookieStore.get('__Secure-next-auth.session-token')?.value;
-
-      if (sessionToken) {
-        const rows = await sql`
-          SELECT t.accent_color
-          FROM sessions s
-          JOIN admin_users u ON (s."userId" = u.id OR s."user_id" = u.id)
-          JOIN tenants t ON u.tenant_id = t.id
-          WHERE s."sessionToken" = ${sessionToken} OR s."session_token" = ${sessionToken}
-          LIMIT 1
-        `;
-        const dbColor = rows[0]?.accent_color;
-        if (dbColor) {
-          themeColor = resolveHeroAccentHex(dbColor);
-        }
-      }
-    }
-  } catch {
-    // Fall back to DEFAULT_ACCENT_HEX on error
-  }
-
+export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Framebooks',
     short_name: 'Framebooks',
@@ -47,7 +13,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     display: 'standalone',
     display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
     background_color: '#0B0F12',
-    theme_color: themeColor,
+    theme_color: DEFAULT_ACCENT_HEX,
     lang: 'en',
     dir: 'ltr',
     orientation: 'any',
@@ -109,7 +75,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
       {
         name: 'Settings',
         short_name: 'Settings',
-        url: '/user/settings',
+        url: '/settings',
         icons: [{ src: '/favicon-192x192.png', sizes: '192x192' }],
       },
     ],

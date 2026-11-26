@@ -38,7 +38,7 @@ export default async function SettingsServerPage({
   if (tabParam) {
     const { role } = await getUserContext();
     if (!role || !isSettingsSectionAllowed(tabParam, role)) {
-      redirect("/user/settings");
+      redirect("/settings");
     }
   }
 

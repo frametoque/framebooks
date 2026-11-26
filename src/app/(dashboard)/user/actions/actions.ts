@@ -1,4 +1,5 @@
 "use server";
+import { cache } from "react";
 import { checkLimit, incrementLifetimeUsage } from "@/lib/plans";
 import { requirePermission, checkTenantReadOnly } from "./rbac";
 
@@ -9,10 +10,15 @@ import { logSystemAction } from "@/lib/logger";
 import { getGravatarUrl } from "@/lib/gravatar";
 import { encryptField, decryptField, blindIndex } from "@/lib/security/crypto";
 
-export async function getTenantId() {
+export const getTenantId = cache(async function getTenantId() {
   const { userId, session } = await auth();
   if (!userId && !session?.user?.email) throw new Error("Unauthorized");
   
+  // Fast path: use verified tenantId directly from authenticated session JWT claim
+  if ((session?.user as any)?.tenantId) {
+    return String((session.user as any).tenantId);
+  }
+
   const email = session?.user?.email?.trim().toLowerCase();
   const numId = Number(userId) || 0;
   const safeId = (numId > 0 && numId < 2147483647) ? numId : 0;
@@ -26,7 +32,7 @@ export async function getTenantId() {
   }
   
   return String(userRows[0].tenant_id);
-}
+});
 
 export async function uploadReceipt(formData: FormData, type: 'income' | 'expenses'): Promise<string> {
   const tenantId = await getTenantId();
@@ -1672,7 +1678,7 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
       : await sql`
           SELECT id, definition FROM invoice_layouts 
           WHERE tenant_id = ${tenantId} AND is_active = true 
-            AND (document_type = 'invoice' OR document_type = 'both')
+            AND (document_type = 'invoice' OR document_type = 'all' OR document_type = 'both')
           LIMIT 1
         `;
 
@@ -1721,6 +1727,42 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
         INSERT INTO invoice_items (invoice_id, description, quantity, price, total, tenant_id)
         VALUES (${invoiceId}, ${item.description}, ${qty}, ${price}, ${qty * price}, ${tenantId})
       `;
+
+      // Sync stock deduction if line item corresponds to an inventory item
+      try {
+        const itemDesc = item.description.trim();
+        const matched = await sql`
+          SELECT id, quantity, item_name, sku FROM admin_inventory
+          WHERE tenant_id::text = ${String(tenantId)}
+            AND (LOWER(TRIM(item_name)) = LOWER(${itemDesc})
+                 OR LOWER(TRIM(sku)) = LOWER(${itemDesc})
+                 OR ${itemDesc} ILIKE '%' || sku || '%')
+          LIMIT 1
+        `;
+        if (matched.length > 0) {
+          const inv = matched[0];
+          const prevQty = parseFloat(inv.quantity || 0);
+          const newQty = prevQty - qty;
+          await sql`
+            UPDATE admin_inventory
+            SET quantity = ${newQty},
+                status = ${newQty <= 0 ? 'Out of Stock' : 'Available'},
+                updated_at = NOW()
+            WHERE id::text = ${String(inv.id)} AND tenant_id::text = ${String(tenantId)}
+          `;
+          await sql`
+            INSERT INTO stock_movements (
+              tenant_id, inventory_id, change_qty, previous_qty, new_qty, reason,
+              reference_type, reference_id, user_name, notes, created_at
+            ) VALUES (
+              ${tenantId}, ${inv.id}, ${-qty}, ${prevQty}, ${newQty}, 'sale',
+              'invoice', ${invoiceId}, 'Invoice Sale', ${`ERP Invoice item: ${itemDesc}`}, NOW()
+            )
+          `;
+        }
+      } catch (err) {
+        // Non-blocking
+      }
     }
   }
 
@@ -1783,7 +1825,7 @@ export async function updateInvoice(invoiceId: string, invoiceData: any, lineIte
       : await sql`
           SELECT id, definition FROM invoice_layouts 
           WHERE tenant_id = ${tenantId} AND is_active = true 
-            AND (document_type = 'invoice' OR document_type = 'both')
+            AND (document_type = 'invoice' OR document_type = 'all' OR document_type = 'both')
           LIMIT 1
         `;
     if (layoutRes.length > 0) {
@@ -1833,6 +1875,42 @@ export async function updateInvoice(invoiceId: string, invoiceData: any, lineIte
         INSERT INTO invoice_items (invoice_id, description, quantity, price, total, tenant_id)
         VALUES (${invoiceId}, ${item.description}, ${qty}, ${price}, ${qty * price}, ${tenantId})
       `;
+
+      // Sync stock deduction if line item corresponds to an inventory item
+      try {
+        const itemDesc = item.description.trim();
+        const matched = await sql`
+          SELECT id, quantity, item_name, sku FROM admin_inventory
+          WHERE tenant_id::text = ${String(tenantId)}
+            AND (LOWER(TRIM(item_name)) = LOWER(${itemDesc})
+                 OR LOWER(TRIM(sku)) = LOWER(${itemDesc})
+                 OR ${itemDesc} ILIKE '%' || sku || '%')
+          LIMIT 1
+        `;
+        if (matched.length > 0) {
+          const inv = matched[0];
+          const prevQty = parseFloat(inv.quantity || 0);
+          const newQty = prevQty - qty;
+          await sql`
+            UPDATE admin_inventory
+            SET quantity = ${newQty},
+                status = ${newQty <= 0 ? 'Out of Stock' : 'Available'},
+                updated_at = NOW()
+            WHERE id::text = ${String(inv.id)} AND tenant_id::text = ${String(tenantId)}
+          `;
+          await sql`
+            INSERT INTO stock_movements (
+              tenant_id, inventory_id, change_qty, previous_qty, new_qty, reason,
+              reference_type, reference_id, user_name, notes, created_at
+            ) VALUES (
+              ${tenantId}, ${inv.id}, ${-qty}, ${prevQty}, ${newQty}, 'sale',
+              'invoice', ${invoiceId}, 'Invoice Sale', ${`ERP Invoice item: ${itemDesc}`}, NOW()
+            )
+          `;
+        }
+      } catch (err) {
+        // Non-blocking
+      }
     }
   }
 
@@ -2038,7 +2116,7 @@ export async function createQuotation(data: any, lineItems: any[] = []) {
     : await sql`
         SELECT id, definition FROM invoice_layouts
         WHERE tenant_id = ${tenantId} AND is_active = true
-          AND (document_type = 'quotation' OR document_type = 'both')
+          AND (document_type = 'quotation' OR document_type = 'all' OR document_type = 'both')
         LIMIT 1
       `;
   if (layoutRes.length > 0) {
@@ -2120,7 +2198,7 @@ export async function updateQuotation(id: number, data: any, lineItems: any[] = 
       : await sql`
           SELECT id, definition FROM invoice_layouts
           WHERE tenant_id = ${tenantId} AND is_active = true
-            AND (document_type = 'quotation' OR document_type = 'both')
+            AND (document_type = 'quotation' OR document_type = 'all' OR document_type = 'both')
           LIMIT 1
         `;
     if (layoutRes.length > 0) {
@@ -2368,7 +2446,7 @@ export async function getQuotationById(quotationId: string) {
         SELECT name, definition FROM invoice_layouts 
         WHERE tenant_id = ${tenantId} 
           AND is_active = true 
-          AND (document_type = 'quotation' OR document_type = 'both')
+          AND (document_type = 'quotation' OR document_type = 'all' OR document_type = 'both')
         LIMIT 1
       ) def_il ON true
       WHERE q.id = ${parseInt(quotationId)} AND q.tenant_id = ${tenantId}

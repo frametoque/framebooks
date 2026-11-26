@@ -37,7 +37,7 @@ export async function createPayHereCheckoutSession(
     `${config.appUrl}/billing/success?order_id=${orderId}&provider=payhere`;
   const cancelUrl =
     params.cancelUrl ||
-    `${config.appUrl}/user/settings?billing_status=cancelled`;
+    `${config.appUrl}/settings?billing_status=cancelled`;
   const notifyUrl = `${config.appUrl}/api/payments/webhook?provider=payhere`;
 
   const checkoutUrl = config.payhere.isSandbox

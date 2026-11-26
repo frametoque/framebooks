@@ -186,7 +186,7 @@ export async function getInvoiceLayout(id: string): Promise<InvoiceLayoutRecord 
 export async function saveInvoiceLayout(data: {
   id?: string;
   name: string;
-  documentType?: 'invoice' | 'quotation' | 'both' | 'off';
+  documentType?: 'invoice' | 'quotation' | 'receipt' | 'all' | 'both' | 'off';
   pageSize?: 'A4' | 'Letter';
   definition: InvoiceLayoutDefinition;
   isDefault?: boolean;
@@ -336,51 +336,49 @@ export async function saveInvoiceLayout(data: {
 }
 
 /**
- * Helper to sync format assignments so only one format can exist for invoice,
- * and only one format can exist for quotation.
+ * Helper to sync format assignments across invoice, quotation, and POS receipt.
+ * Ensures only one layout is actively assigned per document type, or 'all' for all documents.
  */
 async function syncLayoutFormatAssignments(
   tenantId: string,
   targetLayoutId: string | null,
-  targetType: 'invoice' | 'quotation' | 'both' | 'off'
+  targetType: 'invoice' | 'quotation' | 'receipt' | 'all' | 'both' | 'off'
 ) {
+  const normType = targetType === 'both' ? 'all' : targetType;
+
   if (!targetLayoutId || targetLayoutId === "standard") {
-    if (targetType === 'both') {
+    if (normType === 'all') {
       await sql`
         UPDATE invoice_layouts
         SET document_type = 'off', is_default = false, updated_at = NOW()
         WHERE tenant_id = ${tenantId} AND is_active = true
       `;
-    } else if (targetType === 'invoice') {
-      await sql`
-        UPDATE invoice_layouts
-        SET document_type = 'quotation', is_default = true, updated_at = NOW()
-        WHERE tenant_id = ${tenantId} AND is_active = true AND document_type = 'both'
-      `;
+    } else if (normType === 'invoice') {
       await sql`
         UPDATE invoice_layouts
         SET document_type = 'off', is_default = false, updated_at = NOW()
-        WHERE tenant_id = ${tenantId} AND is_active = true AND document_type = 'invoice'
+        WHERE tenant_id = ${tenantId} AND is_active = true AND (document_type = 'invoice' OR document_type = 'both' OR document_type = 'all')
       `;
-    } else if (targetType === 'quotation') {
-      await sql`
-        UPDATE invoice_layouts
-        SET document_type = 'invoice', is_default = true, updated_at = NOW()
-        WHERE tenant_id = ${tenantId} AND is_active = true AND document_type = 'both'
-      `;
+    } else if (normType === 'quotation') {
       await sql`
         UPDATE invoice_layouts
         SET document_type = 'off', is_default = false, updated_at = NOW()
-        WHERE tenant_id = ${tenantId} AND is_active = true AND document_type = 'quotation'
+        WHERE tenant_id = ${tenantId} AND is_active = true AND (document_type = 'quotation' OR document_type = 'both' OR document_type = 'all')
+      `;
+    } else if (normType === 'receipt') {
+      await sql`
+        UPDATE invoice_layouts
+        SET document_type = 'off', is_default = false, updated_at = NOW()
+        WHERE tenant_id = ${tenantId} AND is_active = true AND (document_type = 'receipt' OR document_type = 'both' OR document_type = 'all')
       `;
     }
     return;
   }
 
-  if (targetType === 'both') {
+  if (normType === 'all') {
     await sql`
       UPDATE invoice_layouts
-      SET document_type = 'both', is_default = true, updated_at = NOW()
+      SET document_type = 'all', is_default = true, updated_at = NOW()
       WHERE id = ${targetLayoutId} AND tenant_id = ${tenantId}
     `;
     await sql`
@@ -388,7 +386,7 @@ async function syncLayoutFormatAssignments(
       SET document_type = 'off', is_default = false, updated_at = NOW()
       WHERE id != ${targetLayoutId} AND tenant_id = ${tenantId} AND is_active = true
     `;
-  } else if (targetType === 'invoice') {
+  } else if (normType === 'invoice') {
     await sql`
       UPDATE invoice_layouts
       SET document_type = 'invoice', is_default = true, updated_at = NOW()
@@ -396,15 +394,10 @@ async function syncLayoutFormatAssignments(
     `;
     await sql`
       UPDATE invoice_layouts
-      SET document_type = 'quotation', is_default = true, updated_at = NOW()
-      WHERE id != ${targetLayoutId} AND tenant_id = ${tenantId} AND is_active = true AND document_type = 'both'
-    `;
-    await sql`
-      UPDATE invoice_layouts
       SET document_type = 'off', is_default = false, updated_at = NOW()
-      WHERE id != ${targetLayoutId} AND tenant_id = ${tenantId} AND is_active = true AND document_type = 'invoice'
+      WHERE id != ${targetLayoutId} AND tenant_id = ${tenantId} AND is_active = true AND (document_type = 'invoice' OR document_type = 'both' OR document_type = 'all')
     `;
-  } else if (targetType === 'quotation') {
+  } else if (normType === 'quotation') {
     await sql`
       UPDATE invoice_layouts
       SET document_type = 'quotation', is_default = true, updated_at = NOW()
@@ -412,15 +405,21 @@ async function syncLayoutFormatAssignments(
     `;
     await sql`
       UPDATE invoice_layouts
-      SET document_type = 'invoice', is_default = true, updated_at = NOW()
-      WHERE id != ${targetLayoutId} AND tenant_id = ${tenantId} AND is_active = true AND document_type = 'both'
+      SET document_type = 'off', is_default = false, updated_at = NOW()
+      WHERE id != ${targetLayoutId} AND tenant_id = ${tenantId} AND is_active = true AND (document_type = 'quotation' OR document_type = 'both' OR document_type = 'all')
+    `;
+  } else if (normType === 'receipt') {
+    await sql`
+      UPDATE invoice_layouts
+      SET document_type = 'receipt', is_default = true, updated_at = NOW()
+      WHERE id = ${targetLayoutId} AND tenant_id = ${tenantId}
     `;
     await sql`
       UPDATE invoice_layouts
       SET document_type = 'off', is_default = false, updated_at = NOW()
-      WHERE id != ${targetLayoutId} AND tenant_id = ${tenantId} AND is_active = true AND document_type = 'quotation'
+      WHERE id != ${targetLayoutId} AND tenant_id = ${tenantId} AND is_active = true AND (document_type = 'receipt' OR document_type = 'both' OR document_type = 'all')
     `;
-  } else if (targetType === 'off') {
+  } else if (normType === 'off') {
     await sql`
       UPDATE invoice_layouts
       SET document_type = 'off', is_default = false, updated_at = NOW()
@@ -430,13 +429,13 @@ async function syncLayoutFormatAssignments(
 }
 
 /**
- * Set the format assignment for a layout (invoice, quotation, or both).
- * Only one layout can exist for invoice, and only one layout can exist for quotation.
+ * Set the format assignment for a layout (invoice, quotation, receipt, or all).
+ * Only one layout can exist for invoice, quotation, or receipt, or a single layout assigned to all.
  * If target matches the currently active format on a custom layout, it toggles it off.
  */
 export async function setLayoutFormat(
   id: string | "standard",
-  target: 'invoice' | 'quotation' | 'both'
+  target: 'invoice' | 'quotation' | 'receipt' | 'all' | 'both'
 ): Promise<{ success: boolean; error?: string }> {
   const { error: rbacError, context } = await requirePermission('invoices', 'customize');
   if (rbacError || !context) return { success: false, error: rbacError || "Unauthorized" };
@@ -451,9 +450,11 @@ export async function setLayoutFormat(
     };
   }
 
+  const normTarget = target === 'both' ? 'all' : target;
+
   try {
     if (id === "standard") {
-      await syncLayoutFormatAssignments(tenantId, "standard", target);
+      await syncLayoutFormatAssignments(tenantId, "standard", normTarget);
       return { success: true };
     }
 
@@ -467,7 +468,8 @@ export async function setLayoutFormat(
     }
 
     const currentDocType = currentRows[0].document_type;
-    const nextTarget = currentDocType === target ? 'off' : target;
+    const isCurrentActive = currentDocType === normTarget || (normTarget === 'all' && currentDocType === 'both');
+    const nextTarget = isCurrentActive ? 'off' : normTarget;
     await syncLayoutFormatAssignments(tenantId, id, nextTarget);
     return { success: true };
   } catch (err: any) {
@@ -481,16 +483,16 @@ export async function setLayoutFormat(
  */
 export async function updateLayoutDocumentType(
   id: string,
-  documentType: 'invoice' | 'quotation' | 'both' | 'off'
+  documentType: 'invoice' | 'quotation' | 'receipt' | 'all' | 'both' | 'off'
 ): Promise<{ success: boolean; error?: string }> {
-  return setLayoutFormat(id, documentType === 'off' ? 'both' : documentType);
+  return setLayoutFormat(id, documentType === 'off' ? 'all' : documentType);
 }
 
 /**
  * Set a layout as default for the workspace (backwards compatibility).
  */
 export async function setDefaultInvoiceLayout(id: string | null): Promise<{ success: boolean; error?: string }> {
-  return setLayoutFormat(id || "standard", "both");
+  return setLayoutFormat(id || "standard", "all");
 }
 
 /**
@@ -725,4 +727,52 @@ export async function deleteCustomField(id: string): Promise<{ success: boolean;
     console.error("Delete custom field failed:", err);
     return { success: false, error: "Failed to delete custom field." };
   }
+}
+
+/**
+ * Fetch the active layout for a document type ('invoice', 'quotation', or 'receipt').
+ * Prioritizes a specific assignment, then falls back to 'all' or legacy 'both'.
+ */
+export async function getActiveLayoutForDocument(
+  tenantId: string | number,
+  docType: 'invoice' | 'quotation' | 'receipt'
+): Promise<{ id: string; name: string; definition: any } | null> {
+  try {
+    const rows = await sql`
+      SELECT id, name, definition, document_type FROM invoice_layouts
+      WHERE tenant_id = ${tenantId}
+        AND is_active = true
+        AND (document_type = ${docType} OR document_type = 'all' OR document_type = 'both')
+      ORDER BY
+        CASE
+          WHEN document_type = ${docType} THEN 1
+          WHEN document_type = 'all' THEN 2
+          WHEN document_type = 'both' THEN 3
+          ELSE 4
+        END
+      LIMIT 1
+    `;
+    if (rows.length === 0) return null;
+    return {
+      id: rows[0].id,
+      name: rows[0].name,
+      definition: rows[0].definition,
+    };
+  } catch (err) {
+    console.error("Failed to fetch active layout for document:", err);
+    return null;
+  }
+}
+
+/**
+ * Server action to get the active POS receipt layout for the current tenant.
+ */
+export async function getActiveReceiptLayoutAction(): Promise<{
+  success: boolean;
+  layout?: { id: string; name: string; definition: any } | null;
+}> {
+  const tenantId = await getTenantId();
+  if (!tenantId) return { success: false, layout: null };
+  const layout = await getActiveLayoutForDocument(tenantId, 'receipt');
+  return { success: true, layout };
 }

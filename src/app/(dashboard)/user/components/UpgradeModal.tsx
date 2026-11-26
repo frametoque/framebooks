@@ -45,7 +45,7 @@ export function UpgradeModal() {
           </p>
           <div className="flex flex-col gap-3 w-full">
             <Link 
-              href="/user/settings" 
+              href="/settings/billing" 
               onClick={() => setIsOpen(false)}
               className="w-full px-6 py-3.5 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-xl font-bold transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2"
             >

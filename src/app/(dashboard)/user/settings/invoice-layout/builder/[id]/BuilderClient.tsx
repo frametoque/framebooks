@@ -1127,7 +1127,7 @@ export default function BuilderClient({ initialLayout, layoutId }: BuilderClient
         setSuccessMsg("Layout saved successfully.");
         setTimeout(() => setSuccessMsg(null), 3000);
         if (isNew && res.id) {
-          router.replace(`/user/settings/invoice-layout/builder/${res.id}`);
+          router.replace(`/settings/invoice-layout/builder/${res.id}`);
         }
       } else {
         setErrorMsg(res.error || "Failed to save layout.");
@@ -1156,7 +1156,7 @@ export default function BuilderClient({ initialLayout, layoutId }: BuilderClient
       if (res.success && res.id) {
         setSuccessMsg("Layout duplicated successfully! Opening copy...");
         setTimeout(() => {
-          router.push(`/user/settings/invoice-layout/builder/${res.id}`);
+          router.push(`/settings/invoice-layout/builder/${res.id}`);
         }, 600);
       } else {
         setErrorMsg(res.error || "Failed to duplicate layout.");
@@ -1190,7 +1190,7 @@ export default function BuilderClient({ initialLayout, layoutId }: BuilderClient
       <header className="h-16 px-4 border-b border-border/80 bg-card/40 backdrop-blur-md flex items-center justify-between shrink-0 z-30">
         <div className="flex items-center gap-3">
           <Link
-            href="/user/settings/invoice-layout"
+            href="/settings/invoice-layout"
             className="p-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             title="Back to Layouts"
           >
@@ -1611,8 +1611,8 @@ export default function BuilderClient({ initialLayout, layoutId }: BuilderClient
                     Apply Format To
                   </label>
                   <span className="text-[10px] font-semibold text-brand-500 capitalize bg-brand-500/10 px-2 py-0.5 rounded-full">
-                    {documentType === "both"
-                      ? "Both Documents"
+                    {documentType === "all" || documentType === "both"
+                      ? "ALL Documents"
                       : documentType === "invoice"
                       ? "Invoice Only"
                       : documentType === "quotation"
@@ -1622,7 +1622,7 @@ export default function BuilderClient({ initialLayout, layoutId }: BuilderClient
                 </div>
                 <div className="grid grid-cols-4 gap-1 bg-muted/40 p-1 rounded-xl">
                   {([
-                    { id: "both", label: "Both" },
+                    { id: "all", label: "ALL" },
                     { id: "invoice", label: "Invoice" },
                     { id: "quotation", label: "Quotation" },
                     { id: "off", label: "Off" },
@@ -1631,7 +1631,8 @@ export default function BuilderClient({ initialLayout, layoutId }: BuilderClient
                       key={opt.id}
                       type="button"
                       onClick={() => setDocumentType(opt.id)}
-                      className={`py-1.5 px-1 text-[11px] font-semibold rounded-lg transition-all text-center cursor-pointer ${documentType === opt.id
+                      className={`py-1.5 px-1 text-[11px] font-semibold rounded-lg transition-all text-center cursor-pointer ${
+                        documentType === opt.id || (opt.id === "all" && documentType === "both")
                         ? "bg-brand-500 text-brand-900 shadow-xs"
                         : "text-muted-foreground hover:text-foreground hover:bg-card/30"
                         }`}

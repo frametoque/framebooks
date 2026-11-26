@@ -28,7 +28,7 @@ export interface AccountOption {
 export function WalletExpensePrompt({
   amount,
   accounts,
-  returnUrl = "/user/settings/billing",
+  returnUrl = "/settings/billing",
 }: {
   amount: number;
   accounts: AccountOption[];

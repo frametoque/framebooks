@@ -29,7 +29,29 @@ export async function POST(req: NextRequest) {
       LIMIT 1
     `;
 
-    let tenantId = requestedTenantId ? Number(requestedTenantId) : userRows[0]?.tenant_id;
+    let tenantId = userRows[0]?.tenant_id;
+
+    // Verify authorized access to requestedTenantId to prevent Tenant IDOR
+    if (requestedTenantId) {
+      const candidateId = Number(requestedTenantId);
+      if (candidateId > 0) {
+        const hasAccess = await sql`
+          SELECT id FROM tenants WHERE id = ${candidateId} AND LOWER(owner_email) = ${email}
+          UNION
+          SELECT id FROM admin_users WHERE tenant_id = ${candidateId} AND ((id = ${numId} AND ${numId} > 0) OR LOWER(email) = ${email})
+          LIMIT 1
+        `;
+        if (hasAccess.length > 0) {
+          tenantId = candidateId;
+        } else {
+          return NextResponse.json(
+            { error: "Forbidden: You do not have permission to checkout for the specified workspace." },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
     if (!tenantId) {
       // Check owned tenant
       const owned = await sql`
@@ -216,7 +238,7 @@ export async function POST(req: NextRequest) {
       currency: plan.currency || "LKR",
       couponCode,
       successUrl: `${baseUrl}/billing/success`,
-      cancelUrl: `${baseUrl}/user/settings/billing?billing_status=cancelled`,
+      cancelUrl: `${baseUrl}/settings/billing?billing_status=cancelled`,
     });
 
     return NextResponse.json(result);

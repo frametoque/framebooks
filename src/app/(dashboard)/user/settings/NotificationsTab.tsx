@@ -86,7 +86,7 @@ export function NotificationsTab() {
         // Send welcome notification
         sendLocalPushNotification("Push Notifications Active", {
           body: "You will now receive transaction reminders and automated alerts from Framebooks.",
-          url: "/user/settings/notifications",
+          url: "/settings/notifications",
           tag: "welcome-push",
         });
       } else if (res.permission === "denied") {
@@ -111,7 +111,7 @@ export function NotificationsTab() {
 
     const ok = await sendLocalPushNotification("Framebooks Test Alert", {
       body: "Browser push notifications are configured and functioning seamlessly!",
-      url: "/user/settings/notifications",
+      url: "/settings/notifications",
       tag: "test-notification-" + Date.now(),
     });
 

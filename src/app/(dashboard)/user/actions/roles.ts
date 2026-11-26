@@ -1,7 +1,6 @@
 "use server";
 import { requirePermission } from "./rbac";
 import sql from "@/lib/db";
-import { auth } from '@/lib/auth';
 import { logSystemAction } from "@/lib/logger";
 
 export async function getRoles() {
@@ -13,7 +12,7 @@ export async function getRoles() {
   // Fetch base roles
   const baseRoles = await sql`SELECT role, granular_permissions FROM role_permissions`;
   
-  // Default fallback if table is empty
+  // Default fallback if table is empty or missing Cashier
   const defaultRoles = [
     {
       role: "Admin",
@@ -27,6 +26,8 @@ export async function getRoles() {
         settings: { manage: true, appearance: true },
         team: { manage: true },
         export: { data: true },
+        pos: { use: true, refund: true, discount: true, void: true, reports_view: true },
+        stock: { view: true, manage: true },
       }
     },
     {
@@ -41,6 +42,8 @@ export async function getRoles() {
         settings: { manage: false, appearance: false },
         team: { manage: false },
         export: { data: false },
+        pos: { use: true, refund: false, discount: true, void: false, reports_view: false },
+        stock: { view: true, manage: true },
       }
     },
     {
@@ -55,6 +58,24 @@ export async function getRoles() {
         settings: { manage: false, appearance: false },
         team: { manage: false },
         export: { data: false },
+        pos: { use: false, refund: false, discount: false, void: false, reports_view: true },
+        stock: { view: true, manage: false },
+      }
+    },
+    {
+      role: "Cashier",
+      granular_permissions: {
+        invoices: { read: false, insert: false, update: false, delete: false, customize: false },
+        incomes: { read: false, insert: false, update: false, delete: false },
+        expenses: { read: false, insert: false, update: false, delete: false },
+        clients: { read: false, insert: false, update: false, delete: false },
+        accounts: { read: false, insert: false, update: false, delete: false },
+        inventory: { read: false, insert: false, update: false, delete: false },
+        settings: { manage: false, appearance: false },
+        team: { manage: false },
+        export: { data: false },
+        pos: { use: true, refund: false, discount: false, void: false, reports_view: false },
+        stock: { view: false, manage: false },
       }
     }
   ];
@@ -69,18 +90,45 @@ export async function getRoles() {
   for (const r of effectiveBaseRoles) {
     let perms = r.granular_permissions;
     if (typeof perms === 'string') {
-      try { perms = JSON.parse(perms); } catch (e) {}
+      try { perms = JSON.parse(perms); } catch {}
     }
     if (perms?.invoices && perms.invoices.customize === undefined) {
       perms.invoices.customize = r.role.toLowerCase() === 'admin' || r.role.toLowerCase() === 'super admin';
     }
+    // Ensure POS permissions exist on base roles
+    if (!perms?.pos) {
+      if (r.role.toLowerCase() === 'admin') {
+        perms = { ...perms, pos: { use: true, refund: true, discount: true, void: true, reports_view: true } };
+      } else if (r.role.toLowerCase() === 'editor') {
+        perms = { ...perms, pos: { use: true, refund: false, discount: true, void: false, reports_view: false } };
+      } else if (r.role.toLowerCase() === 'cashier') {
+        perms = { ...perms, pos: { use: true, refund: false, discount: false, void: false, reports_view: false } };
+      } else {
+        perms = { ...perms, pos: { use: false, refund: false, discount: false, void: false, reports_view: false } };
+      }
+    }
+    if (!perms?.stock) {
+      perms = {
+        ...perms,
+        stock: {
+          view: r.role.toLowerCase() !== 'cashier',
+          manage: r.role.toLowerCase() === 'admin' || r.role.toLowerCase() === 'editor',
+        }
+      };
+    }
     rolesMap.set(r.role.toLowerCase(), { ...r, granular_permissions: perms, isCustom: false });
+  }
+
+  // If cashier wasn't in DB baseRoles, add it from defaults
+  if (!rolesMap.has('cashier')) {
+    const cashierDefault = defaultRoles.find(r => r.role === 'Cashier')!;
+    rolesMap.set('cashier', { ...cashierDefault, isCustom: false });
   }
 
   for (const r of customRoles) {
     let perms = r.granular_permissions;
     if (typeof perms === 'string') {
-      try { perms = JSON.parse(perms); } catch (e) {}
+      try { perms = JSON.parse(perms); } catch {}
     }
     if (perms?.invoices && perms.invoices.customize === undefined) {
       perms.invoices.customize = r.role.toLowerCase() === 'admin' || r.role.toLowerCase() === 'super admin';

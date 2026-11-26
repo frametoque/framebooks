@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { uploadToR2 } from "@/lib/r2";
 import { getActivePlans, DBPlan } from "@/lib/plans-db";
 import { revalidatePath } from "next/cache";
+import { getPosAddonStatus, grantPosAddon, revokePosAddon, requestPosAddon } from "@/lib/pos/entitlement";
 
 export async function getAvailablePlansAction(): Promise<{ success: boolean; plans: DBPlan[] }> {
   try {
@@ -951,8 +952,8 @@ export async function switchBillingIntervalAction(params: {
       amount,
       currency: plan?.currency || "LKR",
       couponCode: params.couponCode,
-      successUrl: `${baseUrl}/user/settings?tab=billing&switched=true`,
-      cancelUrl: `${baseUrl}/user/settings?tab=billing`,
+      successUrl: `${baseUrl}/settings?tab=billing&switched=true`,
+      cancelUrl: `${baseUrl}/settings?tab=billing`,
     });
 
     if (!sessionRes.success) {
@@ -987,5 +988,48 @@ export async function rechargeAndSwitchBillingIntervalAction(params: {
   couponCode?: string;
 }) {
   return await switchBillingIntervalAction(params);
+}
+
+export async function getTenantPosAddonAction() {
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return { success: false, error: "Unauthorized", status: null };
+    const status = await getPosAddonStatus(tenantId);
+    return { success: true, status };
+  } catch (err: any) {
+    return { success: false, error: err.message, status: null };
+  }
+}
+
+export async function enablePosAddonAction() {
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return { success: false, error: "Unauthorized" };
+
+    const status = await getPosAddonStatus(tenantId);
+    if (!status.canPurchase && status.currentPlan.toLowerCase() === 'free') {
+      return { success: false, error: "POS add-on requires a Pro or Pro Plus plan." };
+    }
+
+    await grantPosAddon(tenantId, { price: 3000, billingInterval: 'monthly' });
+    revalidatePath("/user/settings");
+    revalidatePath("/pos");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function requestPosAddonAction() {
+  try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return { success: false, error: "Unauthorized" };
+
+    await requestPosAddon(tenantId);
+    revalidatePath("/user/settings");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
 }
 

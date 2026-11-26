@@ -146,7 +146,7 @@ export function DashboardShell({
     if (path.startsWith("/user/expenses")) return "Expenses";
     if (path.startsWith("/user/accounts")) return "Accounts";
     if (path.startsWith("/user/reports")) return "Reports";
-    if (path.startsWith("/user/settings")) {
+    if (path.startsWith("/user/settings") || path.startsWith("/settings")) {
       if (path.includes("/invoice-layout/builder") || path.includes("/invoice-layout")) {
         return "Invoice Layout";
       }
@@ -169,23 +169,24 @@ export function DashboardShell({
   ];
 
   const userLinks = [
-    { name: "Dashboard", href: "/user/dashboard", icon: MdDashboard },
-    { name: "Income", href: "/user/income", icon: MdAccountBalanceWallet },
-    { name: "Expenses", href: "/user/expenses", icon: Receipt },
-    { name: "Accounts", href: "/user/accounts", icon: MdAccountBalance },
-    { name: "Invoices", href: "/user/invoices", icon: MdInsertDriveFile },
-    { name: "Quotations", href: "/user/quotations", icon: NotepadTextDashed },
-    { name: "Clients", href: "/user/clients", icon: MdGroup },
-    { name: "Inventory", href: "/user/inventory", icon: MdInventory2 },
-    { name: "Reports", href: "/user/reports", icon: BarChart3 },
-    { name: "Settings", href: "/user/settings", icon: MdSettings },
+    { name: "Dashboard", href: "/dashboard", icon: MdDashboard },
+    { name: "Income", href: "/income", icon: MdAccountBalanceWallet },
+    { name: "Expenses", href: "/expenses", icon: Receipt },
+    { name: "Accounts", href: "/accounts", icon: MdAccountBalance },
+    { name: "Invoices", href: "/invoices", icon: MdInsertDriveFile },
+    { name: "Quotations", href: "/quotations", icon: NotepadTextDashed },
+    { name: "Clients", href: "/clients", icon: MdGroup },
+    { name: "Inventory", href: "/inventory", icon: MdInventory2 },
+    { name: "Reports", href: "/reports", icon: BarChart3 },
+    { name: "Settings", href: "/settings", icon: MdSettings },
   ];
 
   const links = variant === "admin" ? adminLinks : userLinks;
 
   const isLinkActive = (href: string) => {
-    if (href === "/admin" || href === "/user/dashboard") return pathname === href;
-    return pathname.startsWith(href);
+    if (href === "/admin" || href === "/user/dashboard" || href === "/dashboard") return pathname === href || pathname === "/user/dashboard" || pathname === "/dashboard";
+    if (href === "/settings") return pathname.startsWith("/settings") || pathname.startsWith("/user/settings");
+    return pathname.startsWith(href) || (href.startsWith("/user/") ? pathname.startsWith(href.replace("/user", "")) : pathname.startsWith(`/user${href}`));
   };
 
   if (pathname.startsWith("/admin/login") || pathname.startsWith("/login")) {
@@ -325,7 +326,7 @@ export function DashboardShell({
             <div className="p-3.5 flex flex-col mt-auto space-y-2 shrink-0 border-t border-border">
               <div className="flex items-center gap-2">
                 <Link
-                  href="/user/settings/profile"
+                  href="/settings/profile"
                   prefetch={false}
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex-1 flex items-center gap-2.5 p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-2xl transition-colors min-w-0"
@@ -385,7 +386,7 @@ export function DashboardShell({
               {/* Profile pill on top bar (User only) */}
               {variant !== "admin" && (
                 <Link
-                  href="/user/settings/business"
+                  href="/settings/business"
                   className="flex items-center gap-3 pl-3 border-l border-border hover:opacity-80 transition-opacity"
                 >
                   <div className="flex flex-col items-end hidden sm:flex">

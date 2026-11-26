@@ -531,7 +531,7 @@ export default function OnboardingPage() {
 
             {/* Gateway Checkout Actions */}
             <div className="space-y-3 pt-2">
-              {gatewayStatus?.cardPaymentsDisabled && (
+              {gatewayStatus?.cardPaymentsDisabled && activePriceInfo.finalPrice > 0 && (
                 <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
                   <span>Card payments are disabled on live.</span>
@@ -541,13 +541,13 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={handleGatewayCheckout}
-                disabled={processingPayment || Boolean(gatewayStatus?.cardPaymentsDisabled)}
+                disabled={processingPayment || (activePriceInfo.finalPrice > 0 && Boolean(gatewayStatus?.cardPaymentsDisabled))}
                 className={`w-full py-4 font-black rounded-2xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.99] text-sm ${
-                  gatewayStatus?.cardPaymentsDisabled
+                  activePriceInfo.finalPrice > 0 && gatewayStatus?.cardPaymentsDisabled
                     ? "opacity-50 cursor-not-allowed bg-gray-300 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
                     : "bg-[#00E35B] hover:bg-[#00C750] text-[#041418] cursor-pointer"
                 }`}
-                title={gatewayStatus?.cardPaymentsDisabled ? "Card payments are disabled on live" : undefined}
+                title={activePriceInfo.finalPrice > 0 && gatewayStatus?.cardPaymentsDisabled ? "Card payments are disabled on live" : undefined}
               >
                 {processingPayment ? (
                   <>

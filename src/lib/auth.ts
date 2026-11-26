@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { NextAuthOptions, getServerSession } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -143,29 +144,32 @@ export const authOptions: NextAuthOptions = {
             AND (last_login_at IS NULL OR last_login_at < NOW() - INTERVAL '1 hour')
         `.catch(() => {});
 
-        try {
-          const dbUser = await sql`
-            SELECT id, tenant_id, role, system_role, is_banned, full_name, avatar_url 
-            FROM admin_users 
-            WHERE LOWER(email) = ${email} 
-            LIMIT 1
-          `;
-          if (dbUser.length > 0) {
-            session.user.id = String(dbUser[0].id);
-            (session.user as any).dbId = dbUser[0].id;
-            (session.user as any).tenantId = dbUser[0].tenant_id;
-            (session.user as any).role = dbUser[0].role;
-            (session.user as any).systemRole = dbUser[0].system_role || 'user';
-            (session.user as any).isBanned = !!dbUser[0].is_banned;
-            if (dbUser[0].full_name && !session.user.name) {
-              session.user.name = dbUser[0].full_name;
+        // Only query database if tenantId or dbId is not yet on the JWT token
+        if (token?.tenantId === undefined || token?.dbId === undefined) {
+          try {
+            const dbUser = await sql`
+              SELECT id, tenant_id, role, system_role, is_banned, full_name, avatar_url 
+              FROM admin_users 
+              WHERE LOWER(email) = ${email} 
+              LIMIT 1
+            `;
+            if (dbUser.length > 0) {
+              session.user.id = String(dbUser[0].id);
+              (session.user as any).dbId = dbUser[0].id;
+              (session.user as any).tenantId = dbUser[0].tenant_id;
+              (session.user as any).role = dbUser[0].role;
+              (session.user as any).systemRole = dbUser[0].system_role || 'user';
+              (session.user as any).isBanned = !!dbUser[0].is_banned;
+              if (dbUser[0].full_name && !session.user.name) {
+                session.user.name = dbUser[0].full_name;
+              }
+              if (dbUser[0].avatar_url) {
+                session.user.image = dbUser[0].avatar_url;
+              }
             }
-            if (dbUser[0].avatar_url) {
-              session.user.image = dbUser[0].avatar_url;
-            }
+          } catch (err) {
+            console.error("[Session Callback] DB lookup failed:", err);
           }
-        } catch (err) {
-          console.error("[Session Callback] DB lookup failed:", err);
         }
       }
       return session;
@@ -195,6 +199,29 @@ export const authOptions: NextAuthOptions = {
         if ((profile as any).name) token.name = (profile as any).name;
         if ((profile as any).email) token.email = (profile as any).email.trim().toLowerCase();
       }
+
+      // Populate tenantId and dbId on the token if missing (e.g. initial OAuth login)
+      if (token.email && (token.tenantId === undefined || token.dbId === undefined)) {
+        try {
+          const dbUser = await sql`
+            SELECT id, tenant_id, role, system_role, is_banned, full_name, avatar_url 
+            FROM admin_users 
+            WHERE LOWER(email) = ${token.email} 
+            LIMIT 1
+          `;
+          if (dbUser.length > 0) {
+            token.sub = String(dbUser[0].id);
+            token.id = String(dbUser[0].id);
+            token.dbId = dbUser[0].id;
+            token.tenantId = dbUser[0].tenant_id;
+            token.role = dbUser[0].role;
+            token.systemRole = dbUser[0].system_role || 'user';
+            token.isBanned = !!dbUser[0].is_banned;
+            if (dbUser[0].full_name && !token.name) token.name = dbUser[0].full_name;
+            if (dbUser[0].avatar_url && !token.picture) token.picture = dbUser[0].avatar_url;
+          }
+        } catch {}
+      }
       return token;
     }
   },
@@ -209,21 +236,21 @@ export const authOptions: NextAuthOptions = {
 };
 
 /**
- * Returns current authenticated user and session.
+ * Returns current authenticated user and session, cached per request.
  */
-export async function auth() {
+export const auth = cache(async function auth() {
   const session = await getServerSession(authOptions);
   return { 
     userId: session?.user?.id || ((session?.user as any)?.dbId ? String((session?.user as any).dbId) : null),
     user: session?.user || null,
     session 
   };
-}
+});
 
 /**
- * Returns user details from active session.
+ * Returns user details from active session, cached per request.
  */
-export async function currentUser() {
+export const currentUser = cache(async function currentUser() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return null;
   return {
@@ -241,4 +268,4 @@ export async function currentUser() {
       role: (session.user as any).role,
     }
   };
-}
+});

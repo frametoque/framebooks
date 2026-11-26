@@ -132,16 +132,16 @@ export async function logAdminAction({
       before_state, after_state, ip_address, user_agent, created_at
     )
     VALUES (
-      ${String(actor.id)},
-      ${actor.email},
-      ${actor.systemRole},
-      ${action},
+      ${actor?.id ? String(actor.id) : '0'},
+      ${actor?.email || 'admin'},
+      ${actor?.systemRole || 'admin'},
+      ${action || 'ADMIN_ACTION'},
       ${targetType || null},
-      ${targetId !== undefined ? String(targetId) : null},
-      ${before !== undefined ? sql.json(before) : null},
-      ${after !== undefined ? sql.json(after) : null},
-      ${ipAddress},
-      ${userAgent},
+      ${targetId !== undefined && targetId !== null ? String(targetId) : null},
+      ${before !== undefined && before !== null ? sql.json(before) : null},
+      ${after !== undefined && after !== null ? sql.json(after) : null},
+      ${ipAddress || '127.0.0.1'},
+      ${userAgent || 'unknown'},
       NOW()
     )
   `;

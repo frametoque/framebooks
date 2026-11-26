@@ -298,14 +298,14 @@ export default async function BillingSuccessPage({
           <WalletExpensePrompt
             amount={rechargeAmount}
             accounts={accounts}
-            returnUrl="/user/settings/billing"
+            returnUrl="/settings/billing"
           />
         )}
 
         {/* NAVIGATION ACTIONS */}
         <div className="space-y-2 pt-1">
           <Link
-            href="/user/settings/billing"
+            href="/settings/billing"
             className="w-full py-3.5 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-2xl transition-all flex items-center justify-center shadow-sm cursor-pointer text-xs sm:text-sm"
           >
             <span>Return to Billing Settings</span>

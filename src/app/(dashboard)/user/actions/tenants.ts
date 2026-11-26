@@ -7,7 +7,8 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { logSystemAction } from "@/lib/logger";
 
-import { requirePermission } from "./rbac";
+import { requirePermission, isCashierOnlyUser, hasGranularPermission } from "./rbac";
+import { getPosAddonStatus } from "@/lib/pos/entitlement";
 import { 
   isGta6Palette, 
   GTA6_PALETTE_ID, 
@@ -19,7 +20,8 @@ import {
   SL_FLAG_PALETTE_ID,
   isChristmasPalette,
   CHRISTMAS_PALETTE_ID,
-  resolvePaletteId
+  resolvePaletteId,
+  DEFAULT_ACCENT_HEX
 } from "@/lib/theme/accent";
 
 async function resolveGraceAndReadOnly(plan: string, planExpiresAt: any, tenantId?: number | null, paymentStatus?: string | null) {
@@ -134,6 +136,12 @@ export const getTenantInfo = cache(async function getTenantInfo() {
         address: null,
         userRole: null,
         teamMembersCount: 1,
+        is_cashier_only: false,
+        has_pos_addon: false,
+        can_purchase_pos: false,
+        can_use_pos: false,
+        pos_addon_status: 'none',
+        has_woocommerce: false,
       };
     }
     
@@ -141,23 +149,24 @@ export const getTenantInfo = cache(async function getTenantInfo() {
     const numId = Number(userId) || 0;
     const safeId = (numId > 0 && numId < 2147483647) ? numId : 0;
 
-    const userRows = await sql`
-      SELECT tenant_id, role 
-      FROM admin_users 
-      WHERE (id = ${safeId} AND ${safeId} > 0)
-         OR (email IS NOT NULL AND LOWER(email) = ${email || ''})
-      LIMIT 1
-    `;
+    let tenantId = (session?.user as any)?.tenantId;
+    let rawRole = (session?.user as any)?.role;
 
-    // Keep user's last_login_at up to date on active workspace sessions (throttled to 1 hour)
-    sql`
-      UPDATE admin_users 
-      SET last_login_at = NOW() 
-      WHERE ((id = ${safeId} AND ${safeId} > 0) OR (email IS NOT NULL AND LOWER(email) = ${email || ''}))
-        AND (last_login_at IS NULL OR last_login_at < NOW() - INTERVAL '1 hour')
-    `.catch(() => {});
+    if (!tenantId) {
+      const userRows = await sql`
+        SELECT tenant_id, role 
+        FROM admin_users 
+        WHERE (id = ${safeId} AND ${safeId} > 0)
+           OR (email IS NOT NULL AND LOWER(email) = ${email || ''})
+        LIMIT 1
+      `;
+      if (userRows && userRows.length > 0) {
+        tenantId = userRows[0].tenant_id;
+        rawRole = userRows[0].role;
+      }
+    }
 
-    if (!userRows || userRows.length === 0 || !userRows[0].tenant_id) {
+    if (!tenantId) {
       return {
         plan: "Free",
         plan_expires_at: null,
@@ -178,13 +187,21 @@ export const getTenantInfo = cache(async function getTenantInfo() {
       };
     }
     
-    const tenantId = userRows[0].tenant_id;
-    const rawRole = userRows[0].role;
     const userRole = rawRole ? (rawRole.toLowerCase() === 'viewer' ? 'Viewer' : rawRole) : null;
-    const tenants = await sql`SELECT id, name, plan, plan_expires_at, payment_status, logo_url, industry, phone, email, website, address, accent_color FROM tenants WHERE id = ${tenantId}`;
+    const [tenants, teamMembersCountRows] = await Promise.all([
+      sql`SELECT id, name, plan, plan_expires_at, payment_status, logo_url, industry, phone, email, website, address, accent_color FROM tenants WHERE id = ${tenantId}`,
+      sql`SELECT count(*) FROM admin_users WHERE tenant_id = ${tenantId}`
+    ]);
     
-    const teamMembersCountRows = await sql`SELECT count(*) FROM admin_users WHERE tenant_id = ${tenantId}`;
     const teamMembersCount = parseInt(teamMembersCountRows[0]?.count || '1');
+
+    const [isCashierOnly, posAddon, canUsePos, wooConnRows] = await Promise.all([
+      isCashierOnlyUser(userRole, tenantId),
+      getPosAddonStatus(tenantId),
+      hasGranularPermission(userRole, 'pos.use', tenantId),
+      sql`SELECT status FROM woocommerce_connections WHERE tenant_id = ${tenantId} AND status = 'connected' LIMIT 1`.catch(() => []),
+    ]);
+    const hasWooCommerce = Array.isArray(wooConnRows) && wooConnRows.length > 0;
 
     if (tenants.length > 0) {
       const grace = await resolveGraceAndReadOnly(tenants[0].plan || "Free", tenants[0].plan_expires_at, tenants[0].id, tenants[0].payment_status);
@@ -204,6 +221,12 @@ export const getTenantInfo = cache(async function getTenantInfo() {
         accent_color: tenants[0].accent_color || null,
         userRole: userRole || null,
         teamMembersCount,
+        is_cashier_only: isCashierOnly,
+        has_pos_addon: posAddon.hasAddon,
+        can_purchase_pos: posAddon.canPurchase,
+        can_use_pos: canUsePos,
+        pos_addon_status: posAddon.status,
+        has_woocommerce: hasWooCommerce,
       };
     }
     return {
@@ -223,7 +246,13 @@ export const getTenantInfo = cache(async function getTenantInfo() {
       address: null,
       accent_color: null,
       userRole: null,
-      teamMembersCount: 1
+      teamMembersCount: 1,
+      is_cashier_only: false,
+      has_pos_addon: false,
+      can_purchase_pos: false,
+      can_use_pos: false,
+      pos_addon_status: 'none',
+      has_woocommerce: hasWooCommerce,
     };
   } catch (e) {
     console.error("Failed to fetch tenant info:", e);
@@ -243,7 +272,13 @@ export const getTenantInfo = cache(async function getTenantInfo() {
       website: null,
       address: null,
       userRole: null,
-      teamMembersCount: 1
+      teamMembersCount: 1,
+      is_cashier_only: false,
+      has_pos_addon: false,
+      can_purchase_pos: false,
+      can_use_pos: false,
+      pos_addon_status: 'none',
+      has_woocommerce: false,
     };
   }
 });
@@ -280,6 +315,7 @@ export async function updateTenantInfo(data: {
     await logSystemAction(`Business Profile Updated: changed details for ${data.name || 'tenant'}`);
     
     revalidatePath("/user/settings");
+    revalidatePath("/settings");
     return { success: true };
   } catch (e) {
     console.error("Failed to update tenant info:", e);
@@ -402,13 +438,13 @@ export async function getTeamMembers() {
     
     const [activeMembers, invitedMembers] = await Promise.all([
       sql`
-        SELECT id, email, full_name, role, created_at, avatar_url
+        SELECT id, email, full_name, role, created_at, avatar_url, pos_manager_code
         FROM admin_users
         WHERE tenant_id = ${tenantId} AND deleted_at IS NULL
         ORDER BY created_at ASC
       `,
       sql`
-        SELECT u.id, u.email, u.full_name, ti.role, ti.created_at, u.avatar_url
+        SELECT u.id, u.email, u.full_name, ti.role, ti.created_at, u.avatar_url, u.pos_manager_code
         FROM team_invitations ti
         JOIN admin_users u ON LOWER(ti.email) = LOWER(u.email)
         WHERE ti.tenant_id = ${tenantId.toString()} AND ti.status = 'accepted' AND u.deleted_at IS NULL
@@ -450,6 +486,7 @@ export async function updateTeamMemberRole(memberId: number, newRole: string) {
     
     await logSystemAction(`Updated role for team member ID ${memberId} to ${newRole}`);
     revalidatePath("/user/settings");
+    revalidatePath("/settings");
     
     return { success: true };
   } catch (e) {
@@ -476,6 +513,7 @@ export async function removeTeamMember(memberId: number) {
     
     await logSystemAction(`Removed team member ID ${memberId} from the business profile`);
     revalidatePath("/user/settings");
+    revalidatePath("/settings");
     
     return { success: true };
   } catch (e) {
@@ -841,19 +879,15 @@ export async function switchActiveTenant(targetTenantId: number) {
     // Sync target tenant accent color to browser cookie
     const targetRows = await sql`SELECT accent_color, plan FROM tenants WHERE id = ${targetTenantId} LIMIT 1`;
     const targetAccent = targetRows[0]?.accent_color;
+    const clean = resolvePaletteId(targetAccent) || DEFAULT_ACCENT_HEX;
     try {
       const cookieStore = await cookies();
-      const clean = resolvePaletteId(targetAccent);
-      if (clean) {
-        cookieStore.set("fb_accent_color", clean, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
-      } else {
-        cookieStore.delete("fb_accent_color");
-      }
+      cookieStore.set("fb_accent_color", clean, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
     } catch {}
 
     await logSystemAction(`Switched active workspace to tenant ID ${targetTenantId} as ${newRole}`);
     revalidatePath("/", "layout");
-    return { success: true };
+    return { success: true, targetTenantId, accentColor: clean };
   } catch (err: any) {
     console.error("switchActiveTenant error:", err);
     return { success: false, error: err?.message || "Failed to switch workspace" };
@@ -1075,6 +1109,7 @@ export async function updateTenantAccent(accentColor: string | null): Promise<{ 
 
     revalidatePath("/", "layout");
     revalidatePath("/user/settings");
+    revalidatePath("/settings");
     revalidatePath("/user/settings/appearance");
     return { success: true, accentColor: cleanHex };
   } catch (err: any) {

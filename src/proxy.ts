@@ -1,7 +1,41 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export default function middleware(req: NextRequest) {
+async function verifyAdminJwtSignature(token: string): Promise<any | null> {
+  const secret = process.env.ADMIN_AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret) return null;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const [headerB64, payloadB64, sigB64] = parts;
+    const key = await globalThis.crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+    let base64 = sigB64.replace(/-/g, "+").replace(/_/g, "/");
+    while (base64.length % 4) base64 += "=";
+    const sigBytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    const dataBytes = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
+    const isValid = await globalThis.crypto.subtle.verify("HMAC", key, sigBytes, dataBytes);
+    if (!isValid) return null;
+
+    let payloadStr = payloadB64.replace(/-/g, "+").replace(/_/g, "/");
+    while (payloadStr.length % 4) payloadStr += "=";
+    const payload = JSON.parse(atob(payloadStr));
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.id && payload.exp && payload.exp > now) {
+      return payload;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   const requestHeaders = new Headers(req.headers);
@@ -16,25 +50,15 @@ export default function middleware(req: NextRequest) {
     });
   }
 
-  // Admin routes: protected strictly by framebooks-admin-token
+  // Admin routes: protected strictly by framebooks-admin-token with HMAC signature verification
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
     const adminSession = req.cookies.get("framebooks-admin-token")?.value;
     let isValid = false;
 
     if (adminSession) {
-      try {
-        const parts = adminSession.split(".");
-        if (parts.length === 3) {
-          // Decode payload and verify expiration
-          const payloadJson = Buffer.from(parts[1], "base64url").toString("utf8");
-          const payload = JSON.parse(payloadJson);
-          const now = Math.floor(Date.now() / 1000);
-          if (payload.id && payload.exp && payload.exp > now) {
-            isValid = true;
-          }
-        }
-      } catch {
-        isValid = false;
+      const payload = await verifyAdminJwtSignature(adminSession);
+      if (payload) {
+        isValid = true;
       }
     }
 
@@ -50,8 +74,8 @@ export default function middleware(req: NextRequest) {
     }
   }
 
-  // User dashboard routes: protected by user session (next-auth)
-  if (pathname.startsWith("/user")) {
+  // User dashboard and POS routes: protected by user session (next-auth)
+  if (pathname.startsWith("/user") || pathname === "/pos" || pathname.startsWith("/pos/")) {
     const userSession =
       req.cookies.get("next-auth.session-token")?.value ||
       req.cookies.get("__Secure-next-auth.session-token")?.value;
@@ -75,5 +99,7 @@ export const config = {
     "/user/:path*",
     "/admin/:path*",
     "/api/admin/:path*",
+    "/pos",
+    "/pos/:path*",
   ],
 };

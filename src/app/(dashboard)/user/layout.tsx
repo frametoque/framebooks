@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatedClock } from "./components/AnimatedClock";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from 'next-auth/react';
-import { getTenantInfo, leaveTeam } from "./actions/tenants";
+import { leaveTeam } from "./actions/tenants";
+import { getClientTenantInfo } from "@/lib/tenant/clientTenantInfo";
 import { 
   generateTenantThemeCss, 
   DEFAULT_ACCENT_HEX, 
@@ -33,7 +34,7 @@ import DateRangeSelector from "./components/DateRangeSelector";
 import { AdminDateRangeProvider, useAdminDateRange } from "./context/AdminDateRangeContext";
 import { TaxEstimatorProvider, useTaxEstimator } from "./context/TaxEstimatorContext";
 import { RoleProvider } from "./context/RoleContext";
-import { User as UserIcon, Building2, Receipt, Droplets, BarChart3, NotepadTextDashed, FolderOpenDot, Layers, FilePenLine, ChartLine, CalendarPlus, ExternalLink, Globe, RefreshCw, Server, Cloud, Megaphone, Terminal, Printer } from "lucide-react";
+import { User as UserIcon, Building2, Receipt, Droplets, BarChart3, NotepadTextDashed, FolderOpenDot, Layers, FilePenLine, ChartLine, CalendarPlus, ExternalLink, Globe, RefreshCw, Server, Cloud, Megaphone, Store, Printer, Package, Plug } from "lucide-react";
 import { MdCreditCard, MdNotifications, MdMenu, MdSearch, MdDashboard, MdAccountBalanceWallet, MdInsertDriveFile, MdGroup, MdInventory2, MdLogout, MdClose, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdWorkOutline, MdKeyboardDoubleArrowLeft, MdKeyboardDoubleArrowRight, MdCalendarToday, MdAdd, MdAccessTime, MdSettings, MdAttachMoney, MdDownload, MdMenuBook, MdAccountBalance, MdLockOutline, MdLock, MdWarning } from "react-icons/md";
 import { AppLockProvider, useAppLock, LockScreen } from "./components/AppLockProvider";
 import { PrivacyBlurToggle } from "./components/PrivacyBlurToggle";
@@ -157,56 +158,59 @@ function LayoutContent({ children }) {
     grace_days_remaining?: number | null;
     grace_end_date?: string | null;
     accent_color?: string | null;
+    is_cashier_only?: boolean;
+    has_pos_addon?: boolean;
+    can_purchase_pos?: boolean;
+    can_use_pos?: boolean;
+    pos_addon_status?: string;
   }>({
     plan: "Loading...",
     name: "My Business",
     logo_url: null,
     industry: null,
     accent_color: null,
+    is_cashier_only: false,
+    has_pos_addon: false,
+    can_purchase_pos: false,
+    can_use_pos: false,
+    pos_addon_status: "none",
   });
   const [exceededLimits, setExceededLimits] = useState<string[]>([]);
 
+  const applyClientAccent = useCallback((hex: string | null | undefined) => {
+    const cleanHex = resolvePaletteId(hex) || DEFAULT_ACCENT_HEX;
+    const newCss = generateTenantThemeCss(cleanHex);
+    let tag = (document.getElementById("tenant-accent-theme-ssr") || document.getElementById("tenant-accent-theme-client")) as HTMLStyleElement | null;
+    if (tag) {
+      tag.innerHTML = newCss;
+    } else {
+      tag = document.createElement("style");
+      tag.id = "tenant-accent-theme-client";
+      document.head.appendChild(tag);
+      tag.innerHTML = newCss;
+    }
+    document.documentElement.style.setProperty("--accent", resolveHeroAccentHex(cleanHex));
+  }, []);
+
   useEffect(() => {
-    getTenantInfo().then(info => {
-      setTenantInfo(prev => ({
+    getClientTenantInfo().then(info => {
+      if (!info) return;
+      const activeColor = resolvePaletteId(info.accent_color) || DEFAULT_ACCENT_HEX;
+      setTenantInfo({
         ...info,
-        accent_color: info.accent_color || prev.accent_color || null,
-      }));
-      const clean = resolvePaletteId(info.accent_color);
-      if (clean) {
-        try {
-          document.cookie = `fb_accent_color=${encodeURIComponent(clean)}; path=/; max-age=31536000; SameSite=Lax`;
-          localStorage.setItem("framebooks_accent_color", clean);
-        } catch {}
-      } else if (info.plan !== 'Loading...' && info.plan !== 'Pro Plus') {
-        try {
-          document.cookie = `fb_accent_color=; path=/; max-age=0; SameSite=Lax`;
-          localStorage.removeItem("framebooks_accent_color");
-        } catch {}
-      }
+        accent_color: activeColor,
+      });
+      try {
+        document.cookie = `fb_accent_color=${encodeURIComponent(activeColor)}; path=/; max-age=31536000; SameSite=Lax`;
+        localStorage.setItem("framebooks_accent_color", activeColor);
+      } catch {}
+      applyClientAccent(activeColor);
     });
     getAllLimits().then(limits => setExceededLimits(limits));
-  }, []);
+  }, [applyClientAccent]);
 
   // Synchronize workspace accent color dynamically across client navigations
   useEffect(() => {
-    const applyClientAccent = (hex: string | null | undefined) => {
-      if (!hex) return;
-      const cleanHex = resolvePaletteId(hex);
-      if (!cleanHex) return;
-      const newCss = generateTenantThemeCss(cleanHex);
-      let tag = (document.getElementById("tenant-accent-theme-ssr") || document.getElementById("tenant-accent-theme-client")) as HTMLStyleElement | null;
-      if (tag) {
-        tag.innerHTML = newCss;
-      } else {
-        tag = document.createElement("style");
-        tag.id = "tenant-accent-theme-client";
-        document.head.appendChild(tag);
-        tag.innerHTML = newCss;
-      }
-      document.documentElement.style.setProperty("--accent", resolveHeroAccentHex(cleanHex));
-    };
-
     try {
       const match = document.cookie.match(/(?:^|;\s*)fb_accent_color=([^;]+)/);
       const cookieVal = match ? decodeURIComponent(match[1]).trim() : null;
@@ -228,7 +232,7 @@ function LayoutContent({ children }) {
 
     window.addEventListener("accent:change", handleAccentChange);
     return () => window.removeEventListener("accent:change", handleAccentChange);
-  }, []);
+  }, [applyClientAccent]);
 
   useEffect(() => {
     if (isLoaded && user && !(user as any).tenantId) {
@@ -242,9 +246,26 @@ function LayoutContent({ children }) {
     }
   }, [tenantInfo.payment_status, router]);
 
+  useEffect(() => {
+    if (tenantInfo.is_cashier_only) {
+      router.replace("/pos");
+    }
+  }, [tenantInfo.is_cashier_only, router]);
+
+  if (tenantInfo.is_cashier_only) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center text-center p-6 select-none">
+        <div className="w-12 h-12 rounded-2xl bg-brand-500/15 text-brand-500 flex items-center justify-center animate-pulse mb-3">
+          <Store className="w-6 h-6" />
+        </div>
+        <p className="text-sm font-semibold text-foreground">Opening Point of Sale Terminal...</p>
+      </div>
+    );
+  }
+
   const isTeamLocked = tenantInfo.plan !== 'Loading...' && tenantInfo.plan !== 'Pro Plus' && tenantInfo.userRole !== 'owner' && tenantInfo.userRole !== 'Super Admin' && tenantInfo.userRole !== null;
   const showOwnerWarning = tenantInfo.plan !== 'Loading...' && tenantInfo.plan !== 'Pro Plus' && (tenantInfo.userRole === 'owner' || tenantInfo.userRole === 'Super Admin') && (tenantInfo.teamMembersCount || 0) > 1;
-  const isMainDashboard = pathname === "/user/dashboard" || pathname === "/user";
+  const isMainDashboard = pathname === "/user/dashboard" || pathname === "/user" || pathname === "/dashboard";
 
   // --- Maintenance mode (optimized: visibility-aware on tab switch, zero background timer) ---
   const [maintenance, setMaintenance] = useState<{ active: boolean; message: string; allowed: boolean } | null>(null);
@@ -373,7 +394,7 @@ function LayoutContent({ children }) {
                             <p className="text-gray-600 dark:text-gray-400 text-sm">You have active team members, but your current plan doesn't support them. Upgrade to restore their access.</p>
                           </div>
                         </div>
-                        <Link href="/user/settings/billing" prefetch={false} className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
+                        <Link href="/settings/billing" prefetch={false} className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
                           Upgrade Now
                         </Link>
                       </div>
@@ -429,7 +450,7 @@ function LayoutContent({ children }) {
                             <p className="text-gray-600 dark:text-gray-400 text-sm">You have active team members, but your current plan doesn't support them. Upgrade to restore their access.</p>
                           </div>
                         </div>
-                        <Link href="/user/settings/billing" prefetch={false} className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
+                        <Link href="/settings/billing" prefetch={false} className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
                           Upgrade Now
                         </Link>
                       </div>
@@ -555,15 +576,17 @@ const TaxTopBarControls = () => {
 
 const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
   const pathname = usePathname();
-  const isClients = pathname === "/user/clients";
-  const isInventory = pathname === "/user/inventory";
-  const isInvoiceDetail = pathname.startsWith("/user/invoice/");
-  const isInvoiceNewOrEdit = pathname === "/user/invoices/new" || (pathname.startsWith("/user/invoices/") && pathname.endsWith("/edit"));
-  const isDashboard = pathname === "/user/dashboard";
-  const isAccounts = pathname.startsWith("/user/accounts");
-  const isSettings = pathname.startsWith("/user/settings");
-  const isLogs = pathname.startsWith("/user/logs");
-  const isReports = pathname.startsWith("/user/reports");
+  const cleanPath = pathname.replace(/^\/user/, "") || "/dashboard";
+  const isClients = cleanPath === "/clients";
+  const isInventory = cleanPath === "/inventory";
+  const isStock = cleanPath === "/stock" || cleanPath.startsWith("/stock");
+  const isInvoiceDetail = cleanPath.startsWith("/invoice/");
+  const isInvoiceNewOrEdit = cleanPath === "/invoices/new" || (cleanPath.startsWith("/invoices/") && cleanPath.endsWith("/edit"));
+  const isDashboard = cleanPath === "/dashboard";
+  const isAccounts = cleanPath.startsWith("/accounts");
+  const isSettings = cleanPath.startsWith("/settings");
+  const isLogs = cleanPath.startsWith("/logs");
+  const isReports = cleanPath.startsWith("/reports");
   const [reportsActiveTab, setReportsActiveTab] = useState("overview");
   const isTaxEstimator = isReports && (
     reportsActiveTab === "tax_summary" ||
@@ -572,7 +595,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
     pathname.includes("tax-estimator") ||
     pathname.includes("tax_estimator")
   );
-  const hideSelector = isInvoiceDetail || isInvoiceNewOrEdit || isAccounts || isSettings || isLogs || (isInventory && tenantInfo.plan !== 'Pro Plus') || (isReports && tenantInfo.plan !== 'Pro Plus' && reportsActiveTab !== 'overview' && reportsActiveTab !== 'profit_loss' && !isTaxEstimator);
+  const hideSelector = isInvoiceDetail || isInvoiceNewOrEdit || isAccounts || isSettings || isLogs || isStock || (isInventory && tenantInfo.plan !== 'Pro Plus') || (isReports && tenantInfo.plan !== 'Pro Plus' && reportsActiveTab !== 'overview' && reportsActiveTab !== 'profit_loss' && !isTaxEstimator);
   const { dateRange, startDate, endDate, setDateRange, setStartDate, setEndDate } = useAdminDateRange();
   const [currentTime, setCurrentTime] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
@@ -615,27 +638,31 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
   }, []);
 
   const getPageTitle = (path: string): string => {
-    if (path === "/admin" || path === "/user/dashboard") return "Dashboard";
-    if (path === "/user/clients") return "Clients";
-    if (path === "/user/inventory") return "Inventory";
-    if (path.startsWith("/user/clients/")) return "Client Details";
-    if (path.startsWith("/user/invoice/")) {
-      const parts = path.split("/");
+    if (path === "/admin") return "Dashboard";
+    const p = path.replace(/^\/user/, "") || "/dashboard";
+
+    if (p === "/dashboard") return "Dashboard";
+    if (p === "/clients") return "Clients";
+    if (p === "/inventory") return "Inventory";
+    if (p === "/stock" || p.startsWith("/stock")) return "Stock Management";
+    if (p.startsWith("/clients/")) return "Client Details";
+    if (p.startsWith("/invoice/")) {
+      const parts = p.split("/");
       const id = parts[parts.length - 1];
       return id ? `Invoice #${id}` : "Invoice Details";
     }
-    if (path === "/user/invoices/new") return "New Invoice";
-    if (path.startsWith("/user/invoices/") && path.endsWith("/edit")) return "Edit Invoice";
-    if (path.startsWith("/user/invoices")) return "Invoices";
-    if (path === "/user/quotations/new") return "New Quotation";
-    if (path.startsWith("/user/quotations/") && path.endsWith("/edit")) return "Edit Quotation";
-    if (path.startsWith("/user/quotations")) return "Quotations";
-    if (path.startsWith("/user/income")) return "Income";
-    if (path.startsWith("/user/expenses")) return "Expenses";
-    if (path.startsWith("/user/accounts")) return "Bank Accounts";
-    if (path.startsWith("/user/reports")) {
-      const parts = path.split("/");
-      const sub = parts[3];
+    if (p === "/invoices/new") return "New Invoice";
+    if (p.startsWith("/invoices/") && p.endsWith("/edit")) return "Edit Invoice";
+    if (p.startsWith("/invoices")) return "Invoices";
+    if (p === "/quotations/new") return "New Quotation";
+    if (p.startsWith("/quotations/") && p.endsWith("/edit")) return "Edit Quotation";
+    if (p.startsWith("/quotations")) return "Quotations";
+    if (p.startsWith("/income")) return "Income";
+    if (p.startsWith("/expenses")) return "Expenses";
+    if (p.startsWith("/accounts")) return "Bank Accounts";
+    if (p.startsWith("/reports")) {
+      const parts = p.split("/");
+      const sub = parts[2];
       if (sub === "profit-loss" || sub === "profit_loss") return "Profit & Loss";
       if (sub === "cash-flow" || sub === "cash_flow") return "Cash Flow";
       if (sub === "balance-sheet" || sub === "balance_sheet") return "Balance Sheet";
@@ -646,15 +673,15 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
       if (sub === "overview") return "Overview";
       return "Reports";
     }
-    if (path.startsWith("/user/settings")) {
-      if (path.includes("/invoice-layout/builder")) {
+    if (p.startsWith("/settings")) {
+      if (p.includes("/invoice-layout/builder")) {
         return "Invoice Layout";
       }
-      if (path.includes("/invoice-layout")) {
+      if (p.includes("/invoice-layout")) {
         return "Invoice Layouts";
       }
-      const parts = path.split("/");
-      const sub = parts[3];
+      const parts = p.split("/");
+      const sub = parts[2];
       if (sub === "profile") return "Account & Security";
       if (sub === "business") return "Business Profile";
       if (sub === "appearance") return "Appearance";
@@ -667,7 +694,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
       if (sub === "preferences" || sub === "prefs") return "Admin Preferences";
       return "Settings";
     }
-    if (path.startsWith("/user/logs")) return "Logs";
+    if (p.startsWith("/logs")) return "Logs";
     return "Dashboard";
   };
 
@@ -713,7 +740,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
           </h1>
 
           {/* Top bar context action buttons */}
-          {hideSelector && (isInvoiceDetail || isAccounts || pathname === "/user/social-media/new") && (
+          {hideSelector && (isInvoiceDetail || isAccounts || pathname === "/user/social-media/new" || isStock) && (
             <>
               <span className="hidden sm:block w-[1px] h-5 bg-border" />
 
@@ -777,6 +804,43 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
                     <MdAdd className="w-4 h-4" />
                     <span>Add Account</span>
                   </button>
+                </div>
+              )}
+              {isStock && (
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/pos"
+                    prefetch={false}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-card hover:bg-black/5 dark:hover:bg-white/10 text-foreground border border-border rounded-full font-semibold transition-colors cursor-pointer text-xs shadow-2xs whitespace-nowrap"
+                    title="Open POS Register"
+                  >
+                    <Store className="w-4 h-4 text-brand-500" />
+                    <span>Open POS</span>
+                  </Link>
+
+                  {tenantInfo?.has_woocommerce ? (
+                    <>
+                      <StockSyncButton />
+                      <div
+                        className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-purple-500/10 border border-purple-500/25 text-purple-400 rounded-full font-semibold text-xs whitespace-nowrap"
+                        title="Products and details are managed on WooCommerce"
+                      >
+                        <Plug className="w-3.5 h-3.5" />
+                        <span>Managed via WooCommerce</span>
+                      </div>
+                    </>
+                  ) : (
+                    tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
+                      <button
+                        type="button"
+                        onClick={() => window.dispatchEvent(new CustomEvent("stock:open-new"))}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap shadow-xs"
+                      >
+                        <MdAdd className="w-4 h-4" />
+                        <span>Add Product</span>
+                      </button>
+                    )
+                  )}
                 </div>
               )}
             </>
@@ -875,11 +939,152 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
             <NotificationBell />
           </div>
 
+          {/* POS Top Bar Entry */}
+          <PosTopBarButton tenantInfo={tenantInfo} />
+
           {/* Business Profile Switcher & Info */}
+          <BusinessSwitcher tenantInfo={tenantInfo} />
+        </div>
+
+        {/* Mobile / Tablet Right Controls */}
+        <div className="xl:hidden flex items-center gap-2">
+          <PosTopBarButton tenantInfo={tenantInfo} />
           <BusinessSwitcher tenantInfo={tenantInfo} />
         </div>
       </div>
     </header>
+  );
+};
+
+const PosTopBarButton = ({ tenantInfo }: { tenantInfo: any }) => {
+  if (tenantInfo?.has_pos_addon && tenantInfo?.can_use_pos !== false) {
+    return (
+      <Link
+        href="/pos"
+        prefetch={false}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold text-xs transition-all active:scale-95 shadow-2xs group cursor-pointer"
+        title="Open Point of Sale (POS)"
+      >
+        <Store className="w-3.5 h-3.5" />
+        <span>POS</span>
+        <span className="w-1.5 h-1.5 rounded-full bg-brand-900/60 animate-pulse" />
+      </Link>
+    );
+  }
+
+  if (tenantInfo?.can_purchase_pos) {
+    return (
+      <Link
+        href="/settings/billing#pos-addon"
+        prefetch={false}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-card hover:bg-black/5 dark:hover:bg-white/5 border border-border text-gray-400 hover:text-foreground font-semibold text-xs transition-all shadow-2xs"
+        title="Get POS Add-on (Available on Pro & Pro Plus)"
+      >
+        <Store className="w-3.5 h-3.5 text-brand-500" />
+        <span>POS</span>
+        <MdLockOutline className="w-3.5 h-3.5 text-gray-400" />
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      href="/settings/billing"
+      prefetch={false}
+      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-card hover:bg-black/5 dark:hover:bg-white/5 border border-border text-gray-400 hover:text-foreground font-semibold text-xs transition-all opacity-75 shadow-2xs"
+      title="POS Add-on (Upgrade to Pro required)"
+    >
+      <Store className="w-3.5 h-3.5 text-gray-400" />
+      <span>POS</span>
+      <MdLockOutline className="w-3.5 h-3.5 text-gray-400" />
+    </Link>
+  );
+};
+
+const StockSyncButton = () => {
+  const [syncState, setSyncState] = useState<{
+    isSyncing: boolean;
+    progress: { current: number; total: number; percent: number } | null;
+  }>({ isSyncing: false, progress: null });
+
+  useEffect(() => {
+    let unsub = () => {};
+    import("@/lib/pos/product-sync-events").then(({ subscribeProductSync }) => {
+      unsub = subscribeProductSync((state) => {
+        setSyncState({ isSyncing: state.isSyncing, progress: state.progress });
+      });
+    });
+    return () => unsub();
+  }, []);
+
+  const handleSync = async () => {
+    if (syncState.isSyncing) return;
+    const {
+      broadcastProductSyncStart,
+      broadcastProductSyncProgress,
+      broadcastProductSyncComplete,
+      broadcastProductSyncError,
+    } = await import("@/lib/pos/product-sync-events");
+
+    broadcastProductSyncStart();
+    try {
+      const { syncWooProductsBatchAction } = await import("@/app/(dashboard)/user/actions/woocommerce");
+      let page = 1;
+      let isFinished = false;
+      let totalImported = 0;
+      let totalUpdated = 0;
+      let totalCount = 0;
+
+      const batchSize = 100;
+      while (!isFinished) {
+        const res = await syncWooProductsBatchAction(page, batchSize);
+        if (!res.success) {
+          throw new Error(res.error || "Failed to sync products from WooCommerce.");
+        }
+
+        totalImported += res.imported;
+        totalUpdated += res.updated;
+        totalCount = res.totalProducts || totalCount;
+
+        const processed = Math.min(totalCount, page * batchSize);
+        const percent = totalCount > 0 ? Math.min(100, Math.round((processed / totalCount) * 100)) : (res.isFinished ? 100 : 50);
+        broadcastProductSyncProgress({ current: Math.min(processed, totalCount), total: totalCount, percent });
+
+        if (res.isFinished || page >= res.totalPages || res.batchProcessed === 0) {
+          isFinished = true;
+        } else {
+          page++;
+        }
+      }
+
+      broadcastProductSyncComplete({ total: totalCount, imported: totalImported, updated: totalUpdated });
+    } catch (err: any) {
+      const msg = err.message || "Failed to sync products.";
+      broadcastProductSyncError(msg);
+      alert(msg);
+    }
+  };
+
+  const syncing = syncState.isSyncing;
+  const progress = syncState.progress;
+
+  return (
+    <button
+      type="button"
+      onClick={handleSync}
+      disabled={syncing}
+      className="flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-full font-bold transition-all cursor-pointer text-xs shadow-xs whitespace-nowrap disabled:opacity-50 active:scale-95"
+      title="Sync all products & stock from WooCommerce"
+    >
+      <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
+      <span>
+        {syncing
+          ? progress && progress.total > 0
+            ? `Syncing (${progress.current}/${progress.total} • ${progress.percent}%)...`
+            : "Syncing..."
+          : "Sync Products"}
+      </span>
+    </button>
   );
 };
 
@@ -893,7 +1098,7 @@ const Sidebar = ({
 }: {
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
-  tenantInfo: { plan: string, name: string, logo_url: string | null, industry: string | null };
+  tenantInfo: any;
   isHovered: boolean;
   setIsHovered: (hovered: boolean) => void;
 }) => {
@@ -901,31 +1106,36 @@ const Sidebar = ({
   const { data: session, status } = useSession();
   const user = session?.user;
   const isLoaded = status !== "loading";
-  const isSettingsActive = pathname.startsWith("/user/settings");
+  const isSettingsActive = pathname.startsWith("/user/settings") || pathname.startsWith("/settings");
 
   useEffect(() => {
     setIsHovered(false);
   }, [pathname, setIsHovered]);
 
   const links: { name: string; href: string; icon: any; divider?: boolean; newtab?: boolean }[] = [
-    { name: "Dashboard", href: "/user/dashboard", icon: MdDashboard },
-    { name: "Income", href: "/user/income", icon: MdAccountBalanceWallet },
-    { name: "Expenses", href: "/user/expenses", icon: Receipt },
-    { name: "Accounts", href: "/user/accounts", icon: MdAccountBalance, divider: false },
-    { name: "Invoices", href: "/user/invoices", icon: MdInsertDriveFile, divider: true },
-    { name: "Quotations", href: "/user/quotations", icon: NotepadTextDashed },
-    { name: "Clients", href: "/user/clients", icon: MdGroup },
-    { name: "Inventory", href: "/user/inventory", icon: MdInventory2 },
-    { name: "Reports", href: "/user/reports", icon: BarChart3, divider: true },
-    { name: "Settings", href: "/user/settings", icon: MdSettings },
+    { name: "Dashboard", href: "/dashboard", icon: MdDashboard },
+    { name: "Income", href: "/income", icon: MdAccountBalanceWallet },
+    { name: "Expenses", href: "/expenses", icon: Receipt },
+    { name: "Accounts", href: "/accounts", icon: MdAccountBalance, divider: false },
+    { name: "Invoices", href: "/invoices", icon: MdInsertDriveFile, divider: true },
+    { name: "Quotations", href: "/quotations", icon: NotepadTextDashed },
+    { name: "Clients", href: "/clients", icon: MdGroup },
+    { name: "Inventory", href: "/inventory", icon: MdInventory2 },
+    ...(tenantInfo?.has_pos_addon && tenantInfo?.can_use_pos !== false
+      ? [{ name: "Stock", href: "/stock", icon: Package }]
+      : []),
+    { name: "Reports", href: "/reports", icon: BarChart3, divider: true },
+    { name: "Settings", href: "/settings", icon: MdSettings },
   ];
 
   const isActive = (href: string) => {
-    if (href === "/user/dashboard") return pathname === href;
-    if (href === "/user/invoices") {
-      return pathname.startsWith("/user/invoices") || pathname.startsWith("/user/invoice");
+    const cur = pathname.replace(/^\/user/, "") || "/dashboard";
+    const target = href.replace(/^\/user/, "");
+    if (target === "/dashboard") return cur === "/dashboard";
+    if (target === "/invoices") {
+      return cur.startsWith("/invoices") || cur.startsWith("/invoice");
     }
-    return pathname.startsWith(href);
+    return cur.startsWith(target);
   };
 
   const isExpanded = mobileMenuOpen || isHovered;
@@ -1080,7 +1290,7 @@ const Sidebar = ({
           <div className="p-3 flex flex-col mt-auto space-y-2 shrink-0 border-t border-border w-full">
             <div className={`flex items-center w-full ${isExpanded ? "gap-2" : "justify-center"}`}>
               <Link
-                href="/user/settings/profile"
+                href="/settings/profile"
                 prefetch={false}
                 onClick={() => {
                   setMobileMenuOpen(false);

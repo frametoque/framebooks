@@ -42,7 +42,7 @@ export async function createPaymentsLkCheckoutSession(
 
   const cancelUrl =
     params.cancelUrl ||
-    `${config.appUrl}/user/settings?tab=billing&status=cancelled`;
+    `${config.appUrl}/settings?tab=billing&status=cancelled`;
 
   const resolvedName = params.userName?.trim() || params.userEmail?.split("@")[0] || "Customer";
   const userEmail = params.userEmail?.trim().toLowerCase() || "";

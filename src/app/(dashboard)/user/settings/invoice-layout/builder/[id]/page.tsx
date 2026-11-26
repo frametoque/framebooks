@@ -13,19 +13,19 @@ export default async function BuilderPage({ params }: { params: Promise<{ id: st
   const plan = await getTenantPlan();
 
   if (plan !== "Pro Plus") {
-    redirect("/user/settings?tab=invoice_layout");
+    redirect("/settings/invoice-layout");
   }
 
   const allowed = await canCustomizeInvoices();
   if (!allowed) {
-    redirect("/user/settings?tab=invoice_layout");
+    redirect("/settings/invoice-layout");
   }
 
   let layoutData = null;
   if (id !== "new") {
     layoutData = await getInvoiceLayout(id);
     if (!layoutData) {
-      redirect("/user/settings?tab=invoice_layout");
+      redirect("/settings/invoice-layout");
     }
   }
 

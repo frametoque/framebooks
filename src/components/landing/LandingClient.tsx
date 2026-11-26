@@ -3,8 +3,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MdCheck, MdTrendingUp, MdAccountBalance, MdCallMade, MdCallReceived, MdInsertDriveFile, MdGroup, MdInventory, MdSecurity, MdGroups, MdPerson, MdArrowForward } from 'react-icons/md';
-import { kpis, features, modulesData, workflowSteps, securityFeatures, plans, comparison, faqs } from '@/data/landing/content';
+import { 
+  MdCheck, MdTrendingUp, MdAccountBalance, MdCallMade, MdCallReceived, 
+  MdInsertDriveFile, MdGroup, MdInventory, MdSecurity, MdGroups, MdPerson, 
+  MdArrowForward, MdPointOfSale, MdQrCodeScanner, MdPrint, MdFlashOn, 
+  MdLockOutline, MdPhoneIphone 
+} from 'react-icons/md';
+import { kpis, features, modulesData, workflowSteps, securityFeatures, plans, comparison, faqs, posFeatures } from '@/data/landing/content';
 import PlanFinderWidget from '@/components/landing/PlanFinderWidget';
 
 export default function LandingClient({ initialPlans }: { initialPlans?: any[] }) {
@@ -27,6 +32,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
       case 'MdInsertDriveFile': return <MdInsertDriveFile className="w-6 h-6" />;
       case 'MdGroup': return <MdGroup className="w-6 h-6" />;
       case 'MdInventory': return <MdInventory className="w-6 h-6" />;
+      case 'MdPointOfSale': return <MdPointOfSale className="w-6 h-6" />;
       case 'MdTrendingUp': return <MdTrendingUp className="w-6 h-6" />;
       case 'MdAutorenew': return <MdTrendingUp className="w-6 h-6" />; // fallback
       case 'MdAccountBalanceWallet': return <MdAccountBalance className="w-6 h-6" />; // fallback
@@ -405,6 +411,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                 if (mod.id === 'accounts') Icon = MdAccountBalance;
                 if (mod.id === 'clients') Icon = MdGroup;
                 if (mod.id === 'inventory') Icon = MdInventory;
+                if (mod.id === 'pos') Icon = MdPointOfSale;
                 if (mod.id === 'team') Icon = MdGroups;
                 if (mod.id === 'security') Icon = MdSecurity;
 
@@ -425,6 +432,246 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </section>
+
+        {/* POINT OF SALE (POS) SHOWCASE */}
+        <section id="pos" className="py-16 sm:py-20 md:py-28 bg-[#041418] text-white relative overflow-hidden">
+          {/* Subtle Ambient Light Gradients */}
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#00E35B]/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="container mx-auto px-4 sm:px-6 max-w-6xl relative z-10">
+            {/* Header */}
+            <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#00E35B]/10 border border-[#00E35B]/30 text-[#00E35B] text-xs sm:text-sm font-bold tracking-wide uppercase mb-4">
+                <span className="w-2 h-2 rounded-full bg-[#00E35B] animate-pulse" />
+                Retail & Counter Checkout
+              </div>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight mb-4 sm:mb-6">
+                A lightning-fast POS terminal.<br className="hidden sm:inline" /> Built for real counters<span className="text-[#00E35B]">.</span>
+              </h2>
+              <p className="text-sm sm:text-base md:text-lg text-gray-300 leading-relaxed">
+                Scan barcodes, trigger cash drawers, issue thermal receipts, and sell at the speed of retail. Designed to keep moving even during peak rush hours with complete keyboard navigation, pre-flight oversell protection, and full mobile optimization.
+              </p>
+            </div>
+
+            {/* POS Terminal Visual Mockup */}
+            <div className="mb-14 sm:mb-20 rounded-2xl sm:rounded-3xl border border-white/10 bg-[#0B1E22]/90 backdrop-blur-xl shadow-2xl p-3 sm:p-6 overflow-hidden">
+              {/* POS Top Bar Mockup */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-white/10 text-xs">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-[#00E35B] text-[#041418] flex items-center justify-center font-black text-xs">
+                    FT
+                  </div>
+                  <span className="font-bold tracking-tight text-white">FT DEMO (PRO PLUS)</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold text-[10px] border border-emerald-500/30 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Shift #1 Active
+                  </span>
+                </div>
+                {/* Shortcut pills */}
+                <div className="hidden lg:flex items-center gap-2 text-[11px] text-gray-300">
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
+                    <span>Drawer</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-mono text-gray-400">F6</kbd>
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
+                    <span>Test Bill</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-mono text-gray-400">Shift+F6</kbd>
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
+                    <span>Camera Scan</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-mono text-gray-400">F2</kbd>
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
+                    <span>Stock</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-mono text-gray-400">F9</kbd>
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
+                    <span>Offers</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-mono text-gray-400">F6</kbd>
+                  </span>
+                </div>
+              </div>
+
+              {/* POS Interface Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                {/* Products Column */}
+                <div className="lg:col-span-8 flex flex-col gap-3">
+                  {/* Search Bar */}
+                  <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-gray-400">
+                    <span className="text-gray-400">🔍</span>
+                    <span className="text-gray-300 font-medium truncate">Scan or search products... (Press '/' or F1 to focus, Enter to add)</span>
+                    <span className="ml-auto px-1.5 py-0.5 rounded bg-black/40 text-[10px] font-mono text-gray-400">/</span>
+                  </div>
+
+                  {/* Categories */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 text-[11px] scrollbar-none">
+                    <span className="px-3 py-1 rounded-full bg-[#00E35B] text-[#041418] font-bold">All</span>
+                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">Hardware</span>
+                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">Accessories</span>
+                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">Electronics</span>
+                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">General</span>
+                  </div>
+
+                  {/* Products Grid Mock */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-left">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
+                      <div className="flex justify-between items-start gap-1 mb-2">
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">HARDWARE</span>
+                          <span className="text-xs font-bold text-white leading-tight">Desktop Label Printer</span>
+                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FT-PRN-006</span>
+                        </div>
+                        <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">9</span>
+                      </div>
+                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
+                        <span className="text-xs font-black text-white">LKR 29,500</span>
+                        <span className="text-[10px] text-gray-400">9 pcs</span>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
+                      <div className="flex justify-between items-start gap-1 mb-2">
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">HARDWARE</span>
+                          <span className="text-xs font-bold text-white leading-tight">Heavy Duty Cash Drawer (RJ11)</span>
+                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FT-CSH-007</span>
+                        </div>
+                        <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">8</span>
+                      </div>
+                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
+                        <span className="text-xs font-black text-white">LKR 16,500</span>
+                        <span className="text-[10px] text-gray-400">8 pcs</span>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
+                      <div className="flex justify-between items-start gap-1 mb-2">
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">GENERAL</span>
+                          <span className="text-xs font-bold text-white leading-tight">TEST Auto QR Product</span>
+                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">SKU-00009</span>
+                        </div>
+                        <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">16</span>
+                      </div>
+                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
+                        <span className="text-xs font-black text-white">LKR 1,000</span>
+                        <span className="text-[10px] text-gray-400">16 pcs</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cart Order Summary Column */}
+                <div className="lg:col-span-4 rounded-xl bg-black/40 border border-white/10 p-3.5 flex flex-col justify-between text-left">
+                  <div>
+                    <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/10">
+                      <div className="flex items-center gap-1.5 font-bold text-xs text-white">
+                        <span>🛒 Current Order</span>
+                        <span className="px-1.5 py-0.2 rounded-full bg-[#00E35B] text-[#041418] text-[10px] font-bold">2</span>
+                      </div>
+                      <span className="text-[10px] text-gray-400">Walk-in Customer</span>
+                    </div>
+
+                    {/* Cart Items */}
+                    <div className="space-y-2 mb-3">
+                      <div className="p-2 rounded-lg bg-white/5 text-xs flex justify-between items-center">
+                        <div className="min-w-0 pr-2">
+                          <p className="font-bold text-white truncate">Desktop Label Printer</p>
+                          <p className="text-[10px] text-gray-400">LKR 29,500 × 1</p>
+                        </div>
+                        <span className="font-bold text-[#00E35B] shrink-0 text-xs">LKR 29,500</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white/5 text-xs flex justify-between items-center">
+                        <div className="min-w-0 pr-2">
+                          <p className="font-bold text-white truncate">Cash Drawer (RJ11)</p>
+                          <p className="text-[10px] text-gray-400">LKR 16,500 × 1</p>
+                        </div>
+                        <span className="font-bold text-[#00E35B] shrink-0 text-xs">LKR 16,500</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cart Total & Charge Button */}
+                  <div className="pt-2 border-t border-white/10">
+                    <div className="flex justify-between items-center text-[11px] text-gray-300 mb-1">
+                      <span>Subtotal</span>
+                      <span className="font-semibold text-white">LKR 46,000</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px] text-[#00E35B] mb-2.5">
+                      <span className="flex items-center gap-1">
+                        <span>% Discounts & Offers</span>
+                        <kbd className="px-1 py-0.2 rounded bg-black/50 text-[9px] text-gray-300">F4</kbd>
+                      </span>
+                      <span>LKR 0</span>
+                    </div>
+                    <div className="flex justify-between items-baseline mb-3">
+                      <span className="text-xs uppercase font-bold text-gray-400 tracking-wider">TOTAL</span>
+                      <span className="text-lg font-black text-[#00E35B]">LKR 46,000</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="w-full py-2.5 rounded-xl bg-[#00E35B] text-[#041418] font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-[#00E35B]/20"
+                    >
+                      <MdCheck className="w-4 h-4" />
+                      <span>CHARGE LKR 46,000</span>
+                      <span className="text-[9px] font-mono opacity-70 ml-1">F12 / SPACE</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* POS 6-Pillar Features Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 mb-14 sm:mb-20">
+              {posFeatures.map((feat, idx) => (
+                <div
+                  key={idx}
+                  className="p-6 sm:p-7 rounded-2xl sm:rounded-3xl bg-white/[0.04] border border-white/10 hover:border-[#00E35B]/40 hover:bg-white/[0.06] transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="w-12 h-12 rounded-2xl bg-[#00E35B]/10 border border-[#00E35B]/20 text-[#00E35B] flex items-center justify-center mb-5 text-2xl">
+                      {feat.icon === 'MdFlashOn' && <MdFlashOn />}
+                      {feat.icon === 'MdQrCodeScanner' && <MdQrCodeScanner />}
+                      {feat.icon === 'MdInventory' && <MdInventory />}
+                      {feat.icon === 'MdLockOutline' && <MdLockOutline />}
+                      {feat.icon === 'MdPrint' && <MdPrint />}
+                      {feat.icon === 'MdPhoneIphone' && <MdPhoneIphone />}
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-bold text-white mb-2">{feat.title}</h3>
+                    <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">{feat.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Hardware & Compatibility Strip */}
+            <div className="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-white/[0.03] border border-white/10 flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
+              <div>
+                <h4 className="text-base sm:text-lg font-bold text-white mb-1">
+                  Ready for your existing retail counter hardware
+                </h4>
+                <p className="text-xs sm:text-sm text-gray-400">
+                  Connect any standard USB or Bluetooth scanner, 80mm/58mm thermal receipt printer, and electronic cash drawer.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
+                <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-gray-300">
+                  Barcode Scanners (1D/2D)
+                </span>
+                <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-gray-300">
+                  Thermal Printers (80mm/58mm)
+                </span>
+                <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-gray-300">
+                  RJ11 Cash Drawers
+                </span>
+                <span className="px-3 py-1.5 rounded-full bg-[#00E35B]/15 border border-[#00E35B]/30 text-xs font-bold text-[#00E35B]">
+                  LKR 3,000 / mo Add-on
+                </span>
+              </div>
             </div>
           </div>
         </section>

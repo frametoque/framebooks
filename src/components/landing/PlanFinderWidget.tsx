@@ -66,12 +66,14 @@ export default function PlanFinderWidget({ plans: propPlans, isYearly = false }:
       'Unlimited active clients',
       '2 bank/cash accounts',
       'Advanced P&L & Cash Flow reports',
+      'Cloud POS Add-on compatible',
     ],
     'Pro Plus': [
       'Unlimited invoices & clients',
       'Unlimited bank & cash accounts',
       'Unlimited team members & roles',
       'Complete inventory tracking',
+      'Cloud POS Add-on compatible',
       'System audit logs & priority support',
     ],
   };

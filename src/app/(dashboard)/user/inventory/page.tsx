@@ -26,7 +26,7 @@ const formatLKR = (amount: number) => {
 
 
 
-const emptyForm = { item_name: '', category: '', serial_number: '', quantity: 1, status: 'Available', purchase_date: '', purchase_price: '', notes: '', warranty_letter_url: '', expense_id: '' };
+const emptyForm = { item_name: '', category: '', serial_number: '', sku: '', quantity: 1, status: 'Available', purchase_date: '', purchase_price: '', selling_price: '', notes: '', warranty_letter_url: '', expense_id: '' };
 
 export default function InventoryPage() {
   const { confirm } = useConfirm();
@@ -111,11 +111,13 @@ export default function InventoryPage() {
     setFormData({
       item_name: item.item_name || '',
       category: item.category || '',
+      sku: item.sku || '',
       serial_number: item.serial_number || '',
       quantity: item.quantity || 1,
       status: item.status || 'Available',
       purchase_date: item.purchase_date ? new Date(item.purchase_date).toISOString().split('T')[0] : '',
       purchase_price: item.purchase_price || '',
+      selling_price: item.selling_price || '',
       notes: item.notes || '',
       warranty_letter_url: item.warranty_letter_url || '',
       expense_id: item.expense_id ? String(item.expense_id) : ''
@@ -146,7 +148,12 @@ export default function InventoryPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = { ...formData, quantity: parseInt(formData.quantity.toString()) || 1, purchase_price: parseFloat(formData.purchase_price) || null };
+      const payload = { 
+        ...formData, 
+        quantity: parseInt(formData.quantity.toString()) || 1, 
+        purchase_price: parseFloat(formData.purchase_price) || null,
+        selling_price: parseFloat(formData.selling_price) || null,
+      };
       if (editingId) {
         await updateInventoryItem(editingId, payload);
       } else {
@@ -386,8 +393,9 @@ export default function InventoryPage() {
                     <tr key={item.id} className="hover:bg-black/[0.02] dark:hover:bg-card transition-colors">
                       <td className="py-4 px-6">
                         <div className="font-semibold text-foreground">{item.item_name}</div>
-                        {item.serial_number && <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">SN: {item.serial_number}</div>}
-                        {item.quantity > 1 && <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Qty: {item.quantity}</div>}
+                        {item.sku && <div className="text-[11px] text-brand-600 dark:text-brand-400 font-bold mt-0.5">SKU: {item.sku}</div>}
+                        {item.serial_number && <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">SN: {item.serial_number}</div>}
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Qty: {item.quantity} {item.unit || 'pcs'}</div>
                       </td>
                       <td className="py-4 px-6 text-sm text-gray-700 dark:text-gray-300">{item.category}</td>
                       <td className="py-4 px-6">
@@ -396,8 +404,9 @@ export default function InventoryPage() {
                         </span>
                       </td>
                       <td className="py-4 px-6 text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
-                        {item.purchase_date && <div>{new Date(item.purchase_date).toLocaleDateString()}</div>}
-                        {item.purchase_price && <div className="text-gray-700 dark:text-gray-300 font-medium">{formatLKR(item.purchase_price)}</div>}
+                        {item.selling_price > 0 && <div className="font-bold text-foreground">Sell: {formatLKR(item.selling_price)}</div>}
+                        {item.purchase_price && <div className="text-gray-500 text-xs">Cost: {formatLKR(item.purchase_price)}</div>}
+                        {item.purchase_date && <div className="text-[11px] text-gray-400">{new Date(item.purchase_date).toLocaleDateString()}</div>}
                       </td>
                       <td className="py-4 px-6 hidden lg:table-cell">
                         {item.expense_id ? (
@@ -500,20 +509,20 @@ export default function InventoryPage() {
                     value={formData.serial_number}
                     onChange={e => setFormData({ ...formData, serial_number: e.target.value })}
                     className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-brand-500 shadow-2xs placeholder-gray-400"
-                    placeholder="Optional"
+                    placeholder="Optional SN"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quantity</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SKU / Barcode Code</label>
                   <input
-                    type="number"
-                    min="1"
-                    value={formData.quantity}
-                    onChange={e => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
-                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-brand-500 shadow-2xs"
+                    type="text"
+                    value={formData.sku}
+                    onChange={e => setFormData({ ...formData, sku: e.target.value })}
+                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-brand-500 shadow-2xs placeholder-gray-400 font-medium"
+                    placeholder="Auto-generated if empty"
                   />
                 </div>
                 <div>
@@ -534,6 +543,16 @@ export default function InventoryPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quantity</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.quantity}
+                    onChange={e => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
+                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-brand-500 shadow-2xs"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Purchase Date</label>
                   <input
                     type="date"
@@ -542,14 +561,28 @@ export default function InventoryPage() {
                     className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-brand-500 shadow-2xs"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Purchase Price</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cost / Purchase Price (LKR)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.purchase_price}
                     onChange={e => setFormData({ ...formData, purchase_price: e.target.value })}
                     className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-brand-500 shadow-2xs placeholder-gray-400"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Selling / Retail Price (LKR)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.selling_price}
+                    onChange={e => setFormData({ ...formData, selling_price: e.target.value })}
+                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-brand-500 shadow-2xs placeholder-gray-400 font-semibold"
                     placeholder="0.00"
                   />
                 </div>

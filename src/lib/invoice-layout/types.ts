@@ -138,7 +138,7 @@ export interface CustomFieldDefinition {
   updated_at?: string;
 }
 
-export type LayoutDocumentType = 'invoice' | 'quotation' | 'both' | 'off';
+export type LayoutDocumentType = 'invoice' | 'quotation' | 'receipt' | 'all' | 'both' | 'off';
 
 export interface InvoiceLayoutRecord {
   id: string;

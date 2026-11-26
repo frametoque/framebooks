@@ -97,7 +97,7 @@ export default function NewQuotationPage() {
 
         if (plan === "Pro Plus") {
           const defLayout = lyts.find(
-            (l) => l.document_type === "quotation" || l.document_type === "both"
+            (l) => l.document_type === "quotation" || l.document_type === "all" || l.document_type === "both"
           );
           if (defLayout) {
             setSelectedLayoutId(defLayout.id);
@@ -199,7 +199,7 @@ export default function NewQuotationPage() {
     }
   };
 
-  const activeLayout = layouts.find(l => l.id === selectedLayoutId) || (tenantPlan === "Pro Plus" ? layouts.find(l => l.document_type === "quotation" || l.document_type === "both") : null);
+  const activeLayout = layouts.find(l => l.id === selectedLayoutId) || (tenantPlan === "Pro Plus" ? layouts.find(l => l.document_type === "quotation" || l.document_type === "all" || l.document_type === "both") : null);
   const layoutMaxItems: number | null = (() => {
     if (!activeLayout?.definition) return null;
     if (typeof activeLayout.definition.lineItemsLimit === "number" && activeLayout.definition.lineItemsLimit > 0) {

@@ -17,6 +17,8 @@ export const SETTINGS_SLUG_TO_TAB: Record<string, string> = {
   "danger": "danger",
   "preferences": "prefs",
   "prefs": "prefs",
+  "integrations": "integrations",
+  "woocommerce": "integrations",
 };
 
 export const SETTINGS_TAB_TO_SLUG: Record<string, string> = {
@@ -31,20 +33,22 @@ export const SETTINGS_TAB_TO_SLUG: Record<string, string> = {
   "export": "export",
   "danger": "danger",
   "prefs": "preferences",
+  "integrations": "integrations",
 };
 
 export const SETTINGS_TAB_TITLES: Record<string, string> = {
   profile: "Security",
   business: "Business Profile",
   appearance: "Appearance",
-  notifications: "Notifications & Reminders",
-  "invoice-layout": "Invoice Layouts & Fields",
+  notifications: "Notifications",
+  "invoice-layout": "Invoice Layouts",
   billing: "Billing & Plans",
   team: "Team & Permissions",
   audit_logs: "Audit Logs",
   export: "Data Export",
   danger: "Danger Zone",
   prefs: "Admin Preferences",
+  integrations: "3rd Party Integrations",
 };
 
 /**
@@ -64,9 +68,14 @@ export function isSettingsSectionAllowed(
   // Workspace Owner has full access to all sections
   if (r === "owner") return true;
 
-  // Super Admin has full access to all sections except export (which is owner-only)
+  // Super Admin has full access to all sections except export and integrations (which are owner-only)
   if (r === "super admin") {
-    return tab !== "export";
+    return tab !== "export" && tab !== "integrations" && tab !== "woocommerce";
+  }
+
+  // 3rd Party Integrations: Owner only
+  if (tab === "integrations" || tab === "woocommerce") {
+    return false;
   }
 
   // Profile, Theme, Invoice Layouts & Notifications are accessible to all workspace members

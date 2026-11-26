@@ -20,7 +20,7 @@ export function UpgradeOverlay({ children, title, description, requiredPlan }: U
         {description}
       </p>
       <Link 
-        href="/user/settings" 
+        href="/settings/billing" 
         className="px-8 py-3.5 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-xl font-bold transition-all shadow-lg shadow-brand-500/25 flex items-center gap-2 transform hover:scale-105 active:scale-95"
       >
         Upgrade to {requiredPlan}

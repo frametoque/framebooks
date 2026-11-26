@@ -14,7 +14,7 @@ import TopClientsWidget from "../components/TopClientsWidget";
 import AnimatedNumber from "../components/AnimatedNumber";
 import AutoFitStatNumber from "../components/AutoFitStatNumber";
 import GettingStartedCard from "../components/GettingStartedCard";
-import { getTenantInfo } from "../actions/tenants";
+import { getClientTenantInfo } from "@/lib/tenant/clientTenantInfo";
 import { useAccentTheme } from "@/lib/theme/useAccentTheme";
 
 const formatLKR = (amount: number) => {
@@ -53,8 +53,8 @@ export default function DashboardPage() {
           })
           .catch(() => null);
 
-        // Fetch tenant info
-        getTenantInfo()
+        // Fetch tenant info (deduplicated client-side with layout request)
+        getClientTenantInfo()
           .then((info) => {
             if (!cancelled && info) {
               setTenantInfo(info);

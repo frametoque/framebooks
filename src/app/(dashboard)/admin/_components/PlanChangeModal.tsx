@@ -71,7 +71,8 @@ export function PlanChangeModal({
     try {
       setSubmitting(true);
       await changeSubscriptionPlan({
-        subscriptionId: subscription.id,
+        subscriptionId: subscription?.id ? Number(subscription.id) : undefined,
+        tenantId: subscription?.tenant_id ? Number(subscription.tenant_id) : undefined,
         newPlanKey: targetPlanKey,
         interval,
         effectiveNow,
@@ -103,7 +104,7 @@ export function PlanChangeModal({
               <div>
                 <h3 className="text-xl font-bold text-foreground">Change Subscription Plan</h3>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Workspace: <span className="font-semibold text-foreground">{subscription?.tenant_name}</span>
+                  Workspace: <span className="font-semibold text-foreground">{subscription?.tenant_name || subscription?.name || "Workspace"}</span>
                 </p>
               </div>
               <button

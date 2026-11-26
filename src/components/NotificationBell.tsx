@@ -194,7 +194,7 @@ export function NotificationBell() {
 
           <div className="px-4 py-2.5 bg-muted/30 border-t border-border flex items-center justify-between text-[11px]">
             <Link
-              href="/user/settings/notifications"
+              href="/settings/notifications"
               onClick={() => setOpen(false)}
               className="text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 transition-colors"
             >

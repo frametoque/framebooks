@@ -295,13 +295,8 @@ export default function AppearanceTab({ initialAccent, canManage = true, isProPl
       );
 
       try {
-        if (payload) {
-          localStorage.setItem("framebooks_accent_color", finalColor);
-          document.cookie = `fb_accent_color=${encodeURIComponent(finalColor)}; path=/; max-age=31536000; SameSite=Lax`;
-        } else {
-          localStorage.removeItem("framebooks_accent_color");
-          document.cookie = `fb_accent_color=; path=/; max-age=0; SameSite=Lax`;
-        }
+        localStorage.setItem("framebooks_accent_color", finalColor);
+        document.cookie = `fb_accent_color=${encodeURIComponent(finalColor)}; path=/; max-age=31536000; SameSite=Lax`;
       } catch {}
 
       window.dispatchEvent(new CustomEvent("accent:change", { detail: finalColor }));
@@ -322,13 +317,8 @@ export default function AppearanceTab({ initialAccent, canManage = true, isProPl
         if (ssrTag) ssrTag.innerHTML = prevCss;
         document.documentElement.style.setProperty("--accent", prevSaved);
         try {
-          if (savedHexRef.current && savedHexRef.current !== DEFAULT_ACCENT_HEX) {
-            localStorage.setItem("framebooks_accent_color", prevSaved);
-            document.cookie = `fb_accent_color=${encodeURIComponent(prevSaved)}; path=/; max-age=31536000; SameSite=Lax`;
-          } else {
-            localStorage.removeItem("framebooks_accent_color");
-            document.cookie = `fb_accent_color=; path=/; max-age=0; SameSite=Lax`;
-          }
+          localStorage.setItem("framebooks_accent_color", prevSaved);
+          document.cookie = `fb_accent_color=${encodeURIComponent(prevSaved)}; path=/; max-age=31536000; SameSite=Lax`;
         } catch {}
         window.dispatchEvent(new CustomEvent("accent:change", { detail: prevSaved }));
         setToastMsg({ type: "error", text: res.error || "Failed to save appearance setting." });

@@ -58,24 +58,21 @@ export default async function DashboardRootLayout({
   let accentCss = "";
   if (!pathname.startsWith("/admin") && userSession?.user?.email) {
     try {
-      let resolvedColor: string | null = null;
+      // 1. Query database for the active tenant's true accent color
+      const dbColor = await getCachedUserAccent(userSession.user.email);
+      const resolvedColor = resolvePaletteId(dbColor) || DEFAULT_ACCENT_HEX;
 
-      // 1. Prioritize cookie for fastest, synchronous SSR matching
-      const cookieStore = await cookies();
-      const rawCookie = cookieStore.get("fb_accent_color")?.value;
-      if (rawCookie) {
-        resolvedColor = resolvePaletteId(decodeURIComponent(rawCookie));
-      }
+      // 2. Synchronize cookie to match the active tenant's color
+      try {
+        const cookieStore = await cookies();
+        cookieStore.set("fb_accent_color", resolvedColor, {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 365,
+          sameSite: "lax",
+        });
+      } catch {}
 
-      // 2. If cookie not set, query database (memoized per request)
-      if (!resolvedColor) {
-        const dbColor = await getCachedUserAccent(userSession.user.email);
-        if (dbColor) {
-          resolvedColor = resolvePaletteId(dbColor);
-        }
-      }
-
-      accentCss = generateTenantThemeCss(resolvedColor || DEFAULT_ACCENT_HEX);
+      accentCss = generateTenantThemeCss(resolvedColor);
     } catch {
       accentCss = generateTenantThemeCss(DEFAULT_ACCENT_HEX);
     }

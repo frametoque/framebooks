@@ -32,7 +32,8 @@ import {
   SL_FLAG_PALETTE_ID,
   isChristmasPalette,
   CHRISTMAS_PALETTE_ID,
-  resolvePaletteId
+  resolvePaletteId,
+  DEFAULT_ACCENT_HEX
 } from "@/lib/theme/accent";
 
 interface TenantInfoProps {
@@ -132,21 +133,19 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
     setGeneralMessage(null);
     try {
       const targetBiz = businesses.find((b) => b.id === targetId);
-      const clean = resolvePaletteId(targetBiz?.accent_color);
-      if (clean) {
-        document.cookie = `fb_accent_color=${encodeURIComponent(clean)}; path=/; max-age=31536000; SameSite=Lax`;
-        try {
-          localStorage.setItem("framebooks_accent_color", clean);
-        } catch {}
-      } else {
-        document.cookie = `fb_accent_color=; path=/; max-age=0; SameSite=Lax`;
-        try {
-          localStorage.removeItem("framebooks_accent_color");
-        } catch {}
-      }
+      const clean = resolvePaletteId(targetBiz?.accent_color) || DEFAULT_ACCENT_HEX;
+      document.cookie = `fb_accent_color=${encodeURIComponent(clean)}; path=/; max-age=31536000; SameSite=Lax`;
+      try {
+        localStorage.setItem("framebooks_accent_color", clean);
+      } catch {}
 
       const res = await switchActiveTenant(targetId);
       if (res.success) {
+        const finalColor = (res as any).accentColor || clean;
+        document.cookie = `fb_accent_color=${encodeURIComponent(finalColor)}; path=/; max-age=31536000; SameSite=Lax`;
+        try {
+          localStorage.setItem("framebooks_accent_color", finalColor);
+        } catch {}
         window.location.reload();
       } else {
         setGeneralMessage({ type: "error", text: res.error || "Failed to switch workspace" });

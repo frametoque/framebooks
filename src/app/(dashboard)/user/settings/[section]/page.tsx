@@ -14,9 +14,9 @@ const SECTION_METADATA: Record<string, { title: string; description: string }> =
   "business": { title: "Business Profile | Framebooks", description: "Update business name, contact, branding, and details." },
   "appearance": { title: "Appearance | Framebooks", description: "Customize dashboard accent colour, theme branding, and palettes." },
   "theme": { title: "Appearance | Framebooks", description: "Customize dashboard accent colour, theme branding, and palettes." },
-  "notifications": { title: "Notifications & Reminders | Framebooks", description: "Manage browser push notifications, transaction reminders, and automated expense alerts." },
-  "reminders": { title: "Notifications & Reminders | Framebooks", description: "Manage browser push notifications, transaction reminders, and automated expense alerts." },
-  "invoice-layout": { title: "Invoice Layouts & Fields | Framebooks", description: "Design, customize, and arrange custom invoice templates and fields." },
+  "notifications": { title: "Notifications | Framebooks", description: "Manage browser push notifications, transaction reminders, and automated expense alerts." },
+  "reminders": { title: "Notifications | Framebooks", description: "Manage browser push notifications, transaction reminders, and automated expense alerts." },
+  "invoice-layout": { title: "Invoice Layouts | Framebooks", description: "Design, customize, and arrange custom invoice templates and fields." },
   "billing": { title: "Billing & Plans | Framebooks", description: "Manage subscription plans and payment methods." },
   "team": { title: "Team & Permissions | Framebooks", description: "Manage team members, invitations, and custom roles." },
   "roles": { title: "Roles & Permissions | Framebooks", description: "Configure custom roles and access control." },
@@ -26,6 +26,8 @@ const SECTION_METADATA: Record<string, { title: string; description: string }> =
   "danger": { title: "Danger Zone | Framebooks", description: "Workspace management and account deletion options." },
   "preferences": { title: "Admin Preferences | Framebooks", description: "Configure default dashboard date range and settings." },
   "prefs": { title: "Admin Preferences | Framebooks", description: "Configure default dashboard date range and settings." },
+  "integrations": { title: "3rd Party Integrations | Framebooks", description: "Connect and sync your online WooCommerce store inventory and orders with Framebooks POS." },
+  "woocommerce": { title: "3rd Party Integrations | Framebooks", description: "Connect and sync your online WooCommerce store inventory and orders with Framebooks POS." },
 };
 
 export async function generateMetadata({
@@ -52,12 +54,12 @@ export default async function SettingsSectionPage({
   const section = resolvedParams?.section || "";
   const tab = SETTINGS_SLUG_TO_TAB[section];
   if (!tab) {
-    redirect("/user/settings");
+    redirect("/settings");
   }
 
   const { role } = await getUserContext();
   if (!role || !isSettingsSectionAllowed(section, role)) {
-    redirect("/user/settings");
+    redirect("/settings");
   }
 
   const dbPlans = await getActivePlans().catch(() => []);

@@ -6,6 +6,7 @@ import { verifyPassword } from "@/app/(dashboard)/admin/_lib/passwords";
 import { isStaffRole } from "@/app/(dashboard)/admin/_lib/permissions";
 import { createAdminToken, setAdminSessionCookie, clearAdminSessionCookie } from "@/app/(dashboard)/admin/_lib/session";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 
 export async function adminLoginAction({
@@ -21,11 +22,26 @@ export async function adminLoginAction({
 
   const cleanEmail = email.trim().toLowerCase();
 
-  const rateCheck = checkRateLimit("admin-login", cleanEmail, { windowMs: 15 * 60 * 1000, max: 5 });
+  // Obtain client IP from request headers
+  const headerStore = await headers();
+  const forwarded = headerStore.get("x-forwarded-for");
+  const ip = forwarded ? forwarded.split(",")[0].trim() : "127.0.0.1";
+
+  // Global IP rate limit: max 20 attempts per 15 minutes per IP
+  const ipRateCheck = checkRateLimit("admin-login-ip", ip, { windowMs: 15 * 60 * 1000, max: 20 });
+  if (!ipRateCheck.allowed) {
+    return {
+      success: false,
+      error: `Too many login attempts from this network. Please wait ${Math.ceil(ipRateCheck.retryAfterSeconds / 60)} minute(s).`,
+    };
+  }
+
+  // Account + IP rate limit: prevents third-party attacker from locking out admin
+  const rateCheck = checkRateLimit("admin-login", `${ip}:${cleanEmail}`, { windowMs: 15 * 60 * 1000, max: 5 });
   if (!rateCheck.allowed) {
     return {
       success: false,
-      error: `Too many failed login attempts. Please wait ${Math.ceil(rateCheck.retryAfterSeconds / 60)} minute(s) before trying again.`
+      error: `Too many failed login attempts for this account. Please wait ${Math.ceil(rateCheck.retryAfterSeconds / 60)} minute(s) before trying again.`,
     };
   }
 

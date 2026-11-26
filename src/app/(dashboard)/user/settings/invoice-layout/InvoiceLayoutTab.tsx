@@ -64,7 +64,7 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
     loadData();
   }, []);
 
-  const handleSetFormat = async (id: string | "standard", target: "invoice" | "quotation" | "both") => {
+  const handleSetFormat = async (id: string | "standard", target: "invoice" | "quotation" | "all") => {
     if (!canManage) return;
     if (id !== "standard" && !isProPlus) {
       handleUpgradePrompt("custom layouts");
@@ -134,18 +134,18 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
   };
 
   const activeInvoiceLayout = layouts.find(
-    (l) => l.document_type === "invoice" || l.document_type === "both"
+    (l) => l.document_type === "invoice" || l.document_type === "all" || l.document_type === "both"
   );
   const activeQuotationLayout = layouts.find(
-    (l) => l.document_type === "quotation" || l.document_type === "both"
+    (l) => l.document_type === "quotation" || l.document_type === "all" || l.document_type === "both"
   );
 
-  const standardStatus: "both" | "invoice" | "quotation" | "off" =
+  const standardStatus: "all" | "invoice" | "quotation" | "off" =
     !activeInvoiceLayout && !activeQuotationLayout
-      ? "both"
-      : !activeInvoiceLayout
+      ? "all"
+      : !activeInvoiceLayout && activeQuotationLayout
       ? "invoice"
-      : !activeQuotationLayout
+      : activeInvoiceLayout && !activeQuotationLayout
       ? "quotation"
       : "off";
 
@@ -177,7 +177,7 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
             </button>
           ) : (
             <Link
-              href="/user/settings/invoice-layout/builder/new"
+              href="/settings/invoice-layout/builder/new"
               className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-xs transition-colors cursor-pointer shadow-xs"
             >
               <Plus className="w-4 h-4" />
@@ -234,9 +234,9 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
 
                     {/* Status Badge */}
                     <div className="shrink-0">
-                      {standardStatus === "both" && (
+                      {standardStatus === "all" && (
                         <span className="text-[10px] sm:text-[11px] font-bold text-brand-500 bg-brand-500/10 border border-brand-500/25 px-2.5 py-0.5 rounded-full inline-block">
-                          Both
+                          ALL
                         </span>
                       )}
                       {standardStatus === "invoice" && (
@@ -262,7 +262,7 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
                     <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
                       Assign To
                     </span>
-                    <div className="inline-flex items-center bg-muted/50 p-0.5 rounded-xl border border-border">
+                    <div className="inline-flex items-center bg-muted/50 p-0.5 rounded-xl border border-border flex-wrap gap-0.5">
                       <button
                         type="button"
                         disabled={!canManage || updatingFormatId === "standard"}
@@ -292,15 +292,15 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
                       <button
                         type="button"
                         disabled={!canManage || updatingFormatId === "standard"}
-                        onClick={() => handleSetFormat("standard", "both")}
+                        onClick={() => handleSetFormat("standard", "all")}
                         className={`px-2.5 sm:px-3 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
-                          standardStatus === "both"
+                          standardStatus === "all"
                             ? "bg-brand-500 text-brand-950 shadow-xs"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted"
                         }`}
-                        title="Use Standard layout for Both Invoices and Quotations"
+                        title="Use Standard layout for ALL Documents (Invoices & Quotations)"
                       >
-                        Both
+                        ALL
                       </button>
                     </div>
                   </div>
@@ -343,7 +343,7 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
                       </button>
                     ) : (
                       <Link
-                        href="/user/settings/invoice-layout/builder/new"
+                        href="/settings/invoice-layout/builder/new"
                         className="flex items-center gap-1.5 text-xs text-brand-500 hover:text-brand-400 font-semibold py-1.5 px-3 rounded-lg bg-brand-500/10 hover:bg-brand-500/15 border border-brand-500/20 transition-colors cursor-pointer"
                         title="Customize into a new custom layout"
                       >
@@ -358,9 +358,9 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
 
             {/* Custom Layouts */}
             {layouts.map((l) => {
-              const cStatus: "both" | "invoice" | "quotation" | "off" =
-                l.document_type === "both"
-                  ? "both"
+              const cStatus: "all" | "both" | "invoice" | "quotation" | "off" =
+                l.document_type === "all" || l.document_type === "both"
+                  ? "all"
                   : l.document_type === "invoice"
                   ? "invoice"
                   : l.document_type === "quotation"
@@ -409,9 +409,9 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
 
                         {/* Status Badge */}
                         <div className="shrink-0">
-                          {cStatus === "both" && (
+                          {cStatus === "all" && (
                             <span className="text-[10px] sm:text-[11px] font-bold text-brand-500 bg-brand-500/10 border border-brand-500/25 px-2.5 py-0.5 rounded-full inline-block">
-                              Both
+                              ALL
                             </span>
                           )}
                           {cStatus === "invoice" && (
@@ -437,7 +437,7 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
                         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
                           Assign To
                         </span>
-                        <div className="inline-flex items-center bg-muted/50 p-0.5 rounded-xl border border-border">
+                        <div className="inline-flex items-center bg-muted/50 p-0.5 rounded-xl border border-border flex-wrap gap-0.5">
                           <button
                             type="button"
                             disabled={!canManage || updatingFormatId === l.id}
@@ -467,15 +467,15 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
                           <button
                             type="button"
                             disabled={!canManage || updatingFormatId === l.id}
-                            onClick={() => handleSetFormat(l.id, "both")}
+                            onClick={() => handleSetFormat(l.id, "all")}
                             className={`px-2.5 sm:px-3 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
-                              cStatus === "both"
+                              cStatus === "all"
                                 ? "bg-brand-500 text-brand-950 shadow-xs"
                                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
                             }`}
-                            title="Assign to Both Documents"
+                            title="Assign to ALL Documents (Invoices & Quotations)"
                           >
-                            Both
+                            ALL
                           </button>
                         </div>
                       </div>
@@ -528,7 +528,7 @@ export default function InvoiceLayoutTab({ canManage: initialCanManage = true, i
                           </button>
                         ) : (
                           <Link
-                            href={`/user/settings/invoice-layout/builder/${l.id}`}
+                            href={`/settings/invoice-layout/builder/${l.id}`}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-500 border border-brand-500/25 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
                             title="Edit this format in the Builder Studio"
                           >

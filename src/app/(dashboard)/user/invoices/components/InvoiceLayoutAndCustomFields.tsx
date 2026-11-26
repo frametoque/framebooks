@@ -41,7 +41,7 @@ export function InvoiceLayoutAndCustomFields({
           </h2>
           {canCustomize && (
             <Link
-              href="/user/settings/invoice-layout"
+              href="/settings/invoice-layout"
               target="_blank"
               className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1 transition-colors"
             >

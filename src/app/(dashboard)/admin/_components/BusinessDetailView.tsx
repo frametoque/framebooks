@@ -31,7 +31,9 @@ import {
   Calendar,
   Edit3,
   KeyRound,
+  Store,
 } from "lucide-react";
+import { toggleTenantAddonAction } from "@/app/(dashboard)/admin/users/actions";
 import { PlanBadge, RoleBadge, StatusPill, Money, formatLKR } from "@/components/Formatters";
 import { TenantLogo } from "@/components/TenantLogo";
 import ClientAvatar from "@/components/ClientAvatar";
@@ -142,7 +144,23 @@ export function BusinessDetailView({
     notes = [],
     activity = [],
     appliedCoupon = null,
+    addons = [],
   } = businessData;
+
+  const posAddon = (addons || []).find((a: any) => a.addon_key === 'pos');
+  const [togglingAddon, setTogglingAddon] = useState(false);
+
+  const handleToggleAddon = async (addonKey: string, enable: boolean) => {
+    setTogglingAddon(true);
+    try {
+      await toggleTenantAddonAction(tenant.id, addonKey, enable);
+      router.refresh();
+    } catch (err: any) {
+      alert(err.message || "Failed to update add-on");
+    } finally {
+      setTogglingAddon(false);
+    }
+  };
 
   const limits = plan?.limits || {
     invoices: 50,
@@ -744,6 +762,63 @@ export function BusinessDetailView({
               </button>
             </div>
           )}
+
+          {/* Add-ons & Entitlements */}
+          <div className="bg-card border border-border rounded-3xl p-6 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-foreground text-lg">Add-ons & Feature Entitlements</h3>
+                <p className="text-gray-400 text-xs">Manage paid feature add-ons and access permissions for this workspace</p>
+              </div>
+            </div>
+
+            <div className="divide-y divide-border border border-border rounded-2xl overflow-hidden">
+              <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-black/5 dark:bg-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-500 font-bold shrink-0">
+                    <Store className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-foreground text-sm">Point of Sale (POS) Add-on</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        posAddon?.status === 'active' ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' :
+                        posAddon?.status === 'requested' ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30' :
+                        'bg-gray-500/15 text-gray-400 border border-border'
+                      }`}>
+                        {posAddon?.status || 'Not Entitled'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Price: LKR 3,000 / month • Retails terminals, barcode scanning, cashier shifts & stock deduction
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {posAddon?.status === 'active' ? (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAddon('pos', false)}
+                      disabled={togglingAddon}
+                      className="px-4 py-2 rounded-xl border border-red-500/30 text-red-500 hover:bg-red-500/10 text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      {togglingAddon ? "Updating..." : "Revoke POS Add-on"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAddon('pos', true)}
+                      disabled={togglingAddon}
+                      className="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-900 text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                    >
+                      {togglingAddon ? "Updating..." : posAddon?.status === 'requested' ? 'Approve & Activate POS' : 'Grant POS Add-on'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="bg-card border border-border rounded-3xl p-6 shadow-2xs">
             <h3 className="font-bold text-foreground text-lg mb-4">Subscription History</h3>
@@ -1426,9 +1501,12 @@ export function BusinessDetailView({
         <PlanChangeModal
           isOpen={isChangePlanOpen}
           subscription={{
+            id: subscription?.id || 0,
             tenant_id: tenant.id,
+            tenant_name: tenant.name,
             plan_id: plan?.id || 1,
             current_plan: tenant.plan,
+            current_plan_name: tenant.plan,
           }}
           allPlans={allPlans || []}
           onClose={() => setIsChangePlanOpen(false)}

@@ -18,6 +18,7 @@ interface CategoryPickerProps {
   type?: 'expense' | 'income' | 'all';
   // Kept for backward compatibility, but we fetch our own now
   categories?: string[];
+  singleSelect?: boolean;
 }
 
 export default function CategoryPicker({
@@ -27,6 +28,7 @@ export default function CategoryPicker({
   placeholder = "Select categories...",
   type = 'expense',
   categories: initialCategories = [],
+  singleSelect = false,
 }: CategoryPickerProps) {
   const { confirm } = useConfirm();
   const [open, setOpen] = useState(false);
@@ -138,6 +140,15 @@ export default function CategoryPicker({
   const toggle = (cat: string) => {
     const catLower = cat.trim().toLowerCase();
     const exists = value.some(c => c.trim().toLowerCase() === catLower);
+    if (singleSelect) {
+      if (exists) {
+        onChange([]);
+      } else {
+        onChange([cat]);
+        setOpen(false);
+      }
+      return;
+    }
     if (exists) {
       onChange(value.filter((c) => c.trim().toLowerCase() !== catLower));
     } else {
@@ -157,7 +168,10 @@ export default function CategoryPicker({
     const lower = trimmed.toLowerCase();
     const existingCat = serverCategories.find(c => c.trim().toLowerCase() === lower);
     if (existingCat) {
-      if (!value.some(c => c.trim().toLowerCase() === lower)) {
+      if (singleSelect) {
+        onChange([existingCat]);
+        setOpen(false);
+      } else if (!value.some(c => c.trim().toLowerCase() === lower)) {
         onChange([...value, existingCat]);
       }
       return;
@@ -167,7 +181,10 @@ export default function CategoryPicker({
       setAdding(true);
       await createCategory(canonical, type);
       setServerCategories(prev => deduplicateCategories([...prev, canonical]).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })));
-      if (!value.some(c => c.trim().toLowerCase() === lower)) {
+      if (singleSelect) {
+        onChange([canonical]);
+        setOpen(false);
+      } else if (!value.some(c => c.trim().toLowerCase() === lower)) {
         onChange([...value, canonical]);
       }
     } catch (e) {
@@ -193,7 +210,7 @@ export default function CategoryPicker({
   const dropdown = open ? (
     <div
       ref={dropdownRef}
-      style={{ ...dropdownStyle, position: "fixed", zIndex: 9999 }}
+      style={{ ...dropdownStyle, position: "fixed", zIndex: 99999 }}
       className="bg-popover border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col"
     >
       <div className="p-2 border-b border-border flex gap-2 shrink-0 bg-popover">
