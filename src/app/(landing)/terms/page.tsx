@@ -113,7 +113,7 @@ export default function TermsOfServicePage() {
             <h2 className="text-xl sm:text-2xl font-bold text-[#082830]">9. Contact Information</h2>
             <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-xs sm:text-sm">
               <p className="font-bold text-[#082830]">Frametoque Digital Productions</p>
-              <p>Email: <a href="mailto:legal@framebooks.lk" className="text-[#00C750] font-semibold hover:underline">legal@framebooks.lk</a></p>
+              <p>Email: <a href="mailto:framebooks@frametoque.com" className="text-[#00C750] font-semibold hover:underline">framebooks@frametoque.com</a></p>
               <p>Web: <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="text-[#00C750] font-semibold hover:underline">frametoque.com</a></p>
             </div>
           </section>

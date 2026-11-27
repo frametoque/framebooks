@@ -92,7 +92,7 @@ export default function RefundPolicyPage() {
             </p>
             <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-xs sm:text-sm space-y-1">
               <p className="font-bold text-[#082830]">Frametoque Digital Productions - Billing Department</p>
-              <p>Email: <a href="mailto:billing@framebooks.lk" className="text-[#00C750] font-semibold hover:underline">billing@framebooks.lk</a></p>
+              <p>Email: <a href="mailto:framebooks@frametoque.com" className="text-[#00C750] font-semibold hover:underline">framebooks@frametoque.com</a></p>
               <p className="text-gray-500 text-xs mt-1">Please include: Your registered business name, account email, payment reference ID, and reason for the request.</p>
             </div>
           </section>

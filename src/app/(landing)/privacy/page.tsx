@@ -110,7 +110,7 @@ export default function PrivacyPolicyPage() {
             </p>
             <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-xs sm:text-sm">
               <p className="font-bold text-[#082830]">Frametoque Digital Productions</p>
-              <p>Email: <a href="mailto:privacy@framebooks.lk" className="text-[#00C750] font-semibold hover:underline">privacy@framebooks.lk</a></p>
+              <p>Email: <a href="mailto:framebooks@frametoque.com" className="text-[#00C750] font-semibold hover:underline">framebooks@frametoque.com</a></p>
               <p>Web: <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="text-[#00C750] font-semibold hover:underline">frametoque.com</a></p>
             </div>
           </section>
