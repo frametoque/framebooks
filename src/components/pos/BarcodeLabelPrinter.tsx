@@ -40,19 +40,19 @@ export function BarcodeLabelPrinter({ product, isOpen, onClose }: BarcodeLabelPr
   const displaySku = product.sku || product.barcode || `ITEM-${product.id}`;
   const codeToEncode = displaySku;
 
-  // Optimized barcodes for barcode-only vs combo layouts
+  // Optimized barcodes for barcode-only vs combo layouts (10-module quiet zone for standard ISO scanning)
   const barcodeSvgOnly = generateBarcodeSvg(codeToEncode, {
     height: labelSize.height <= 30 ? 28 : 36,
     barWidth: 1.4,
     showText: true,
-    quietZone: 4,
+    quietZone: 10,
   });
 
   const barcodeSvgCombo = generateBarcodeSvg(codeToEncode, {
     height: labelSize.height <= 30 ? 24 : 30,
-    barWidth: 1.3,
+    barWidth: 1.25,
     showText: true,
-    quietZone: 3,
+    quietZone: 8,
   });
 
   const qrSvg = generateQrCodeSvg(codeToEncode, 80);
@@ -420,10 +420,10 @@ export function BarcodeLabelPrinter({ product, isOpen, onClose }: BarcodeLabelPr
               <span className="text-[10px] text-gray-400 font-medium">Auto-fitted to sticker roll</span>
             </div>
             <div
-              className="bg-white text-black p-3.5 rounded-xl border border-gray-300 shadow-md flex flex-col items-center justify-between text-center mx-auto transition-all overflow-hidden"
+              className="bg-white text-black p-4 rounded-xl border border-gray-300 shadow-md flex flex-col items-center justify-between text-center mx-auto transition-all overflow-hidden"
               style={{
-                width: "260px",
-                minHeight: labelSize.height <= 30 ? "130px" : "150px",
+                width: "290px",
+                minHeight: labelSize.height <= 30 ? "140px" : "165px",
               }}
             >
               <div className="w-full">
@@ -435,26 +435,26 @@ export function BarcodeLabelPrinter({ product, isOpen, onClose }: BarcodeLabelPr
                 </div>
               </div>
 
-              <div className="my-1.5 w-full flex items-center justify-center overflow-hidden">
+              <div className="my-2 w-full flex items-center justify-center overflow-hidden">
                 {labelType === "combo" ? (
-                  <div className="w-full flex items-center justify-between gap-2 overflow-hidden px-1">
+                  <div className="w-full flex items-center justify-between gap-3 overflow-hidden px-1">
                     <div
-                      className="w-10 h-10 shrink-0 flex items-center justify-center [&_svg]:w-full [&_svg]:h-full [&_svg]:block"
+                      className="w-12 h-12 shrink-0 flex items-center justify-center [&_svg]:w-full [&_svg]:h-full [&_svg]:block"
                       dangerouslySetInnerHTML={{ __html: qrSvg }}
                     />
                     <div
-                      className="flex-1 min-w-0 max-w-full flex items-center justify-center overflow-hidden [&_svg]:w-full [&_svg]:max-w-full [&_svg]:h-auto [&_svg]:max-h-10 [&_svg]:block"
+                      className="flex-1 min-w-0 max-w-full flex items-center justify-center overflow-hidden [&_svg]:w-full [&_svg]:max-w-full [&_svg]:h-auto [&_svg]:max-h-12 [&_svg]:block"
                       dangerouslySetInnerHTML={{ __html: barcodeSvgCombo }}
                     />
                   </div>
                 ) : labelType === "barcode_only" ? (
                   <div
-                    className="w-full flex items-center justify-center overflow-hidden px-1 [&_svg]:w-full [&_svg]:max-w-full [&_svg]:h-auto [&_svg]:max-h-12 [&_svg]:block"
+                    className="w-full flex items-center justify-center overflow-hidden px-1 [&_svg]:w-full [&_svg]:max-w-full [&_svg]:h-auto [&_svg]:max-h-14 [&_svg]:block"
                     dangerouslySetInnerHTML={{ __html: barcodeSvgOnly }}
                   />
                 ) : (
                   <div
-                    className="w-14 h-14 flex items-center justify-center [&_svg]:w-full [&_svg]:h-full [&_svg]:block"
+                    className="w-20 h-20 flex items-center justify-center [&_svg]:w-full [&_svg]:h-full [&_svg]:block"
                     dangerouslySetInnerHTML={{ __html: qrSvg }}
                   />
                 )}

@@ -1,7 +1,7 @@
 /**
- * Pure TypeScript Code 128-B barcode and SVG generator.
- * Open standard: ISO/IEC 15417.
- * Generates clean, crisp vector SVGs suitable for any thermal printer or screen.
+ * Pure TypeScript Code 128-B barcode and ISO/IEC 18004 QR Code SVG generator.
+ * Open standards: ISO/IEC 15417 (Code 128) & ISO/IEC 18004 (QR Code).
+ * Generates crisp vector SVGs suitable for any thermal printer or mobile camera screen scanning.
  */
 
 // GF(2^8) math with prime polynomial 0x11D for standard QR Code Reed-Solomon
@@ -18,17 +18,17 @@ for (let i = 0; i < 255; i++) {
 
 function gfMul(a: number, b: number): number {
   if (a === 0 || b === 0) return 0;
-  return EXP[LOG[a] + LOG[b]];
+  return EXP[(LOG[a] + LOG[b]) % 255];
 }
 
 function rsGeneratorPoly(degree: number): Uint8Array {
   let poly = new Uint8Array([1]);
   for (let i = 0; i < degree; i++) {
-    const nextPoly = new Uint8Array(poly.length + 1);
     const factor = EXP[i];
+    const nextPoly = new Uint8Array(poly.length + 1);
     for (let j = 0; j < poly.length; j++) {
-      nextPoly[j] ^= gfMul(poly[j], factor);
-      nextPoly[j + 1] ^= poly[j];
+      nextPoly[j] ^= poly[j];
+      nextPoly[j + 1] ^= gfMul(poly[j], factor);
     }
     poly = nextPoly;
   }
@@ -44,7 +44,7 @@ function rsCompute(data: Uint8Array, ecLength: number): Uint8Array {
     remainder.copyWithin(0, 1);
     remainder[ecLength - 1] = 0;
     for (let j = 0; j < ecLength; j++) {
-      remainder[j] ^= gfMul(gen[j], factor);
+      remainder[j] ^= gfMul(gen[j + 1], factor);
     }
   }
 
@@ -76,12 +76,33 @@ const QR_VERSIONS: VersionInfo[] = [
   { total: 346, data: 216, ecPerBlock: 26, b1: 4, d1: 43, b2: 1, d2: 44, align: [6, 28, 50] },
 ];
 
+const G15 = (1 << 10) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 2) | (1 << 1) | (1 << 0);
+const G15_MASK = (1 << 14) | (1 << 12) | (1 << 10) | (1 << 4) | (1 << 1);
+
+function getBchDigit(data: number): number {
+  let digit = 0;
+  while (data !== 0) {
+    digit++;
+    data >>>= 1;
+  }
+  return digit;
+}
+
+function getBchTypeInfo(data: number): number {
+  let d = data << 10;
+  const g15Digit = getBchDigit(G15);
+  while (getBchDigit(d) - g15Digit >= 0) {
+    d ^= G15 << (getBchDigit(d) - g15Digit);
+  }
+  return ((data << 10) | d) ^ G15_MASK;
+}
+
 export function encodeQrMatrix(text: string): boolean[][] {
   const utf8Bytes = new TextEncoder().encode(text);
   const dataLen = utf8Bytes.length;
 
   let version = 1;
-  while (version <= 10) {
+  while (version < QR_VERSIONS.length) {
     const vInfo = QR_VERSIONS[version];
     const countBits = version <= 9 ? 8 : 16;
     const availableBits = vInfo.data * 8;
@@ -90,7 +111,7 @@ export function encodeQrMatrix(text: string): boolean[][] {
     version++;
   }
 
-  if (version > 10) version = 10;
+  if (version >= QR_VERSIONS.length) version = QR_VERSIONS.length - 1;
   const vInfo = QR_VERSIONS[version];
   const charCountBits = version <= 9 ? 8 : 16;
 
@@ -101,7 +122,7 @@ export function encodeQrMatrix(text: string): boolean[][] {
     }
   };
 
-  pushBits(0b0100, 4);
+  pushBits(0b0100, 4); // Byte mode indicator
   pushBits(dataLen, charCountBits);
   for (let i = 0; i < dataLen; i++) {
     pushBits(utf8Bytes[i], 8);
@@ -169,6 +190,9 @@ export function encodeQrMatrix(text: string): boolean[][] {
   const matrix: (boolean | null)[][] = Array.from({ length: matrixSize }, () =>
     Array(matrixSize).fill(null)
   );
+  const isReserved: boolean[][] = Array.from({ length: matrixSize }, () =>
+    Array(matrixSize).fill(false)
+  );
 
   const addFinder = (originR: number, originC: number) => {
     for (let r = -1; r <= 7; r++) {
@@ -176,6 +200,7 @@ export function encodeQrMatrix(text: string): boolean[][] {
         const mr = originR + r;
         const mc = originC + c;
         if (mr < 0 || mr >= matrixSize || mc < 0 || mc >= matrixSize) continue;
+        isReserved[mr][mc] = true;
         if (r === -1 || r === 7 || c === -1 || c === 7) {
           matrix[mr][mc] = false;
         } else if (r === 0 || r === 6 || c === 0 || c === 6) {
@@ -196,13 +221,11 @@ export function encodeQrMatrix(text: string): boolean[][] {
   const coords = vInfo.align;
   for (const r of coords) {
     for (const c of coords) {
-      const onTopLeft = r < 9 && c < 9;
-      const onTopRight = r < 9 && c >= matrixSize - 9;
-      const onBottomLeft = r >= matrixSize - 9 && c < 9;
-      if (onTopLeft || onTopRight || onBottomLeft) continue;
+      if (isReserved[r][c]) continue;
 
       for (let dr = -2; dr <= 2; dr++) {
         for (let dc = -2; dc <= 2; dc++) {
+          isReserved[r + dr][c + dc] = true;
           if (Math.abs(dr) === 2 || Math.abs(dc) === 2 || (dr === 0 && dc === 0)) {
             matrix[r + dr][c + dc] = true;
           } else {
@@ -214,27 +237,40 @@ export function encodeQrMatrix(text: string): boolean[][] {
   }
 
   for (let i = 8; i < matrixSize - 8; i++) {
-    if (matrix[6][i] === null) matrix[6][i] = i % 2 === 0;
-    if (matrix[i][6] === null) matrix[i][6] = i % 2 === 0;
+    if (!isReserved[6][i]) {
+      isReserved[6][i] = true;
+      matrix[6][i] = i % 2 === 0;
+    }
+    if (!isReserved[i][6]) {
+      isReserved[i][6] = true;
+      matrix[i][6] = i % 2 === 0;
+    }
   }
 
-  matrix[4 * version + 9][8] = true;
+  // Dark module
+  const darkR = 4 * version + 9;
+  const darkC = 8;
+  isReserved[darkR][darkC] = true;
+  matrix[darkR][darkC] = true;
 
-  for (let i = 0; i < 9; i++) {
-    if (matrix[8][i] === null) matrix[8][i] = false;
-    if (matrix[i][8] === null) matrix[i][8] = false;
-  }
-  for (let i = 0; i < 8; i++) {
-    if (matrix[8][matrixSize - 1 - i] === null) matrix[8][matrixSize - 1 - i] = false;
-    if (matrix[matrixSize - 1 - i][8] === null) matrix[matrixSize - 1 - i][8] = false;
+  // Reserve format information regions
+  for (let i = 0; i < 15; i++) {
+    if (i < 6) {
+      isReserved[i][8] = true;
+    } else if (i < 8) {
+      isReserved[i + 1][8] = true;
+    } else {
+      isReserved[matrixSize - 15 + i][8] = true;
+    }
   }
 
-  if (version >= 7) {
-    for (let r = 0; r < 6; r++) {
-      for (let c = 0; c < 3; c++) {
-        matrix[r][matrixSize - 11 + c] = false;
-        matrix[matrixSize - 11 + c][r] = false;
-      }
+  for (let i = 0; i < 15; i++) {
+    if (i < 8) {
+      isReserved[8][matrixSize - i - 1] = true;
+    } else if (i < 9) {
+      isReserved[8][15 - i] = true;
+    } else {
+      isReserved[8][15 - i - 1] = true;
     }
   }
 
@@ -250,7 +286,7 @@ export function encodeQrMatrix(text: string): boolean[][] {
     for (let i = 0; i < matrixSize; i++) {
       const r = upward ? matrixSize - 1 - i : i;
       for (let c = right; c >= right - 1; c--) {
-        if (matrix[r][c] === null) {
+        if (!isReserved[r][c]) {
           let bit = false;
           if (dataBitIndex < totalBitsToPlace) {
             const byteIdx = Math.floor(dataBitIndex / 8);
@@ -267,66 +303,131 @@ export function encodeQrMatrix(text: string): boolean[][] {
     right -= 2;
   }
 
-  const maskFn = (r: number, c: number) => (r + c) % 2 === 0;
+  const masks = [
+    (r: number, c: number) => (r + c) % 2 === 0,
+    (r: number, c: number) => r % 2 === 0,
+    (r: number, c: number) => c % 3 === 0,
+    (r: number, c: number) => (r + c) % 3 === 0,
+    (r: number, c: number) => (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0,
+    (r: number, c: number) => ((r * c) % 2) + ((r * c) % 3) === 0,
+    (r: number, c: number) => (((r * c) % 2) + ((r * c) % 3)) % 2 === 0,
+    (r: number, c: number) => (((r + c) % 2) + ((r * c) % 3)) % 2 === 0,
+  ];
 
+  let bestMask = 0;
+  let bestPenalty = 1e9;
+
+  for (let maskIdx = 0; maskIdx < masks.length; maskIdx++) {
+    const maskFn = masks[maskIdx];
+    const testMat: boolean[][] = Array.from({ length: matrixSize }, (_, r) =>
+      Array.from({ length: matrixSize }, (_, c) => {
+        const val = matrix[r][c] === true;
+        if (!isReserved[r][c] && maskFn(r, c)) {
+          return !val;
+        }
+        return val;
+      })
+    );
+
+    let penalty = 0;
+
+    // Feature 1: Runs of same color in rows and cols
+    for (let r = 0; r < matrixSize; r++) {
+      let run = 0;
+      let prev: boolean | null = null;
+      for (let c = 0; c < matrixSize; c++) {
+        if (testMat[r][c] === prev) {
+          run++;
+        } else {
+          if (run >= 5) penalty += 3 + (run - 5);
+          run = 1;
+          prev = testMat[r][c];
+        }
+      }
+      if (run >= 5) penalty += 3 + (run - 5);
+    }
+
+    for (let c = 0; c < matrixSize; c++) {
+      let run = 0;
+      let prev: boolean | null = null;
+      for (let r = 0; r < matrixSize; r++) {
+        if (testMat[r][c] === prev) {
+          run++;
+        } else {
+          if (run >= 5) penalty += 3 + (run - 5);
+          run = 1;
+          prev = testMat[r][c];
+        }
+      }
+      if (run >= 5) penalty += 3 + (run - 5);
+    }
+
+    // Feature 2: 2x2 blocks of same color
+    for (let r = 0; r < matrixSize - 1; r++) {
+      for (let c = 0; c < matrixSize - 1; c++) {
+        const clr = testMat[r][c];
+        if (testMat[r + 1][c] === clr && testMat[r][c + 1] === clr && testMat[r + 1][c + 1] === clr) {
+          penalty += 3;
+        }
+      }
+    }
+
+    // Feature 4: Proportion of dark modules
+    let darkCnt = 0;
+    for (let r = 0; r < matrixSize; r++) {
+      for (let c = 0; c < matrixSize; c++) {
+        if (testMat[r][c]) darkCnt++;
+      }
+    }
+    const ratio = Math.floor((darkCnt * 100) / (matrixSize * matrixSize));
+    const prevMult = Math.floor(ratio / 5) * 5;
+    const nextMult = prevMult + 5;
+    penalty += Math.min(Math.floor(Math.abs(ratio - 50) / 5), Math.floor(Math.abs(nextMult - 50) / 5)) * 10;
+
+    if (penalty < bestPenalty) {
+      bestPenalty = penalty;
+      bestMask = maskIdx;
+    }
+  }
+
+  // Apply winning mask
+  const winningMaskFn = masks[bestMask];
   for (let r = 0; r < matrixSize; r++) {
     for (let c = 0; c < matrixSize; c++) {
-      const isTopLeftFinder = r <= 8 && c <= 8;
-      const isTopRightFinder = r <= 8 && c >= matrixSize - 8;
-      const isBottomLeftFinder = r >= matrixSize - 8 && c <= 8;
-      const isTiming = r === 6 || c === 6;
-      const isDarkModule = r === 4 * version + 9 && c === 8;
-
-      let isAlign = false;
-      for (const ar of coords) {
-        for (const ac of coords) {
-          if ((ar < 9 && ac < 9) || (ar < 9 && ac >= matrixSize - 9) || (ar >= matrixSize - 9 && ac < 9)) continue;
-          if (Math.abs(r - ar) <= 2 && Math.abs(c - ac) <= 2) {
-            isAlign = true;
-            break;
-          }
-        }
-        if (isAlign) break;
-      }
-
-      if (!isTopLeftFinder && !isTopRightFinder && !isBottomLeftFinder && !isTiming && !isDarkModule && !isAlign) {
-        if (maskFn(r, c)) {
+      if (!isReserved[r][c]) {
+        if (winningMaskFn(r, c)) {
           matrix[r][c] = !matrix[r][c];
         }
       }
     }
   }
 
-  const formatData = (0b00 << 3) | 0b000;
-  let rem = formatData << 10;
-  const genPoly = 0b10100110111;
-  for (let i = 14; i >= 10; i--) {
-    if ((rem >> i) & 1) {
-      rem ^= genPoly << (i - 10);
+  // Error correction level M is 0 (00 in binary)
+  const typeData = (0 << 3) | bestMask;
+  const bitsVal = getBchTypeInfo(typeData);
+
+  // Vertical placement of format bits
+  for (let i = 0; i < 15; i++) {
+    const mod = ((bitsVal >> i) & 1) === 1;
+    if (i < 6) {
+      matrix[i][8] = mod;
+    } else if (i < 8) {
+      matrix[i + 1][8] = mod;
+    } else {
+      matrix[matrixSize - 15 + i][8] = mod;
     }
   }
-  const formatWord = ((formatData << 10) | rem) ^ 0x5412;
 
-  const formatBits: boolean[] = [];
-  for (let i = 14; i >= 0; i--) {
-    formatBits.push(((formatWord >> i) & 1) === 1);
-  }
-
-  const tlCoords: [number, number][] = [
-    [8, 0], [8, 1], [8, 2], [8, 3], [8, 4], [8, 5],
-    [8, 7], [8, 8], [7, 8],
-    [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8]
-  ];
+  // Horizontal placement of format bits
   for (let i = 0; i < 15; i++) {
-    const [r, c] = tlCoords[i];
-    matrix[r][c] = formatBits[i];
-  }
-
-  for (let i = 0; i < 7; i++) {
-    matrix[matrixSize - 1 - i][8] = formatBits[i];
-  }
-  for (let i = 0; i < 8; i++) {
-    matrix[8][matrixSize - 8 + i] = formatBits[7 + i];
+    const mod = ((bitsVal >> i) & 1) === 1;
+    if (i < 8) {
+      matrix[8][matrixSize - i - 1] = mod;
+    } else if (i < 9) {
+      matrix[8][15 - i] = mod;
+    } else {
+      matrix[8][15 - i - 1] = mod;
+    }
   }
 
   return matrix.map((row) => row.map((cell) => cell === true));
@@ -353,6 +454,7 @@ const STOP_CODE = 106;
 
 /**
  * Encodes text into Code 128-B modules.
+ * Compliant with ISO/IEC 15417.
  */
 export function encodeCode128(text: string): string {
   const clean = text.trim();
@@ -385,13 +487,13 @@ export function encodeCode128(text: string): string {
     }
   }
 
-  // Final termination bar (2 modules)
-  moduleString += "11";
+  // The STOP pattern "2331112" (index 106) already includes the standard 2-module termination bar.
   return moduleString;
 }
 
 /**
  * Generates an inline SVG for Code 128 Barcode.
+ * Standard ISO/IEC 15417 quiet zone is 10X.
  */
 export function generateBarcodeSvg(
   text: string,
@@ -407,7 +509,7 @@ export function generateBarcodeSvg(
   const barWidth = options?.barWidth ?? 2;
   const showText = options?.showText ?? true;
   const color = options?.color ?? "#000000";
-  const quietZone = options?.quietZone ?? 6; // Standard quiet zone (margin) in modules
+  const quietZone = options?.quietZone ?? 10; // Standard quiet zone in modules (10X minimum)
 
   const modules = encodeCode128(text);
   if (!modules) return "";
@@ -426,22 +528,22 @@ export function generateBarcodeSvg(
       currentRun++;
     } else {
       if (currentRun > 0) {
-        rects += `<rect x="${startX}" y="0" width="${currentRun * barWidth}" height="${height}" fill="${color}" />`;
+        rects += `<rect x="${startX.toFixed(2)}" y="0" width="${(currentRun * barWidth).toFixed(2)}" height="${height}" fill="${color}" />`;
         currentRun = 0;
       }
     }
   }
   if (currentRun > 0) {
-    rects += `<rect x="${startX}" y="0" width="${currentRun * barWidth}" height="${height}" fill="${color}" />`;
+    rects += `<rect x="${startX.toFixed(2)}" y="0" width="${(currentRun * barWidth).toFixed(2)}" height="${height}" fill="${color}" />`;
   }
 
   let textElement = "";
   if (showText) {
-    textElement = `<text x="${totalWidth / 2}" y="${height + 13}" font-family="monospace" font-size="11" font-weight="bold" text-anchor="middle" fill="${color}">${text}</text>`;
+    textElement = `<text x="${(totalWidth / 2).toFixed(2)}" y="${height + 13}" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11" font-weight="600" text-anchor="middle" fill="${color}">${text}</text>`;
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${totalHeight}" width="${totalWidth}" height="${totalHeight}" preserveAspectRatio="xMidYMid meet">
-    <rect width="${totalWidth}" height="${totalHeight}" fill="#ffffff" />
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth.toFixed(2)} ${totalHeight}" width="${totalWidth.toFixed(2)}" height="${totalHeight}" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges">
+    <rect width="${totalWidth.toFixed(2)}" height="${totalHeight}" fill="#ffffff" />
     ${rects}
     ${textElement}
   </svg>`;
@@ -459,7 +561,7 @@ export function generateQrCodeSvg(
   if (!text) return "";
   const matrix = encodeQrMatrix(text);
   const matrixSize = matrix.length;
-  const quietZone = 2; // 2 modules quiet zone
+  const quietZone = 4; // ISO/IEC 18004 specifies minimum 4 modules quiet zone
   const totalDim = matrixSize + quietZone * 2;
   const cellSize = size / totalDim;
 
@@ -474,7 +576,7 @@ export function generateQrCodeSvg(
     }
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges">
     <rect width="${size}" height="${size}" fill="#ffffff" />
     ${cells}
   </svg>`;
