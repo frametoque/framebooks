@@ -62,13 +62,6 @@ export default function LandingClient({
         {/* HERO */}
         <section className="pt-24 sm:pt-28 md:pt-40 pb-14 sm:pb-20 md:pb-28 overflow-hidden px-4 sm:px-6">
           <div className="container mx-auto max-w-5xl text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full border border-gray-200 bg-white shadow-xs mb-5 sm:mb-6 text-xs sm:text-sm font-semibold text-gray-700"
-            >
-              <span>Built for Sri Lanka</span> <span>🇱🇰</span>
-            </motion.div>
             <motion.h1
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
