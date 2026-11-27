@@ -1011,7 +1011,7 @@ export async function enablePosAddonAction() {
       return { success: false, error: "POS add-on requires a Pro or Pro Plus plan." };
     }
 
-    await grantPosAddon(tenantId, { price: 3000, billingInterval: 'monthly' });
+    await grantPosAddon(tenantId, { billingInterval: 'monthly' });
     revalidatePath("/user/settings");
     revalidatePath("/pos");
     return { success: true };

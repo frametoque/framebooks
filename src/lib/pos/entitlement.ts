@@ -12,6 +12,58 @@ export interface PosAddonStatus {
   currentPlan: string;
 }
 
+export interface PosAddonPricing {
+  key: string;
+  name: string;
+  description: string;
+  priceMonthly: number;
+  priceYearly: number;
+  isActive: boolean;
+  compatiblePlans: string[];
+}
+
+/**
+ * Single source of truth for POS Add-on pricing.
+ * Reads dynamically from system_addons table with robust defaults.
+ */
+export async function getPosAddonPricing(): Promise<PosAddonPricing> {
+  try {
+    await ensurePosSchema();
+    const rows = await sql`
+      SELECT key, name, description, price_monthly, price_yearly, is_active, compatible_plans
+      FROM system_addons
+      WHERE key = 'pos'
+      LIMIT 1
+    `;
+    if (rows.length > 0) {
+      const row = rows[0];
+      const monthly = Number(row.price_monthly) || 3000;
+      const yearly = Number(row.price_yearly) || (monthly * 10);
+      return {
+        key: row.key || 'pos',
+        name: row.name || 'Point of Sale (POS)',
+        description: row.description || 'Complete Cloud Point of Sale add-on for retail counters, fast barcode scanning, receipt printing, and live stock tracking.',
+        priceMonthly: monthly,
+        priceYearly: yearly,
+        isActive: row.is_active !== false,
+        compatiblePlans: Array.isArray(row.compatible_plans) ? row.compatible_plans : ['pro', 'pro_plus'],
+      };
+    }
+  } catch (err) {
+    console.warn("[getPosAddonPricing] Notice:", err);
+  }
+
+  return {
+    key: 'pos',
+    name: 'Point of Sale (POS)',
+    description: 'Complete Cloud Point of Sale add-on for retail counters, fast barcode scanning, receipt printing, and live stock tracking.',
+    priceMonthly: 3000,
+    priceYearly: 30000,
+    isActive: true,
+    compatiblePlans: ['pro', 'pro_plus'],
+  };
+}
+
 /**
  * Checks whether a tenant is entitled to use the POS add-on.
  * Rule: POS is NOT included in Free, Pro, or Pro Plus. Only Pro and Pro Plus tenants can purchase it.
@@ -111,8 +163,10 @@ export async function grantPosAddon(
 ) {
   await ensurePosSchema();
   const tid = Number(tenantId);
-  const price = options?.price ?? 3000; // 3,000 LKR / mo
+  const pricing = await getPosAddonPricing();
   const billingInterval = options?.billingInterval ?? 'monthly';
+  const defaultPrice = billingInterval === 'yearly' ? pricing.priceYearly : pricing.priceMonthly;
+  const price = options?.price ?? defaultPrice;
   const expiresAt = options?.expiresAt ?? null;
 
   await sql`
@@ -155,15 +209,17 @@ export async function revokePosAddon(tenantId: number | string) {
 export async function requestPosAddon(tenantId: number | string) {
   await ensurePosSchema();
   const tid = Number(tenantId);
+  const pricing = await getPosAddonPricing();
 
   await sql`
     INSERT INTO tenant_addons (
       tenant_id, addon_key, status, purchased_at, price, billing_interval, updated_at
     ) VALUES (
-      ${tid}, 'pos', 'requested', NOW(), 3000, 'monthly', NOW()
+      ${tid}, 'pos', 'requested', NOW(), ${pricing.priceMonthly}, 'monthly', NOW()
     )
     ON CONFLICT (tenant_id, addon_key) DO UPDATE SET
       status = 'requested',
+      price = EXCLUDED.price,
       updated_at = NOW()
   `;
 

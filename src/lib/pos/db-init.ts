@@ -27,6 +27,36 @@ export async function ensurePosSchema() {
     `;
     await sql`CREATE INDEX IF NOT EXISTS idx_tenant_addons_lookup ON tenant_addons(tenant_id, addon_key, status);`;
 
+    // 1b. Global System Addons Definition & Pricing Table
+    await sql`
+      CREATE TABLE IF NOT EXISTS system_addons (
+        key VARCHAR(50) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        description TEXT,
+        price_monthly NUMERIC(12, 2) NOT NULL DEFAULT 3000,
+        price_yearly NUMERIC(12, 2) NOT NULL DEFAULT 30000,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        compatible_plans TEXT[] DEFAULT ARRAY['pro', 'pro_plus'],
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `;
+
+    // Seed default POS add-on if it doesn't exist
+    await sql`
+      INSERT INTO system_addons (key, name, description, price_monthly, price_yearly, is_active, compatible_plans)
+      VALUES (
+        'pos',
+        'Point of Sale (POS)',
+        'Complete Cloud Point of Sale add-on for retail counters, fast barcode scanning, receipt printing, and live stock tracking.',
+        3000,
+        30000,
+        TRUE,
+        ARRAY['pro', 'pro_plus']
+      )
+      ON CONFLICT (key) DO NOTHING;
+    `;
+
     // 2. Extend admin_inventory for retail & POS stock
     await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS sku VARCHAR(100);`;
     await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS barcode VARCHAR(100);`;
@@ -367,8 +397,8 @@ export async function seedFtDemoTenantStock(targetTenantId?: number) {
       // Auto-activate POS add-on for FT DEMO workspace
       await sql`
         INSERT INTO tenant_addons (tenant_id, addon_key, status, price, purchased_at)
-        VALUES (${tId}, 'pos', 'active', 3000, NOW())
-        ON CONFLICT (tenant_id, addon_key) DO UPDATE SET status = 'active', price = 3000
+        VALUES (${tId}, 'pos', 'active', (SELECT COALESCE(price_monthly, 3000) FROM system_addons WHERE key = 'pos' LIMIT 1), NOW())
+        ON CONFLICT (tenant_id, addon_key) DO UPDATE SET status = 'active'
       `.catch(() => {});
 
       // Ensure FT DEMO has workspace logo set

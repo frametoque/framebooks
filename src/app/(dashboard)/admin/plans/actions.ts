@@ -4,6 +4,8 @@
 import sql from "@/lib/db";
 import { requireAdmin, logAdminAction } from "@/app/(dashboard)/admin/_lib/auth";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { ensurePosSchema } from "@/lib/pos/db-init";
+import { getPosAddonPricing } from "@/lib/pos/entitlement";
 
 export async function getPlansWithStats() {
   await requireAdmin("view_plans");
@@ -342,6 +344,66 @@ export async function deletePlan(id: number) {
   });
 
   try { (revalidateTag as any)("plans-all"); } catch {}
+  revalidatePath("/admin/plans");
+  revalidatePath("/");
+  revalidatePath("/user/settings");
+  return { success: true };
+}
+
+export async function getPosAddonConfigAction() {
+  await requireAdmin("view_plans");
+  return await getPosAddonPricing();
+}
+
+export async function updatePosAddonPricingAction({
+  priceMonthly,
+  priceYearly,
+  isActive = true,
+}: {
+  priceMonthly: number;
+  priceYearly: number;
+  isActive?: boolean;
+}) {
+  const actor = await requireAdmin("edit_plans");
+
+  const numMonthly = Number(priceMonthly);
+  const numYearly = Number(priceYearly);
+
+  if (isNaN(numMonthly) || numMonthly < 0 || isNaN(numYearly) || numYearly < 0) {
+    throw new Error("POS Add-on prices cannot be negative or invalid");
+  }
+
+  await ensurePosSchema();
+
+  await sql`
+    INSERT INTO system_addons (
+      key, name, description, price_monthly, price_yearly, is_active, updated_at
+    ) VALUES (
+      'pos',
+      'Point of Sale (POS)',
+      'Complete Cloud Point of Sale add-on for retail counters, fast barcode scanning, receipt printing, and live stock tracking.',
+      ${numMonthly},
+      ${numYearly},
+      ${isActive},
+      NOW()
+    )
+    ON CONFLICT (key) DO UPDATE SET
+      price_monthly = EXCLUDED.price_monthly,
+      price_yearly = EXCLUDED.price_yearly,
+      is_active = EXCLUDED.is_active,
+      updated_at = NOW()
+  `;
+
+  await logAdminAction({
+    actor,
+    action: "UPDATE_POS_ADDON_PRICING",
+    targetType: "system_addon",
+    targetId: "pos",
+    after: { price_monthly: numMonthly, price_yearly: numYearly, is_active: isActive }
+  });
+
+  try { (revalidateTag as any)("plans-all"); } catch {}
+  try { (revalidateTag as any)("pos-addon-pricing"); } catch {}
   revalidatePath("/admin/plans");
   revalidatePath("/");
   revalidatePath("/user/settings");

@@ -14,9 +14,25 @@ import {
 import { kpis, features, modulesData, workflowSteps, securityFeatures, plans, comparison, faqs, posFeatures } from '@/data/landing/content';
 import PlanFinderWidget from '@/components/landing/PlanFinderWidget';
 
-export default function LandingClient({ initialPlans }: { initialPlans?: any[] }) {
+export default function LandingClient({ 
+  initialPlans,
+  initialPosPricing 
+}: { 
+  initialPlans?: any[];
+  initialPosPricing?: {
+    priceMonthly: number;
+    priceYearly: number;
+    isActive?: boolean;
+  };
+}) {
   const [yearly, setYearly] = useState(false);
   const [openFaqs, setOpenFaqs] = useState<number[]>([]);
+
+  const posPricing = initialPosPricing || {
+    priceMonthly: 3000,
+    priceYearly: 30000,
+    isActive: true,
+  };
 
   const toggleFaq = (index: number) => {
     setOpenFaqs((prev) =>
@@ -776,6 +792,56 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                 </div>
               ))}
             </div>
+
+            {/* POS Add-on to Pro / Pro Plus Pricing Banner */}
+            <div className="mt-8 sm:mt-10 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#00E35B]/10 via-white/[0.04] to-[#00E35B]/10 border border-[#00E35B]/30 p-6 sm:p-8 md:p-10 backdrop-blur-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 sm:gap-8 shadow-xl shadow-[#00E35B]/5">
+              <div className="space-y-3 max-w-2xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00E35B]/20 border border-[#00E35B]/40 text-[#00E35B] text-xs font-bold uppercase tracking-wider">
+                  <span className="w-2 h-2 rounded-full bg-[#00E35B] animate-pulse"></span>
+                  Optional Add-on Module
+                </div>
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">
+                  Available as an Add-on to <span className="text-[#00E35B]">Pro</span> or <span className="text-[#00E35B]">Pro Plus</span>
+                </h3>
+                <p className="text-gray-300 text-xs sm:text-sm leading-relaxed">
+                  Already running a checkout counter, retail store, or mobile sales team? Point of Sale can be purchased as an optional add-on to your Pro or Pro Plus plan with instant counter activation and live cloud sync.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="px-2.5 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-gray-300 text-xs font-medium">
+                    ✓ Compatible with Pro
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-gray-300 text-xs font-medium">
+                    ✓ Compatible with Pro Plus
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-gray-300 text-xs font-medium">
+                    ✓ Instant counter setup
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between w-full lg:w-auto gap-4 shrink-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-white/10">
+                <div className="text-left lg:text-right">
+                  <div className="text-xs uppercase font-bold text-gray-400 tracking-wider">POS Add-on Price</div>
+                  <div className="flex items-baseline gap-1.5 mt-0.5">
+                    <span className="text-2xl sm:text-3xl font-black text-[#00E35B]">
+                      LKR {posPricing.priceMonthly.toLocaleString()}
+                    </span>
+                    <span className="text-xs sm:text-sm text-gray-400 font-medium">/ month</span>
+                  </div>
+                  <div className="text-[11px] text-gray-400 mt-1">
+                    or LKR {posPricing.priceYearly.toLocaleString()} / year (2 months free)
+                  </div>
+                </div>
+
+                <Link
+                  href="#pricing"
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-[#00E35B] text-[#041418] font-black text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-[#00c750] transition-colors shadow-lg shadow-[#00E35B]/20 active:scale-[0.98]"
+                >
+                  <span>Choose Plan & Add POS</span>
+                  <MdCallMade className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -862,7 +928,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                   Adjust your total invoice volume, active clients, and feature needs to get an instant tailored recommendation.
                 </p>
               </div>
-              <PlanFinderWidget plans={displayPlans} isYearly={yearly} />
+              <PlanFinderWidget plans={displayPlans} isYearly={yearly} posPricing={posPricing} />
             </div>
 
             {/* Enterprise & Custom */}

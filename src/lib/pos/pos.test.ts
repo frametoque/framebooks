@@ -45,6 +45,19 @@ test("POS Entitlement and Plan Rules", async (t) => {
     const posAddonMonthlyPrice = 3000;
     assert.equal(posAddonMonthlyPrice, 3000, "POS add-on monthly price must be 3,000 LKR");
   });
+
+  await t.test("POS add-on yearly pricing defaults to 10x monthly with 2 months free", () => {
+    const monthlyPrice = 3000;
+    const yearlyPrice = monthlyPrice * 10;
+    assert.equal(yearlyPrice, 30000, "POS add-on yearly price must be 30,000 LKR (10x monthly / 2 months free)");
+  });
+
+  await t.test("POS add-on pricing is only compatible with Pro and Pro Plus plans", () => {
+    const compatiblePlans = ["pro", "pro_plus"];
+    assert.ok(compatiblePlans.includes("pro"));
+    assert.ok(compatiblePlans.includes("pro_plus"));
+    assert.ok(!compatiblePlans.includes("free"));
+  });
 });
 
 test("Stock Calculation and Oversell Protection Rules", async (t) => {

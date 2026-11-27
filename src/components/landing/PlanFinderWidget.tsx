@@ -16,9 +16,14 @@ export interface PlanFinderWidgetProps {
     features?: any[];
   }>;
   isYearly?: boolean;
+  posPricing?: {
+    priceMonthly: number;
+    priceYearly: number;
+    isActive?: boolean;
+  };
 }
 
-export default function PlanFinderWidget({ plans: propPlans, isYearly = false }: PlanFinderWidgetProps = {}) {
+export default function PlanFinderWidget({ plans: propPlans, isYearly = false, posPricing }: PlanFinderWidgetProps = {}) {
   const [plans, setPlans] = useState(propPlans || fallbackPlans);
   const [invoices, setInvoices] = useState(100);
   const [clients, setClients] = useState(50);
@@ -55,11 +60,13 @@ export default function PlanFinderWidget({ plans: propPlans, isYearly = false }:
       : matchedPlan?.monthlyPrice ??
         (recommendation.plan === 'Free' ? 0 : recommendation.plan === 'Pro' ? 2600 : 5200);
 
-  const posAddonPrice = needsPos ? (isYearly ? 30000 : 3000) : 0;
+  const posMonthlyPrice = posPricing?.priceMonthly ?? 3000;
+  const posYearlyPrice = posPricing?.priceYearly ?? (posMonthlyPrice * 10);
+  const posAddonPrice = needsPos ? (isYearly ? posYearlyPrice : posMonthlyPrice) : 0;
   const totalPriceNum = basePriceNum + posAddonPrice;
 
   const posFeature = needsPos
-    ? `Cloud POS Add-on (+${(isYearly ? 30000 : 3000).toLocaleString()} LKR/${isYearly ? 'yr' : 'mo'})`
+    ? `Cloud POS Add-on (+${(isYearly ? posYearlyPrice : posMonthlyPrice).toLocaleString()} LKR/${isYearly ? 'yr' : 'mo'})`
     : 'Cloud POS Add-on compatible';
 
   const planFeatures: Record<string, string[]> = {

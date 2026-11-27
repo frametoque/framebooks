@@ -15,13 +15,20 @@ import {
   Plus,
   Trash2,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  Store
 } from "lucide-react";
 import { formatLKR } from "@/components/Formatters";
 import { calculatePlanPricingBreakdown, addPackageGatewayFee } from "@/lib/payment-gateway/fee";
-import { updatePlan, createPlan, deletePlan, togglePlanActive } from "./actions";
+import { updatePlan, createPlan, deletePlan, togglePlanActive, updatePosAddonPricingAction } from "./actions";
 
-export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
+export function PlansClient({ 
+  initialPlans,
+  initialPosPricing
+}: { 
+  initialPlans: any[];
+  initialPosPricing?: any;
+}) {
   const router = useRouter();
   const [editingPlan, setEditingPlan] = useState<any | null>(null);
   const [editFormData, setEditFormData] = useState<any | null>(null);
@@ -30,6 +37,14 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
   const [submitting, setSubmitting] = useState(false);
   const [statusToast, setStatusToast] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  // POS Add-on Pricing State
+  const [posMonthly, setPosMonthly] = useState<number>(initialPosPricing?.priceMonthly ?? 3000);
+  const [posYearly, setPosYearly] = useState<number>(initialPosPricing?.priceYearly ?? 30000);
+  const [posActive, setPosActive] = useState<boolean>(initialPosPricing?.isActive ?? true);
+  const [savingPos, setSavingPos] = useState<boolean>(false);
+  const [posSaved, setPosSaved] = useState<boolean>(false);
+  const [posError, setPosError] = useState<string>("");
 
   const [newPlanData, setNewPlanData] = useState({
     name: "",
@@ -59,6 +74,31 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
   const showToast = (msg: string) => {
     setStatusToast(msg);
     setTimeout(() => setStatusToast(""), 3500);
+  };
+
+  const handleSetYearlyTenX = () => {
+    setPosYearly(posMonthly * 10);
+  };
+
+  const handleSavePosPricing = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingPos(true);
+    setPosError("");
+    try {
+      await updatePosAddonPricingAction({
+        priceMonthly: posMonthly,
+        priceYearly: posYearly,
+        isActive: posActive,
+      });
+      setPosSaved(true);
+      showToast("POS Add-on pricing updated successfully!");
+      router.refresh();
+      setTimeout(() => setPosSaved(false), 3000);
+    } catch (err: any) {
+      setPosError(err.message || "Failed to update POS pricing");
+    } finally {
+      setSavingPos(false);
+    }
   };
 
   const startEdit = (p: any) => {
@@ -222,6 +262,166 @@ export function PlansClient({ initialPlans }: { initialPlans: any[] }) {
           <Plus className="w-4 h-4" />
           <span>Add new plan</span>
         </button>
+      </div>
+
+      {/* POS Add-on Pricing Configuration */}
+      <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6 border-b border-border/70">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-500/20">
+              <Store className="w-3.5 h-3.5" />
+              <span>Point of Sale (POS) Add-on</span>
+            </div>
+            <h3 className="text-lg sm:text-xl font-bold text-foreground">POS Add-on Pricing Configuration</h3>
+            <p className="text-xs text-muted-foreground max-w-2xl">
+              Set the monthly and annual add-on price for Cloud POS. Changes save directly to the system and update across the landing page, plan finder widget, and workspace checkout. Available exclusively for Pro and Pro Plus plans.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={posActive}
+                onChange={(e) => setPosActive(e.target.checked)}
+                className="w-4 h-4 rounded text-brand-500 focus:ring-brand-500/30 accent-brand-500"
+              />
+              <span className={posActive ? "text-emerald-500 font-bold" : "text-muted-foreground"}>
+                {posActive ? "Add-on Active" : "Add-on Inactive"}
+              </span>
+            </label>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-[11px] font-medium text-muted-foreground border border-border">
+              <span>Compatible:</span>
+              <span className="font-bold text-foreground">Pro</span>
+              <span>&</span>
+              <span className="font-bold text-foreground">Pro Plus</span>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleSavePosPricing} className="mt-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {/* Monthly Price */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-foreground block">
+                Monthly Price (LKR)
+              </label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
+                  LKR
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="50"
+                  value={posMonthly}
+                  onChange={(e) => setPosMonthly(Number(e.target.value))}
+                  required
+                  className="w-full pl-13 pr-4 py-2.5 rounded-2xl border border-border bg-background text-foreground text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                  placeholder="3000"
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Monthly add-on billing rate for retail counter access.
+              </p>
+            </div>
+
+            {/* Yearly Price */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-bold text-foreground block">
+                  Yearly Price (LKR)
+                </label>
+                <button
+                  type="button"
+                  onClick={handleSetYearlyTenX}
+                  className="text-[10px] font-semibold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer"
+                  title="Sets yearly to 10x monthly (2 months free)"
+                >
+                  10x Monthly (2 mo free)
+                </button>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
+                  LKR
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={posYearly}
+                  onChange={(e) => setPosYearly(Number(e.target.value))}
+                  required
+                  className="w-full pl-13 pr-4 py-2.5 rounded-2xl border border-border bg-background text-foreground text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                  placeholder="30000"
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Annual upfront billing rate (~17% discount / 2 months free).
+              </p>
+            </div>
+
+            {/* Payments.lk Fee Breakdown Card */}
+            {(() => {
+              const breakdown = calculatePlanPricingBreakdown(posMonthly, posYearly);
+              return (
+                <div className="p-4 rounded-2xl bg-muted/40 border border-border/70 text-xs space-y-2 md:col-span-2 lg:col-span-1">
+                  <div className="flex items-center justify-between text-muted-foreground font-semibold">
+                    <span>Fee Breakdown</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 font-bold">
+                      Payments.lk {breakdown.feeRatePercent}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-muted-foreground">
+                    <span>Our Base Price:</span>
+                    <span className="font-semibold text-foreground">{formatLKR(posMonthly)} /mo</span>
+                  </div>
+                  <div className="flex justify-between items-center text-muted-foreground">
+                    <span>Payments.lk Fee:</span>
+                    <span className="font-mono text-amber-500 font-medium">+{formatLKR(breakdown.feeMonthly)}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-1.5 border-t border-border/40 font-bold">
+                    <span className="text-foreground">Client Covering Price:</span>
+                    <span className="text-brand-500 font-extrabold text-sm">{formatLKR(breakdown.coveringMonthly)} /mo</span>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {posError && (
+            <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-xs text-red-500 font-medium flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{posError}</span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            {posSaved && (
+              <span className="text-xs font-semibold text-emerald-500 flex items-center gap-1.5 animate-in fade-in">
+                <CheckCircle2 className="w-4 h-4" />
+                POS pricing updated everywhere!
+              </span>
+            )}
+            <button
+              type="submit"
+              disabled={savingPos}
+              className="px-6 py-2.5 rounded-full bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
+            >
+              {savingPos ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Save POS Pricing</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* Plans Grid Cards */}
