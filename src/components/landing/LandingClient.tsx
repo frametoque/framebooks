@@ -66,7 +66,7 @@ export default function LandingClient({
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.12] mb-4 sm:mb-6 text-[#082830]"
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.12] mb-4 sm:mb-6 text-[#082830]"
             >
               Run your whole business finances in one place<span className="text-[#00E35B]">.</span>
             </motion.h1>
@@ -82,18 +82,18 @@ export default function LandingClient({
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 mb-6 sm:mb-8 w-full max-w-sm sm:max-w-none mx-auto"
+              className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 mb-6 sm:mb-8 w-full max-w-xs sm:max-w-none mx-auto"
             >
               <Link
                 href="/login"
-                className="w-full sm:w-auto px-7 py-3.5 sm:py-4 bg-[#00E35B] hover:bg-[#00C750] text-[#041418] font-bold rounded-full transition-all hover:scale-105 active:scale-95 shadow-md shadow-[#00E35B]/25 text-base sm:text-lg text-center flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-4 bg-[#00E35B] hover:bg-[#00C750] text-[#041418] font-bold rounded-full transition-all hover:scale-105 active:scale-95 shadow-md shadow-[#00E35B]/25 text-sm sm:text-lg text-center flex items-center justify-center gap-2"
               >
                 <span>Start Free</span>
                 <MdArrowForward className="w-4 h-4" />
               </Link>
               <a
                 href="#features"
-                className="w-full sm:w-auto px-7 py-3.5 sm:py-4 bg-white hover:bg-gray-50 border border-gray-200 text-[#082830] font-bold rounded-full transition-colors active:scale-95 text-base sm:text-lg text-center"
+                className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-4 bg-white hover:bg-gray-50 border border-gray-200 text-[#082830] font-bold rounded-full transition-colors active:scale-95 text-sm sm:text-lg text-center"
               >
                 See how it works
               </a>
@@ -410,7 +410,7 @@ export default function LandingClient({
                 From sub-second counter checkout to deep financial intelligence. Eleven powerful modules, one seamless experience.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-8">
               {modulesData.map((mod) => {
                 let Icon = MdCheck;
                 if (mod.id === 'dashboard') Icon = MdTrendingUp;
@@ -425,19 +425,16 @@ export default function LandingClient({
                 if (mod.id === 'security') Icon = MdSecurity;
 
                 return (
-                  <div key={mod.id} className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-[#E5E7EB] shadow-xs hover:shadow-md transition-shadow group">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-[#F9FAFB] rounded-xl sm:rounded-2xl flex items-center justify-center mb-5 sm:mb-6 text-[#00C750] group-hover:scale-105 group-hover:bg-[#E6FDF0] transition-all">
-                      <Icon className="w-6 h-6 sm:w-7 sm:h-7" />
+                  <div key={mod.id} className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#E5E7EB] shadow-xs hover:shadow-md transition-shadow group flex flex-col justify-between">
+                    <div>
+                      <div className="w-10 h-10 sm:w-14 sm:h-14 bg-[#F9FAFB] rounded-xl sm:rounded-2xl flex items-center justify-center mb-3 sm:mb-6 text-[#00C750] group-hover:scale-105 group-hover:bg-[#E6FDF0] transition-all">
+                        <Icon className="w-5 h-5 sm:w-7 sm:h-7" />
+                      </div>
+                      <h3 className="text-base sm:text-2xl font-black mb-1.5 sm:mb-3">{mod.title}</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 leading-snug sm:leading-relaxed">
+                        {mod.description}
+                      </p>
                     </div>
-                    <h3 className="text-xl sm:text-2xl font-black mb-4 sm:mb-6">{mod.title}</h3>
-                    <ul className="space-y-3 sm:space-y-4">
-                      {mod.benefits.map((b, j) => (
-                        <li key={j} className="flex items-start gap-2.5 sm:gap-3 text-sm text-gray-600">
-                          <div className="mt-0.5 shrink-0 text-[#00E35B]"><MdCheck className="w-4 h-4" /></div>
-                          <span className="leading-relaxed">{b}</span>
-                        </li>
-                      ))}
-                    </ul>
                   </div>
                 );
               })}
@@ -561,14 +558,14 @@ export default function LandingClient({
             </div>
 
             {/* POS 6-Pillar Features Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
               {posFeatures.map((feat, idx) => (
                 <div
                   key={idx}
-                  className="p-6 sm:p-7 rounded-2xl sm:rounded-3xl bg-white/[0.04] border border-white/10 hover:border-[#00E35B]/40 hover:bg-white/[0.06] transition-all flex flex-col justify-between"
+                  className="p-3.5 sm:p-7 rounded-2xl sm:rounded-3xl bg-white/[0.04] border border-white/10 hover:border-[#00E35B]/40 hover:bg-white/[0.06] transition-all flex flex-col justify-between"
                 >
                   <div>
-                    <div className="w-12 h-12 rounded-2xl bg-[#00E35B]/10 border border-[#00E35B]/20 text-[#00E35B] flex items-center justify-center mb-5 text-2xl">
+                    <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#00E35B]/10 border border-[#00E35B]/20 text-[#00E35B] flex items-center justify-center mb-3 sm:mb-5 text-xl sm:text-2xl">
                       {feat.icon === 'MdFlashOn' && <MdFlashOn />}
                       {feat.icon === 'MdQrCodeScanner' && <MdQrCodeScanner />}
                       {feat.icon === 'MdInventory' && <MdInventory />}
@@ -577,8 +574,8 @@ export default function LandingClient({
                       {feat.icon === 'MdPhoneIphone' && <MdPhoneIphone />}
                       {feat.icon === 'MdLocalOffer' && <MdLocalOffer />}
                     </div>
-                    <h3 className="text-lg sm:text-xl font-bold text-white mb-2">{feat.title}</h3>
-                    <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">{feat.description}</p>
+                    <h3 className="text-sm sm:text-xl font-bold text-white mb-1.5 sm:mb-2">{feat.title}</h3>
+                    <p className="text-xs sm:text-sm text-gray-400 leading-snug sm:leading-relaxed">{feat.description}</p>
                   </div>
                 </div>
               ))}

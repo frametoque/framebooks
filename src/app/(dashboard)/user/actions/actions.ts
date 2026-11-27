@@ -153,11 +153,11 @@ async function _getDashboardData(tenantId: string, start: string, end: string) {
       SELECT 
         i.invoice_id as id, 
         COALESCE(c.full_name, ce.full_name, i.user_email, 'Client') as client, 
-        COALESCE(it.description, 'Project') as service,
+        COALESCE(NULLIF(i.project_name, ''), i.invoice_id, 'Invoice') as service,
         i.total as amount, 
         i.payment_status as status
       FROM (
-        SELECT invoice_id, client_id, user_email, total, payment_status, date, created_at, tenant_id
+        SELECT invoice_id, client_id, user_email, project_name, total, payment_status, date, created_at, tenant_id
         FROM invoices
         WHERE tenant_id = ${tenantId}
         ORDER BY date DESC, created_at DESC
@@ -165,9 +165,6 @@ async function _getDashboardData(tenantId: string, start: string, end: string) {
       ) i
       LEFT JOIN admin_clients c ON c.id = i.client_id AND c.tenant_id = ${tenantId}
       LEFT JOIN admin_clients ce ON i.client_id IS NULL AND i.user_email IS NOT NULL AND LOWER(ce.email) = LOWER(i.user_email) AND ce.tenant_id = ${tenantId}
-      LEFT JOIN LATERAL (
-        SELECT description FROM invoice_items WHERE invoice_id = i.invoice_id LIMIT 1
-      ) it ON true
     ),
     recent_quot AS (
       SELECT q.id, COALESCE(q.description, 'Untitled') as project, COALESCE(c.full_name, 'Unknown') as client, q.amount as amount, q.status
@@ -178,11 +175,87 @@ async function _getDashboardData(tenantId: string, start: string, end: string) {
       LIMIT 4
     ),
     recent_tx AS (
-      (SELECT id, 'income' as type, description as name, date, created_at, amount FROM admin_incomes WHERE tenant_id = ${tenantId} ORDER BY date DESC, created_at DESC LIMIT 5)
-      UNION ALL
-      (SELECT id, 'expense' as type, description as name, date, created_at, amount FROM admin_expenses WHERE tenant_id = ${tenantId} ORDER BY date DESC, created_at DESC LIMIT 5)
+      SELECT * FROM (
+        (
+          SELECT 
+            inc.id::text as id, 
+            'income' as type, 
+            inc.description as name, 
+            inc.date, 
+            inc.created_at, 
+            inc.amount,
+            false as is_pos,
+            null as pos_order_number,
+            null as pos_status,
+            false as is_negative
+          FROM admin_incomes inc
+          WHERE inc.tenant_id = ${tenantId}
+            AND inc.category != 'POS' 
+            AND inc.description NOT ILIKE 'POS Sale%'
+            AND NOT EXISTS (
+              SELECT 1 FROM pos_orders po 
+              WHERE po.tenant_id = ${tenantId} AND (po.invoice_id = inc.invoice_id OR inc.description = 'POS Sale #' || po.order_number)
+            )
+          ORDER BY inc.date DESC, inc.created_at DESC 
+          LIMIT 8
+        )
+        UNION ALL
+        (
+          SELECT 
+            exp.id::text as id, 
+            'expense' as type, 
+            exp.description as name, 
+            exp.date, 
+            exp.created_at, 
+            exp.amount,
+            false as is_pos,
+            null as pos_order_number,
+            null as pos_status,
+            true as is_negative
+          FROM admin_expenses exp
+          WHERE exp.tenant_id = ${tenantId}
+          ORDER BY exp.date DESC, exp.created_at DESC 
+          LIMIT 8
+        )
+        UNION ALL
+        (
+          SELECT 
+            ('pos-sale-' || po.id)::text as id,
+            'pos' as type,
+            'POS Sale #' || po.order_number || COALESCE(' (' || NULLIF(po.customer_name, '') || ')', '') as name,
+            po.created_at::date as date,
+            po.created_at,
+            po.total_amount as amount,
+            true as is_pos,
+            po.order_number as pos_order_number,
+            'completed' as pos_status,
+            false as is_negative
+          FROM pos_orders po
+          WHERE po.tenant_id = ${tenantId}
+          ORDER BY po.created_at DESC
+          LIMIT 8
+        )
+        UNION ALL
+        (
+          SELECT 
+            ('pos-reversal-' || po.id)::text as id,
+            po.status as type,
+            CASE WHEN po.status = 'refunded' THEN 'POS Refund #' ELSE 'POS Void #' END || po.order_number || COALESCE(' (' || NULLIF(po.customer_name, '') || ')', '') as name,
+            COALESCE(po.updated_at, po.created_at)::date as date,
+            COALESCE(po.updated_at, po.created_at) as created_at,
+            po.total_amount as amount,
+            true as is_pos,
+            po.order_number as pos_order_number,
+            po.status as pos_status,
+            true as is_negative
+          FROM pos_orders po
+          WHERE po.tenant_id = ${tenantId} AND po.status IN ('refunded', 'voided')
+          ORDER BY COALESCE(po.updated_at, po.created_at) DESC
+          LIMIT 8
+        )
+      ) all_tx
       ORDER BY date DESC, created_at DESC
-      LIMIT 5
+      LIMIT 6
     ),
     exp_cat AS (
       SELECT 
@@ -374,11 +447,15 @@ async function _getDashboardData(tenantId: string, start: string, end: string) {
   }));
 
   const recentTransactions = (result?.recent_transactions || []).map((row: any, index: number) => ({
-    id: index,
+    id: row.id || index,
     type: row.type,
     name: row.name,
-    date: new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    amount: parseFloat(row.amount || 0)
+    date: row.date ? new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
+    amount: parseFloat(row.amount || 0),
+    isPos: Boolean(row.is_pos),
+    posOrderNumber: row.pos_order_number || null,
+    posStatus: row.pos_status || null,
+    isNegative: Boolean(row.is_negative),
   }));
 
   const currentMonthStats = {

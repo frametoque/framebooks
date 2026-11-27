@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { ShieldCheck, X, Camera, Lock, CheckCircle, AlertCircle, Sparkles } from "lucide-react";
 import { PosPromotion, verifyManagerPosCodeAction } from "@/app/(dashboard)/pos/actions/promotions";
 import { CameraScannerModal } from "./CameraScannerModal";
+import { playManagerBellSound } from "./useHardwareBarcodeScanner";
 
 interface ManagerApprovalModalProps {
   isOpen: boolean;
@@ -33,6 +34,10 @@ export function ManagerApprovalModal({
 
   useEffect(() => {
     if (isOpen) {
+      // Ring service desk bell sound to alert managers on the floor
+      if (promotion?.requires_manager_approval || actionTitle) {
+        playManagerBellSound();
+      }
       setCode("");
       setErrorMsg(null);
       setSuccessMsg(null);

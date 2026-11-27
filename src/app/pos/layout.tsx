@@ -28,7 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 
   return {
-    title: bizName ? `POS Terminal | ${bizName}` : "POS Terminal",
+    title: bizName ? `POS Terminal - ${bizName}` : "POS Terminal",
     description: "Lightning-fast retail POS counter terminal with barcode scanning, automated stock tracking, and receipt printing.",
   };
 }

@@ -26,7 +26,7 @@ import {
   getOrCreateShiftAction 
 } from "@/app/(dashboard)/pos/actions/sales";
 import { PosPromotion, loadPosPromotionsAction } from "@/app/(dashboard)/pos/actions/promotions";
-import { useHardwareBarcodeScanner, playScanSound } from "./useHardwareBarcodeScanner";
+import { useHardwareBarcodeScanner, playScanSound, playManagerBellSound } from "./useHardwareBarcodeScanner";
 import { CameraScannerModal } from "./CameraScannerModal";
 import { ReceiptModal } from "./ReceiptModal";
 import { MdPointOfSale } from "react-icons/md";
@@ -71,7 +71,23 @@ export function PosTerminalClient({
 }: PosTerminalClientProps) {
   useEffect(() => {
     const biz = tenantName?.trim() || "My Business";
-    document.title = `POS Terminal | ${biz} | Framebooks`;
+    const expectedTitle = `POS Terminal - ${biz} | Framebooks`;
+    document.title = expectedTitle;
+
+    const titleEl = document.querySelector("title");
+    let observer: MutationObserver | null = null;
+    if (titleEl) {
+      observer = new MutationObserver(() => {
+        if (document.title !== expectedTitle) {
+          document.title = expectedTitle;
+        }
+      });
+      observer.observe(titleEl, { childList: true, characterData: true, subtree: true });
+    }
+
+    return () => {
+      if (observer) observer.disconnect();
+    };
   }, [tenantName]);
   // Products catalog state
   const [products, setProducts] = useState<StockItem[]>([]);
@@ -331,10 +347,10 @@ export function PosTerminalClient({
   // Add product to cart helper with stock sufficiency check
   const addToCart = useCallback(
     (product: StockItem, qtyToAdd: number = 1): boolean => {
-      // Must have an active register shift before adding products to order
+      // Must have an active register counter before adding products to order
       if (!activeShift) {
         playScanSound("error");
-        triggerToast("Please open a register shift before adding products to an order.", "error");
+        triggerToast("Please open a register counter before adding products to an order.", "error");
         setIsShiftModalOpen(true);
         return false;
       }
@@ -399,7 +415,7 @@ export function PosTerminalClient({
   const updateCartQty = (productId: number, delta: number) => {
     if (!activeShift) {
       playScanSound("error");
-      triggerToast("Please open a register shift before updating an order.", "error");
+      triggerToast("Please open a register counter before updating an order.", "error");
       setIsShiftModalOpen(true);
       return;
     }
@@ -582,6 +598,7 @@ export function PosTerminalClient({
     // Check if offer requires manager approval AND current user is a cashier (not manager/owner)
     const isManagerUser = !isCashierOnly && canManageStock;
     if (promo.requires_manager_approval && !isManagerUser) {
+      playManagerBellSound();
       setAuthorizingPromo(promo);
       return;
     }
@@ -611,6 +628,7 @@ export function PosTerminalClient({
         (p) => p.id !== promo.id && p.requires_manager_approval && !appliedPromotionIds.includes(p.id)
       );
       if (nextPending) {
+        playManagerBellSound();
         pendingCheckoutAfterPromoRef.current = true;
         setPendingCheckoutAfterPromo(true);
         setAuthorizingPromo(nextPending);
@@ -636,7 +654,7 @@ export function PosTerminalClient({
 
       if (!activeShift) {
         playScanSound("error");
-        triggerToast("Please open a register shift before scanning items.", "error");
+        triggerToast("Please open a register counter before scanning items.", "error");
         setIsShiftModalOpen(true);
         return;
       }
@@ -941,7 +959,7 @@ export function PosTerminalClient({
   const handleOpenPaymentModal = () => {
     if (!activeShift) {
       playScanSound("error");
-      triggerToast("Please open a register shift before checking out.", "error");
+      triggerToast("Please open a register counter before checking out.", "error");
       setIsShiftModalOpen(true);
       return;
     }
@@ -973,6 +991,7 @@ export function PosTerminalClient({
         (p) => p.requires_manager_approval && !appliedPromotionIds.includes(p.id)
       );
       if (pendingApprovalOffer) {
+        playManagerBellSound();
         pendingCheckoutAfterPromoRef.current = true;
         setPendingCheckoutAfterPromo(true);
         setAuthorizingPromo(pendingApprovalOffer);
@@ -989,8 +1008,8 @@ export function PosTerminalClient({
   const handleExecuteCheckout = async () => {
     if (!activeShift) {
       playScanSound("error");
-      setPaymentError("Cannot process checkout: No active register shift is open.");
-      triggerToast("Please open a register shift before processing payment.", "error");
+      setPaymentError("Cannot process checkout: No active register counter is open.");
+      triggerToast("Please open a register counter before processing payment.", "error");
       setIsShiftModalOpen(true);
       return;
     }
@@ -1366,7 +1385,7 @@ export function PosTerminalClient({
           if (searchTerm.trim().length > 0 && filteredProducts.length > 0) {
             if (!activeShift) {
               playScanSound("error");
-              triggerToast("Please open a register shift before adding products.", "error");
+              triggerToast("Please open a register counter before adding products.", "error");
               setIsShiftModalOpen(true);
               return;
             }
@@ -1617,8 +1636,8 @@ export function PosTerminalClient({
             }`}
           >
             <Clock className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">{activeShift ? `Shift #${activeShift.shift_number || activeShift.id} Active` : "Open Shift"}</span>
-            <span className="xs:hidden">{activeShift ? `#${activeShift.shift_number || activeShift.id}` : "Shift"}</span>
+            <span className="hidden xs:inline">{activeShift ? `${activeShift.counter_name || "Counter 1"} • Shift #${activeShift.shift_number || activeShift.id}` : "Open Shift"}</span>
+            <span className="xs:hidden">{activeShift ? `${activeShift.counter_name || "C1"} • S#${activeShift.shift_number || activeShift.id}` : "Shift"}</span>
           </button>
 
           {/* Live Date and Time Display (Plain Text) */}
@@ -1889,7 +1908,7 @@ export function PosTerminalClient({
                 onClick={() => {
                   if (!activeShift) {
                     playScanSound("error");
-                    triggerToast("Please open a register shift before scanning items.", "error");
+                    triggerToast("Please open a register counter before scanning items.", "error");
                     setIsShiftModalOpen(true);
                     return;
                   }
@@ -1916,7 +1935,7 @@ export function PosTerminalClient({
               >
                 <div className="flex items-center gap-2.5 text-xs font-semibold">
                   <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
-                  <span>Register shift is closed. You must open a shift to add products or process sales.</span>
+                  <span>Register shift is closed. Open a shift on a counter to start processing sales.</span>
                 </div>
                 <button
                   type="button"
@@ -1988,7 +2007,7 @@ export function PosTerminalClient({
                       onClick={() => {
                         if (!activeShift) {
                           playScanSound("error");
-                          triggerToast("Please open a register shift before adding products.", "error");
+                          triggerToast("Please open a register counter before adding products.", "error");
                           setIsShiftModalOpen(true);
                           return;
                         }
@@ -2293,7 +2312,7 @@ export function PosTerminalClient({
                 >
                   <Percent className="w-3 h-3" />
                   <span>
-                    Discounts & Offers {discountPercent > 0 ? `(${discountPercent}%)` : discountFixed > 0 ? `(Fixed)` : ""}
+                    Discount {discountPercent > 0 ? `(${discountPercent}%)` : discountFixed > 0 ? `(Fixed)` : ""}
                   </span>
                   <kbd className="text-[10px] bg-black/10 dark:bg-white/10 text-gray-400 px-1 py-0.2 rounded font-sans font-semibold">F4</kbd>
                 </button>
@@ -3004,7 +3023,7 @@ export function PosTerminalClient({
                 </div>
               )}
 
-              {/* Shift Details */}
+              {/* Counter Details */}
               <button
                 onClick={() => {
                   setIsMobileMenuOpen(false);
@@ -3017,7 +3036,7 @@ export function PosTerminalClient({
                     <Clock className="w-4 h-4" />
                   </div>
                   <div className="text-xs font-bold text-foreground group-hover:text-brand-500">
-                    {activeShift ? `Shift #${activeShift.shift_number || activeShift.id} Details` : "Open Register Shift"}
+                    {activeShift ? `${activeShift.counter_name || "Counter 1"} • Shift #${activeShift.shift_number || activeShift.id}` : "Open Shift on Counter"}
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" />

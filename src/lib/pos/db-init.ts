@@ -125,7 +125,22 @@ export async function ensurePosSchema() {
       );
     `;
 
-    // 5. POS Shifts (Cash Drawer)
+    // 4b. Cashier Counters (Physical or logical registers)
+    await sql`
+      CREATE TABLE IF NOT EXISTS pos_counters (
+        id SERIAL PRIMARY KEY,
+        tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        name VARCHAR(100) NOT NULL,
+        code VARCHAR(20),
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(tenant_id, name)
+      );
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_pos_counters_tenant ON pos_counters(tenant_id, is_active);`;
+
+    // 5. POS Shifts (Cash Drawer Sessions associated with Counters)
     await sql`
       CREATE TABLE IF NOT EXISTS pos_shifts (
         id SERIAL PRIMARY KEY,
@@ -133,6 +148,8 @@ export async function ensurePosSchema() {
         user_id INTEGER NOT NULL,
         user_name VARCHAR(150),
         shift_number INTEGER,
+        counter_id INTEGER,
+        counter_name VARCHAR(100),
         opened_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         closed_at TIMESTAMP WITH TIME ZONE,
         opening_cash NUMERIC(12, 2) DEFAULT 0,
@@ -144,8 +161,11 @@ export async function ensurePosSchema() {
       );
     `;
     await sql`ALTER TABLE pos_shifts ADD COLUMN IF NOT EXISTS shift_number INTEGER;`;
+    await sql`ALTER TABLE pos_shifts ADD COLUMN IF NOT EXISTS counter_id INTEGER;`;
+    await sql`ALTER TABLE pos_shifts ADD COLUMN IF NOT EXISTS counter_name VARCHAR(100);`;
     await sql`CREATE INDEX IF NOT EXISTS idx_pos_shifts_tenant_status ON pos_shifts(tenant_id, status);`;
     await sql`CREATE INDEX IF NOT EXISTS idx_pos_shifts_tenant_shift_num ON pos_shifts(tenant_id, shift_number);`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_pos_shifts_counter ON pos_shifts(tenant_id, counter_id, status);`;
 
     // Backfill sequential shift_number per tenant for any existing shifts
     await sql`
@@ -160,6 +180,23 @@ export async function ensurePosSchema() {
       WHERE p.id = numbered.id;
     `.catch(() => {});
 
+    // Ensure default Counter 1 exists for tenants and backfill legacy shifts
+    await sql`
+      INSERT INTO pos_counters (tenant_id, name, code, is_active)
+      SELECT DISTINCT t.id, 'Counter 1', 'C1', true
+      FROM tenants t
+      WHERE EXISTS (SELECT 1 FROM pos_shifts s WHERE s.tenant_id = t.id)
+         OR EXISTS (SELECT 1 FROM tenant_addons a WHERE a.tenant_id = t.id AND a.addon_key = 'pos' AND a.status = 'active')
+      ON CONFLICT (tenant_id, name) DO NOTHING;
+    `.catch(() => {});
+
+    await sql`
+      UPDATE pos_shifts s
+      SET counter_id = c.id, counter_name = c.name
+      FROM pos_counters c
+      WHERE s.tenant_id = c.tenant_id AND s.counter_id IS NULL AND c.name = 'Counter 1';
+    `.catch(() => {});
+
     // 6. POS Orders
     await sql`
       CREATE TABLE IF NOT EXISTS pos_orders (
@@ -168,6 +205,8 @@ export async function ensurePosSchema() {
         order_number VARCHAR(50) NOT NULL,
         invoice_id VARCHAR(50),
         shift_id INTEGER,
+        counter_id INTEGER,
+        counter_name VARCHAR(100),
         user_id INTEGER,
         user_name VARCHAR(150),
         customer_name VARCHAR(150) DEFAULT 'Walk-in Customer',
@@ -186,8 +225,11 @@ export async function ensurePosSchema() {
         UNIQUE(tenant_id, order_number)
       );
     `;
+    await sql`ALTER TABLE pos_orders ADD COLUMN IF NOT EXISTS counter_id INTEGER;`;
+    await sql`ALTER TABLE pos_orders ADD COLUMN IF NOT EXISTS counter_name VARCHAR(100);`;
     await sql`CREATE INDEX IF NOT EXISTS idx_pos_orders_tenant_number ON pos_orders(tenant_id, order_number);`;
     await sql`CREATE INDEX IF NOT EXISTS idx_pos_orders_tenant_date ON pos_orders(tenant_id, created_at DESC);`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_pos_orders_counter ON pos_orders(tenant_id, counter_id);`;
 
     // 7. POS Promotions & Special Offers (Brand discounts, bundle offers, cross-item offers, spend discounts)
     await sql`
@@ -235,6 +277,7 @@ export async function ensurePosSchema() {
     await sql`ALTER TABLE tenant_addons ENABLE ROW LEVEL SECURITY;`.catch(() => {});
     await sql`ALTER TABLE stock_movements ENABLE ROW LEVEL SECURITY;`.catch(() => {});
     await sql`ALTER TABLE pos_settings ENABLE ROW LEVEL SECURITY;`.catch(() => {});
+    await sql`ALTER TABLE pos_counters ENABLE ROW LEVEL SECURITY;`.catch(() => {});
     await sql`ALTER TABLE pos_shifts ENABLE ROW LEVEL SECURITY;`.catch(() => {});
     await sql`ALTER TABLE pos_orders ENABLE ROW LEVEL SECURITY;`.catch(() => {});
     await sql`ALTER TABLE pos_promotions ENABLE ROW LEVEL SECURITY;`.catch(() => {});

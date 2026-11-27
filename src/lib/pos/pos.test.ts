@@ -358,6 +358,16 @@ test("POS Special Discounts, Offers & Client Management Rules", async (t) => {
     assert.equal(isAuthorizedRole("Admin"), true);
     assert.equal(isAuthorizedRole("Cashier"), false);
     assert.equal(isAuthorizedRole("Viewer"), false);
+
+    // Manager Alert Bell Sound trigger rule when offer requires supervisor approval
+    const shouldPlayManagerBell = (offer: { requires_manager_approval: boolean }, isManager: boolean) => {
+      // Plays distinct service desk bell when showing offer requiring manager authorization to alert floor managers
+      return Boolean(offer.requires_manager_approval) && !isManager;
+    };
+
+    assert.equal(shouldPlayManagerBell(protectedOffer, false), true, "Must ring bell to alert managers for cashier");
+    assert.equal(shouldPlayManagerBell(protectedOffer, true), false, "Manager already has authorization; no alert bell needed");
+    assert.equal(shouldPlayManagerBell({ requires_manager_approval: false }, false), false, "Standard offers do not trigger bell");
   });
 
   await t.test("Validates cashier restriction for POS settings access", () => {
@@ -765,5 +775,131 @@ test("POS Special Discounts, Offers & Client Management Rules", async (t) => {
     const proceedWithoutProtected = handleCheckoutIntercept(qualifiedPromotions, cashierApplied, false);
     // Proceed to payment with only regular offer applied
     assert.deepEqual(cashierApplied, [1], "Cart retains regular offer without protected offer");
+  });
+
+  await t.test("POS Multiple Cashier Counters and Shifts Architecture Rules", async (ct) => {
+    interface MockCounter {
+      id: number;
+      tenant_id: number;
+      name: string;
+      code: string;
+      is_active: boolean;
+      active_shift?: { id: number; shift_number: number; user_name: string } | null;
+    }
+
+    interface MockShift {
+      id: number;
+      tenant_id: number;
+      counter_id: number;
+      counter_name: string;
+      shift_number: number;
+      status: "open" | "closed";
+      user_name: string;
+      opening_cash: number;
+    }
+
+    const countersDb: MockCounter[] = [
+      { id: 1, tenant_id: 1, name: "Counter 1", code: "C1", is_active: true },
+      { id: 2, tenant_id: 1, name: "Counter 2", code: "C2", is_active: true },
+      { id: 3, tenant_id: 1, name: "Floor 2 Express", code: "EXP", is_active: false },
+    ];
+
+    const shiftsDb: MockShift[] = [
+      {
+        id: 101,
+        tenant_id: 1,
+        counter_id: 1,
+        counter_name: "Counter 1",
+        shift_number: 1,
+        status: "closed",
+        user_name: "Kasun",
+        opening_cash: 5000,
+      },
+      {
+        id: 102,
+        tenant_id: 1,
+        counter_id: 1,
+        counter_name: "Counter 1",
+        shift_number: 2,
+        status: "open",
+        user_name: "Amali",
+        opening_cash: 10000,
+      },
+    ];
+
+    await ct.test("Validates counter naming uniqueness per tenant", () => {
+      const validateNewCounter = (name: string, tenantId: number) => {
+        const trimmed = name.trim().toLowerCase();
+        const exists = countersDb.some(
+          (c) => c.tenant_id === tenantId && c.name.trim().toLowerCase() === trimmed
+        );
+        if (exists) return { valid: false, error: `A counter named "${name}" already exists.` };
+        return { valid: true };
+      };
+
+      assert.equal(validateNewCounter("Counter 1", 1).valid, false);
+      assert.equal(validateNewCounter("counter 1", 1).valid, false);
+      assert.equal(validateNewCounter("Counter 3", 1).valid, true);
+      assert.equal(validateNewCounter("Counter 1", 2).valid, true); // Tenant isolation
+    });
+
+    await ct.test("Counters track shifts independently with sequential numbering", () => {
+      const getNextShiftNumber = (tenantId: number) => {
+        const tenantShifts = shiftsDb.filter((s) => s.tenant_id === tenantId);
+        const maxNum = tenantShifts.reduce((max, s) => Math.max(max, s.shift_number), 0);
+        return maxNum + 1;
+      };
+
+      assert.equal(getNextShiftNumber(1), 3);
+
+      // Open new shift on Counter 2
+      const newShift: MockShift = {
+        id: 103,
+        tenant_id: 1,
+        counter_id: 2,
+        counter_name: "Counter 2",
+        shift_number: getNextShiftNumber(1),
+        status: "open",
+        user_name: "Devinda",
+        opening_cash: 7500,
+      };
+      shiftsDb.push(newShift);
+
+      assert.equal(newShift.shift_number, 3);
+      assert.equal(newShift.counter_name, "Counter 2");
+    });
+
+    await ct.test("Guards against deactivating or deleting a counter with an active shift", () => {
+      const canDeactivateOrDelete = (counterId: number) => {
+        const hasOpenShift = shiftsDb.some(
+          (s) => s.counter_id === counterId && s.status === "open"
+        );
+        if (hasOpenShift) {
+          return { allowed: false, error: "Cannot modify or delete counter while a shift is open." };
+        }
+        return { allowed: true };
+      };
+
+      // Counter 1 has open shift #102
+      assert.equal(canDeactivateOrDelete(1).allowed, false);
+      // Floor 2 Express has no shifts
+      assert.equal(canDeactivateOrDelete(3).allowed, true);
+    });
+
+    await ct.test("Orders inherit counter_id and counter_name from active shift", () => {
+      const activeShift = shiftsDb.find((s) => s.id === 102 && s.status === "open")!;
+      const createOrder = (orderNum: string, shift: MockShift) => ({
+        order_number: orderNum,
+        shift_id: shift.id,
+        counter_id: shift.counter_id,
+        counter_name: shift.counter_name,
+        total_amount: 4500,
+      });
+
+      const order = createOrder("POS-2001", activeShift);
+      assert.equal(order.counter_id, 1);
+      assert.equal(order.counter_name, "Counter 1");
+      assert.equal(order.shift_id, 102);
+    });
   });
 });

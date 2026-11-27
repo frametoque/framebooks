@@ -10,11 +10,85 @@ interface HardwareBarcodeScannerOptions {
 }
 
 /**
- * Web Audio API synthesizer for instant POS hardware feedback without external audio files.
+ * Manager Alert Service Desk Bell Synthesizer.
+ * Synthesizes a realistic double-strike brass service/counter bell (Ding-Dong)
+ * to alert store managers across the floor when an offer or discount requires manager approval.
+ * Distinct from standard barcode scan beeps, error buzzes, or cash drawer clicks.
  */
-export function playScanSound(type: 'success' | 'error' | 'beep' | 'drawer') {
+export function playManagerBellSound() {
   if (typeof window === 'undefined') return;
   try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const t0 = ctx.currentTime;
+
+    const playBellChime = (startTime: number, freq: number, duration: number, volume: number) => {
+      // 1. Primary brass chime oscillator (pure sine)
+      const oscPrimary = ctx.createOscillator();
+      const gainPrimary = ctx.createGain();
+      oscPrimary.type = 'sine';
+      oscPrimary.frequency.setValueAtTime(freq, startTime);
+
+      gainPrimary.gain.setValueAtTime(0, startTime);
+      gainPrimary.gain.linearRampToValueAtTime(volume, startTime + 0.003);
+      gainPrimary.gain.exponentialRampToValueAtTime(0.0008, startTime + duration);
+
+      oscPrimary.connect(gainPrimary);
+      gainPrimary.connect(ctx.destination);
+      oscPrimary.start(startTime);
+      oscPrimary.stop(startTime + duration);
+
+      // 2. High metallic strike transient (hammer strike ping)
+      const oscTransient = ctx.createOscillator();
+      const gainTransient = ctx.createGain();
+      oscTransient.type = 'triangle';
+      oscTransient.frequency.setValueAtTime(freq * 1.5, startTime);
+
+      gainTransient.gain.setValueAtTime(volume * 0.45, startTime);
+      gainTransient.gain.exponentialRampToValueAtTime(0.001, startTime + 0.12);
+
+      oscTransient.connect(gainTransient);
+      gainTransient.connect(ctx.destination);
+      oscTransient.start(startTime);
+      oscTransient.stop(startTime + 0.12);
+
+      // 3. Shimmer overtone (lingering brass bell ring)
+      const oscShimmer = ctx.createOscillator();
+      const gainShimmer = ctx.createGain();
+      oscShimmer.type = 'sine';
+      oscShimmer.frequency.setValueAtTime(freq * 2.02, startTime);
+
+      gainShimmer.gain.setValueAtTime(volume * 0.3, startTime);
+      gainShimmer.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.7);
+
+      oscShimmer.connect(gainShimmer);
+      gainShimmer.connect(ctx.destination);
+      oscShimmer.start(startTime);
+      oscShimmer.stop(startTime + duration * 0.7);
+    };
+
+    // First strike: High C7 bell chime (2093 Hz)
+    playBellChime(t0, 2093, 0.95, 0.3);
+
+    // Second strike: Harmonious E7 brass bell chime (2637 Hz) at +160ms (Ding-Dong)
+    playBellChime(t0 + 0.16, 2637, 1.15, 0.35);
+  } catch {
+    // AudioContext blocked or user hasn't interacted with page yet
+  }
+}
+
+/**
+ * Web Audio API synthesizer for instant POS hardware feedback without external audio files.
+ */
+export function playScanSound(type: 'success' | 'error' | 'beep' | 'drawer' | 'bell') {
+  if (typeof window === 'undefined') return;
+  try {
+    if (type === 'bell') {
+      playManagerBellSound();
+      return;
+    }
+
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();

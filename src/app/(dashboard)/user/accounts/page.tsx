@@ -607,8 +607,20 @@ export default function AccountsPage() {
 
         {filteredAccounts.length === 0 && (
           <div className="col-span-full bg-card border border-border rounded-3xl p-12 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto mb-4">
-              <MdHandshake className="w-7 h-7" />
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 ${
+              activeFilter === "debt"
+                ? "bg-amber-100/70 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"
+                : activeFilter === "cash"
+                  ? "bg-blue-100/70 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400"
+                  : "bg-emerald-100/70 text-emerald-700 dark:bg-green-500/10 dark:text-green-400"
+            }`}>
+              {activeFilter === "debt" ? (
+                <MdHandshake className="w-7 h-7" />
+              ) : activeFilter === "cash" ? (
+                <MdAccountBalanceWallet className="w-7 h-7" />
+              ) : (
+                <MdAccountBalance className="w-7 h-7" />
+              )}
             </div>
             <h3 className="text-base font-semibold text-foreground mb-1">
               {activeFilter === "debt" ? "No Debt accounts yet" : "No accounts found"}

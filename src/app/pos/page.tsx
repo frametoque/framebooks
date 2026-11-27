@@ -48,7 +48,7 @@ export default async function PosPage() {
 
   // Check active shift for this user
   const shiftRows = await sql`
-    SELECT id, tenant_id, user_id, user_name, shift_number, opened_at, opening_cash, status, notes
+    SELECT id, tenant_id, user_id, user_name, shift_number, counter_id, counter_name, opened_at, opening_cash, status, notes
     FROM pos_shifts
     WHERE tenant_id = ${tenantId} AND user_id = ${user.id} AND status = 'open'
     ORDER BY id DESC LIMIT 1

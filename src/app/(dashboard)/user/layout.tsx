@@ -670,14 +670,39 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
 
   useEffect(() => {
     const pageTitle = dynamicTitle || getPageTitle(pathname);
-    const businessName = tenantInfo?.name?.trim();
-    if (pageTitle && businessName && businessName !== "Loading...") {
-      document.title = `${pageTitle} | ${businessName} | Framebooks`;
-    } else if (pageTitle) {
-      document.title = `${pageTitle} | Framebooks`;
-    } else {
-      document.title = "Framebooks";
+    const businessName = tenantInfo?.name?.trim() || (typeof window !== "undefined" ? localStorage.getItem("framebooks_business_name")?.trim() : "") || "";
+    
+    const applyTitle = () => {
+      const expectedTitle = businessName && businessName !== "Loading..." && businessName !== "My Business"
+        ? `${pageTitle} - ${businessName} | Framebooks`
+        : `${pageTitle} | Framebooks`;
+
+      if (document.title !== expectedTitle) {
+        document.title = expectedTitle;
+      }
+    };
+
+    applyTitle();
+
+    if (tenantInfo?.name && tenantInfo.name !== "Loading..." && tenantInfo.name !== "My Business") {
+      try {
+        localStorage.setItem("framebooks_business_name", tenantInfo.name.trim());
+      } catch {}
     }
+
+    // Guard against Next.js router resetting document.title on page switch
+    const titleEl = document.querySelector("title");
+    let observer: MutationObserver | null = null;
+    if (titleEl) {
+      observer = new MutationObserver(() => {
+        applyTitle();
+      });
+      observer.observe(titleEl, { childList: true, characterData: true, subtree: true });
+    }
+
+    return () => {
+      if (observer) observer.disconnect();
+    };
   }, [pathname, dynamicTitle, tenantInfo?.name]);
 
   useEffect(() => {
@@ -699,12 +724,16 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
 
   // Clock moved to AnimatedClock component
 
-  return (
-    <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl h-16 sm:h-20 flex-shrink-0 flex items-center">
-      <div className="w-full flex items-center justify-between px-3 sm:px-6 lg:px-8">
+  const hasActionButtons = hideSelector && Boolean(isInvoiceDetail || isAccounts || pathname === "/user/social-media/new" || isStock);
+  const hasSelectorControls = !hideSelector;
+  const hasMobileControls = hasActionButtons || hasSelectorControls;
 
-        {/* Left Side: Title & Date Selector */}
-        <div className="flex items-center gap-2 sm:gap-6 min-w-0">
+  return (
+    <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl flex-shrink-0 border-b border-border/30">
+      <div className="w-full flex items-center justify-between h-16 sm:h-20 px-3 sm:px-6 lg:px-8">
+
+        {/* Left Side: Title & Desktop Context Actions / Selectors */}
+        <div className="flex items-center gap-2 sm:gap-6 min-w-0 flex-1 sm:flex-none">
           <button
             onClick={() => setMobileMenuOpen(true)}
             className="lg:hidden p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-2xl text-foreground shrink-0 cursor-pointer"
@@ -717,172 +746,171 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
             {dynamicTitle || getPageTitle(pathname)}<span className="text-brand-500 ml-0.5">.</span>
           </h1>
 
-          {/* Top bar context action buttons */}
-          {hideSelector && (isInvoiceDetail || isAccounts || pathname === "/user/social-media/new" || isStock) && (
-            <>
-              <span className="hidden sm:block w-[1px] h-5 bg-border" />
+          {/* Desktop-only: Inline actions & selectors */}
+          <div className="hidden sm:flex items-center gap-3 lg:gap-4">
+            {hideSelector && (isInvoiceDetail || isAccounts || pathname === "/user/social-media/new" || isStock) && (
+              <>
+                <span className="w-[1px] h-5 bg-border" />
 
-              {pathname === "/user/social-media/new" && (
-                <div className="flex items-center gap-2 text-gray-400">
-                  <Link href="/user/social-media" prefetch={false} className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors flex items-center justify-center hover:text-foreground" title="Go Back">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>
-                  </Link>
-                  <span className="text-sm font-semibold tracking-tight text-gray-300">Create New Post</span>
-                </div>
-              )}
-              {isInvoiceDetail && (
-                <div className="flex items-center gap-2">
-                  <Link href="/user/invoices" prefetch={false} className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors flex items-center justify-center text-gray-400 hover:text-foreground mr-2" title="Back to Invoices">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>
-                  </Link>
-                  {tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
-                    <button
-                      type="button"
-                      onClick={() => window.dispatchEvent(new CustomEvent("invoice:create-income"))}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap"
-                    >
-                      <MdAttachMoney className="w-4 h-4" />
-                      <span>Create Income</span>
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => window.dispatchEvent(new CustomEvent("invoice:download-pdf"))}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:opacity-90 text-brand-900 rounded-3xl font-bold transition-opacity active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap"
-                  >
-                    <MdDownload className="w-4 h-4" />
-                    <span>Download PDF</span>
-                  </button>
-                  {tenantInfo?.plan === "Pro Plus" && (
-                    <button
-                      type="button"
-                      onClick={() => window.dispatchEvent(new CustomEvent("invoice:print"))}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-card hover:bg-black/5 dark:hover:bg-white/10 text-foreground border border-border rounded-3xl font-bold transition-colors active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap shadow-2xs"
-                      title="Direct Print Invoice"
-                    >
-                      <Printer className="w-4 h-4 text-brand-500" />
-                      <span>Print</span>
-                    </button>
-                  )}
-                  {tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
-                    <button
-                      type="button"
-                      onClick={() => window.dispatchEvent(new CustomEvent("invoice:cancel"))}
-                      className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-3xl font-bold transition-colors active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap shadow-2xs"
-                      title="Cancel & Revoke Invoice"
-                    >
-                      <MdCancel className="w-4 h-4" />
-                      <span>Cancel Invoice</span>
-                    </button>
-                  )}
-                </div>
-              )}
-              {isAccounts && tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => window.dispatchEvent(new CustomEvent("accounts:open-transfer"))}
-                    className="flex items-center gap-2 px-4 py-2 bg-card hover:bg-black/5 dark:hover:bg-white/10 text-foreground border border-border rounded-xl font-medium transition-colors cursor-pointer text-sm shadow-2xs"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    <span>Transfer Cash</span>
-                  </button>
-                  <button
-                    onClick={() => window.dispatchEvent(new CustomEvent("accounts:open-create"))}
-                    className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-xl font-bold transition-colors cursor-pointer text-sm"
-                  >
-                    <MdAdd className="w-4 h-4" />
-                    <span>Add Account</span>
-                  </button>
-                </div>
-              )}
-              {isStock && (
-                <div className="flex items-center gap-2">
-                  {tenantInfo?.has_woocommerce ? (
-                    <>
-                      <StockSyncButton />
-                      <div
-                        className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-purple-500/10 border border-purple-500/25 text-purple-400 rounded-full font-semibold text-xs whitespace-nowrap"
-                        title="Products and details are managed on WooCommerce"
-                      >
-                        <Plug className="w-3.5 h-3.5" />
-                        <span>Managed via WooCommerce</span>
-                      </div>
-                    </>
-                  ) : (
-                    tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
+                {pathname === "/user/social-media/new" && (
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <Link href="/user/social-media" prefetch={false} className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors flex items-center justify-center hover:text-foreground" title="Go Back">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>
+                    </Link>
+                    <span className="text-sm font-semibold tracking-tight text-gray-300">Create New Post</span>
+                  </div>
+                )}
+                {isInvoiceDetail && (
+                  <div className="flex items-center gap-2">
+                    <Link href="/user/invoices" prefetch={false} className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors flex items-center justify-center text-gray-400 hover:text-foreground mr-2" title="Back to Invoices">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>
+                    </Link>
+                    {tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
                       <button
                         type="button"
-                        onClick={() => window.dispatchEvent(new CustomEvent("stock:open-new"))}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap shadow-xs"
-                      >
-                        <MdAdd className="w-4 h-4" />
-                        <span>Add Product</span>
-                      </button>
-                    )
-                  )}
-                </div>
-              )}
-            </>
-          )}
-
-          {!hideSelector && (
-            <>
-              {/* Divider */}
-              <span className="hidden sm:block w-[1px] h-5 bg-border" />
-
-              {/* Range Selector */}
-              <div className="flex items-center">
-                {(isClients || isInventory) ? (
-                  <div className="flex items-center gap-3">
-                    <div className="relative w-32 sm:w-64">
-                      <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search..."
-                        value={headerSearchTerm}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setHeaderSearchTerm(val);
-                          window.dispatchEvent(new CustomEvent(isInventory ? "inventory:search" : "clients:search", { detail: val }));
-                        }}
-                        className="w-full bg-card border border-border rounded-full pl-10 pr-4 py-2 outline-none focus:border-brand-500 transition-colors text-sm text-foreground placeholder:text-gray-500 dark:placeholder:text-gray-400 shadow-2xs"
-                      />
-                    </div>
-                    {tenantInfo.userRole !== 'Viewer' && (
-                      <button
-                        onClick={() => window.dispatchEvent(new CustomEvent(isInventory ? "inventory:open-new" : "clients:open-new"))}
+                        onClick={() => window.dispatchEvent(new CustomEvent("invoice:create-income"))}
                         className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap"
                       >
-                        <MdAdd className="w-4 h-4" />
-                        {isInventory ? "Add Item" : "Add Client"}
+                        <MdAttachMoney className="w-4 h-4" />
+                        <span>Create Income</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => window.dispatchEvent(new CustomEvent("invoice:download-pdf"))}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:opacity-90 text-brand-900 rounded-3xl font-bold transition-opacity active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap"
+                    >
+                      <MdDownload className="w-4 h-4" />
+                      <span>Download PDF</span>
+                    </button>
+                    {tenantInfo?.plan === "Pro Plus" && (
+                      <button
+                        type="button"
+                        onClick={() => window.dispatchEvent(new CustomEvent("invoice:print"))}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-card hover:bg-black/5 dark:hover:bg-white/10 text-foreground border border-border rounded-3xl font-bold transition-colors active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap shadow-2xs"
+                        title="Direct Print Invoice"
+                      >
+                        <Printer className="w-4 h-4 text-brand-500" />
+                        <span>Print</span>
+                      </button>
+                    )}
+                    {tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
+                      <button
+                        type="button"
+                        onClick={() => window.dispatchEvent(new CustomEvent("invoice:cancel"))}
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-3xl font-bold transition-colors active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap shadow-2xs"
+                        title="Cancel & Revoke Invoice"
+                      >
+                        <MdCancel className="w-4 h-4" />
+                        <span>Cancel Invoice</span>
                       </button>
                     )}
                   </div>
-                ) : isReports && reportsActiveTab === "trial_balance" ? (
-                  <button
-                    type="button"
-                    onClick={() => window.dispatchEvent(new CustomEvent("reports:toggle-datepicker"))}
-                    className="bg-card border border-border hover:border-black/20 dark:border-white/20 active:bg-black/5 dark:active:bg-white/10 rounded-xl px-4 py-2 text-xs text-foreground flex items-center gap-2 transition-all cursor-pointer shadow-2xs select-none"
-                  >
-                    <MdCalendarToday className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                    <span className="font-semibold text-gray-500 dark:text-gray-400">As of:</span>
-                    <span className="font-bold">{reportsFormattedDate || "Select Date"}</span>
-                  </button>
-                ) : isTaxEstimator ? (
-                  <TaxTopBarControls />
-                ) : (
-                  <DateRangeSelector
-                    dateRange={dateRange}
-                    startDate={startDate}
-                    endDate={endDate}
-                    onRangeChange={setDateRange}
-                    onStartDateChange={setStartDate}
-                    onEndDateChange={setEndDate}
-                  />
                 )}
-              </div>
-            </>
-          )}
+                {isAccounts && tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => window.dispatchEvent(new CustomEvent("accounts:open-transfer"))}
+                      className="flex items-center gap-2 px-4 py-2 bg-card hover:bg-black/5 dark:hover:bg-white/10 text-foreground border border-border rounded-xl font-medium transition-colors cursor-pointer text-sm shadow-2xs"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Transfer Cash</span>
+                    </button>
+                    <button
+                      onClick={() => window.dispatchEvent(new CustomEvent("accounts:open-create"))}
+                      className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-xl font-bold transition-colors cursor-pointer text-sm"
+                    >
+                      <MdAdd className="w-4 h-4" />
+                      <span>Add Account</span>
+                    </button>
+                  </div>
+                )}
+                {isStock && (
+                  <div className="flex items-center gap-2">
+                    {tenantInfo?.has_woocommerce ? (
+                      <>
+                        <StockSyncButton />
+                        <div
+                          className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-purple-500/10 border border-purple-500/25 text-purple-400 rounded-full font-semibold text-xs whitespace-nowrap"
+                          title="Products and details are managed on WooCommerce"
+                        >
+                          <Plug className="w-3.5 h-3.5" />
+                          <span>Managed via WooCommerce</span>
+                        </div>
+                      </>
+                    ) : (
+                      tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
+                        <button
+                          type="button"
+                          onClick={() => window.dispatchEvent(new CustomEvent("stock:open-new"))}
+                          className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap shadow-xs"
+                        >
+                          <MdAdd className="w-4 h-4" />
+                          <span>Add Product</span>
+                        </button>
+                      )
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {!hideSelector && (
+              <>
+                <span className="w-[1px] h-5 bg-border" />
+                <div className="flex items-center">
+                  {(isClients || isInventory) ? (
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-32 sm:w-64">
+                        <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search..."
+                          value={headerSearchTerm}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setHeaderSearchTerm(val);
+                            window.dispatchEvent(new CustomEvent(isInventory ? "inventory:search" : "clients:search", { detail: val }));
+                          }}
+                          className="w-full bg-card border border-border rounded-full pl-10 pr-4 py-2 outline-none focus:border-brand-500 transition-colors text-sm text-foreground placeholder:text-gray-500 dark:placeholder:text-gray-400 shadow-2xs"
+                        />
+                      </div>
+                      {tenantInfo.userRole !== 'Viewer' && (
+                        <button
+                          onClick={() => window.dispatchEvent(new CustomEvent(isInventory ? "inventory:open-new" : "clients:open-new"))}
+                          className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap"
+                        >
+                          <MdAdd className="w-4 h-4" />
+                          {isInventory ? "Add Item" : "Add Client"}
+                        </button>
+                      )}
+                    </div>
+                  ) : isReports && reportsActiveTab === "trial_balance" ? (
+                    <button
+                      type="button"
+                      onClick={() => window.dispatchEvent(new CustomEvent("reports:toggle-datepicker"))}
+                      className="bg-card border border-border hover:border-black/20 dark:border-white/20 active:bg-black/5 dark:active:bg-white/10 rounded-xl px-4 py-2 text-xs text-foreground flex items-center gap-2 transition-all cursor-pointer shadow-2xs select-none"
+                    >
+                      <MdCalendarToday className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                      <span className="font-semibold text-gray-500 dark:text-gray-400">As of:</span>
+                      <span className="font-bold">{reportsFormattedDate || "Select Date"}</span>
+                    </button>
+                  ) : isTaxEstimator ? (
+                    <TaxTopBarControls />
+                  ) : (
+                    <DateRangeSelector
+                      dateRange={dateRange}
+                      startDate={startDate}
+                      endDate={endDate}
+                      onRangeChange={setDateRange}
+                      onStartDateChange={setStartDate}
+                      onEndDateChange={setEndDate}
+                    />
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Right Side: System Stats */}
@@ -932,6 +960,166 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
           <BusinessSwitcher tenantInfo={tenantInfo} />
         </div>
       </div>
+
+      {/* Mobile-only Sub-Header: Controls / Actions / Date Selector */}
+      {hasMobileControls && (
+        <div className="sm:hidden w-full px-3 pb-2.5 pt-1 border-t border-border/30 flex items-center gap-2 overflow-x-auto scrollbar-none bg-background/90">
+          {hasActionButtons && (
+            <>
+              {pathname === "/user/social-media/new" && (
+                <div className="flex items-center gap-2 text-gray-400">
+                  <Link href="/user/social-media" prefetch={false} className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors flex items-center justify-center hover:text-foreground" title="Go Back">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>
+                  </Link>
+                  <span className="text-xs font-semibold tracking-tight text-gray-300">Create New Post</span>
+                </div>
+              )}
+              {isInvoiceDetail && (
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none w-full py-0.5">
+                  <Link href="/user/invoices" prefetch={false} className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors flex items-center justify-center text-gray-400 hover:text-foreground shrink-0" title="Back to Invoices">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>
+                  </Link>
+                  {tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
+                    <button
+                      type="button"
+                      onClick={() => window.dispatchEvent(new CustomEvent("invoice:create-income"))}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors text-xs whitespace-nowrap shrink-0"
+                    >
+                      <MdAttachMoney className="w-3.5 h-3.5" />
+                      <span>Create Income</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent("invoice:download-pdf"))}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-brand-500 hover:opacity-90 text-brand-900 rounded-3xl font-bold transition-opacity text-xs whitespace-nowrap shrink-0"
+                  >
+                    <MdDownload className="w-3.5 h-3.5" />
+                    <span>Download PDF</span>
+                  </button>
+                  {tenantInfo?.plan === "Pro Plus" && (
+                    <button
+                      type="button"
+                      onClick={() => window.dispatchEvent(new CustomEvent("invoice:print"))}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-card hover:bg-black/5 dark:hover:bg-white/10 text-foreground border border-border rounded-3xl font-bold transition-colors text-xs whitespace-nowrap shrink-0"
+                      title="Direct Print Invoice"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-brand-500" />
+                      <span>Print</span>
+                    </button>
+                  )}
+                  {tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
+                    <button
+                      type="button"
+                      onClick={() => window.dispatchEvent(new CustomEvent("invoice:cancel"))}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-3xl font-bold transition-colors text-xs whitespace-nowrap shrink-0"
+                      title="Cancel & Revoke Invoice"
+                    >
+                      <MdCancel className="w-3.5 h-3.5" />
+                      <span>Cancel</span>
+                    </button>
+                  )}
+                </div>
+              )}
+              {isAccounts && tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
+                <div className="flex items-center gap-2 w-full">
+                  <button
+                    onClick={() => window.dispatchEvent(new CustomEvent("accounts:open-transfer"))}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-card hover:bg-black/5 dark:hover:bg-white/10 text-foreground border border-border rounded-xl font-medium transition-colors cursor-pointer text-xs shadow-2xs"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Transfer Cash</span>
+                  </button>
+                  <button
+                    onClick={() => window.dispatchEvent(new CustomEvent("accounts:open-create"))}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-xl font-bold transition-colors cursor-pointer text-xs"
+                  >
+                    <MdAdd className="w-4 h-4" />
+                    <span>Add Account</span>
+                  </button>
+                </div>
+              )}
+              {isStock && (
+                <div className="flex items-center gap-2 w-full">
+                  {tenantInfo?.has_woocommerce ? (
+                    <>
+                      <StockSyncButton />
+                      <div className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-500/10 border border-purple-500/25 text-purple-400 rounded-full font-semibold text-xs whitespace-nowrap">
+                        <Plug className="w-3 h-3" />
+                        <span>WooCommerce</span>
+                      </div>
+                    </>
+                  ) : (
+                    tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
+                      <button
+                        type="button"
+                        onClick={() => window.dispatchEvent(new CustomEvent("stock:open-new"))}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors text-xs whitespace-nowrap shadow-xs"
+                      >
+                        <MdAdd className="w-4 h-4" />
+                        <span>Add Product</span>
+                      </button>
+                    )
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {hasSelectorControls && (
+            <div className="flex items-center w-full">
+              {(isClients || isInventory) ? (
+                <div className="flex items-center gap-2 w-full">
+                  <div className="relative flex-1">
+                    <MdSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search..."
+                      value={headerSearchTerm}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setHeaderSearchTerm(val);
+                        window.dispatchEvent(new CustomEvent(isInventory ? "inventory:search" : "clients:search", { detail: val }));
+                      }}
+                      className="w-full bg-card border border-border rounded-full pl-9 pr-3 py-1.5 outline-none focus:border-brand-500 transition-colors text-xs text-foreground placeholder:text-gray-500 dark:placeholder:text-gray-400 shadow-2xs"
+                    />
+                  </div>
+                  {tenantInfo.userRole !== 'Viewer' && (
+                    <button
+                      onClick={() => window.dispatchEvent(new CustomEvent(isInventory ? "inventory:open-new" : "clients:open-new"))}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors text-xs whitespace-nowrap shrink-0"
+                    >
+                      <MdAdd className="w-3.5 h-3.5" />
+                      <span>{isInventory ? "Add Item" : "Add Client"}</span>
+                    </button>
+                  )}
+                </div>
+              ) : isReports && reportsActiveTab === "trial_balance" ? (
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent("reports:toggle-datepicker"))}
+                  className="bg-card border border-border hover:border-black/20 dark:border-white/20 active:bg-black/5 dark:active:bg-white/10 rounded-xl px-3 py-1.5 text-xs text-foreground flex items-center gap-2 transition-all cursor-pointer shadow-2xs select-none"
+                >
+                  <MdCalendarToday className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
+                  <span className="font-semibold text-gray-500 dark:text-gray-400">As of:</span>
+                  <span className="font-bold">{reportsFormattedDate || "Select Date"}</span>
+                </button>
+              ) : isTaxEstimator ? (
+                <TaxTopBarControls />
+              ) : (
+                <DateRangeSelector
+                  dateRange={dateRange}
+                  startDate={startDate}
+                  endDate={endDate}
+                  onRangeChange={setDateRange}
+                  onStartDateChange={setStartDate}
+                  onEndDateChange={setEndDate}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </header>
   );
 };

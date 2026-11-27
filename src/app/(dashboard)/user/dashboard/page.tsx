@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader } from "@/components/ui/Loader";
 import Link from "next/link";
 import { Receipt, Folder, CheckSquare, Droplets, ArrowRight } from "lucide-react";
-import { MdAccountBalance, MdAccountBalanceWallet, MdTrendingUp, MdErrorOutline, MdCallMade, MdCallReceived, MdInsertDriveFile, MdGroup, MdRemoveRedEye, MdCalendarToday, MdLocationOn, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdCheck } from "react-icons/md";
+import { MdAccountBalance, MdAccountBalanceWallet, MdTrendingUp, MdErrorOutline, MdCallMade, MdCallReceived, MdInsertDriveFile, MdGroup, MdRemoveRedEye, MdCalendarToday, MdLocationOn, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdCheck, MdPointOfSale } from "react-icons/md";
 import { motion, Variants } from "framer-motion";
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from "recharts";
 import { getDashboardData } from "../actions/actions";
@@ -549,83 +549,66 @@ export default function DashboardPage() {
         </motion.div>
       </div>
 
+      {/* Top Grid: Recent Transactions & Net Income Comparison */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <motion.div variants={itemVariants} className="bg-card border border-border rounded-3xl p-7 flex flex-col justify-between shadow-xs">
+        {/* Recent Transactions (Now Top, 2 columns) */}
+        <motion.div variants={itemVariants} className="lg:col-span-2 bg-card border border-border rounded-3xl p-6 sm:p-7 flex flex-col justify-between shadow-xs">
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-foreground">Recent Invoices</h2>
+              <h2 className="text-xl font-semibold text-foreground">Recent Transactions</h2>
             </div>
-            <div className="space-y-4">
-              {data.recentInvoices.map((invoice: any, i: number) => {
-                let statusColor = "text-gray-600 bg-gray-100 border-gray-200 dark:text-gray-400 dark:bg-gray-400/10 dark:border-gray-400/20";
-                const statusStr = invoice.status?.toLowerCase() || '';
-                if (statusStr === 'paid' || statusStr === 'fully paid') statusColor = "text-emerald-700 bg-emerald-100/70 border-emerald-200/60 dark:text-green-400 dark:bg-green-400/10 dark:border-green-400/20";
-                else if (statusStr === 'unpaid' || statusStr === 'pending') statusColor = "text-amber-800 bg-amber-100/70 border-amber-200/60 dark:text-amber-400 dark:bg-amber-400/10 dark:border-amber-400/20";
-                else if (statusStr === 'overdue') statusColor = "text-red-700 bg-red-100/70 border-red-200/60 dark:text-red-400 dark:bg-red-400/10 dark:border-red-400/20";
-                else if (statusStr.includes('advance')) statusColor = "text-blue-700 bg-blue-100/70 border-blue-200/60 dark:text-blue-400 dark:bg-blue-400/10 dark:border-blue-400/20";
-                return (
-                  <div key={i} className="flex items-center justify-between p-4 bg-black/[0.02] dark:bg-card border border-border rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <p className="font-semibold text-sm text-foreground">{invoice.service || 'Service'}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{invoice.client || 'Unknown'}</p>
-                      </div>
+            <div className="space-y-3">
+              {data.recentTransactions.map((tx: any) => (
+                <div key={tx.id} className="flex items-center justify-between p-4 bg-black/[0.02] dark:bg-card border border-border rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="text-foreground flex shrink-0">
+                      {tx.isPos || tx.type === 'pos' ? (
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
+                          tx.isNegative 
+                            ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' 
+                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                        }`}>
+                          <MdPointOfSale className="w-4 h-4" />
+                        </div>
+                      ) : tx.type === 'income' ? (
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-green-400 border border-emerald-500/20 flex items-center justify-center">
+                          <MdCallReceived className="w-4 h-4" />
+                        </div>
+                      ) : (
+                        <div className="w-9 h-9 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 flex items-center justify-center">
+                          <MdCallMade className="w-4 h-4" />
+                        </div>
+                      )}
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-sm text-foreground">{formatLKR(invoice.amount)}</p>
-                      <span className={`inline-block mt-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${statusColor}`}>
-                        {invoice.status}
-                      </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-sm text-foreground truncate">{tx.name}</p>
+                        {(tx.isPos || tx.type === 'pos') && (
+                          <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 shrink-0">
+                            POS
+                          </span>
+                        )}
+                        {tx.posStatus && tx.posStatus !== 'completed' && (
+                          <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
+                            tx.isNegative || tx.posStatus === 'refunded' || tx.posStatus === 'voided'
+                              ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+                              : 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20'
+                          }`}>
+                            {tx.posStatus}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{tx.date}</p>
                     </div>
                   </div>
-                );
-              })}
-              {data.recentInvoices.length === 0 && <p className="text-gray-500 text-sm">No recent invoices.</p>}
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div variants={itemVariants} className="bg-card border border-border rounded-3xl p-7 flex flex-col justify-between shadow-xs">
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-foreground">Recent Quotations</h2>
-            </div>
-            <div className="space-y-4">
-              {data.recentQuotations && data.recentQuotations.map((quotation: any, i: number) => {
-                let statusColor = "text-gray-600 bg-gray-100 border-gray-200 dark:text-gray-400 dark:bg-gray-400/10 dark:border-gray-400/20";
-                const statusStr = quotation.status?.toLowerCase() || '';
-                if (statusStr === 'accepted' || statusStr === 'approved') {
-                  statusColor = "text-emerald-700 bg-emerald-100/70 border-emerald-200/60 dark:text-green-400 dark:bg-green-400/10 dark:border-green-400/20";
-                } else if (statusStr === 'pending' || statusStr === 'sent') {
-                  statusColor = "text-amber-800 bg-amber-100/70 border-amber-200/60 dark:text-amber-400 dark:bg-amber-400/10 dark:border-amber-400/20";
-                } else if (statusStr === 'rejected' || statusStr === 'declined') {
-                  statusColor = "text-red-700 bg-red-100/70 border-red-200/60 dark:text-red-400 dark:bg-red-400/10 dark:border-red-400/20";
-                } else if (statusStr === 'expired') {
-                  statusColor = "text-gray-600 bg-gray-100 border-gray-200 dark:text-gray-400 dark:bg-gray-400/10 dark:border-gray-400/20";
-                }
-
-                return (
-                  <div key={i} className="flex items-center justify-between p-4 bg-black/[0.02] dark:bg-card border border-border rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                  <div className="flex items-center gap-3">
-                      <div>
-                        <p className="font-semibold text-sm text-foreground">
-                          {quotation.project && quotation.project.length > 26 
-                            ? quotation.project.substring(0, 26) + '...' 
-                            : quotation.project || 'Untitled'}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{quotation.client || 'Unknown'}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-sm text-foreground">{formatLKR(quotation.amount)}</p>
-                      <span className={`inline-block mt-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${statusColor}`}>
-                        {quotation.status}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-              {!data.recentQuotations || data.recentQuotations.length === 0 && <p className="text-gray-500 text-sm">No recent quotations.</p>}
+                  <p className={`font-semibold text-sm shrink-0 ml-3 ${
+                    tx.isNegative || tx.type === 'expense' ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-green-400'
+                  }`}>
+                    {tx.isNegative || tx.type === 'expense' ? '-' : '+'}{formatLKR(tx.amount)}
+                  </p>
+                </div>
+              ))}
+              {data.recentTransactions.length === 0 && <p className="text-gray-500 text-sm">No recent transactions.</p>}
             </div>
           </div>
         </motion.div>
@@ -678,33 +661,106 @@ export default function DashboardPage() {
         </motion.div>
       </div>
 
-      {/* Bottom Grid: Recent Transactions & Expense Breakdown */}
+      {/* Bottom Grid: Recent Invoices, Recent Quotations & Top Clients */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        {/* Recent Transactions */}
-        <motion.div variants={itemVariants} className="lg:col-span-2 bg-card border border-border rounded-3xl p-6 shadow-xs">
-          <h2 className="text-xl font-semibold mb-6 text-foreground">Recent Transactions</h2>
-          <div className="space-y-3">
-            {data.recentTransactions.map((tx: any) => (
-              <div key={tx.id} className="flex items-center justify-between p-4 bg-black/[0.02] dark:bg-card border border-border rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="text-foreground flex shrink-0">
-                    {tx.type === 'income' ? (
-                      <MdCallReceived className="w-5 h-5 text-emerald-600 dark:text-green-400" />
-                    ) : (
-                      <MdCallMade className="w-5 h-5 text-red-600 dark:text-red-400" />
-                    )}
+        {/* Recent Invoices (Now Bottom) */}
+        <motion.div variants={itemVariants} className="bg-card border border-border rounded-3xl p-7 flex flex-col justify-between shadow-xs">
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-foreground">Recent Invoices</h2>
+            </div>
+            <div className="space-y-4">
+              {data.recentInvoices.map((invoice: any, i: number) => {
+                let statusColor = "text-gray-600 bg-gray-100 border-gray-200 dark:text-gray-400 dark:bg-gray-400/10 dark:border-gray-400/20";
+                const statusStr = invoice.status?.toLowerCase() || '';
+                if (statusStr === 'paid' || statusStr === 'fully paid') {
+                  statusColor = "text-emerald-700 bg-emerald-100/70 border-emerald-200/60 dark:text-green-400 dark:bg-green-400/10 dark:border-green-400/20";
+                } else if (statusStr === 'unpaid' || statusStr === 'pending') {
+                  statusColor = "text-amber-800 bg-amber-100/70 border-amber-200/60 dark:text-amber-400 dark:bg-amber-400/10 dark:border-amber-400/20";
+                } else if (statusStr === 'overdue') {
+                  statusColor = "text-red-700 bg-red-100/70 border-red-200/60 dark:text-red-400 dark:bg-red-400/10 dark:border-red-400/20";
+                } else if (statusStr.includes('advance')) {
+                  statusColor = "text-blue-700 bg-blue-100/70 border-blue-200/60 dark:text-blue-400 dark:bg-blue-400/10 dark:border-blue-400/20";
+                } else if (statusStr === 'refunded') {
+                  statusColor = "text-purple-700 bg-purple-100/70 border-purple-200/60 dark:text-purple-400 dark:bg-purple-400/10 dark:border-purple-400/20";
+                } else if (statusStr === 'cancelled' || statusStr === 'canceled' || statusStr === 'voided') {
+                  statusColor = "text-rose-700 bg-rose-100/70 border-rose-200/60 dark:text-rose-400 dark:bg-rose-400/10 dark:border-rose-400/20";
+                }
+
+                return (
+                  <Link
+                    key={i}
+                    href={`/user/invoice/${invoice.id}`}
+                    prefetch={false}
+                    className="flex items-center justify-between p-4 bg-black/[0.02] dark:bg-card border border-border rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors block"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-xs text-emerald-700 dark:text-brand-400 shrink-0">#{invoice.id}</span>
+                          <span className="text-gray-300 dark:text-gray-600 shrink-0">•</span>
+                          <p className="font-semibold text-sm text-foreground truncate">{invoice.service || 'Invoice'}</p>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{invoice.client || 'Unknown'}</p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 ml-3">
+                      <p className="font-semibold text-sm text-foreground">{formatLKR(invoice.amount)}</p>
+                      <span className={`inline-block mt-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${statusColor}`}>
+                        {invoice.status}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+              {data.recentInvoices.length === 0 && <p className="text-gray-500 text-sm">No recent invoices.</p>}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Recent Quotations (Now Bottom) */}
+        <motion.div variants={itemVariants} className="bg-card border border-border rounded-3xl p-7 flex flex-col justify-between shadow-xs">
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-foreground">Recent Quotations</h2>
+            </div>
+            <div className="space-y-4">
+              {data.recentQuotations && data.recentQuotations.map((quotation: any, i: number) => {
+                let statusColor = "text-gray-600 bg-gray-100 border-gray-200 dark:text-gray-400 dark:bg-gray-400/10 dark:border-gray-400/20";
+                const statusStr = quotation.status?.toLowerCase() || '';
+                if (statusStr === 'accepted' || statusStr === 'approved') {
+                  statusColor = "text-emerald-700 bg-emerald-100/70 border-emerald-200/60 dark:text-green-400 dark:bg-green-400/10 dark:border-green-400/20";
+                } else if (statusStr === 'pending' || statusStr === 'sent') {
+                  statusColor = "text-amber-800 bg-amber-100/70 border-amber-200/60 dark:text-amber-400 dark:bg-amber-400/10 dark:border-amber-400/20";
+                } else if (statusStr === 'rejected' || statusStr === 'declined') {
+                  statusColor = "text-red-700 bg-red-100/70 border-red-200/60 dark:text-red-400 dark:bg-red-400/10 dark:border-red-400/20";
+                } else if (statusStr === 'expired') {
+                  statusColor = "text-gray-600 bg-gray-100 border-gray-200 dark:text-gray-400 dark:bg-gray-400/10 dark:border-gray-400/20";
+                }
+
+                return (
+                  <div key={i} className="flex items-center justify-between p-4 bg-black/[0.02] dark:bg-card border border-border rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <p className="font-semibold text-sm text-foreground">
+                          {quotation.project && quotation.project.length > 26 
+                            ? quotation.project.substring(0, 26) + '...' 
+                            : quotation.project || 'Untitled'}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{quotation.client || 'Unknown'}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-sm text-foreground">{formatLKR(quotation.amount)}</p>
+                      <span className={`inline-block mt-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${statusColor}`}>
+                        {quotation.status}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-foreground">{tx.name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{tx.date}</p>
-                  </div>
-                </div>
-                <p className={`font-semibold ${tx.type === 'income' ? 'text-emerald-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {tx.type === 'income' ? '+' : '-'}{formatLKR(tx.amount)}
-                </p>
-              </div>
-            ))}
-            {data.recentTransactions.length === 0 && <p className="text-gray-500 text-sm">No recent transactions.</p>}
+                );
+              })}
+              {!data.recentQuotations || data.recentQuotations.length === 0 && <p className="text-gray-500 text-sm">No recent quotations.</p>}
+            </div>
           </div>
         </motion.div>
 

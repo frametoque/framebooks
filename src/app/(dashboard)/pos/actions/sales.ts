@@ -75,9 +75,9 @@ async function generateInvoiceId(tenantId: number): Promise<string> {
 }
 
 /**
- * Open or retrieve active shift for current cashier/user.
+ * Open or retrieve active shift for current cashier/user on a specific counter.
  */
-export async function getOrCreateShiftAction(openingCash: number = 0, notes?: string) {
+export async function getOrCreateShiftAction(openingCash: number = 0, notes?: string, counterId?: number) {
   const perm = await requirePosPermission('pos.use');
   if (perm.error || !perm.context) {
     return { success: false, error: perm.error, shift: null };
@@ -87,11 +87,49 @@ export async function getOrCreateShiftAction(openingCash: number = 0, notes?: st
   const userId = Number(perm.context.userId);
 
   try {
-    // Check for open shift
+    // Resolve counter
+    let resolvedCounterId: number | null = counterId ? Number(counterId) : null;
+    let resolvedCounterName: string = "Counter 1";
+
+    if (counterId) {
+      const cRows = await sql`
+        SELECT id, name FROM pos_counters 
+        WHERE id = ${counterId} AND tenant_id = ${tenantId}
+        LIMIT 1
+      `;
+      if (cRows.length > 0) {
+        resolvedCounterId = Number(cRows[0].id);
+        resolvedCounterName = cRows[0].name;
+      }
+    } else {
+      // Find first active counter or default Counter 1
+      const defaultCRows = await sql`
+        SELECT id, name FROM pos_counters 
+        WHERE tenant_id = ${tenantId} AND is_active = true
+        ORDER BY id ASC LIMIT 1
+      `;
+      if (defaultCRows.length > 0) {
+        resolvedCounterId = Number(defaultCRows[0].id);
+        resolvedCounterName = defaultCRows[0].name;
+      } else {
+        const created = await sql`
+          INSERT INTO pos_counters (tenant_id, name, code, is_active)
+          VALUES (${tenantId}, 'Counter 1', 'C1', true)
+          ON CONFLICT (tenant_id, name) DO UPDATE SET is_active = true
+          RETURNING id, name
+        `;
+        resolvedCounterId = Number(created[0].id);
+        resolvedCounterName = created[0].name;
+      }
+    }
+
+    // Check for open shift on this specific counter (or user)
     const openShifts = await sql`
-      SELECT id, tenant_id, user_id, user_name, shift_number, opened_at, opening_cash, status, notes
+      SELECT id, tenant_id, user_id, user_name, shift_number, counter_id, counter_name, opened_at, opening_cash, status, notes
       FROM pos_shifts
-      WHERE tenant_id = ${tenantId} AND user_id = ${userId} AND status = 'open'
+      WHERE tenant_id = ${tenantId} 
+        AND status = 'open'
+        AND (${resolvedCounterId ? sql`counter_id = ${resolvedCounterId}` : sql`user_id = ${userId}`})
       ORDER BY id DESC LIMIT 1
     `;
 
@@ -114,14 +152,14 @@ export async function getOrCreateShiftAction(openingCash: number = 0, notes?: st
     // Create new shift
     const newShift = await sql`
       INSERT INTO pos_shifts (
-        tenant_id, user_id, user_name, shift_number, opened_at, opening_cash, status, notes
+        tenant_id, user_id, user_name, shift_number, counter_id, counter_name, opened_at, opening_cash, status, notes
       ) VALUES (
-        ${tenantId}, ${userId}, ${userName}, ${shiftNumber}, NOW(), ${openingCash}, 'open', ${notes || null}
+        ${tenantId}, ${userId}, ${userName}, ${shiftNumber}, ${resolvedCounterId}, ${resolvedCounterName}, NOW(), ${openingCash}, 'open', ${notes || null}
       )
-      RETURNING id, tenant_id, user_id, user_name, shift_number, opened_at, opening_cash, status, notes
+      RETURNING id, tenant_id, user_id, user_name, shift_number, counter_id, counter_name, opened_at, opening_cash, status, notes
     `;
 
-    await logSystemAction(`Cashier ${userName} opened POS shift #${shiftNumber} with cash ${openingCash}`);
+    await logSystemAction(`Cashier ${userName} opened POS Shift #${shiftNumber} on ${resolvedCounterName} with cash ${openingCash}`);
     return { success: true, shift: newShift[0] };
   } catch (err: any) {
     return { success: false, error: err.message, shift: null };
@@ -282,6 +320,19 @@ export async function checkoutPosOrderAction(payload: CheckoutPayload, shiftId?:
       if (accRows.length > 0) accountId = accRows[0].id;
     }
 
+    // Resolve Counter details from shift if shiftId is provided
+    let counterId: number | null = null;
+    let counterName: string | null = null;
+    if (shiftId) {
+      const shiftRows = await sql`
+        SELECT counter_id, counter_name FROM pos_shifts WHERE id = ${shiftId} LIMIT 1
+      `;
+      if (shiftRows.length > 0) {
+        counterId = shiftRows[0].counter_id ? Number(shiftRows[0].counter_id) : null;
+        counterName = shiftRows[0].counter_name || null;
+      }
+    }
+
     // 5. Execute stock decrement and accounting records in an atomic transaction
     const updatedStockItems: Array<{
       inventoryId: number;
@@ -393,12 +444,12 @@ export async function checkoutPosOrderAction(payload: CheckoutPayload, shiftId?:
       // e. Insert into `pos_orders`
       const orderRow = await trx`
         INSERT INTO pos_orders (
-          tenant_id, order_number, invoice_id, shift_id, user_id, user_name,
+          tenant_id, order_number, invoice_id, shift_id, counter_id, counter_name, user_id, user_name,
           customer_name, customer_phone, subtotal, discount_amount, tax_amount,
           total_amount, payment_method, amount_tendered, change_returned,
           status, items_json, created_at, updated_at
         ) VALUES (
-          ${tenantId}, ${orderNumber}, ${invoiceId}, ${shiftId || null}, ${userId}, ${userName},
+          ${tenantId}, ${orderNumber}, ${invoiceId}, ${shiftId || null}, ${counterId}, ${counterName}, ${userId}, ${userName},
           ${customerName}, ${customerPhone}, ${payload.subtotal}, ${payload.discountAmount}, ${payload.taxAmount},
           ${payload.totalAmount}, ${payload.paymentMethod}, ${payload.amountTendered}, ${payload.changeReturned},
           'completed', ${sql.json(payload.items as any)}, NOW(), NOW()

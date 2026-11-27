@@ -44,91 +44,55 @@ export const modulesData = [
   {
     id: 'dashboard',
     title: 'Dashboard',
-    benefits: [
-      'Your financial pulse in real time. Income, profit, and cash runway at a glance.',
-      'Clear, beautiful charts that make monthly performance unmistakable.',
-      'Jump straight into recent invoices, estimates, and register sales.'
-    ],
+    description: 'Real-time revenue, profit, and cash runway at a glance.',
     align: 'left'
   },
   {
     id: 'invoices',
     title: 'Invoices',
-    benefits: [
-      'Engineered to impress clients and speed up payments.',
-      'Automated overdue alerts and live payment statuses.',
-      'Download clean PDFs or share instant payment links.'
-    ],
+    description: 'Professional billing with automated payment links and tracking.',
     align: 'right'
   },
   {
     id: 'quotations',
     title: 'Quotations',
-    benefits: [
-      'Create polished proposals and estimates in seconds.',
-      'Organize by custom service categories and itemized rates.',
-      'One tap turns an approved quote into a live invoice.'
-    ],
+    description: 'Fast, polished estimates that convert to invoices in one tap.',
     align: 'left'
   },
   {
     id: 'income-expenses',
     title: 'Income & Expenses',
-    benefits: [
-      'Every transaction tied to a client, an account, and a category.',
-      'Know your true monthly burn rate without digging through spreadsheets.',
-      'Instant month-over-month comparisons to track growth.'
-    ],
+    description: 'Categorized cash flow tracking without spreadsheet chaos.',
     align: 'right'
   },
   {
     id: 'accounts',
     title: 'Account Ledgers',
-    benefits: [
-      'Unified tracking across bank accounts, petty cash, and cards.',
-      'Share your verified bank details with clients in a single tap.',
-      'Keep track of payables and receivables without skewing your profits.'
-    ],
+    description: 'Unified balances across bank accounts, petty cash, and cards.',
     align: 'left'
   },
   {
     id: 'clients',
     title: 'Clients',
-    benefits: [
-      'A complete directory of contact details and lifetime revenue.',
-      'Spot your most valuable clients and repeat customers instantly.',
-      'Protected with field-level encryption for absolute confidentiality.'
-    ],
+    description: 'Complete customer directory with contact info and lifetime revenue.',
     align: 'right'
   },
   {
     id: 'inventory',
     title: 'Inventory',
-    benefits: [
-      'Know what is on hand, what is running low, and total asset value.',
-      'Stock counts decrease the moment an invoice or register sale completes.',
-      'Full barcode, QR code, and SKU support built into every item.'
-    ],
+    description: 'Live stock tracking with barcodes and automatic sales deductions.',
     align: 'left'
   },
   {
     id: 'team',
     title: 'Team & Roles',
-    benefits: [
-      'Invite cashiers, managers, and accountants in seconds.',
-      'Granular permission controls — give access only to what people need.',
-      'Collaborate safely without ever sharing administrator passwords.'
-    ],
+    description: 'Granular permissions for cashiers, managers, and accountants.',
     align: 'right'
   },
   {
     id: 'security',
     title: 'Security & Privacy',
-    benefits: [
-      'Bank-grade encryption safeguards your client and financial records.',
-      'Biometric passkeys let you sign in with Touch ID or Face ID.',
-      'Privacy blur mode hides sensitive totals when working in public.'
-    ],
+    description: 'Bank-grade encryption, biometric passkeys, and privacy blur.',
     align: 'left'
   }
 ];
@@ -226,7 +190,7 @@ export const plans = [
 export const posFeatures = [
   {
     title: 'Fast QR and Barcode Scanning',
-    description: 'Laser, Bluetooth, or your device camera. Scan any barcode or QR code instantly — keep checkout moving during the biggest rush.',
+    description: 'Laser, Bluetooth, or your device camera. Scan any barcode or QR code instantly to keep checkout moving during the biggest rush.',
     icon: 'MdQrCodeScanner',
   },
   {
@@ -235,7 +199,7 @@ export const posFeatures = [
     icon: 'MdInventory',
   },
   {
-    title: 'Thermal receipts & cash drawers',
+    title: 'External Printer and Cash Drawer Support',
     description: 'Works with standard thermal printers and cash drawers. Clean typography, customizable headers, and instant drawer kicks.',
     icon: 'MdPrint',
   },
