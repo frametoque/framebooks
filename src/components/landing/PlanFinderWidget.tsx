@@ -264,7 +264,7 @@ export default function PlanFinderWidget({ plans: propPlans, isYearly = false }:
             Required Features
           </p>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
             {[
               {
                 id: 'pos',
@@ -301,23 +301,25 @@ export default function PlanFinderWidget({ plans: propPlans, isYearly = false }:
                   key={item.id}
                   type="button"
                   onClick={() => item.onChange(!item.checked)}
-                  className={`p-2 sm:p-2.5 rounded-xl border text-left flex items-center justify-between transition-all ${
+                  className={`p-2.5 sm:p-3 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                     item.checked
                       ? 'bg-[#E6FDF0] border-[#00E35B] shadow-xs'
                       : 'bg-white border-[#E5E7EB] hover:border-gray-300'
                   }`}
                 >
-                  <div className="flex items-center gap-2 min-w-0 pr-1">
+                  <div className="flex items-center gap-2.5 min-w-0 pr-2">
                     <div
-                      className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors shrink-0 ${
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors shrink-0 ${
                         item.checked
                           ? 'bg-[#00E35B] text-[#041418]'
                           : 'bg-gray-100 text-gray-500'
                       }`}
                     >
-                      <Icon className="w-3.5 h-3.5" />
+                      <Icon className="w-4 h-4" />
                     </div>
-                    <p className="text-[11px] sm:text-xs font-bold text-[#082830] truncate">{item.label}</p>
+                    <p className="text-xs font-bold text-[#082830] whitespace-normal leading-tight">
+                      {item.label}
+                    </p>
                   </div>
                   <div
                     className={`w-8 h-4.5 flex items-center rounded-full p-0.5 transition-colors shrink-0 ${
