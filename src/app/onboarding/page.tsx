@@ -96,7 +96,7 @@ export default function OnboardingPage() {
         const statusRes = await getOnboardingStatusAction();
         if (statusRes?.success && statusRes.hasTenant) {
           if (statusRes.isApproved) {
-            router.push("/user/dashboard");
+            router.push("/dashboard");
             return;
           }
           if (statusRes.needsPayment) {
@@ -242,7 +242,7 @@ export default function OnboardingPage() {
       }
 
       if (result.isComplimentary || selectedPlan === "Free") {
-        router.push("/user/dashboard");
+        router.push("/dashboard");
       } else {
         // Move to Onboarding Step 4: Billing Section (Do not redirect to /user/settings/billing!)
         setStep(4);
@@ -328,7 +328,7 @@ export default function OnboardingPage() {
 
       if (res.success) {
         await update();
-        router.push("/user/dashboard");
+        router.push("/dashboard");
       } else {
         setErrorMsg(res.error || "Failed to complete test payment.");
       }
@@ -347,7 +347,7 @@ export default function OnboardingPage() {
       const res = await switchToFreePlanAction();
       if (res.success) {
         await update();
-        router.push("/user/dashboard");
+        router.push("/dashboard");
       } else {
         setErrorMsg(res.error || "Failed to switch plan.");
       }

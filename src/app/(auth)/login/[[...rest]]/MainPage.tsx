@@ -28,11 +28,11 @@ export default function CustomLogin() {
         try {
           const response = await fetch("/api/auth/check-role");
           const data = await response.json();
-          const redirectPath = data.isNewUser ? "/onboarding" : "/user/dashboard";
+          const redirectPath = data.isNewUser ? "/onboarding" : "/dashboard";
           router.replace(redirectPath);
         } catch (err: any) {
           if (err.name === 'TypeError' || err.message === 'Failed to fetch') return;
-          router.replace("/user/dashboard");
+          router.replace("/dashboard");
         }
       };
       checkAndRedirect();
@@ -44,7 +44,7 @@ export default function CustomLogin() {
     setLoadingProvider("google");
     setErrorMsg("");
     try {
-      await signIn("google", { callbackUrl: "/user/dashboard" });
+      await signIn("google", { callbackUrl: "/dashboard" });
     } catch (err: any) {
       console.error("SignIn Error:", err);
       setErrorMsg("Failed to sign in with Google.");

@@ -74,8 +74,39 @@ export default async function middleware(req: NextRequest) {
     }
   }
 
-  // User dashboard and POS routes: protected by user session (next-auth)
-  if (pathname.startsWith("/user") || pathname === "/pos" || pathname.startsWith("/pos/")) {
+  // User dashboard, clean routes, and POS routes: protected by user session (next-auth)
+  const isUserRoute =
+    pathname.startsWith("/user") ||
+    pathname === "/dashboard" ||
+    pathname.startsWith("/dashboard/") ||
+    pathname === "/pos" ||
+    pathname.startsWith("/pos/") ||
+    pathname === "/stock" ||
+    pathname.startsWith("/stock/") ||
+    pathname === "/invoices" ||
+    pathname.startsWith("/invoices/") ||
+    pathname === "/invoice" ||
+    pathname.startsWith("/invoice/") ||
+    pathname === "/income" ||
+    pathname.startsWith("/income/") ||
+    pathname === "/expenses" ||
+    pathname.startsWith("/expenses/") ||
+    pathname === "/accounts" ||
+    pathname.startsWith("/accounts/") ||
+    pathname === "/quotations" ||
+    pathname.startsWith("/quotations/") ||
+    pathname === "/clients" ||
+    pathname.startsWith("/clients/") ||
+    pathname === "/inventory" ||
+    pathname.startsWith("/inventory/") ||
+    pathname === "/reports" ||
+    pathname.startsWith("/reports/") ||
+    pathname === "/settings" ||
+    pathname.startsWith("/settings/") ||
+    pathname === "/logs" ||
+    pathname.startsWith("/logs/");
+
+  if (isUserRoute) {
     const userSession =
       req.cookies.get("next-auth.session-token")?.value ||
       req.cookies.get("__Secure-next-auth.session-token")?.value;
@@ -101,5 +132,30 @@ export const config = {
     "/api/admin/:path*",
     "/pos",
     "/pos/:path*",
+    "/dashboard",
+    "/dashboard/:path*",
+    "/stock",
+    "/stock/:path*",
+    "/invoices",
+    "/invoices/:path*",
+    "/invoice/:path*",
+    "/income",
+    "/income/:path*",
+    "/expenses",
+    "/expenses/:path*",
+    "/accounts",
+    "/accounts/:path*",
+    "/quotations",
+    "/quotations/:path*",
+    "/clients",
+    "/clients/:path*",
+    "/inventory",
+    "/inventory/:path*",
+    "/reports",
+    "/reports/:path*",
+    "/settings",
+    "/settings/:path*",
+    "/logs",
+    "/logs/:path*",
   ],
 };

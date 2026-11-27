@@ -225,7 +225,7 @@ export function DashboardShell({
           {/* Logo & Header */}
           <div className="flex items-center justify-between h-20 flex-shrink-0 px-4">
             <div className="flex-1 flex items-center justify-start overflow-hidden">
-              <Link href={variant === "admin" ? "/admin" : "/user/dashboard"} className="flex items-center">
+              <Link href={variant === "admin" ? "/admin" : "/dashboard"} className="flex items-center">
                 <Image
                   src="/logos/ft/name-logo.png"
                   alt="FrameBooks"

@@ -7,9 +7,9 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Framebooks',
     short_name: 'Framebooks',
     description: 'Run your entire business in one place. Track money, manage clients, and grow faster.',
-    start_url: '/user/dashboard',
+    start_url: '/dashboard',
     scope: '/',
-    id: '/user/dashboard',
+    id: '/dashboard',
     display: 'standalone',
     display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
     background_color: '#0B0F12',
@@ -63,13 +63,13 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: 'Dashboard',
         short_name: 'Dashboard',
-        url: '/user/dashboard',
+        url: '/dashboard',
         icons: [{ src: '/favicon-192x192.png', sizes: '192x192' }],
       },
       {
         name: 'New Invoice',
         short_name: 'New Invoice',
-        url: '/user/invoices/new',
+        url: '/invoices/new',
         icons: [{ src: '/favicon-192x192.png', sizes: '192x192' }],
       },
       {

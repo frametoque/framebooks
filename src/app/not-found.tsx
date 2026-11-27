@@ -19,7 +19,7 @@ export default function NotFound() {
         </p>
         <div className="flex flex-col sm:flex-row gap-3 w-full">
           <Link
-            href="/user/dashboard"
+            href="/dashboard"
             className="flex-1 px-5 py-3 bg-[#00E35B] hover:bg-[#00C750] text-[#041418] rounded-xl font-bold text-sm transition-all shadow-md text-center"
           >
             Dashboard

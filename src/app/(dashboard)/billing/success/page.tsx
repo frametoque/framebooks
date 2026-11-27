@@ -313,7 +313,7 @@ export default async function BillingSuccessPage({
 
           {!isWalletTopup && (
             <Link
-              href="/user/dashboard"
+              href="/dashboard"
               className="w-full py-2.5 text-muted-foreground hover:text-foreground font-semibold rounded-2xl transition-all flex items-center justify-center gap-1.5 text-xs cursor-pointer"
             >
               <span>Open Dashboard</span>

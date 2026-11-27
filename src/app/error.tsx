@@ -34,7 +34,7 @@ export default function GlobalError({
             Try Again
           </button>
           <a
-            href="/user/dashboard"
+            href="/dashboard"
             className="flex-1 px-5 py-3 bg-white/10 hover:bg-white/15 text-white rounded-xl font-semibold text-sm transition-all border border-white/10 text-center"
           >
             Dashboard

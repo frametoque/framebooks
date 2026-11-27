@@ -425,7 +425,7 @@ export async function switchToFreePlanAction() {
       WHERE id = ${tenantId}
     `;
 
-    return { success: true, redirect: "/user/dashboard" };
+    return { success: true, redirect: "/dashboard" };
   } catch (err: any) {
     console.error("Error switching to free plan:", err);
     return { success: false, error: err.message };

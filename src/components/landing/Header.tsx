@@ -39,7 +39,7 @@ export default function Header() {
   const isSolid = scrolled || !isHome;
 
   const isAuthenticated = mounted && status === 'authenticated' && !!session;
-  const actionHref = isAuthenticated ? '/user/dashboard' : '/login';
+  const actionHref = isAuthenticated ? '/dashboard' : '/login';
   const actionLabel = isAuthenticated ? 'Dashboard' : 'Start Free';
 
   return (
