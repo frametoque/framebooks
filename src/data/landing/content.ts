@@ -1,7 +1,7 @@
 export const navigation = [
   { name: 'Features', href: '/#features' },
-  { name: 'POS', href: '/#pos' },
   { name: 'Pricing', href: '/#pricing' },
+  { name: 'POS', href: '/#pos' },
   { name: 'Guide', href: '/guide' },
   { name: 'FAQ', href: '/#faq' },
   { name: 'Contact', href: '/#contact' },
@@ -9,8 +9,8 @@ export const navigation = [
 
 export const footerProductLinks = [
   { name: 'Features', href: '/#features' },
-  { name: 'POS', href: '/#pos' },
   { name: 'Pricing', href: '/#pricing' },
+  { name: 'POS', href: '/#pos' },
   { name: 'Guide', href: '/guide' },
 ];
 

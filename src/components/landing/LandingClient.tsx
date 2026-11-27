@@ -454,6 +454,120 @@ export default function LandingClient({
           </div>
         </section>
 
+        {/* PRICING */}
+        <section id="pricing" className="py-16 sm:py-20 md:py-24 bg-[#F9FAFB]">
+          <div className="container mx-auto px-4 sm:px-6 max-w-6xl">
+            <div className="text-center mb-10 sm:mb-16">
+              <h2 className="text-3xl sm:text-4xl font-black mb-3 sm:mb-4 tracking-tight">
+                Start free. Upgrade when you grow<span className="text-[#00E35B]">.</span>
+              </h2>
+              <div className="flex items-center justify-center gap-3 sm:gap-4 mt-6 sm:mt-8">
+                <span className={`text-sm sm:text-base font-semibold ${!yearly ? 'text-[#082830]' : 'text-gray-500'}`}>Monthly</span>
+                <button
+                  onClick={() => setYearly(!yearly)}
+                  className="w-14 h-8 bg-[#082830] rounded-full p-1 relative transition-colors focus:outline-none focus:ring-2 focus:ring-[#00E35B]"
+                  aria-label="Toggle annual billing"
+                >
+                  <div className={`w-6 h-6 bg-[#26F29C] rounded-full transition-transform ${yearly ? 'translate-x-6' : ''}`} />
+                </button>
+                <span className={`text-sm sm:text-base font-semibold flex items-center gap-1.5 ${yearly ? 'text-[#082830]' : 'text-gray-500'}`}>
+                  Yearly
+                  <span className="text-[11px] sm:text-xs font-bold text-[#007A31] bg-[#E6FDF0] px-2 py-0.5 rounded-full border border-[#00E35B]/20">
+                    Save 17% · 2 months free
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            <div className={`grid grid-cols-1 ${displayPlans.length === 1 ? 'max-w-md' :
+                displayPlans.length === 2 ? 'max-w-3xl md:grid-cols-2' :
+                  displayPlans.length === 4 ? 'max-w-7xl sm:grid-cols-2 lg:grid-cols-4' :
+                    'max-w-5xl md:grid-cols-3'
+              } gap-6 sm:gap-8 items-start mx-auto mb-12 sm:mb-16`}>
+              {displayPlans.map((p, i) => (
+                <div key={i} className={`bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 border ${p.highlight ? 'border-[#00E35B] ring-2 ring-[#00E35B]/20' : 'border-[#E5E7EB]'} relative shadow-xs hover:shadow-lg transition-shadow flex flex-col h-full`}>
+                  {p.badge && <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#082830] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">{p.badge}</div>}
+                  <h3 className="text-xl sm:text-2xl font-black mb-2">{p.name}</h3>
+                  <p className="text-xs sm:text-sm text-gray-500 mb-6 min-h-[32px] sm:h-10 leading-relaxed">{p.description}</p>
+                  <div className="mb-6">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">
+                        LKR {yearly && p.monthlyPrice > 0 ? p.yearlyPrice.toLocaleString() : p.monthlyPrice.toLocaleString()}
+                      </span>
+                      <span className="text-gray-500 font-medium text-xs sm:text-sm">{p.monthlyPrice === 0 ? 'forever' : yearly && p.monthlyPrice > 0 ? '/yr' : '/mo'}</span>
+                    </div>
+                    {yearly && p.monthlyPrice > 0 && (
+                      <p className="text-xs sm:text-sm text-[#00C750] font-semibold mt-1">2 months free</p>
+                    )}
+                  </div>
+                  <ul className="space-y-3 sm:space-y-4 flex-1 mb-6 sm:mb-8">
+                    {p.features.map((f: any, j: number) => (
+                      <li key={j} className="flex items-center justify-between text-xs sm:text-sm font-medium text-gray-700 border-b border-[#E5E7EB]/50 pb-2.5 sm:pb-3 last:border-0 last:pb-0 gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#E6FDF0] text-[#00C750] rounded-full flex items-center justify-center shrink-0">
+                            <MdCheck className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                          </div>
+                          <span>{f.label}</span>
+                        </div>
+                        <span className="font-bold text-gray-900 text-right shrink-0">{f.value}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href="/login"
+                    className={`w-full py-3 sm:py-3.5 rounded-xl font-bold text-center mt-auto transition-all active:scale-[0.98] ${
+                      p.highlight
+                        ? 'bg-[#00E35B] text-[#041418] hover:bg-[#00C750] shadow-md shadow-[#00E35B]/20'
+                        : 'bg-[#082830] text-white hover:bg-black'
+                    }`}
+                  >
+                    {p.monthlyPrice === 0 ? 'Get Started' : 'Buy Now'}
+                  </Link>
+                </div>
+              ))}
+            </div>
+
+            {/* INTERACTIVE PLAN FINDER WIDGET */}
+            <div className="max-w-5xl mx-auto mb-12 sm:mb-16">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl sm:text-3xl font-black text-[#082830] mb-2 tracking-tight">
+                  <span className="text-[#00E35B]">Not sure</span> which plan you need?
+                </h3>
+                <p className="text-gray-500 max-w-lg mx-auto text-xs sm:text-sm leading-relaxed px-4">
+                  Adjust your total invoice volume, active clients, and feature needs to get an instant tailored recommendation.
+                </p>
+              </div>
+              <PlanFinderWidget plans={displayPlans} isYearly={yearly} posPricing={posPricing} />
+            </div>
+
+            {/* Enterprise & Custom */}
+            <div className="max-w-5xl mx-auto bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-10 border border-[#E5E7EB] shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 md:gap-8">
+              <div className="text-left">
+                <h3 className="text-xl sm:text-2xl font-black mb-2 text-[#082830]">Enterprise & Custom</h3>
+                <p className="text-xs sm:text-sm text-gray-500 mb-4 max-w-2xl leading-relaxed">
+                  Need something specific? We can build custom features, tailor-made reports, and specialized integrations designed exactly for your business workflow.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <div className="flex items-center gap-1.5 text-[#007A31] font-bold text-xs sm:text-sm bg-[#E6FDF0] px-3 py-1.5 rounded-lg w-fit border border-[#00E35B]/20">
+                    <MdCheck className="shrink-0" /> Request custom features
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[#007A31] font-bold text-xs sm:text-sm bg-[#E6FDF0] px-3 py-1.5 rounded-lg w-fit border border-[#00E35B]/20">
+                    <MdCheck className="shrink-0" /> Dedicated support
+                  </div>
+                </div>
+              </div>
+              <div className="shrink-0 w-full md:w-auto">
+                <Link
+                  href="#contact"
+                  className="block w-full md:w-auto px-7 py-3.5 bg-transparent border-2 border-[#082830] text-[#082830] font-bold rounded-xl text-center hover:bg-[#082830] hover:text-white active:scale-[0.98] transition-all text-sm sm:text-base"
+                >
+                  Contact Sales
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* POINT OF SALE (POS) SHOWCASE */}
         <section id="pos" className="py-16 sm:py-20 md:py-28 bg-[#041418] text-white relative overflow-hidden">
           {/* Subtle Ambient Light Gradients */}
@@ -815,120 +929,6 @@ export default function LandingClient({
                 <div className="text-[11px] text-gray-400 mt-1">
                   or LKR {posPricing.priceYearly.toLocaleString()} / year (2 months free)
                 </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* PRICING */}
-        <section id="pricing" className="py-16 sm:py-20 md:py-24 bg-[#F9FAFB]">
-          <div className="container mx-auto px-4 sm:px-6 max-w-6xl">
-            <div className="text-center mb-10 sm:mb-16">
-              <h2 className="text-3xl sm:text-4xl font-black mb-3 sm:mb-4 tracking-tight">
-                Start free. Upgrade when you grow<span className="text-[#00E35B]">.</span>
-              </h2>
-              <div className="flex items-center justify-center gap-3 sm:gap-4 mt-6 sm:mt-8">
-                <span className={`text-sm sm:text-base font-semibold ${!yearly ? 'text-[#082830]' : 'text-gray-500'}`}>Monthly</span>
-                <button
-                  onClick={() => setYearly(!yearly)}
-                  className="w-14 h-8 bg-[#082830] rounded-full p-1 relative transition-colors focus:outline-none focus:ring-2 focus:ring-[#00E35B]"
-                  aria-label="Toggle annual billing"
-                >
-                  <div className={`w-6 h-6 bg-[#26F29C] rounded-full transition-transform ${yearly ? 'translate-x-6' : ''}`} />
-                </button>
-                <span className={`text-sm sm:text-base font-semibold flex items-center gap-1.5 ${yearly ? 'text-[#082830]' : 'text-gray-500'}`}>
-                  Yearly
-                  <span className="text-[11px] sm:text-xs font-bold text-[#007A31] bg-[#E6FDF0] px-2 py-0.5 rounded-full border border-[#00E35B]/20">
-                    Save 17% · 2 months free
-                  </span>
-                </span>
-              </div>
-            </div>
-
-            <div className={`grid grid-cols-1 ${displayPlans.length === 1 ? 'max-w-md' :
-                displayPlans.length === 2 ? 'max-w-3xl md:grid-cols-2' :
-                  displayPlans.length === 4 ? 'max-w-7xl sm:grid-cols-2 lg:grid-cols-4' :
-                    'max-w-5xl md:grid-cols-3'
-              } gap-6 sm:gap-8 items-start mx-auto mb-12 sm:mb-16`}>
-              {displayPlans.map((p, i) => (
-                <div key={i} className={`bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 border ${p.highlight ? 'border-[#00E35B] ring-2 ring-[#00E35B]/20' : 'border-[#E5E7EB]'} relative shadow-xs hover:shadow-lg transition-shadow flex flex-col h-full`}>
-                  {p.badge && <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#082830] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">{p.badge}</div>}
-                  <h3 className="text-xl sm:text-2xl font-black mb-2">{p.name}</h3>
-                  <p className="text-xs sm:text-sm text-gray-500 mb-6 min-h-[32px] sm:h-10 leading-relaxed">{p.description}</p>
-                  <div className="mb-6">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">
-                        LKR {yearly && p.monthlyPrice > 0 ? p.yearlyPrice.toLocaleString() : p.monthlyPrice.toLocaleString()}
-                      </span>
-                      <span className="text-gray-500 font-medium text-xs sm:text-sm">{p.monthlyPrice === 0 ? 'forever' : yearly && p.monthlyPrice > 0 ? '/yr' : '/mo'}</span>
-                    </div>
-                    {yearly && p.monthlyPrice > 0 && (
-                      <p className="text-xs sm:text-sm text-[#00C750] font-semibold mt-1">2 months free</p>
-                    )}
-                  </div>
-                  <ul className="space-y-3 sm:space-y-4 flex-1 mb-6 sm:mb-8">
-                    {p.features.map((f: any, j: number) => (
-                      <li key={j} className="flex items-center justify-between text-xs sm:text-sm font-medium text-gray-700 border-b border-[#E5E7EB]/50 pb-2.5 sm:pb-3 last:border-0 last:pb-0 gap-2">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#E6FDF0] text-[#00C750] rounded-full flex items-center justify-center shrink-0">
-                            <MdCheck className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                          </div>
-                          <span>{f.label}</span>
-                        </div>
-                        <span className="font-bold text-gray-900 text-right shrink-0">{f.value}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href="/login"
-                    className={`w-full py-3 sm:py-3.5 rounded-xl font-bold text-center mt-auto transition-all active:scale-[0.98] ${
-                      p.highlight
-                        ? 'bg-[#00E35B] text-[#041418] hover:bg-[#00C750] shadow-md shadow-[#00E35B]/20'
-                        : 'bg-[#082830] text-white hover:bg-black'
-                    }`}
-                  >
-                    {p.monthlyPrice === 0 ? 'Get Started' : 'Buy Now'}
-                  </Link>
-                </div>
-              ))}
-            </div>
-
-            {/* INTERACTIVE PLAN FINDER WIDGET */}
-            <div className="max-w-5xl mx-auto mb-12 sm:mb-16">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl sm:text-3xl font-black text-[#082830] mb-2 tracking-tight">
-                  <span className="text-[#00E35B]">Not sure</span> which plan you need?
-                </h3>
-                <p className="text-gray-500 max-w-lg mx-auto text-xs sm:text-sm leading-relaxed px-4">
-                  Adjust your total invoice volume, active clients, and feature needs to get an instant tailored recommendation.
-                </p>
-              </div>
-              <PlanFinderWidget plans={displayPlans} isYearly={yearly} posPricing={posPricing} />
-            </div>
-
-            {/* Enterprise & Custom */}
-            <div className="max-w-5xl mx-auto bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-10 border border-[#E5E7EB] shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 md:gap-8">
-              <div className="text-left">
-                <h3 className="text-xl sm:text-2xl font-black mb-2 text-[#082830]">Enterprise & Custom</h3>
-                <p className="text-xs sm:text-sm text-gray-500 mb-4 max-w-2xl leading-relaxed">
-                  Need something specific? We can build custom features, tailor-made reports, and specialized integrations designed exactly for your business workflow.
-                </p>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <div className="flex items-center gap-1.5 text-[#007A31] font-bold text-xs sm:text-sm bg-[#E6FDF0] px-3 py-1.5 rounded-lg w-fit border border-[#00E35B]/20">
-                    <MdCheck className="shrink-0" /> Request custom features
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[#007A31] font-bold text-xs sm:text-sm bg-[#E6FDF0] px-3 py-1.5 rounded-lg w-fit border border-[#00E35B]/20">
-                    <MdCheck className="shrink-0" /> Dedicated support
-                  </div>
-                </div>
-              </div>
-              <div className="shrink-0 w-full md:w-auto">
-                <Link
-                  href="#contact"
-                  className="block w-full md:w-auto px-7 py-3.5 bg-transparent border-2 border-[#082830] text-[#082830] font-bold rounded-xl text-center hover:bg-[#082830] hover:text-white active:scale-[0.98] transition-all text-sm sm:text-base"
-                >
-                  Contact Sales
-                </Link>
               </div>
             </div>
           </div>
