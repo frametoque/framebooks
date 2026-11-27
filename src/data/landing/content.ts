@@ -7,6 +7,20 @@ export const navigation = [
   { name: 'Contact', href: '/#contact' },
 ];
 
+export const footerProductLinks = [
+  { name: 'Features', href: '/#features' },
+  { name: 'POS', href: '/#pos' },
+  { name: 'Pricing', href: '/#pricing' },
+  { name: 'Guide', href: '/guide' },
+];
+
+export const footerLegalLinks = [
+  { name: 'Privacy Policy', href: '#' },
+  { name: 'Terms of Service', href: '#' },
+  { name: 'Cookie Policy', href: '#' },
+  { name: 'Refund Policy', href: '#' },
+];
+
 export const kpis = [
   { label: 'Modules', value: '11' },
   { label: 'Retail & POS', value: 'High-speed' },

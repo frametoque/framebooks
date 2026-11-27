@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { navigation } from '@/data/landing/content';
+import { footerProductLinks, footerLegalLinks } from '@/data/landing/content';
 import { FaFacebook, FaInstagram, FaTiktok, FaLinkedin } from 'react-icons/fa6';
 
 const socialLinks = [
@@ -39,7 +39,7 @@ export default function Footer() {
           <div>
             <h4 className="font-bold text-sm sm:text-base mb-3 sm:mb-4 text-[#082830]">Product</h4>
             <ul className="space-y-2.5 sm:space-y-3 text-sm text-gray-600">
-              {navigation.map((n) => (
+              {footerProductLinks.map((n) => (
                 <li key={n.name}>
                   <Link href={n.href} className="inline-block py-0.5 hover:text-[#00C750] transition-colors">
                     {n.name}
@@ -51,16 +51,13 @@ export default function Footer() {
           <div>
             <h4 className="font-bold text-sm sm:text-base mb-3 sm:mb-4 text-[#082830]">Legal</h4>
             <ul className="space-y-2.5 sm:space-y-3 text-sm text-gray-600">
-              <li>
-                <Link href="#" className="inline-block py-0.5 hover:text-[#00C750] transition-colors">
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="inline-block py-0.5 hover:text-[#00C750] transition-colors">
-                  Terms of Service
-                </Link>
-              </li>
+              {footerLegalLinks.map((item) => (
+                <li key={item.name}>
+                  <Link href={item.href} className="inline-block py-0.5 hover:text-[#00C750] transition-colors">
+                    {item.name}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
