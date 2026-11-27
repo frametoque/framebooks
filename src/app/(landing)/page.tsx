@@ -22,13 +22,13 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: 'Framebooks | Invoicing, Bookkeeping, and Point of Sale',
-    description: 'Create invoices, manage live stock, and run your retail counter checkout. Simple, fast, and built for Sri Lanka.',
+    description: 'Invoicing, bookkeeping, and real-time inventory. Expand anytime with the retail Point of Sale add-on.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Framebooks | Invoicing, Bookkeeping, and Point of Sale',
-    description: 'Create invoices, manage live stock, and run your retail counter checkout. Simple, fast, and built for Sri Lanka.',
+    description: 'Invoicing, bookkeeping, and real-time inventory. Expand anytime with the retail Point of Sale add-on.',
   }
 };
 

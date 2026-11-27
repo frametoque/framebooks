@@ -68,7 +68,7 @@ export default function LandingClient({
               transition={{ delay: 0.1 }}
               className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.12] mb-4 sm:mb-6 text-[#082830]"
             >
-              Invoicing, bookkeeping, and Point of Sale. All in one<span className="text-[#00E35B]">.</span>
+              Run your whole business finances in one place<span className="text-[#00E35B]">.</span>
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 15 }}
@@ -76,7 +76,7 @@ export default function LandingClient({
               transition={{ delay: 0.2 }}
               className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed font-normal"
             >
-              Create invoices, manage live stock, and run your retail counter checkout. Simple, fast, and built for Sri Lanka.
+              Invoicing, bookkeeping, and real-time inventory. Expand anytime with the retail Point of Sale add-on.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 15 }}
