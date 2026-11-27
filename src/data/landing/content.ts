@@ -241,7 +241,7 @@ export const comparison = [
 export const faqs = [
   { q: 'Who is Framebooks for?', a: 'Framebooks is built specifically for small businesses, agencies, and freelancers in Sri Lanka looking for an all-in-one financial dashboard.' },
   { q: 'Does it work in LKR?', a: 'Yes! Framebooks is LKR-first, meaning all formatting, reports, and currency displays are natively designed for Sri Lankan Rupees.' },
-  { q: 'Does Framebooks have a Point of Sale (POS) system?', a: 'Yes! Framebooks includes an easy-to-use, fast POS terminal for retail counters. Scan barcodes with a camera or scanner, print thermal customer receipts, open cash drawers, apply discounts with manager PIN approval, and track sales live.' },
+  { q: 'Does Framebooks have a POS System?', a: 'Yes! Framebooks includes an easy-to-use, fast POS terminal for retail counters. Scan barcodes with a camera or scanner, print thermal customer receipts, open cash drawers, apply discounts with manager PIN approval, and track sales live.' },
   { q: 'Can I use the POS on mobile phones or tablets?', a: 'Yes. The POS is fully mobile-responsive. You can take orders on the sales floor with a phone or tablet, scan barcodes using your device camera, and complete transactions anywhere in your store.' },
   { q: 'How does POS stock synchronization work?', a: 'Your physical stock counts update automatically in real time with every sale. When an item is sold at the register, stock quantities immediately update across all registers and your stock dashboard to prevent overselling.' },
   { q: 'Can I manage multiple bank accounts?', a: 'Absolutely. You can track multiple bank accounts, petty cash, and even transfer funds between them with full history.' },
