@@ -573,27 +573,27 @@ export const guideGroups: GuideGroup[] = [
         ]
       },
       {
-        slug: 'pos-barcodes-inventory',
-        title: 'POS Inventory Sync & Barcode Label Printing',
+        slug: 'pos-barcodes-stock',
+        title: 'POS Stock Sync & Barcode Label Printing',
         intro: 'Prevent overselling with real-time stock sync across registers and print professional thermal barcode labels for your retail merchandise.',
-        plan: 'Pro Plus',
+        plan: 'Pro',
         readTime: '4 min read',
         steps: [
           {
-            title: '1. Real-Time Inventory Synchronization',
-            content: 'Every sale completed at the POS terminal automatically deducts stock across all connected registers and your main Framebooks inventory module.',
+            title: '1. Real-Time Stock Synchronization',
+            content: 'Every sale completed at the POS terminal automatically deducts physical stock counts across all connected registers and your stock management dashboard.',
             bullets: [
               'Live multi-register synchronization ensures stock counts stay consistent everywhere',
-              'Eliminates stock discrepancies between physical storefront counters and back-office sales',
-              'Sales revenue and inventory cost of goods sold (COGS) flow directly into your accounting reports'
+              'Eliminates stock discrepancies between counter registers and warehouse stockrooms',
+              'Real-time stock movements log every sale, refund, and adjustment count automatically'
             ]
           },
           {
             title: '2. Pre-Flight Oversell Protection',
-            content: 'Framebooks POS verifies item availability before allowing products to enter the cart or be charged at checkout.',
+            content: 'Framebooks POS verifies stock availability before allowing products to enter the cart or be charged at checkout.',
             bullets: [
               'Out-of-stock items are highlighted with clear visual indicators to prevent checkout delays',
-              'Guards against accidental rings when physical stock is exhausted',
+              'Guards against accidental rings when physical stock is depleted',
               'Authorized managers can perform quick in-terminal stock adjustments during shift operations'
             ]
           },
@@ -610,7 +610,7 @@ export const guideGroups: GuideGroup[] = [
             title: '4. Printing Thermal Barcode Labels',
             content: 'Print adhesive barcode stickers and price tags directly to thermal label printers.',
             bullets: [
-              'Print individual product labels or batch-print stickers for new inventory shipments',
+              'Print individual product labels or batch-print stickers for new stock arrivals',
               'Labels display product name, price in LKR, SKU, and high-contrast scannable barcode',
               'Supports standard label sizes (e.g. 50x30mm, 40x30mm) and continuous adhesive rolls'
             ]
