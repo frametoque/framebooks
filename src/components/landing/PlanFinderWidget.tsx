@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MdCheck, MdInsertDriveFile, MdGroup, MdAccountBalance, MdInventory, MdTrendingUp, MdSecurity } from 'react-icons/md';
+import { MdCheck, MdInsertDriveFile, MdGroup, MdAccountBalance, MdInventory, MdTrendingUp, MdSecurity, MdPointOfSale } from 'react-icons/md';
 import { recommendPlan } from '@/lib/plan-finder';
 import { plans as fallbackPlans } from '@/data/landing/content';
 
@@ -26,6 +26,7 @@ export default function PlanFinderWidget({ plans: propPlans, isYearly = false }:
   const [needsInventory, setNeedsInventory] = useState(false);
   const [needsAdvancedReports, setNeedsAdvancedReports] = useState(true);
   const [needsAuditLogs, setNeedsAuditLogs] = useState(false);
+  const [needsPos, setNeedsPos] = useState(false);
 
   useEffect(() => {
     if (propPlans && propPlans.length > 0) {
@@ -42,7 +43,7 @@ export default function PlanFinderWidget({ plans: propPlans, isYearly = false }:
     }
   }, [propPlans]);
 
-  const recommendation = recommendPlan(invoices, clients, accounts, needsInventory, needsAdvancedReports, needsAuditLogs);
+  const recommendation = recommendPlan(invoices, clients, accounts, needsInventory, needsAdvancedReports, needsAuditLogs, needsPos);
 
   const matchedPlan = (plans || fallbackPlans).find(
     (p) => p.name.toLowerCase() === recommendation.plan.toLowerCase()
@@ -105,6 +106,7 @@ export default function PlanFinderWidget({ plans: propPlans, isYearly = false }:
               setNeedsInventory(false);
               setNeedsAdvancedReports(true);
               setNeedsAuditLogs(false);
+              setNeedsPos(false);
             }}
             className="text-[11px] font-semibold text-gray-400 hover:text-[#00C750] transition-colors"
           >
@@ -262,8 +264,15 @@ export default function PlanFinderWidget({ plans: propPlans, isYearly = false }:
             Required Features
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
+              {
+                id: 'pos',
+                label: 'Point of Sale (POS)',
+                icon: MdPointOfSale,
+                checked: needsPos,
+                onChange: setNeedsPos,
+              },
               {
                 id: 'inventory',
                 label: 'Inventory Management',

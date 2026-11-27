@@ -18,7 +18,8 @@ export function recommendPlan(
   accounts: number,
   needsInventory: boolean,
   needsAdvancedReports: boolean,
-  needsAuditLogs: boolean
+  needsAuditLogs: boolean,
+  needsPos: boolean = false
 ): { plan: PlanRecommendation; reason: string } {
   if (needsAuditLogs || needsInventory || accounts > planLimits.Pro.accounts) {
     return {
@@ -31,14 +32,16 @@ export function recommendPlan(
     };
   }
 
-  if (needsAdvancedReports || invoices > planLimits.Free.invoices || clients > planLimits.Free.clients) {
+  if (needsPos || needsAdvancedReports || invoices > planLimits.Free.invoices || clients > planLimits.Free.clients) {
     return {
       plan: 'Pro',
-      reason: needsAdvancedReports
-        ? 'Advanced reports are available on the Pro plan.'
-        : invoices > planLimits.Free.invoices
-          ? `You need more than ${planLimits.Free.invoices} invoices (Free plan includes up to ${planLimits.Free.invoices} lifetime invoices).`
-          : `You manage more than ${planLimits.Free.clients} clients.`
+      reason: needsPos
+        ? 'Point of Sale (POS) requires at least the Pro plan.'
+        : needsAdvancedReports
+          ? 'Advanced reports are available on the Pro plan.'
+          : invoices > planLimits.Free.invoices
+            ? `You need more than ${planLimits.Free.invoices} invoices (Free plan includes up to ${planLimits.Free.invoices} lifetime invoices).`
+            : `You manage more than ${planLimits.Free.clients} clients.`
     };
   }
 
