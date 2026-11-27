@@ -467,7 +467,7 @@ export default function LandingClient({
                 A lightning-fast POS terminal.<br className="hidden sm:inline" /> Built for real counters<span className="text-[#00E35B]">.</span>
               </h2>
               <p className="text-sm sm:text-base md:text-lg text-gray-300 leading-relaxed">
-                Scan barcodes, print thermal receipts, open cash drawers, and ring up sales in seconds. Built to keep checkout lines moving fast during your busiest rush hours with real-time stock tracking and seamless support for phones, tablets, and desktop counters.
+                Built to keep checkout lines moving fast during your busiest rush hours with real-time stock tracking and seamless support for phones, tablets, and desktop counters.
               </p>
             </div>
 
