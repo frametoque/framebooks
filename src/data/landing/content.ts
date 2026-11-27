@@ -175,11 +175,6 @@ export const plans = [
 
 export const posFeatures = [
   {
-    title: 'Keyboard-First Rapid Checkout',
-    description: 'Ring up orders at record speed without touching the mouse. Instant shortcut keys for search (/ or F1), line discounts (F4), cash drawer (F6), and instant charge (F12 or Space).',
-    icon: 'MdFlashOn',
-  },
-  {
     title: 'Continuous Barcode & QR Scanner',
     description: 'Built-in camera scanner with live target HUD, plus native support for external USB and Bluetooth handheld 1D/2D barcode scanners with debounced precision.',
     icon: 'MdQrCodeScanner',
