@@ -1,6 +1,4 @@
 import React from 'react';
-import Link from 'next/link';
-import { MdOutlineCookie, MdArrowBack } from 'react-icons/md';
 
 export const metadata = {
   title: 'Cookie Policy - Framebooks',
@@ -11,21 +9,8 @@ export default function CookiePolicyPage() {
   return (
     <div className="pt-24 sm:pt-28 pb-16 sm:pb-24 bg-white text-[#082830]">
       <div className="container mx-auto px-4 sm:px-6 max-w-4xl">
-        {/* Back link */}
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-400 hover:text-[#00C750] transition-colors mb-6"
-        >
-          <MdArrowBack className="w-4 h-4" />
-          <span>Back to Home</span>
-        </Link>
-
         {/* Title */}
         <div className="border-b border-[#E5E7EB] pb-6 mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E6FDF0] text-[#007A31] text-xs font-bold uppercase tracking-wider mb-3">
-            <MdOutlineCookie className="w-3.5 h-3.5" />
-            <span>Browser Storage &amp; Cookies</span>
-          </div>
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-[#082830] mb-3">
             Cookie Policy<span className="text-[#00E35B]">.</span>
           </h1>
