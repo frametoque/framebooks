@@ -267,13 +267,13 @@ html {
 }
 
 .prose strong {
-  color: #2563EB;
+  color: var(--accent-text, #007A31);
   font-weight: 600;
 }
 
 .prose code {
-  background: rgba(59, 130, 246, 0.1);
-  color: #2563EB;
+  background: var(--accent-soft, rgba(0, 227, 91, 0.1));
+  color: var(--accent-text, #007A31);
   padding: 0.2em 0.4em;
   border-radius: 0.25rem;
   font-size: 0.875em;
