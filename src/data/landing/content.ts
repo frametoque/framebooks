@@ -53,7 +53,7 @@ export const modulesData = [
   },
   {
     id: 'accounts',
-    title: 'Accounts & Debt Ledgers',
+    title: 'Account Ledgers',
     benefits: ['Maintain multiple bank and cash accounts with one-click bank detail sharing.', 'Track real-time inflow, outflow, net debt, and account balances.', 'Manage dual-direction debts (receivables & payables) without skewing P&L.'],
     align: 'left'
   },
