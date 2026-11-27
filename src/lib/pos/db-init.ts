@@ -278,7 +278,6 @@ export async function seedFtDemoTenantStock(targetTenantId?: number) {
       const ftTenants = await sql`
         SELECT id FROM tenants 
         WHERE name ILIKE '%FT DEMO%' 
-           OR slug ILIKE '%ft-demo%'
            OR name ILIKE '%FT%DEMO%'
       `;
       tenantIds = ftTenants.map((t: any) => t.id);

@@ -75,7 +75,7 @@ export default function LandingClient({
               transition={{ delay: 0.1 }}
               className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.12] mb-4 sm:mb-6 text-[#082830]"
             >
-              Run your whole business finances & retail counters in one place<span className="text-[#00E35B]">.</span>
+              Your business finances. And the counter you run them on<span className="text-[#00E35B]">.</span>
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 15 }}
@@ -83,7 +83,7 @@ export default function LandingClient({
               transition={{ delay: 0.2 }}
               className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed font-normal"
             >
-              All-in-one Cloud ERP, Accounting & Retail POS. Invoices, quotations, barcode stock management, live counter checkout, bank accounts, and reports — built for modern businesses.
+              Invoices, cash registers, real-time stock, and bank ledgers. Beautifully engineered to work together as one.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 15 }}
@@ -113,17 +113,17 @@ export default function LandingClient({
             >
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#00C750]" />
-                Enterprise-grade encryption
+                Bank-grade encryption
               </span>
               <span className="hidden sm:inline text-gray-300">•</span>
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#00C750]" />
-                No credit card needed
+                No credit card required
               </span>
               <span className="hidden sm:inline text-gray-300">•</span>
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#00C750]" />
-                Multi-account support
+                Instant setup
               </span>
             </motion.div>
 
@@ -411,10 +411,10 @@ export default function LandingClient({
           <div className="container mx-auto px-4 sm:px-6 max-w-6xl">
             <div className="text-center mb-10 sm:mb-16">
               <h2 className="text-3xl sm:text-4xl font-black mb-3 sm:mb-4 tracking-tight">
-                Everything your business & counters need.<br className="hidden sm:inline" /> Nothing they don't<span className="text-[#00E35B]">.</span>
+                Everything your business needs.<br className="hidden sm:inline" /> Nothing it doesn&apos;t<span className="text-[#00E35B]">.</span>
               </h2>
               <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto">
-                From high-speed retail checkout to back-office bookkeeping and automated stock, neatly organized into powerful modules.
+                From sub-second counter checkout to deep financial intelligence. Eleven powerful modules, one seamless experience.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">
@@ -457,7 +457,7 @@ export default function LandingClient({
           <div className="container mx-auto px-4 sm:px-6 max-w-6xl">
             <div className="text-center mb-10 sm:mb-16">
               <h2 className="text-3xl sm:text-4xl font-black mb-3 sm:mb-4 tracking-tight">
-                Start free. Upgrade when you grow<span className="text-[#00E35B]">.</span>
+                Transparent pricing. Zero surprises<span className="text-[#00E35B]">.</span>
               </h2>
               <div className="flex items-center justify-center gap-3 sm:gap-4 mt-6 sm:mt-8">
                 <span className={`text-sm sm:text-base font-semibold ${!yearly ? 'text-[#082830]' : 'text-gray-500'}`}>Monthly</span>
@@ -528,16 +528,16 @@ export default function LandingClient({
             {/* Enterprise & Custom */}
             <div className="max-w-5xl mx-auto bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-10 border border-[#E5E7EB] shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 md:gap-8">
               <div className="text-left">
-                <h3 className="text-xl sm:text-2xl font-black mb-2 text-[#082830]">Enterprise & Custom</h3>
+                <h3 className="text-xl sm:text-2xl font-black mb-2 text-[#082830]">Enterprise & Bespoke Setups</h3>
                 <p className="text-xs sm:text-sm text-gray-500 mb-4 max-w-2xl leading-relaxed">
-                  Need something specific? We can build custom features, tailor-made reports, and specialized integrations designed exactly for your business workflow.
+                  Need custom integrations, multi-branch architecture, or tailor-made reports? We engineer solutions built around your exact business workflow.
                 </p>
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   <div className="flex items-center gap-1.5 text-[#007A31] font-bold text-xs sm:text-sm bg-[#E6FDF0] px-3 py-1.5 rounded-lg w-fit border border-[#00E35B]/20">
-                    <MdCheck className="shrink-0" /> Request custom features
+                    <MdCheck className="shrink-0" /> Custom features & integrations
                   </div>
                   <div className="flex items-center gap-1.5 text-[#007A31] font-bold text-xs sm:text-sm bg-[#E6FDF0] px-3 py-1.5 rounded-lg w-fit border border-[#00E35B]/20">
-                    <MdCheck className="shrink-0" /> Dedicated support
+                    <MdCheck className="shrink-0" /> Priority 1-on-1 support
                   </div>
                 </div>
               </div>
@@ -563,10 +563,10 @@ export default function LandingClient({
             {/* Header */}
             <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight mb-4 sm:mb-6">
-                A lightning-fast POS terminal.<br className="hidden sm:inline" /> Built for real counters<span className="text-[#00E35B]">.</span>
+                Point of Sale.<br className="hidden sm:inline" /> Engineered for speed<span className="text-[#00E35B]">.</span>
               </h2>
               <p className="text-sm sm:text-base md:text-lg text-gray-300 leading-relaxed">
-                Built to keep checkout lines moving fast during your busiest rush hours with real-time stock tracking and seamless support for phones, tablets, and desktop counters.
+                Designed for peak rush hours. Sub-second scanning, live inventory sync, and instant receipt printing on any Mac, PC, tablet, or phone.
               </p>
             </div>
 
@@ -598,10 +598,10 @@ export default function LandingClient({
             <div className="mt-8 sm:mt-10 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#00E35B]/10 via-white/[0.04] to-[#00E35B]/10 border border-[#00E35B]/30 p-6 sm:p-8 md:p-10 backdrop-blur-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 sm:gap-8 shadow-xl shadow-[#00E35B]/5">
               <div className="space-y-3 max-w-2xl">
                 <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">
-                  Available as an Add-on to <span className="text-[#00E35B]">Pro</span> or <span className="text-[#00E35B]">Pro Plus</span>
+                  Add POS to <span className="text-[#00E35B]">Pro</span> or <span className="text-[#00E35B]">Pro Plus</span>
                 </h3>
                 <p className="text-gray-300 text-xs sm:text-sm leading-relaxed">
-                  Already running a checkout counter, retail store, or mobile sales team? Point of Sale can be added to your plan with instant activation and live cloud sync.
+                  Bring the speed of Framebooks to your checkout counter. One click activates register access, barcode scanning, and multi-terminal stock sync.
                 </p>
               </div>
 
@@ -627,10 +627,10 @@ export default function LandingClient({
             <div className="max-w-5xl mx-auto">
               <div className="text-center mb-6">
                 <h3 className="text-2xl sm:text-3xl font-black text-[#082830] mb-2 tracking-tight">
-                  <span className="text-[#00E35B]">Not sure</span> which plan you need?
+                  Find the plan that fits<span className="text-[#00E35B]">.</span>
                 </h3>
                 <p className="text-gray-500 max-w-lg mx-auto text-xs sm:text-sm leading-relaxed px-4">
-                  Adjust your total invoice volume, active clients, and feature needs to get an instant tailored recommendation.
+                  Tell us what you run, how many invoices you send, and the tools you need. We will find your ideal configuration.
                 </p>
               </div>
               <PlanFinderWidget plans={displayPlans} isYearly={yearly} posPricing={posPricing} />
@@ -643,9 +643,9 @@ export default function LandingClient({
           <div className="container mx-auto px-4 sm:px-6 max-w-6xl xl:max-w-7xl">
             <div className="text-center mb-10 sm:mb-16">
               <h2 className="text-3xl sm:text-4xl font-black mb-3 sm:mb-4 tracking-tight">
-                Frequently Asked Questions<span className="text-[#00E35B]">.</span>
+                Answers to your questions<span className="text-[#00E35B]">.</span>
               </h2>
-              <p className="text-sm sm:text-base text-gray-600">Everything you need to know about Framebooks.</p>
+              <p className="text-sm sm:text-base text-gray-600">Clear, upfront details on how Framebooks works for your business.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 items-start">
@@ -703,10 +703,10 @@ export default function LandingClient({
                 {/* Left: Text Content */}
                 <div className="max-w-2xl text-left">
                   <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#041418] tracking-tight leading-tight mb-2.5">
-                    Ready to put your finances in order?
+                    Run your business with absolute clarity.
                   </h2>
                   <p className="text-[#041418]/85 text-xs sm:text-base font-medium leading-relaxed max-w-xl">
-                    Join hundreds of Sri Lankan businesses that use Framebooks to manage their accounting, invoicing, and inventory effortlessly.
+                    Get started in minutes. No credit card required.
                   </p>
                 </div>
 

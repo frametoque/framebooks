@@ -4,8 +4,8 @@ import { getLandingPlansFormatted } from '@/lib/plans-db';
 import { getPosAddonPricing } from '@/lib/pos/entitlement';
 
 export const metadata: Metadata = {
-  title: 'Framebooks - Modern Cloud ERP, Accounting & Retail POS System',
-  description: 'The all-in-one business platform for Sri Lanka. Lightning-fast retail POS counter, automated inventory, invoices, quotations, bank accounts, and financial accounting.',
+  title: 'Framebooks — Business finances and Point of Sale, unified',
+  description: 'The all-in-one platform for Sri Lankan business. Lightning-fast retail POS, live inventory, invoices, bank ledgers, and financial intelligence.',
   keywords: [
     'Cloud ERP Sri Lanka',
     'POS System Sri Lanka',
@@ -19,14 +19,14 @@ export const metadata: Metadata = {
     'WooCommerce POS Sync'
   ],
   openGraph: {
-    title: 'Framebooks - Modern Cloud ERP, Accounting & Retail POS',
-    description: 'Run your whole business finances and checkout counters in one place. Lightning-fast POS, invoicing, stock tracking, and accounting.',
+    title: 'Framebooks — Business finances and Point of Sale, unified',
+    description: 'Invoices, cash registers, real-time stock, and bank ledgers. Beautifully engineered to work together as one.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Framebooks - Modern Cloud ERP & Retail POS',
-    description: 'All-in-one business platform: Retail POS registers, barcode stock management, invoicing, and finances.',
+    title: 'Framebooks — Business finances and Point of Sale, unified',
+    description: 'Invoices, cash registers, real-time stock, and bank ledgers. Beautifully engineered to work together as one.',
   }
 };
 

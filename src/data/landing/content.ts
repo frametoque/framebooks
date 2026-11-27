@@ -22,103 +22,139 @@ export const footerLegalLinks = [
 ];
 
 export const kpis = [
-  { label: 'Modules', value: '11' },
-  { label: 'Retail & POS', value: 'High-speed' },
-  { label: 'LKR-first', value: 'accounting' },
-  { label: 'Data encryption', value: 'Bank-grade' },
+  { label: 'Built-in modules', value: '11' },
+  { label: 'Checkout speed', value: 'Instant' },
+  { label: 'Native currency', value: 'LKR-first' },
+  { label: 'Security architecture', value: 'Bank-grade' },
 ];
 
 export const features = [
-  { title: 'Income tracking', description: 'Log all revenue streams with linked invoices.', icon: 'MdCallReceived' },
-  { title: 'Expense tracking', description: 'Categorise and record spending by account.', icon: 'MdCallMade' },
-  { title: 'Multi-account banking', description: 'Manage multiple bank and cash accounts seamlessly.', icon: 'MdAccountBalance' },
-  { title: 'Invoicing', description: 'Create, send, and track professional invoices.', icon: 'MdInsertDriveFile' },
-  { title: 'Quotations', description: 'Send estimates and convert them to invoices.', icon: 'MdInsertDriveFile' },
-  { title: 'Client management', description: 'Keep a directory of your clients and their revenue.', icon: 'MdGroup' },
-  { title: 'Inventory', description: 'Track items and estimated values (Pro Plus).', icon: 'MdInventory' },
-  { title: 'Point of Sale (POS)', description: 'Rapid barcode scanning, stock sync, receipts & drawer.', icon: 'MdPointOfSale' },
-  { title: 'Financial reports', description: 'Get insights from P&L, Cash Flow, and more.', icon: 'MdTrendingUp' },
+  { title: 'Income tracking', description: 'Every rupee earned. Linked directly to your invoices.', icon: 'MdCallReceived' },
+  { title: 'Expense management', description: 'Know where money goes by account and category.', icon: 'MdCallMade' },
+  { title: 'Multi-account banking', description: 'All your bank and cash ledgers in one clear view.', icon: 'MdAccountBalance' },
+  { title: 'Invoicing', description: 'Clean, professional invoices. Sent in seconds, paid faster.', icon: 'MdInsertDriveFile' },
+  { title: 'Quotations', description: 'Crisp estimates that convert to invoices with one tap.', icon: 'MdInsertDriveFile' },
+  { title: 'Client directory', description: 'Every client, balance, and purchase history at your fingertips.', icon: 'MdGroup' },
+  { title: 'Inventory', description: 'Live stock levels and total valuation across every shelf.', icon: 'MdInventory' },
+  { title: 'Point of Sale', description: 'Sub-second barcode scanning, live stock sync, and receipt printing.', icon: 'MdPointOfSale' },
+  { title: 'Financial reports', description: 'Instant P&L and cash flow. No accounting jargon.', icon: 'MdTrendingUp' },
 ];
 
 export const modulesData = [
   {
     id: 'dashboard',
     title: 'Dashboard',
-    benefits: ['Monitor KPI cards like Total Income and Net Profit.', 'Visualize Income vs Expenses over time.', 'Quickly access recent invoices and quotations.'],
+    benefits: [
+      'Your financial pulse in real time. Income, profit, and cash runway at a glance.',
+      'Clear, beautiful charts that make monthly performance unmistakable.',
+      'Jump straight into recent invoices, estimates, and register sales.'
+    ],
     align: 'left'
   },
   {
     id: 'invoices',
     title: 'Invoices',
-    benefits: ['Create, send, and download invoices in seconds.', 'Track payment statuses like Fully Paid or Overdue.', 'Highlight overdue dates automatically.'],
+    benefits: [
+      'Engineered to impress clients and speed up payments.',
+      'Automated overdue alerts and live payment statuses.',
+      'Download clean PDFs or share instant payment links.'
+    ],
     align: 'right'
   },
   {
     id: 'quotations',
     title: 'Quotations',
-    benefits: ['Draft and send quotes to potential clients.', 'Filter by service categories like Web dev or Photography.', 'Convert accepted quotes into invoices instantly.'],
+    benefits: [
+      'Create polished proposals and estimates in seconds.',
+      'Organize by custom service categories and itemized rates.',
+      'One tap turns an approved quote into a live invoice.'
+    ],
     align: 'left'
   },
   {
     id: 'income-expenses',
     title: 'Income & Expenses',
-    benefits: ['Record transactions against clients and accounts.', 'Tag entries with categories for accurate reporting.', 'Compare this month to last month at a glance.'],
+    benefits: [
+      'Every transaction tied to a client, an account, and a category.',
+      'Know your true monthly burn rate without digging through spreadsheets.',
+      'Instant month-over-month comparisons to track growth.'
+    ],
     align: 'right'
   },
   {
     id: 'accounts',
     title: 'Account Ledgers',
-    benefits: ['Maintain multiple bank and cash accounts with one-click bank detail sharing.', 'Track real-time inflow, outflow, net debt, and account balances.', 'Manage dual-direction debts (receivables & payables) without skewing P&L.'],
+    benefits: [
+      'Unified tracking across bank accounts, petty cash, and cards.',
+      'Share your verified bank details with clients in a single tap.',
+      'Keep track of payables and receivables without skewing your profits.'
+    ],
     align: 'left'
   },
   {
     id: 'clients',
     title: 'Clients',
-    benefits: ['Store contact details and track lifetime revenue.', 'See who your top clients are instantly.', 'Manage active and inactive client statuses with field-level encryption.'],
+    benefits: [
+      'A complete directory of contact details and lifetime revenue.',
+      'Spot your most valuable clients and repeat customers instantly.',
+      'Protected with field-level encryption for absolute confidentiality.'
+    ],
     align: 'right'
   },
   {
     id: 'inventory',
     title: 'Inventory',
-    benefits: ['Maintain an itemized list of your products.', 'Track available quantities and estimated value.', 'Exclusive to our Pro Plus plan.'],
+    benefits: [
+      'Know what is on hand, what is running low, and total asset value.',
+      'Stock counts decrease the moment an invoice or register sale completes.',
+      'Full barcode, QR code, and SKU support built into every item.'
+    ],
     align: 'left'
   },
   {
     id: 'team',
     title: 'Team & Roles',
-    benefits: ['Invite unlimited team members on higher plans.', 'Assign fine-grained custom roles and permissions.', 'Collaborate without sharing passwords.'],
+    benefits: [
+      'Invite cashiers, managers, and accountants in seconds.',
+      'Granular permission controls — give access only to what people need.',
+      'Collaborate safely without ever sharing administrator passwords.'
+    ],
     align: 'right'
   },
   {
     id: 'security',
     title: 'Security & Privacy',
-    benefits: ['Bank-grade data encryption for sensitive client and banking details.', 'Hardware-backed biometric passkeys (Touch ID / Face ID) and app lock PIN.', 'Privacy blur mode for public spaces and comprehensive system audit logs.'],
+    benefits: [
+      'Bank-grade encryption safeguards your client and financial records.',
+      'Biometric passkeys let you sign in with Touch ID or Face ID.',
+      'Privacy blur mode hides sensitive totals when working in public.'
+    ],
     align: 'left'
   }
 ];
 
 export const workflowSteps = [
-  { num: '01', title: 'Send a quotation', icon: 'MdInsertDriveFile' },
-  { num: '02', title: 'Convert it to an invoice', icon: 'MdAutorenew' },
-  { num: '03', title: 'Record the payment against your account', icon: 'MdAccountBalanceWallet' },
-  { num: '04', title: 'See it in your reports', icon: 'MdTrendingUp' },
+  { num: '01', title: 'Quote with confidence', icon: 'MdInsertDriveFile' },
+  { num: '02', title: 'Bill with a tap', icon: 'MdAutorenew' },
+  { num: '03', title: 'Collect and reconcile', icon: 'MdAccountBalanceWallet' },
+  { num: '04', title: 'Watch the books balance', icon: 'MdTrendingUp' },
 ];
 
 export const securityFeatures = [
-  'Roles & Permissions (custom roles)',
-  'Team Settings & Invitations',
-  'Audit Logs & Traceability',
-  'App Lock & Biometric Passkeys',
-  'Privacy Blur Mode',
-  'Push Notifications & Financial Reminders',
-  'Data Export to CSV',
-  'Bank-Grade Data Encryption'
+  'Granular roles and permission controls',
+  'Frictionless team invitations',
+  'Tamper-evident audit trails',
+  'Touch ID & Face ID biometric passkeys',
+  'Privacy blur for public environments',
+  'Smart notifications and payment reminders',
+  'One-click data export to CSV',
+  'Bank-grade AES data encryption'
 ];
 
 export const plans = [
   {
     name: 'Free',
-    description: 'Get started for free to explore the product',
+    description: 'Everything you need to get your business off the ground.',
     monthlyPrice: 0,
     yearlyPrice: 0,
     features: [
@@ -141,7 +177,7 @@ export const plans = [
   },
   {
     name: 'Pro',
-    description: 'Advanced tools to manage finances and grow faster.',
+    description: 'Uncapped capability for growing businesses and retail counters.',
     monthlyPrice: 2600,
     yearlyPrice: 26000,
     features: [
@@ -163,7 +199,7 @@ export const plans = [
   },
   {
     name: 'Pro Plus',
-    description: 'For Power Users and large teams',
+    description: 'The ultimate operating system for established businesses and teams.',
     monthlyPrice: 5200,
     yearlyPrice: 52000,
     features: [
@@ -189,33 +225,33 @@ export const plans = [
 
 export const posFeatures = [
   {
-    title: 'Fast Barcode & QR Scanning',
-    description: 'Scan items in seconds with your phone camera or any handheld USB and Bluetooth barcode scanner to keep checkout lines moving fast.',
+    title: 'Sub-second scanning',
+    description: 'Laser, Bluetooth, or your device camera. Scan any barcode or QR code instantly — keep checkout moving during the biggest rush.',
     icon: 'MdQrCodeScanner',
   },
   {
-    title: 'Real-Time Stock Tracking',
-    description: 'Stock quantities sync automatically with every sale, preventing stockouts and keeping your counter shelves and catalog accurate.',
+    title: 'Live inventory sync',
+    description: 'Every sale updates inventory across your registers and online catalog in real time. Zero double-counting. Zero overselling.',
     icon: 'MdInventory',
   },
   {
-    title: 'Receipt Printing & Cash Drawers',
-    description: 'Print clean customer receipts on standard thermal printers and automatically pop open your cash drawer when payment completes.',
+    title: 'Thermal receipts & cash drawers',
+    description: 'Works with standard thermal printers and cash drawers. Clean typography, customizable headers, and instant drawer kicks.',
     icon: 'MdPrint',
   },
   {
-    title: 'Cashier Controls & Manager PIN',
-    description: 'Protect your business with role permissions. Staff can ring up sales, while applying custom discounts requires a manager PIN code.',
+    title: 'Manager PIN protection',
+    description: 'Cashiers ring up sales quickly. Special discounts, price overrides, and cash drawer opens require a manager PIN.',
     icon: 'MdLockOutline',
   },
   {
-    title: 'Flexible Discounts & Offers',
-    description: 'Apply percentage or fixed-amount discounts, run product bundle deals, and track walk-in or saved customers with clear price breakdowns.',
+    title: 'Split tenders & clean discounts',
+    description: 'Cash, card, bank transfer, or split across methods. Apply percentage or fixed discounts with complete transparency.',
     icon: 'MdLocalOffer',
   },
   {
-    title: 'Sell on Mobile, Tablet & PC',
-    description: 'Take orders from your counter desktop, a tablet, or your phone on the retail floor. Complete sales anywhere with instant cloud sync.',
+    title: 'Any screen is your register',
+    description: 'Mac, PC, iPad, or smartphone. Ring up sales at the counter, on the shop floor, or on the go with automatic cloud sync.',
     icon: 'MdPhoneIphone',
   },
 ];
@@ -239,16 +275,52 @@ export const comparison = [
 ];
 
 export const faqs = [
-  { q: 'Who is Framebooks for?', a: 'Framebooks is built specifically for small businesses, agencies, and freelancers in Sri Lanka looking for an all-in-one financial dashboard.' },
-  { q: 'Does it work in LKR?', a: 'Yes! Framebooks is LKR-first, meaning all formatting, reports, and currency displays are natively designed for Sri Lankan Rupees.' },
-  { q: 'Does Framebooks have a POS System?', a: 'Yes! Framebooks includes an easy-to-use, fast POS terminal for retail counters. Scan barcodes with a camera or scanner, print thermal customer receipts, open cash drawers, apply discounts with manager PIN approval, and track sales live.' },
-  { q: 'Can I use the POS on mobile phones or tablets?', a: 'Yes. The POS is fully mobile-responsive. You can take orders on the sales floor with a phone or tablet, scan barcodes using your device camera, and complete transactions anywhere in your store.' },
-  { q: 'How does POS stock synchronization work?', a: 'Your physical stock counts update automatically in real time with every sale. When an item is sold at the register, stock quantities immediately update across all registers and your stock dashboard to prevent overselling.' },
-  { q: 'Can I manage multiple bank accounts?', a: 'Absolutely. You can track multiple bank accounts, petty cash, and even transfer funds between them with full history.' },
-  { q: 'How do quotations become invoices?', a: 'Once a client accepts a quote, you can convert it to an invoice with a single click, carrying over all line items and details automatically.' },
-  { q: 'Can my team have different permissions?', a: 'Yes, our Roles & Permissions feature allows you to customize exactly what each team member can see and edit.' },
-  { q: 'Is my data safe?', a: 'Your data stays secure with enterprise-grade encryption in transit and at rest, regular backups, and features like two-factor authentication on higher plans.' },
-  { q: 'Can I export my data?', a: 'You can export all your financial data to CSV at any time for your accountant or your own records.' },
-  { q: 'Can I upgrade or downgrade later?', a: 'Of course! You can change your plan at any time to fit your growing business needs.' },
-  { q: 'What hardware do I need to use the POS?', a: 'You can use any laptop, tablet, or smartphone. Framebooks POS works with standard USB and Bluetooth barcode scanners, thermal receipt printers, and cash drawers without needing expensive proprietary equipment.' },
+  {
+    q: 'Who is Framebooks designed for?',
+    a: 'Any Sri Lankan business that wants their money, inventory, and sales in one place — retailers, agencies, studios, contractors, and growing brands.'
+  },
+  {
+    q: 'Does it work natively in Sri Lankan Rupees?',
+    a: 'Down to the cent. LKR is native across all formatting, ledgers, tax totals, and financial summaries.'
+  },
+  {
+    q: 'How does the Point of Sale work?',
+    a: 'It turns any computer, tablet, or phone into a fast checkout register. Scan barcodes, print receipts, open cash drawers, and update inventory live.'
+  },
+  {
+    q: 'Do I need special hardware to use the POS?',
+    a: 'None at all. Framebooks works with standard USB and Bluetooth barcode scanners, thermal receipt printers, and cash drawers you already own.'
+  },
+  {
+    q: 'Can I use the POS on mobile phones or tablets?',
+    a: 'Yes. Take orders on the sales floor with an iPad or smartphone, scan barcodes using your built-in camera, and close sales anywhere in your store.'
+  },
+  {
+    q: 'How does stock synchronize between the counter and warehouse?',
+    a: 'Instantly. The moment an item sells at the counter, stock levels update across all registers and your main inventory dashboard.'
+  },
+  {
+    q: 'Can I track multiple bank accounts?',
+    a: 'Yes. Manage multiple commercial bank accounts, petty cash, and cards. Transfer funds between them with full traceability.'
+  },
+  {
+    q: 'How do quotations turn into invoices?',
+    a: 'With one click. When a client approves your quote, convert it to an invoice immediately — all line items and pricing carry over automatically.'
+  },
+  {
+    q: 'Can I restrict what my team members see?',
+    a: 'Yes. Assign cashiers to register mode only, let your accountant inspect the ledgers, and keep company-level profits reserved for management.'
+  },
+  {
+    q: 'How is my financial data protected?',
+    a: 'Bank-grade AES encryption, biometric passkeys (Touch ID and Face ID), daily cloud backups, and private-by-design access controls.'
+  },
+  {
+    q: 'Can I export my data for my accountant or tax filings?',
+    a: 'Anytime. Export all transactions, invoices, and ledgers into clean CSV spreadsheets in a single click.'
+  },
+  {
+    q: 'Can I change my plan as my business grows?',
+    a: 'Whenever you need to. Upgrade, downgrade, or switch billing cycles anytime with zero lock-in contracts.'
+  },
 ];

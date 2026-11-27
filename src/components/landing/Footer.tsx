@@ -23,7 +23,7 @@ export default function Footer() {
               Framebooks
             </Link>
             <p className="text-gray-500 mb-4 max-w-sm text-sm leading-relaxed">
-              The complete cloud ERP, accounting, and retail Point of Sale (POS) system for modern businesses in Sri Lanka.
+              Cloud accounting, invoicing, and retail point of sale. Built for Sri Lankan businesses.
             </p>
             <div className="space-y-2 text-xs sm:text-sm text-gray-600 mb-5">
               <a
