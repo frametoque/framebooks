@@ -549,7 +549,7 @@ export async function createIncome(data: any) {
   await logSystemAction(`Created income: Recorded LKR ${data.amount} for "${data.description}"`);
 }
 
-export async function createClient(data: { name: string; email: string; company?: string | null; phone?: string | null; address?: string | null; legal_name?: string | null }): Promise<any> {
+export async function createClient(data: { name: string; email: string; company?: string | null; phone?: string | null; address?: string | null; billing_address?: string | null; tax_id?: string | null; legal_name?: string | null }): Promise<any> {
   const { error: rbacError } = await requirePermission('clients', 'insert');
   if (rbacError) throw new Error(rbacError);
 
@@ -562,21 +562,36 @@ export async function createClient(data: { name: string; email: string; company?
   const encPhone = data.phone ? encryptField(data.phone, { tenantId: tenantId || 1, table: "admin_clients", column: "phone", recordId: clientId }) : null;
   const bidxPhone = data.phone ? blindIndex(data.phone, tenantId || 1) : null;
   const encAddress = data.address ? encryptField(data.address, { tenantId: tenantId || 1, table: "admin_clients", column: "address", recordId: clientId }) : null;
+  const encBilling = data.billing_address ? encryptField(data.billing_address, { tenantId: tenantId || 1, table: "admin_clients", column: "billing_address", recordId: clientId }) : null;
+  const encTax = data.tax_id ? encryptField(data.tax_id, { tenantId: tenantId || 1, table: "admin_clients", column: "tax_id", recordId: clientId }) : null;
+  const bidxTax = data.tax_id ? blindIndex(data.tax_id, tenantId || 1) : null;
 
   await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS phone_enc TEXT`.catch(() => {});
   await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS phone_bidx VARCHAR(64)`.catch(() => {});
   await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS address_enc TEXT`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS billing_address_enc TEXT`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS tax_id_enc TEXT`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS tax_id_bidx VARCHAR(64)`.catch(() => {});
 
   await sql`
-    INSERT INTO admin_clients (id, full_name, email, company, phone, phone_enc, phone_bidx, address, address_enc, active, legal_name, tenant_id)
-    VALUES (${clientId}, ${data.name}, ${data.email}, ${data.company || null}, ${data.phone || null}, ${encPhone}, ${bidxPhone}, ${data.address || null}, ${encAddress}, true, ${data.legal_name || null}, ${tenantId})
+    INSERT INTO admin_clients (
+      id, full_name, email, company, phone, phone_enc, phone_bidx,
+      address, address_enc, billing_address, billing_address_enc,
+      tax_id, tax_id_enc, tax_id_bidx, active, legal_name, tenant_id
+    )
+    VALUES (
+      ${clientId}, ${data.name}, ${data.email}, ${data.company || null},
+      ${data.phone || null}, ${encPhone}, ${bidxPhone},
+      ${data.address || null}, ${encAddress}, ${data.billing_address || null}, ${encBilling},
+      ${data.tax_id || null}, ${encTax}, ${bidxTax}, true, ${data.legal_name || null}, ${tenantId}
+    )
   `;
   await incrementLifetimeUsage(Number(tenantId), 'clients');
   await logSystemAction(`Created client: "${data.name}" (${data.email})`);
   return clientId;
 }
 
-export async function updateClient(clientId: string, data: { name?: string; email?: string; company?: string | null; phone?: string | null; address?: string | null; legal_name?: string | null }) {
+export async function updateClient(clientId: string, data: { name?: string; email?: string; company?: string | null; phone?: string | null; address?: string | null; billing_address?: string | null; tax_id?: string | null; legal_name?: string | null }) {
   const { error: rbacError } = await requirePermission('clients', 'update');
   if (rbacError) throw new Error(rbacError);
 
@@ -592,10 +607,16 @@ export async function updateClient(clientId: string, data: { name?: string; emai
   const encPhone = data.phone !== undefined ? (data.phone ? encryptField(data.phone, { tenantId: tenantId || 1, table: "admin_clients", column: "phone", recordId: clientId }) : null) : undefined;
   const bidxPhone = data.phone !== undefined ? (data.phone ? blindIndex(data.phone, tenantId || 1) : null) : undefined;
   const encAddress = data.address !== undefined ? (data.address ? encryptField(data.address, { tenantId: tenantId || 1, table: "admin_clients", column: "address", recordId: clientId }) : null) : undefined;
+  const encBilling = data.billing_address !== undefined ? (data.billing_address ? encryptField(data.billing_address, { tenantId: tenantId || 1, table: "admin_clients", column: "billing_address", recordId: clientId }) : null) : undefined;
+  const encTax = data.tax_id !== undefined ? (data.tax_id ? encryptField(data.tax_id, { tenantId: tenantId || 1, table: "admin_clients", column: "tax_id", recordId: clientId }) : null) : undefined;
+  const bidxTax = data.tax_id !== undefined ? (data.tax_id ? blindIndex(data.tax_id, tenantId || 1) : null) : undefined;
 
   await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS phone_enc TEXT`.catch(() => {});
   await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS phone_bidx VARCHAR(64)`.catch(() => {});
   await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS address_enc TEXT`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS billing_address_enc TEXT`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS tax_id_enc TEXT`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS tax_id_bidx VARCHAR(64)`.catch(() => {});
 
   // Update admin_clients row
   await sql`
@@ -609,6 +630,11 @@ export async function updateClient(clientId: string, data: { name?: string; emai
       phone_bidx = COALESCE(${bidxPhone ?? null}, phone_bidx),
       address = ${data.address ?? null},
       address_enc = COALESCE(${encAddress ?? null}, address_enc),
+      billing_address = ${data.billing_address ?? null},
+      billing_address_enc = COALESCE(${encBilling ?? null}, billing_address_enc),
+      tax_id = ${data.tax_id ?? null},
+      tax_id_enc = COALESCE(${encTax ?? null}, tax_id_enc),
+      tax_id_bidx = COALESCE(${bidxTax ?? null}, tax_id_bidx),
       legal_name = ${data.legal_name ?? null}
     WHERE id = ${clientId} AND tenant_id = ${tenantId}
   `;
@@ -1256,8 +1282,13 @@ export async function getInvoiceByIdAdmin(invoiceId: string) {
       COALESCE(ac.address, ac.billing_address) as client_address,
       ac.email as client_email,
       ac.phone as client_phone,
+      ac.phone_enc as client_phone_enc,
+      ac.address_enc as client_address_enc,
+      ac.billing_address_enc as client_billing_address_enc,
       ac.company as client_company,
       ac.tax_id as client_tax_id,
+      ac.tax_id_enc as client_tax_id_enc,
+      ac.id as client_record_id,
       ba.name as bank_acc_name,
       ba.account_number as bank_acc_number,
       ba.bank_name as bank_acc_bank,
@@ -1281,6 +1312,47 @@ export async function getInvoiceByIdAdmin(invoiceId: string) {
 
   if (result.length === 0) return null;
   const invoice = result[0];
+
+  if (invoice.client_phone_enc) {
+    try {
+      invoice.client_phone = decryptField(invoice.client_phone_enc, {
+        tenantId: tenantId || 1,
+        table: "admin_clients",
+        column: "phone",
+        recordId: invoice.client_record_id,
+      });
+    } catch {}
+  }
+  if (invoice.client_billing_address_enc) {
+    try {
+      invoice.billing_address = decryptField(invoice.client_billing_address_enc, {
+        tenantId: tenantId || 1,
+        table: "admin_clients",
+        column: "billing_address",
+        recordId: invoice.client_record_id,
+      });
+    } catch {}
+  }
+  if (invoice.client_address_enc) {
+    try {
+      invoice.client_address = decryptField(invoice.client_address_enc, {
+        tenantId: tenantId || 1,
+        table: "admin_clients",
+        column: "address",
+        recordId: invoice.client_record_id,
+      });
+    } catch {}
+  }
+  if (invoice.client_tax_id_enc) {
+    try {
+      invoice.client_tax_id = decryptField(invoice.client_tax_id_enc, {
+        tenantId: tenantId || 1,
+        table: "admin_clients",
+        column: "tax_id",
+        recordId: invoice.client_record_id,
+      });
+    } catch {}
+  }
 
   const itemsResult = await sql`
     SELECT description, price, total, quantity 
@@ -1400,6 +1472,8 @@ export async function getClients() {
 
   await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS phone_enc TEXT`.catch(() => {});
   await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS address_enc TEXT`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS billing_address_enc TEXT`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS tax_id_enc TEXT`.catch(() => {});
 
   const rows = await sql`
     SELECT c.id,
@@ -1411,6 +1485,10 @@ export async function getClients() {
            c.phone_enc,
            c.address,
            c.address_enc,
+           c.billing_address,
+           c.billing_address_enc,
+           c.tax_id,
+           c.tax_id_enc,
            c.legal_name,
            (SELECT COUNT(*) FROM invoices i WHERE (i.client_id = c.id OR (c.email IS NOT NULL AND LOWER(i.user_email) = LOWER(c.email))) AND i.tenant_id = ${tenantId}) as invoices,
            COALESCE((SELECT SUM(amount) FROM admin_incomes inc WHERE inc.client_id = c.id AND inc.tenant_id = ${tenantId}), 0) as revenue,
@@ -1452,6 +1530,30 @@ export async function getClients() {
         } catch {}
       }
 
+      let resolvedBilling = r.billing_address;
+      if (r.billing_address_enc) {
+        try {
+          resolvedBilling = decryptField(r.billing_address_enc, {
+            tenantId: tenantId || 1,
+            table: "admin_clients",
+            column: "billing_address",
+            recordId: r.id,
+          });
+        } catch {}
+      }
+
+      let resolvedTaxId = r.tax_id;
+      if (r.tax_id_enc) {
+        try {
+          resolvedTaxId = decryptField(r.tax_id_enc, {
+            tenantId: tenantId || 1,
+            table: "admin_clients",
+            column: "tax_id",
+            recordId: r.id,
+          });
+        } catch {}
+      }
+
       return {
         id: r.id,
         name: r.name || (r.email ? r.email.split('@')[0] : 'Client'),
@@ -1460,6 +1562,8 @@ export async function getClients() {
         company: r.company,
         phone: resolvedPhone,
         address: resolvedAddress,
+        billingAddress: resolvedBilling,
+        taxId: resolvedTaxId,
         legalName: r.legal_name || "",
         imageUrl,
         invoices: parseInt(r.invoices),
@@ -1480,6 +1584,8 @@ export async function getClientById(clientId: string) {
 
   await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS phone_enc TEXT`.catch(() => {});
   await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS address_enc TEXT`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS billing_address_enc TEXT`.catch(() => {});
+  await sql`ALTER TABLE admin_clients ADD COLUMN IF NOT EXISTS tax_id_enc TEXT`.catch(() => {});
 
   const rows = await sql`
     SELECT c.id,
@@ -1491,6 +1597,10 @@ export async function getClientById(clientId: string) {
            c.phone_enc,
            c.address,
            c.address_enc,
+           c.billing_address,
+           c.billing_address_enc,
+           c.tax_id,
+           c.tax_id_enc,
            c.website,
            c.legal_name
     FROM admin_clients c
@@ -1523,8 +1633,35 @@ export async function getClientById(clientId: string) {
       });
     } catch {}
   }
+
+  let resolvedBilling = c.billing_address;
+  if (c.billing_address_enc) {
+    try {
+      resolvedBilling = decryptField(c.billing_address_enc, {
+        tenantId: tenantId || 1,
+        table: "admin_clients",
+        column: "billing_address",
+        recordId: c.id,
+      });
+    } catch {}
+  }
+
+  let resolvedTaxId = c.tax_id;
+  if (c.tax_id_enc) {
+    try {
+      resolvedTaxId = decryptField(c.tax_id_enc, {
+        tenantId: tenantId || 1,
+        table: "admin_clients",
+        column: "tax_id",
+        recordId: c.id,
+      });
+    } catch {}
+  }
+
   c.phone = resolvedPhone;
   c.address = resolvedAddress;
+  c.billing_address = resolvedBilling;
+  c.tax_id = resolvedTaxId;
 
   let imageUrl = null;
   if (c.email) {
@@ -2125,10 +2262,15 @@ export async function createQuotation(data: any, lineItems: any[] = []) {
   }
 
   if (data.clientId && data.billingAddress) {
+    const encAddress = encryptField(data.billingAddress, { tenantId: tenantId || 1, table: "admin_clients", column: "address", recordId: data.clientId });
+    const encBilling = encryptField(data.billingAddress, { tenantId: tenantId || 1, table: "admin_clients", column: "billing_address", recordId: data.clientId });
     await sql`
       UPDATE admin_clients
       SET 
         address = ${data.billingAddress},
+        address_enc = ${encAddress},
+        billing_address = ${data.billingAddress},
+        billing_address_enc = ${encBilling},
         legal_name = COALESCE(${data.legalName || null}, legal_name)
       WHERE id = ${data.clientId} AND tenant_id = ${tenantId}
     `;
@@ -2207,10 +2349,15 @@ export async function updateQuotation(id: number, data: any, lineItems: any[] = 
     }
 
     if (data.clientId && data.billingAddress) {
+      const encAddress = encryptField(data.billingAddress, { tenantId: tenantId || 1, table: "admin_clients", column: "address", recordId: data.clientId });
+      const encBilling = encryptField(data.billingAddress, { tenantId: tenantId || 1, table: "admin_clients", column: "billing_address", recordId: data.clientId });
       await sql`
         UPDATE admin_clients
         SET 
           address = ${data.billingAddress},
+          address_enc = ${encAddress},
+          billing_address = ${data.billingAddress},
+          billing_address_enc = ${encBilling},
           legal_name = COALESCE(${data.legalName || null}, legal_name)
         WHERE id = ${data.clientId} AND tenant_id = ${tenantId}
       `;

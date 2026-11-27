@@ -4,6 +4,7 @@ import sql from "@/lib/db";
 import { requirePosPermission, hasGranularPermission, getUserContext } from "@/app/(dashboard)/user/actions/rbac";
 import { ensurePosSchema } from "@/lib/pos/db-init";
 import { logSystemAction } from "@/lib/logger";
+import { encryptField, decryptField, blindIndex } from "@/lib/security/crypto";
 
 export interface PosPromotion {
   id: number;
@@ -225,12 +226,15 @@ export async function verifyManagerPosCodeAction(
   }
 
   try {
+    const bidxCode = blindIndex(cleanCode.toLowerCase(), tenantId);
     const rows = await sql`
-      SELECT id, full_name, email, role, pos_manager_code
+      SELECT id, full_name, email, role, pos_manager_code, pos_manager_code_enc
       FROM admin_users
       WHERE tenant_id = ${tenantId}
-        AND pos_manager_code IS NOT NULL
-        AND LOWER(TRIM(pos_manager_code)) = LOWER(${cleanCode})
+        AND (
+          pos_manager_code_bidx = ${bidxCode}
+          OR (pos_manager_code IS NOT NULL AND LOWER(TRIM(pos_manager_code)) = LOWER(${cleanCode}))
+        )
         AND deleted_at IS NULL
       LIMIT 1
     `;
@@ -285,7 +289,7 @@ export async function getUserPosCodeAction(userId: number): Promise<{
 
   try {
     const rows = await sql`
-      SELECT id, full_name, email, role, pos_manager_code
+      SELECT id, full_name, email, role, pos_manager_code, pos_manager_code_enc
       FROM admin_users
       WHERE id = ${userId} AND tenant_id = ${tenantId} AND deleted_at IS NULL
       LIMIT 1
@@ -295,7 +299,21 @@ export async function getUserPosCodeAction(userId: number): Promise<{
       return { success: false, error: "User not found." };
     }
 
-    return { success: true, posCode: rows[0].pos_manager_code || null };
+    let posCode = rows[0].pos_manager_code || null;
+    if (rows[0].pos_manager_code_enc) {
+      try {
+        posCode = decryptField(rows[0].pos_manager_code_enc, {
+          tenantId,
+          table: "admin_users",
+          column: "pos_manager_code",
+          recordId: userId,
+        });
+      } catch {
+        // Fallback to pos_manager_code
+      }
+    }
+
+    return { success: true, posCode };
   } catch (err: any) {
     return { success: false, error: err.message };
   }
@@ -337,12 +355,23 @@ export async function updateUserPosCodeAction(
   await ensurePosSchema();
 
   try {
+    const bidxCode = blindIndex(cleanCode.toLowerCase(), tenantId);
+    const encCode = encryptField(cleanCode, {
+      tenantId,
+      table: "admin_users",
+      column: "pos_manager_code",
+      recordId: userId,
+    });
+
     // Check if code is already taken by another user in this tenant
     const existing = await sql`
       SELECT id, full_name FROM admin_users
       WHERE tenant_id = ${tenantId}
         AND id != ${userId}
-        AND LOWER(TRIM(pos_manager_code)) = LOWER(${cleanCode})
+        AND (
+          pos_manager_code_bidx = ${bidxCode}
+          OR (pos_manager_code IS NOT NULL AND LOWER(TRIM(pos_manager_code)) = LOWER(${cleanCode}))
+        )
         AND deleted_at IS NULL
       LIMIT 1
     `;
@@ -352,7 +381,9 @@ export async function updateUserPosCodeAction(
 
     await sql`
       UPDATE admin_users
-      SET pos_manager_code = ${cleanCode}
+      SET pos_manager_code = ${cleanCode},
+          pos_manager_code_enc = ${encCode},
+          pos_manager_code_bidx = ${bidxCode}
       WHERE id = ${userId} AND tenant_id = ${tenantId}
     `;
 

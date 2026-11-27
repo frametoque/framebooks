@@ -5,6 +5,7 @@ import sql from "@/lib/db";
 import { requireAdmin, logAdminAction } from "@/app/(dashboard)/admin/_lib/auth";
 import { revalidatePath } from "next/cache";
 import { grantPosAddon, revokePosAddon, getPosAddonStatus } from "@/lib/pos/entitlement";
+import { encryptField, decryptField } from "@/lib/security/crypto";
 
 export async function getUsersList({
   search = "",
@@ -469,10 +470,25 @@ export async function addUserNote(userId: number, body: string) {
 
   if (!body.trim()) throw new Error("Note cannot be empty");
 
-  await sql`
-    INSERT INTO user_notes (user_id, author_id, author_email, author_name, body)
-    VALUES (${userId}, ${String(actor.id)}, ${actor.email}, ${actor.name}, ${body.trim()})
+  const userRows = await sql`SELECT tenant_id FROM admin_users WHERE id = ${userId} LIMIT 1`;
+  const tenantId = userRows[0]?.tenant_id ? Number(userRows[0].tenant_id) : 1;
+
+  const inserted = await sql`
+    INSERT INTO user_notes (user_id, tenant_id, author_id, author_email, author_name, body)
+    VALUES (${userId}, ${tenantId}, ${String(actor.id)}, ${actor.email}, ${actor.name}, ${body.trim()})
+    RETURNING id
   `;
+
+  const noteId = inserted[0]?.id;
+  if (noteId) {
+    const encBody = encryptField(body.trim(), {
+      tenantId,
+      table: "user_notes",
+      column: "body",
+      recordId: noteId,
+    });
+    await sql`UPDATE user_notes SET body_enc = ${encBody} WHERE id = ${noteId}`;
+  }
 
   await logAdminAction({
     actor,
@@ -573,11 +589,25 @@ export async function getUserDetails(userId: number) {
   `;
 
   // Notes
-  const notes = await sql`
+  const rawNotes = await sql`
     SELECT * FROM user_notes 
     WHERE user_id = ${userId}
     ORDER BY created_at DESC
   `;
+  const notes = rawNotes.map((n: any) => {
+    let resolvedBody = n.body;
+    if (n.body_enc) {
+      try {
+        resolvedBody = decryptField(n.body_enc, {
+          tenantId: n.tenant_id || tenantId || 1,
+          table: "user_notes",
+          column: "body",
+          recordId: n.id,
+        });
+      } catch {}
+    }
+    return { ...n, body: resolvedBody };
+  });
 
   // Lifetime paid sum
   const lifetimePaid = payments
@@ -859,12 +889,26 @@ export async function getBusinessDetails(tenantId: number) {
     .filter((p: any) => p.status === 'paid')
     .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
 
-  const notes = await sql`
+  const rawNotes = await sql`
     SELECT * FROM user_notes 
     WHERE tenant_id = ${tenantId}
        OR (user_id IN (SELECT id FROM admin_users WHERE tenant_id = ${tenantId}))
     ORDER BY created_at DESC
   `;
+  const notes = rawNotes.map((n: any) => {
+    let resolvedBody = n.body;
+    if (n.body_enc) {
+      try {
+        resolvedBody = decryptField(n.body_enc, {
+          tenantId: n.tenant_id || tenantId || 1,
+          table: "user_notes",
+          column: "body",
+          recordId: n.id,
+        });
+      } catch {}
+    }
+    return { ...n, body: resolvedBody };
+  });
 
   const activity = await sql`
     SELECT * FROM admin_audit_logs
@@ -938,10 +982,22 @@ export async function addBusinessNote(tenantId: number, body: string) {
   `;
   const representativeUserId = ownerRows[0]?.id || actor.id;
 
-  await sql`
+  const inserted = await sql`
     INSERT INTO user_notes (user_id, tenant_id, author_id, author_email, author_name, body)
     VALUES (${representativeUserId}, ${tenantId}, ${String(actor.id)}, ${actor.email}, ${actor.name}, ${body.trim()})
+    RETURNING id
   `;
+
+  const noteId = inserted[0]?.id;
+  if (noteId) {
+    const encBody = encryptField(body.trim(), {
+      tenantId,
+      table: "user_notes",
+      column: "body",
+      recordId: noteId,
+    });
+    await sql`UPDATE user_notes SET body_enc = ${encBody} WHERE id = ${noteId}`;
+  }
 
   await logAdminAction({
     actor,
