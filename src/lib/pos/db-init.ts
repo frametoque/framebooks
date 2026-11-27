@@ -1,4 +1,5 @@
 import sql from "@/lib/db";
+import { ensureDefaultRolePermissions } from "@/app/(dashboard)/user/actions/roles";
 
 let isInitialized = false;
 let posInitPromise: Promise<void> | null = null;
@@ -41,6 +42,9 @@ export async function ensurePosSchema() {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
     `;
+
+    // 1c. Ensure system role permissions table and default role privileges
+    await ensureDefaultRolePermissions().catch(() => {});
 
     // Seed default POS add-on if it doesn't exist
     await sql`

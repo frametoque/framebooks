@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth';
 import sql from "@/lib/db";
 import { getPosAddonStatus } from "@/lib/pos/entitlement";
+import { DEFAULT_ROLE_PERMISSIONS } from "./roles";
 
 export type Role = string;
 export type ResourceType = 
@@ -78,8 +79,8 @@ export async function getUserContext() {
  */
 export async function getRolePermissionsObject(role: Role | null, tenantId: number | null = null): Promise<Record<string, any> | null> {
   if (!role) return null;
-  const lowerRole = role.toLowerCase();
-  if (lowerRole === 'owner' || lowerRole === 'super admin' || lowerRole === 'super_admin') return null; // full bypass
+  const lowerRole = role.toLowerCase().replace(/\s+/g, '_');
+  if (lowerRole === 'owner') return null; // full bypass for organization owner
 
   let result;
   if (tenantId) {
@@ -92,22 +93,21 @@ export async function getRolePermissionsObject(role: Role | null, tenantId: numb
     result = await sql`SELECT granular_permissions FROM role_permissions WHERE LOWER(role) = LOWER(${role})`;
   }
 
-  if (result.length === 0) {
-    if (lowerRole === 'cashier') {
-      return {
-        pos: { use: true, refund: false, discount: false, void: false, reports_view: false },
-        stock: { view: false, manage: false },
-      };
+  if (result && result.length > 0) {
+    let perms = result[0].granular_permissions;
+    if (typeof perms === 'string') {
+      try { perms = JSON.parse(perms); } catch {}
     }
-    if (lowerRole === 'admin') return null; // full bypass
-    return {};
+    if (perms && typeof perms === 'object') return perms;
   }
 
-  let perms = result[0].granular_permissions;
-  if (typeof perms === 'string') {
-    try { perms = JSON.parse(perms); } catch {}
+  // Fallback to centralized default role permissions
+  const normalizedKey = (lowerRole === 'super_admin' || lowerRole === 'superadmin') ? 'super_admin' : lowerRole;
+  if (DEFAULT_ROLE_PERMISSIONS[normalizedKey]) {
+    return DEFAULT_ROLE_PERMISSIONS[normalizedKey];
   }
-  return perms && typeof perms === 'object' ? perms : {};
+
+  return {};
 }
 
 /**
@@ -121,40 +121,19 @@ export async function hasPermission(
 ): Promise<boolean> {
   if (!role) return false;
   
-  const lowerRole = role.toLowerCase();
+  const lowerRole = role.toLowerCase().replace(/\s+/g, '_');
 
-  // Owner and Super Admin have full access to everything
-  if (lowerRole === 'owner' || lowerRole === 'super admin' || lowerRole === 'super_admin') return true;
+  // Owner has full access to everything
+  if (lowerRole === 'owner') return true;
   
   // Billing is owner-only, not in DB
   if (resource === 'billing') {
     return lowerRole === 'owner';
   }
 
-  // POS Access Rule: Cashier and all roles above cashier have access to POS
-  // Roles hierarchy: super_admin, owner, admin, accountant, editor, member, cashier
-  if (resource === 'pos' && action === 'use') {
-    const posRoles = ['super_admin', 'super admin', 'owner', 'admin', 'accountant', 'editor', 'member', 'cashier'];
-    if (posRoles.includes(lowerRole)) return true;
-  }
-
-  // Stock viewing for POS terminal catalog loading
-  if (resource === 'stock' && (action === 'view' || action === 'read')) {
-    const stockViewRoles = ['super_admin', 'super admin', 'owner', 'admin', 'accountant', 'editor', 'member', 'cashier'];
-    if (stockViewRoles.includes(lowerRole)) return true;
-  }
-
-  // Built-in cashier role defaults
-  if (lowerRole === 'cashier') {
-    if (resource === 'pos' && action === 'use') return true;
-    if (resource !== 'pos' && resource !== 'stock') return false;
-  }
-
   const perms = await getRolePermissionsObject(role, tenantId);
   if (perms === null) {
-    // Admin full bypass
-    if (lowerRole === 'admin') return true;
-    return false;
+    return true; // full bypass
   }
 
   const resourcePerms = perms[resource];
@@ -174,7 +153,6 @@ export async function hasPermission(
     if (perms.settings?.customize === true) return true;
     if (perms.invoices?.customize === false || perms.settings?.invoice_customization === false) return false;
     if (perms.settings?.manage === true) return true;
-    if (lowerRole === 'admin') return true;
     return false;
   }
 
@@ -186,6 +164,15 @@ export async function hasPermission(
     if (action === 'manage' || action === 'update') {
       if (resourcePerms?.manage === true || resourcePerms?.update === true || perms.inventory?.update === true) return true;
     }
+  }
+
+  // POS privileges mapping
+  if (resource === 'pos') {
+    if (action === 'use') return resourcePerms?.use === true;
+    if (action === 'refund') return resourcePerms?.refund === true;
+    if (action === 'discount') return resourcePerms?.discount === true;
+    if (action === 'void') return resourcePerms?.void === true;
+    if (action === 'reports_view') return resourcePerms?.reports_view === true;
   }
 
   if (!resourcePerms) return false;

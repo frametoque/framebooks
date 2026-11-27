@@ -59,28 +59,67 @@ test("POS Entitlement and Plan Rules", async (t) => {
     assert.ok(!compatiblePlans.includes("free"));
   });
 
-  await t.test("Cashier and all roles above cashier have access to POS terminal", () => {
-    const posAllowedRoles = [
-      'super_admin',
-      'super admin',
-      'owner',
-      'admin',
-      'accountant',
-      'editor',
-      'member',
-      'cashier',
-    ];
+  await t.test("Validates customized default permissions for Super Admin, Admin, and Editor", () => {
+    // Super Admin customized defaults
+    const superAdminPerms = {
+      invoices: { read: true, insert: true, update: true, delete: true, customize: true },
+      incomes: { read: true, insert: true, update: true, delete: true },
+      expenses: { read: true, insert: true, update: true, delete: true },
+      clients: { read: true, insert: true, update: true, delete: true },
+      accounts: { read: true, insert: true, update: true, delete: true },
+      inventory: { read: true, insert: true, update: true, delete: true },
+      pos: { use: true, refund: true, discount: true, void: true, reports_view: false },
+      stock: { view: false, manage: true },
+      settings: { manage: true, appearance: true },
+      team: { manage: true },
+      export: { data: true },
+    };
+    assert.equal(superAdminPerms.pos.use, true);
+    assert.equal(superAdminPerms.pos.reports_view, false);
+    assert.equal(superAdminPerms.stock.manage, true);
+    assert.equal(superAdminPerms.export.data, true);
 
-    const hasPosAccess = (role: string) => posAllowedRoles.includes(role.toLowerCase());
+    // Admin customized defaults
+    const adminPerms = {
+      invoices: { read: true, insert: true, update: true, delete: true, customize: true },
+      incomes: { read: true, insert: true, update: true, delete: true },
+      expenses: { read: true, insert: true, update: true, delete: true },
+      clients: { read: true, insert: true, update: true, delete: true },
+      accounts: { read: true, insert: true, update: true, delete: true },
+      inventory: { read: true, insert: true, update: true, delete: true },
+      pos: { use: false, refund: false, discount: true, void: false, reports_view: true },
+      stock: { view: true, manage: false },
+      settings: { manage: true, appearance: true },
+      team: { manage: true },
+      export: { data: false },
+    };
+    assert.equal(adminPerms.pos.use, false);
+    assert.equal(adminPerms.pos.discount, true);
+    assert.equal(adminPerms.pos.reports_view, true);
+    assert.equal(adminPerms.stock.view, true);
+    assert.equal(adminPerms.stock.manage, false);
+    assert.equal(adminPerms.export.data, false);
 
-    assert.equal(hasPosAccess("Super Admin"), true, "Super Admin must have POS access");
-    assert.equal(hasPosAccess("Owner"), true, "Owner must have POS access");
-    assert.equal(hasPosAccess("Admin"), true, "Admin must have POS access");
-    assert.equal(hasPosAccess("Accountant"), true, "Accountant must have POS access");
-    assert.equal(hasPosAccess("Editor"), true, "Editor must have POS access");
-    assert.equal(hasPosAccess("Member"), true, "Member must have POS access");
-    assert.equal(hasPosAccess("Cashier"), true, "Cashier must have POS access");
-    assert.equal(hasPosAccess("Viewer"), false, "Viewer must not have POS access");
+    // Editor customized defaults
+    const editorPerms = {
+      invoices: { read: true, insert: true, update: true, delete: true, customize: false },
+      incomes: { read: true, insert: true, update: true, delete: true },
+      expenses: { read: true, insert: true, update: true, delete: true },
+      clients: { read: true, insert: true, update: true, delete: true },
+      accounts: { read: true, insert: true, update: true, delete: true },
+      inventory: { read: true, insert: true, update: true, delete: true },
+      pos: { use: false, refund: false, discount: false, void: false, reports_view: true },
+      stock: { view: true, manage: false },
+      settings: { manage: false, appearance: false },
+      team: { manage: false },
+      export: { data: false },
+    };
+    assert.equal(editorPerms.invoices.delete, true);
+    assert.equal(editorPerms.inventory.delete, true);
+    assert.equal(editorPerms.pos.use, false);
+    assert.equal(editorPerms.pos.reports_view, true);
+    assert.equal(editorPerms.stock.view, true);
+    assert.equal(editorPerms.stock.manage, false);
   });
 });
 

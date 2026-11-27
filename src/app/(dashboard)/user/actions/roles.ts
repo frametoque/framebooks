@@ -3,84 +3,139 @@ import { requirePermission } from "./rbac";
 import sql from "@/lib/db";
 import { logSystemAction } from "@/lib/logger";
 
+export const DEFAULT_ROLE_PERMISSIONS: Record<string, Record<string, any>> = {
+  super_admin: {
+    invoices: { read: true, insert: true, update: true, delete: true, customize: true },
+    incomes: { read: true, insert: true, update: true, delete: true },
+    expenses: { read: true, insert: true, update: true, delete: true },
+    clients: { read: true, insert: true, update: true, delete: true },
+    accounts: { read: true, insert: true, update: true, delete: true },
+    inventory: { read: true, insert: true, update: true, delete: true },
+    pos: { use: true, refund: true, discount: true, void: true, reports_view: false },
+    stock: { view: false, manage: true },
+    settings: { manage: true, appearance: true },
+    team: { manage: true },
+    export: { data: true },
+  },
+  admin: {
+    invoices: { read: true, insert: true, update: true, delete: true, customize: true },
+    incomes: { read: true, insert: true, update: true, delete: true },
+    expenses: { read: true, insert: true, update: true, delete: true },
+    clients: { read: true, insert: true, update: true, delete: true },
+    accounts: { read: true, insert: true, update: true, delete: true },
+    inventory: { read: true, insert: true, update: true, delete: true },
+    pos: { use: false, refund: false, discount: true, void: false, reports_view: true },
+    stock: { view: true, manage: false },
+    settings: { manage: true, appearance: true },
+    team: { manage: true },
+    export: { data: false },
+  },
+  editor: {
+    invoices: { read: true, insert: true, update: true, delete: true, customize: false },
+    incomes: { read: true, insert: true, update: true, delete: true },
+    expenses: { read: true, insert: true, update: true, delete: true },
+    clients: { read: true, insert: true, update: true, delete: true },
+    accounts: { read: true, insert: true, update: true, delete: true },
+    inventory: { read: true, insert: true, update: true, delete: true },
+    pos: { use: false, refund: false, discount: false, void: false, reports_view: true },
+    stock: { view: true, manage: false },
+    settings: { manage: false, appearance: false },
+    team: { manage: false },
+    export: { data: false },
+  },
+  accountant: {
+    invoices: { read: true, insert: true, update: true, delete: false, customize: false },
+    incomes: { read: true, insert: true, update: true, delete: false },
+    expenses: { read: true, insert: true, update: true, delete: false },
+    clients: { read: true, insert: true, update: true, delete: false },
+    accounts: { read: true, insert: true, update: true, delete: false },
+    inventory: { read: true, insert: false, update: false, delete: false },
+    pos: { use: true, refund: true, discount: true, void: false, reports_view: true },
+    stock: { view: true, manage: false },
+    settings: { manage: false, appearance: false },
+    team: { manage: false },
+    export: { data: true },
+  },
+  cashier: {
+    invoices: { read: false, insert: false, update: false, delete: false, customize: false },
+    incomes: { read: false, insert: false, update: false, delete: false },
+    expenses: { read: false, insert: false, update: false, delete: false },
+    clients: { read: false, insert: false, update: false, delete: false },
+    accounts: { read: false, insert: false, update: false, delete: false },
+    inventory: { read: false, insert: false, update: false, delete: false },
+    pos: { use: true, refund: false, discount: false, void: false, reports_view: false },
+    stock: { view: true, manage: false },
+    settings: { manage: false, appearance: false },
+    team: { manage: false },
+    export: { data: false },
+  },
+  viewer: {
+    invoices: { read: true, insert: false, update: false, delete: false, customize: false },
+    incomes: { read: true, insert: false, update: false, delete: false },
+    expenses: { read: true, insert: false, update: false, delete: false },
+    clients: { read: true, insert: false, update: false, delete: false },
+    accounts: { read: true, insert: false, update: false, delete: false },
+    inventory: { read: true, insert: false, update: false, delete: false },
+    pos: { use: false, refund: false, discount: false, void: false, reports_view: true },
+    stock: { view: true, manage: false },
+    settings: { manage: false, appearance: false },
+    team: { manage: false },
+    export: { data: false },
+  },
+};
+
+export const DEFAULT_ROLES = [
+  { role: "Super Admin", granular_permissions: DEFAULT_ROLE_PERMISSIONS.super_admin },
+  { role: "Admin", granular_permissions: DEFAULT_ROLE_PERMISSIONS.admin },
+  { role: "Editor", granular_permissions: DEFAULT_ROLE_PERMISSIONS.editor },
+  { role: "Accountant", granular_permissions: DEFAULT_ROLE_PERMISSIONS.accountant },
+  { role: "Cashier", granular_permissions: DEFAULT_ROLE_PERMISSIONS.cashier },
+  { role: "Viewer", granular_permissions: DEFAULT_ROLE_PERMISSIONS.viewer },
+];
+
+export async function ensureDefaultRolePermissions() {
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS role_permissions (
+        id SERIAL PRIMARY KEY,
+        role VARCHAR(50) UNIQUE NOT NULL,
+        granular_permissions JSONB NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `;
+
+    for (const r of DEFAULT_ROLES) {
+      await sql`
+        INSERT INTO role_permissions (role, granular_permissions, updated_at)
+        VALUES (${r.role}, ${JSON.stringify(r.granular_permissions)}::jsonb, NOW())
+        ON CONFLICT (role) DO UPDATE SET
+          granular_permissions = EXCLUDED.granular_permissions,
+          updated_at = NOW()
+      `;
+    }
+
+    // Clean up temporary custom overrides for standard roles so they serve as native defaults
+    await sql`
+      DELETE FROM tenant_roles 
+      WHERE LOWER(role) IN ('super admin', 'super_admin', 'admin', 'editor')
+    `.catch(() => {});
+  } catch (err) {
+    console.warn("[ensureDefaultRolePermissions] Notice:", err);
+  }
+}
+
 export async function getRoles() {
   const { error: rbacError, context } = await requirePermission('team', 'manage');
   if (rbacError || !context) throw new Error(rbacError || "Unauthorized");
 
   const { tenantId } = context;
 
-  // Fetch base roles
-  const baseRoles = await sql`SELECT role, granular_permissions FROM role_permissions`;
-  
-  // Default fallback if table is empty or missing Cashier
-  const defaultRoles = [
-    {
-      role: "Admin",
-      granular_permissions: {
-        invoices: { read: true, insert: true, update: true, delete: true, customize: true },
-        incomes: { read: true, insert: true, update: true, delete: true },
-        expenses: { read: true, insert: true, update: true, delete: true },
-        clients: { read: true, insert: true, update: true, delete: true },
-        accounts: { read: true, insert: true, update: true, delete: true },
-        inventory: { read: true, insert: true, update: true, delete: true },
-        settings: { manage: true, appearance: true },
-        team: { manage: true },
-        export: { data: true },
-        pos: { use: true, refund: true, discount: true, void: true, reports_view: true },
-        stock: { view: true, manage: true },
-      }
-    },
-    {
-      role: "Editor",
-      granular_permissions: {
-        invoices: { read: true, insert: true, update: true, delete: false, customize: false },
-        incomes: { read: true, insert: true, update: true, delete: false },
-        expenses: { read: true, insert: true, update: true, delete: false },
-        clients: { read: true, insert: true, update: true, delete: false },
-        accounts: { read: true, insert: false, update: false, delete: false },
-        inventory: { read: true, insert: true, update: true, delete: false },
-        settings: { manage: false, appearance: false },
-        team: { manage: false },
-        export: { data: false },
-        pos: { use: true, refund: false, discount: true, void: false, reports_view: false },
-        stock: { view: true, manage: true },
-      }
-    },
-    {
-      role: "Viewer",
-      granular_permissions: {
-        invoices: { read: true, insert: false, update: false, delete: false, customize: false },
-        incomes: { read: true, insert: false, update: false, delete: false },
-        expenses: { read: true, insert: false, update: false, delete: false },
-        clients: { read: true, insert: false, update: false, delete: false },
-        accounts: { read: true, insert: false, update: false, delete: false },
-        inventory: { read: true, insert: false, update: false, delete: false },
-        settings: { manage: false, appearance: false },
-        team: { manage: false },
-        export: { data: false },
-        pos: { use: false, refund: false, discount: false, void: false, reports_view: true },
-        stock: { view: true, manage: false },
-      }
-    },
-    {
-      role: "Cashier",
-      granular_permissions: {
-        invoices: { read: false, insert: false, update: false, delete: false, customize: false },
-        incomes: { read: false, insert: false, update: false, delete: false },
-        expenses: { read: false, insert: false, update: false, delete: false },
-        clients: { read: false, insert: false, update: false, delete: false },
-        accounts: { read: false, insert: false, update: false, delete: false },
-        inventory: { read: false, insert: false, update: false, delete: false },
-        settings: { manage: false, appearance: false },
-        team: { manage: false },
-        export: { data: false },
-        pos: { use: true, refund: false, discount: false, void: false, reports_view: false },
-        stock: { view: false, manage: false },
-      }
-    }
-  ];
+  await ensureDefaultRolePermissions();
 
-  const effectiveBaseRoles = baseRoles.length > 0 ? baseRoles : defaultRoles;
+  // Fetch base roles from DB
+  const baseRoles = await sql`SELECT role, granular_permissions FROM role_permissions`;
+  const effectiveBaseRoles = baseRoles.length > 0 ? baseRoles : DEFAULT_ROLES;
 
   // Fetch tenant custom overrides
   const customRoles = await sql`SELECT role, granular_permissions FROM tenant_roles WHERE tenant_id = ${tenantId}`;
@@ -92,46 +147,21 @@ export async function getRoles() {
     if (typeof perms === 'string') {
       try { perms = JSON.parse(perms); } catch {}
     }
-    if (perms?.invoices && perms.invoices.customize === undefined) {
-      perms.invoices.customize = r.role.toLowerCase() === 'admin' || r.role.toLowerCase() === 'super admin';
-    }
-    // Ensure POS permissions exist on base roles
-    if (!perms?.pos) {
-      if (r.role.toLowerCase() === 'admin') {
-        perms = { ...perms, pos: { use: true, refund: true, discount: true, void: true, reports_view: true } };
-      } else if (r.role.toLowerCase() === 'editor') {
-        perms = { ...perms, pos: { use: true, refund: false, discount: true, void: false, reports_view: false } };
-      } else if (r.role.toLowerCase() === 'cashier') {
-        perms = { ...perms, pos: { use: true, refund: false, discount: false, void: false, reports_view: false } };
-      } else {
-        perms = { ...perms, pos: { use: false, refund: false, discount: false, void: false, reports_view: false } };
-      }
-    }
-    if (!perms?.stock) {
-      perms = {
-        ...perms,
-        stock: {
-          view: r.role.toLowerCase() !== 'cashier',
-          manage: r.role.toLowerCase() === 'admin' || r.role.toLowerCase() === 'editor',
-        }
-      };
-    }
     rolesMap.set(r.role.toLowerCase(), { ...r, granular_permissions: perms, isCustom: false });
   }
 
-  // If cashier wasn't in DB baseRoles, add it from defaults
-  if (!rolesMap.has('cashier')) {
-    const cashierDefault = defaultRoles.find(r => r.role === 'Cashier')!;
-    rolesMap.set('cashier', { ...cashierDefault, isCustom: false });
+  // Ensure all standard DEFAULT_ROLES exist
+  for (const defRole of DEFAULT_ROLES) {
+    const key = defRole.role.toLowerCase();
+    if (!rolesMap.has(key)) {
+      rolesMap.set(key, { ...defRole, isCustom: false });
+    }
   }
 
   for (const r of customRoles) {
     let perms = r.granular_permissions;
     if (typeof perms === 'string') {
       try { perms = JSON.parse(perms); } catch {}
-    }
-    if (perms?.invoices && perms.invoices.customize === undefined) {
-      perms.invoices.customize = r.role.toLowerCase() === 'admin' || r.role.toLowerCase() === 'super admin';
     }
     rolesMap.set(r.role.toLowerCase(), { ...r, granular_permissions: perms, isCustom: true });
   }
