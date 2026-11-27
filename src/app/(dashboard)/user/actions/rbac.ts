@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth';
 import sql from "@/lib/db";
 import { getPosAddonStatus } from "@/lib/pos/entitlement";
-import { DEFAULT_ROLE_PERMISSIONS } from "./roles";
+import { DEFAULT_ROLE_PERMISSIONS } from "@/lib/rbac/defaults";
 
 export type Role = string;
 export type ResourceType = 

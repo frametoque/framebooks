@@ -441,6 +441,8 @@ export default function EditInvoicePage() {
                   <option value="advance-paid" className="bg-card text-foreground">Advance Paid</option>
                   <option value="overdue" className="bg-card text-foreground">Overdue</option>
                   <option value="fully paid" className="bg-card text-foreground">Fully Paid</option>
+                  <option value="cancelled" className="bg-card text-foreground">Cancelled</option>
+                  <option value="refunded" className="bg-card text-foreground">Refunded</option>
                 </select>
               </div>
             </div>

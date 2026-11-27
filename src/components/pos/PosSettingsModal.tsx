@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Settings, X, Save, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Settings, X, Save, AlertTriangle, ShieldCheck, Vault, Printer } from "lucide-react";
 import { loadPosSettingsAction, savePosSettingsAction } from "@/app/(dashboard)/pos/actions/stock";
 import { PosSettings } from "@/lib/pos/stock-service";
 
@@ -10,9 +10,18 @@ interface PosSettingsModalProps {
   onClose: () => void;
   onSettingsSaved?: () => void;
   canManageSettings?: boolean;
+  onOpenCashDrawer?: () => void;
+  onPrintTestBill?: () => void;
 }
 
-export function PosSettingsModal({ isOpen, onClose, onSettingsSaved, canManageSettings = true }: PosSettingsModalProps) {
+export function PosSettingsModal({
+  isOpen,
+  onClose,
+  onSettingsSaved,
+  canManageSettings = true,
+  onOpenCashDrawer,
+  onPrintTestBill,
+}: PosSettingsModalProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<PosSettings>({
@@ -34,12 +43,35 @@ export function PosSettingsModal({ isOpen, onClose, onSettingsSaved, canManageSe
       if (e.key === "Escape" && isOpen) {
         e.preventDefault();
         onClose();
+        return;
+      }
+
+      const isInput = ["INPUT", "TEXTAREA", "SELECT"].includes(
+        (document.activeElement?.tagName || "").toUpperCase()
+      );
+
+      // F5 or (Space when no input focused): Open cash drawer
+      if ((e.key === "F5" && !e.shiftKey) || (e.key === " " && !isInput)) {
+        if (onOpenCashDrawer) {
+          e.preventDefault();
+          onOpenCashDrawer();
+        }
+        return;
+      }
+
+      // Shift+F5 or Alt+P: Print test bill
+      if ((e.key === "F5" && e.shiftKey) || (e.altKey && e.key.toLowerCase() === "p")) {
+        if (onPrintTestBill) {
+          e.preventDefault();
+          onPrintTestBill();
+        }
+        return;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, canManageSettings, onClose]);
+  }, [isOpen, canManageSettings, onClose, onOpenCashDrawer, onPrintTestBill]);
 
   const loadSettings = async () => {
     setLoading(true);
@@ -88,9 +120,7 @@ export function PosSettingsModal({ isOpen, onClose, onSettingsSaved, canManageSe
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-black/5 dark:bg-white/5">
-          <div>
-            <h2 className="text-base font-bold text-foreground">POS Terminal & Stock Settings</h2>
-          </div>
+          <h2 className="text-base font-bold text-foreground">POS Terminal & Stock Settings</h2>
           <button
             onClick={onClose}
             className="p-1.5 text-gray-400 hover:text-foreground rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
@@ -159,11 +189,7 @@ export function PosSettingsModal({ isOpen, onClose, onSettingsSaved, canManageSe
           </div>
 
           {/* Thermal Receipt Configuration */}
-          <div className="pt-2 border-t border-border">
-            <span className="text-[11px] font-bold text-brand-500 uppercase tracking-wider block mb-1">
-              Receipt Customization
-            </span>
-          </div>
+          <div className="border-t border-border pt-1" />
 
           {/* Receipt Header Text */}
           <div>
@@ -187,6 +213,37 @@ export function PosSettingsModal({ isOpen, onClose, onSettingsSaved, canManageSe
               placeholder="e.g. Thank you for your purchase! Goods sold are non-refundable."
               className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 text-foreground outline-none focus:border-brand-500"
             />
+          </div>
+
+          {/* Hardware & Counter Tools */}
+          <div className="pt-2 border-t border-border">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={onOpenCashDrawer}
+                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-border text-xs font-bold text-foreground transition-all cursor-pointer shadow-2xs"
+                title="Open Cash Drawer (Space)"
+              >
+                <div className="flex items-center gap-2">
+                  <Vault className="w-4 h-4 text-brand-500 shrink-0" />
+                  <span>Drawer</span>
+                </div>
+                <kbd className="text-[10px] bg-black/10 dark:bg-white/10 text-gray-400 px-1.5 py-0.5 rounded font-sans font-semibold">Space</kbd>
+              </button>
+
+              <button
+                type="button"
+                onClick={onPrintTestBill}
+                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-border text-xs font-bold text-foreground transition-all cursor-pointer shadow-2xs"
+                title="Print Test Bill for Calibration (Enter / Shift+F5)"
+              >
+                <div className="flex items-center gap-2">
+                  <Printer className="w-4 h-4 text-brand-500 shrink-0" />
+                  <span>Test Bill</span>
+                </div>
+                <kbd className="text-[10px] bg-black/10 dark:bg-white/10 text-gray-400 px-1.5 py-0.5 rounded font-sans font-semibold">Enter</kbd>
+              </button>
+            </div>
           </div>
 
           {/* Save Button */}

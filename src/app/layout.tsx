@@ -20,16 +20,45 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://books.frametoque.com'),
   title: {
-    default: "Framebooks",
-    template: "%s"
+    default: "Framebooks - Cloud ERP, Accounting & Retail POS",
+    template: "%s | Framebooks"
   },
-  description: "Run your entire business in one place. Track money, manage clients, and grow faster.",
+  description: "Modern Cloud ERP, Business Accounting & Retail POS for growing businesses. Run your entire business in one place: invoices, quotations, live counter registers, barcode stock management, and financial ledgers.",
+  keywords: [
+    "Framebooks",
+    "Cloud ERP",
+    "POS System Sri Lanka",
+    "Retail Point of Sale",
+    "Barcode POS",
+    "Cash Register Software",
+    "Accounting Software",
+    "Invoicing Software",
+    "Inventory & Stock Management",
+    "WooCommerce POS Sync",
+    "Sri Lanka Business Software"
+  ],
+  authors: [{ name: "Frametoque" }],
+  creator: "Frametoque",
+  publisher: "Framebooks",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Framebooks",
+    title: "Framebooks POS & ERP",
+  },
+  openGraph: {
+    title: "Framebooks - Cloud ERP, Accounting & Retail POS",
+    description: "The complete cloud ERP, accounting, and retail POS platform. Run your business finances and retail checkout counters seamlessly.",
+    siteName: "Framebooks",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Framebooks - Cloud ERP, Accounting & Retail POS",
+    description: "Modern all-in-one platform for Cloud ERP, bookkeeping, and lightning-fast retail POS counter checkout.",
   },
   icons: {
     icon: [

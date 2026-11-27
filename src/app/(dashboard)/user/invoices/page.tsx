@@ -5,9 +5,9 @@ import { Loader } from "@/components/ui/Loader";
 import { useEffect, useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Edit2, Send, Loader2, Image as ImageIcon, FileText as FileIcon, Printer } from "lucide-react";
-import { MdInsertDriveFile, MdCheckCircle, MdAccessTime, MdErrorOutline, MdSearch, MdRemoveRedEye, MdDownload, MdDelete, MdAttachMoney, MdClose, MdUpload } from "react-icons/md";
+import { MdInsertDriveFile, MdCheckCircle, MdAccessTime, MdErrorOutline, MdSearch, MdRemoveRedEye, MdDownload, MdDelete, MdAttachMoney, MdClose, MdUpload, MdCancel } from "react-icons/md";
 import Link from "next/link";
-import { getInvoices, deleteInvoice, recordInvoicePayment, adminUploadPaymentSlip, getInvoiceByIdAdmin } from "../actions/actions";
+import { getInvoices, deleteInvoice, recordInvoicePayment, adminUploadPaymentSlip, getInvoiceByIdAdmin, cancelInvoiceAction } from "../actions/actions";
 import { getAccounts } from "../actions/accounts";
 import { useRole } from "../context/RoleContext";
 import { getTenantInfo } from "../actions/tenants";
@@ -17,7 +17,7 @@ import { useConfirm } from '@/components/ui/ConfirmProvider';
 import { downloadInvoiceWithLayout, printInvoiceWithLayout } from "@/lib/invoice-layout/export-pdf";
 import Image from "next/image";
 
-const filters = ["All", "Fully Paid", "Partially Paid", "On Review", "Overdue", "Advance-Paid", "Unpaid"];
+const filters = ["All", "Fully Paid", "Partially Paid", "On Review", "Overdue", "Advance-Paid", "Unpaid", "Cancelled", "Refunded"];
 
 const formatLKR = (amount: number) => {
   const num = new Intl.NumberFormat('en-LK', {
@@ -376,6 +376,25 @@ function InvoicesPageContent() {
     }
   };
 
+  const handleCancelInvoice = async (id: string) => {
+    if (await confirm(`Are you sure you want to cancel and revoke invoice #${id}? This will remove it from your income ledger and restore any deducted inventory.`)) {
+      requireAuth(async () => {
+        try {
+          const res = await cancelInvoiceAction(id);
+          if (res.success) {
+            await loadData();
+            alert(`Invoice #${id} has been cancelled and removed from income.`);
+          } else {
+            alert(`Failed to cancel invoice: ${res.error}`);
+          }
+        } catch (e: any) {
+          console.error("Failed to cancel invoice", e);
+          alert(`Error cancelling invoice: ${e?.message || String(e)}`);
+        }
+      });
+    }
+  };
+
   const handleSend = (id: string) => {
     const url = `${window.location.origin}/dashboard/invoice/${id}`;
     navigator.clipboard.writeText(url);
@@ -540,6 +559,8 @@ function InvoicesPageContent() {
                 else if (paymentStatus === 'unpaid' || paymentStatus === 'pending') paymentColor = "text-amber-800 bg-amber-100/70 border-amber-200/60 dark:text-amber-400 dark:bg-amber-500/10 dark:border-amber-500/20";
                 else if (paymentStatus === 'overdue') paymentColor = "text-red-700 bg-red-100/70 border-red-200/60 dark:text-red-400 dark:bg-red-500/10 dark:border-red-500/20";
                 else if (paymentStatus === 'partially paid') paymentColor = "text-indigo-700 bg-indigo-100/70 border-indigo-200/60 dark:text-indigo-400 dark:bg-indigo-500/10 dark:border-indigo-500/20";
+                else if (paymentStatus === 'cancelled' || paymentStatus === 'canceled' || paymentStatus === 'voided') paymentColor = "text-rose-700 bg-rose-100/70 border-rose-200/60 dark:text-rose-400 dark:bg-rose-500/10 dark:border-rose-500/20";
+                else if (paymentStatus === 'refunded') paymentColor = "text-purple-700 bg-purple-100/70 border-purple-200/60 dark:text-purple-400 dark:bg-purple-500/10 dark:border-purple-500/20";
 
                 return (
                   <tr key={row.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
@@ -621,6 +642,15 @@ function InvoicesPageContent() {
                             )}
                           </button>
                         )}
+                        {paymentStatus !== 'cancelled' && paymentStatus !== 'canceled' && paymentStatus !== 'refunded' && paymentStatus !== 'voided' && role !== 'Viewer' && (
+                          <button
+                            onClick={() => handleCancelInvoice(row.id)}
+                            className="p-2 hover:bg-rose-50 dark:hover:bg-rose-400/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-rose-600 dark:hover:text-rose-400"
+                            title="Cancel & Revoke Invoice"
+                          >
+                            <MdCancel className="w-4 h-4" />
+                          </button>
+                        )}
                         {role !== 'Viewer' && (
                           <button onClick={() => handleDelete(row.id)} className="p-2 hover:bg-red-50 dark:hover:bg-red-400/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" title="Delete">
                             <MdDelete className="w-4 h-4" />
@@ -652,6 +682,8 @@ function InvoicesPageContent() {
             else if (paymentStatus === 'unpaid' || paymentStatus === 'pending') paymentColor = "text-amber-800 bg-amber-100/70 border-amber-200/60 dark:text-amber-400 dark:bg-amber-500/10 dark:border-amber-500/20";
             else if (paymentStatus === 'overdue') paymentColor = "text-red-700 bg-red-100/70 border-red-200/60 dark:text-red-400 dark:bg-red-500/10 dark:border-red-500/20";
             else if (paymentStatus === 'partially paid') paymentColor = "text-indigo-700 bg-indigo-100/70 border-indigo-200/60 dark:text-indigo-400 dark:bg-indigo-500/10 dark:border-indigo-500/20";
+            else if (paymentStatus === 'cancelled' || paymentStatus === 'canceled' || paymentStatus === 'voided') paymentColor = "text-rose-700 bg-rose-100/70 border-rose-200/60 dark:text-rose-400 dark:bg-rose-500/10 dark:border-rose-500/20";
+            else if (paymentStatus === 'refunded') paymentColor = "text-purple-700 bg-purple-100/70 border-purple-200/60 dark:text-purple-400 dark:bg-purple-500/10 dark:border-purple-500/20";
 
             return (
               <div key={row.id} className="p-4 space-y-3">
@@ -732,6 +764,15 @@ function InvoicesPageContent() {
                       ) : (
                         <Printer className="w-4 h-4" />
                       )}
+                    </button>
+                  )}
+                  {paymentStatus !== 'cancelled' && paymentStatus !== 'canceled' && paymentStatus !== 'refunded' && paymentStatus !== 'voided' && role !== 'Viewer' && (
+                    <button
+                      onClick={() => handleCancelInvoice(row.id)}
+                      className="p-2.5 hover:bg-rose-50 dark:hover:bg-rose-400/10 rounded-xl transition-colors text-rose-500"
+                      title="Cancel & Revoke Invoice"
+                    >
+                      <MdCancel className="w-4 h-4" />
                     </button>
                   )}
                   {role !== 'Viewer' && (

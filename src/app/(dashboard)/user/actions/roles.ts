@@ -2,96 +2,7 @@
 import { requirePermission } from "./rbac";
 import sql from "@/lib/db";
 import { logSystemAction } from "@/lib/logger";
-
-export const DEFAULT_ROLE_PERMISSIONS: Record<string, Record<string, any>> = {
-  super_admin: {
-    invoices: { read: true, insert: true, update: true, delete: true, customize: true },
-    incomes: { read: true, insert: true, update: true, delete: true },
-    expenses: { read: true, insert: true, update: true, delete: true },
-    clients: { read: true, insert: true, update: true, delete: true },
-    accounts: { read: true, insert: true, update: true, delete: true },
-    inventory: { read: true, insert: true, update: true, delete: true },
-    pos: { use: true, refund: true, discount: true, void: true, reports_view: false },
-    stock: { view: false, manage: true },
-    settings: { manage: true, appearance: true },
-    team: { manage: true },
-    export: { data: true },
-  },
-  admin: {
-    invoices: { read: true, insert: true, update: true, delete: true, customize: true },
-    incomes: { read: true, insert: true, update: true, delete: true },
-    expenses: { read: true, insert: true, update: true, delete: true },
-    clients: { read: true, insert: true, update: true, delete: true },
-    accounts: { read: true, insert: true, update: true, delete: true },
-    inventory: { read: true, insert: true, update: true, delete: true },
-    pos: { use: false, refund: false, discount: true, void: false, reports_view: true },
-    stock: { view: true, manage: false },
-    settings: { manage: true, appearance: true },
-    team: { manage: true },
-    export: { data: false },
-  },
-  editor: {
-    invoices: { read: true, insert: true, update: true, delete: true, customize: false },
-    incomes: { read: true, insert: true, update: true, delete: true },
-    expenses: { read: true, insert: true, update: true, delete: true },
-    clients: { read: true, insert: true, update: true, delete: true },
-    accounts: { read: true, insert: true, update: true, delete: true },
-    inventory: { read: true, insert: true, update: true, delete: true },
-    pos: { use: false, refund: false, discount: false, void: false, reports_view: true },
-    stock: { view: true, manage: false },
-    settings: { manage: false, appearance: false },
-    team: { manage: false },
-    export: { data: false },
-  },
-  accountant: {
-    invoices: { read: true, insert: true, update: true, delete: false, customize: false },
-    incomes: { read: true, insert: true, update: true, delete: false },
-    expenses: { read: true, insert: true, update: true, delete: false },
-    clients: { read: true, insert: true, update: true, delete: false },
-    accounts: { read: true, insert: true, update: true, delete: false },
-    inventory: { read: true, insert: false, update: false, delete: false },
-    pos: { use: true, refund: true, discount: true, void: false, reports_view: true },
-    stock: { view: true, manage: false },
-    settings: { manage: false, appearance: false },
-    team: { manage: false },
-    export: { data: true },
-  },
-  cashier: {
-    invoices: { read: false, insert: false, update: false, delete: false, customize: false },
-    incomes: { read: false, insert: false, update: false, delete: false },
-    expenses: { read: false, insert: false, update: false, delete: false },
-    clients: { read: false, insert: false, update: false, delete: false },
-    accounts: { read: false, insert: false, update: false, delete: false },
-    inventory: { read: false, insert: false, update: false, delete: false },
-    pos: { use: true, refund: false, discount: false, void: false, reports_view: false },
-    stock: { view: true, manage: false },
-    settings: { manage: false, appearance: false },
-    team: { manage: false },
-    export: { data: false },
-  },
-  viewer: {
-    invoices: { read: true, insert: false, update: false, delete: false, customize: false },
-    incomes: { read: true, insert: false, update: false, delete: false },
-    expenses: { read: true, insert: false, update: false, delete: false },
-    clients: { read: true, insert: false, update: false, delete: false },
-    accounts: { read: true, insert: false, update: false, delete: false },
-    inventory: { read: true, insert: false, update: false, delete: false },
-    pos: { use: false, refund: false, discount: false, void: false, reports_view: true },
-    stock: { view: true, manage: false },
-    settings: { manage: false, appearance: false },
-    team: { manage: false },
-    export: { data: false },
-  },
-};
-
-export const DEFAULT_ROLES = [
-  { role: "Super Admin", granular_permissions: DEFAULT_ROLE_PERMISSIONS.super_admin },
-  { role: "Admin", granular_permissions: DEFAULT_ROLE_PERMISSIONS.admin },
-  { role: "Editor", granular_permissions: DEFAULT_ROLE_PERMISSIONS.editor },
-  { role: "Accountant", granular_permissions: DEFAULT_ROLE_PERMISSIONS.accountant },
-  { role: "Cashier", granular_permissions: DEFAULT_ROLE_PERMISSIONS.cashier },
-  { role: "Viewer", granular_permissions: DEFAULT_ROLE_PERMISSIONS.viewer },
-];
+import { DEFAULT_ROLE_PERMISSIONS, DEFAULT_ROLES } from "@/lib/rbac/defaults";
 
 export async function ensureDefaultRolePermissions() {
   try {
@@ -103,6 +14,7 @@ export async function ensureDefaultRolePermissions() {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
+      ALTER TABLE role_permissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
     `;
 
     for (const r of DEFAULT_ROLES) {

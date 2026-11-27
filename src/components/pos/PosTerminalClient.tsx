@@ -6,7 +6,8 @@ import {
   Plus, Minus, ArrowLeft, ArrowRight, LogOut, Package, History, Settings, 
   CreditCard, DollarSign, UserCheck, CheckCircle2, AlertTriangle, AlertCircle, 
   Clock, X, Printer, Percent, RefreshCw, Zap, Keyboard, HelpCircle,
-  Sparkles, Tag, UserPlus, Layers, Vault, Menu, ChevronRight, ShieldCheck
+  Sparkles, Tag, UserPlus, Layers, Vault, Menu, ChevronRight, ShieldCheck,
+  Calendar
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
@@ -28,6 +29,7 @@ import { PosPromotion, loadPosPromotionsAction } from "@/app/(dashboard)/pos/act
 import { useHardwareBarcodeScanner, playScanSound } from "./useHardwareBarcodeScanner";
 import { CameraScannerModal } from "./CameraScannerModal";
 import { ReceiptModal } from "./ReceiptModal";
+import { MdPointOfSale } from "react-icons/md";
 import { ShiftModal } from "./ShiftModal";
 import { StockManagementModal } from "./StockManagementModal";
 import { OrderHistoryModal } from "./OrderHistoryModal";
@@ -180,6 +182,37 @@ export function PosTerminalClient({
   // Role permissions
   const isCashier = isCashierOnly || userRole?.toLowerCase() === "cashier";
   const canAccessPosSettings = !isCashier && canManageStock;
+
+  // Live Date and Time for Counter Operations
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setCurrentTime(new Date());
+    const clockInterval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(clockInterval);
+  }, []);
+
+  const formattedDate = useMemo(() => {
+    if (!currentTime) return "";
+    return currentTime.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, [currentTime]);
+
+  const formattedTime = useMemo(() => {
+    if (!currentTime) return "";
+    return currentTime.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+  }, [currentTime]);
 
   // Toast notification
   const [scanToast, setScanToast] = useState<{ text: string; type: "success" | "error" } | null>(null);
@@ -1564,7 +1597,7 @@ export function PosTerminalClient({
               iconClassName="w-5 h-5 text-brand-500"
             />
             <div className="min-w-0">
-              <span className="font-black text-xs sm:text-sm tracking-tight text-foreground uppercase truncate block max-w-[90px] xs:max-w-[130px] sm:max-w-[180px] md:max-w-xs">{tenantName}</span>
+              <span className="font-black text-xs sm:text-sm tracking-tight text-foreground uppercase truncate block max-w-[120px] xs:max-w-[160px] sm:max-w-[220px] md:max-w-xs">{tenantName}</span>
             </div>
           </div>
 
@@ -1583,6 +1616,17 @@ export function PosTerminalClient({
             <span className="hidden xs:inline">{activeShift ? `Shift #${activeShift.shift_number || activeShift.id} Active` : "Open Shift"}</span>
             <span className="xs:hidden">{activeShift ? `#${activeShift.shift_number || activeShift.id}` : "Shift"}</span>
           </button>
+
+          {/* Live Date and Time Display (Plain Text) */}
+          {currentTime && (
+            <div className="hidden sm:flex items-center gap-2 text-xs select-none pl-1">
+              <span className="hidden lg:inline text-muted-foreground font-medium">{formattedDate}</span>
+              <span className="hidden lg:inline text-muted-foreground/60">•</span>
+              <span className="text-foreground font-bold tracking-tight tabular-nums">
+                {formattedTime}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Center / Right Header Navigation */}
@@ -1597,28 +1641,6 @@ export function PosTerminalClient({
             <Keyboard className="w-4 h-4 text-brand-500" />
             <span className="hidden xl:inline text-[11px] font-semibold text-gray-400">Keys</span>
             <kbd className="hidden sm:inline text-[10px] bg-black/10 dark:bg-white/10 px-1 py-0.2 rounded font-sans font-bold">?</kbd>
-          </button>
-
-          {/* Open Cash Drawer Button */}
-          <button
-            onClick={handleOpenCashDrawer}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-border text-xs font-bold text-foreground transition-all cursor-pointer shadow-2xs"
-            title="Open Cash Drawer (Space)"
-          >
-            <Vault className="w-4 h-4 text-brand-500" />
-            <span className="hidden sm:inline">Drawer</span>
-            <kbd className="hidden sm:inline text-[10px] bg-black/10 dark:bg-white/10 text-gray-400 px-1 py-0.2 rounded font-sans font-semibold">Space</kbd>
-          </button>
-
-          {/* Print Test Bill (Paper Roll Configuration) Button */}
-          <button
-            onClick={handlePrintTestBill}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-border text-xs font-bold text-foreground transition-all cursor-pointer shadow-2xs"
-            title="Print Test Bill for Calibration (Enter on empty screen or Shift+F5)"
-          >
-            <Printer className="w-4 h-4 text-brand-500" />
-            <span className="hidden sm:inline">Test Bill</span>
-            <kbd className="hidden sm:inline text-[10px] bg-black/10 dark:bg-white/10 text-gray-400 px-1 py-0.2 rounded font-sans font-semibold">Enter</kbd>
           </button>
 
           {/* Stock Section */}
@@ -1684,7 +1706,7 @@ export function PosTerminalClient({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-border text-xs font-bold text-foreground transition-all cursor-pointer shadow-2xs relative"
             title="Special Offers, Deals & Promotions (F6)"
           >
-            <Sparkles className="w-4 h-4 text-brand-500" />
+            <Percent className="w-4 h-4 text-brand-500" />
             <span className="hidden sm:inline">Offers</span>
             {promotions.filter(p => p.active).length > 0 && (
               <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
@@ -1701,20 +1723,6 @@ export function PosTerminalClient({
             >
               <Settings className="w-4 h-4" />
             </button>
-          )}
-
-          <div className="w-px h-6 bg-border mx-1" />
-
-          {/* Exit POS back to dashboard (visible ONLY if NOT cashier-only) */}
-          {!isCashierOnly && (
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border hover:bg-black/5 dark:hover:bg-white/5 text-xs font-bold text-gray-300 hover:text-foreground transition-all"
-              title="Return to Framebooks ERP dashboard"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden md:inline">Exit POS</span>
-            </Link>
           )}
 
           {/* Cashier Name & Logout */}
@@ -1735,6 +1743,13 @@ export function PosTerminalClient({
 
         {/* Mobile View Quick Header Actions (Drawer, Offers, Menu) */}
         <div className="flex md:hidden items-center gap-1.5">
+          {/* Quick Date/Time on Mobile */}
+          {currentTime && (
+            <span className="text-[11px] font-bold text-foreground tabular-nums select-none px-1">
+              {formattedTime}
+            </span>
+          )}
+
           {/* Quick Drawer Button on Mobile */}
           <button
             onClick={handleOpenCashDrawer}
@@ -1750,7 +1765,7 @@ export function PosTerminalClient({
             className="p-2 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-border text-foreground transition-all cursor-pointer shadow-2xs relative"
             title="Special Offers & Deals"
           >
-            <Sparkles className="w-4 h-4 text-brand-500" />
+            <Percent className="w-4 h-4 text-brand-500" />
             {promotions.filter(p => p.active).length > 0 && (
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
             )}
@@ -2628,6 +2643,7 @@ export function PosTerminalClient({
         canManageStock={canManageStock}
         isWooConnected={isWooConnected}
         onStockChanged={fetchProducts}
+        tenantName={tenantName}
       />
 
       {/* Order History & Refunds Modal */}
@@ -2647,6 +2663,8 @@ export function PosTerminalClient({
         isOpen={isSettingsModalOpen && canAccessPosSettings}
         onClose={() => setIsSettingsModalOpen(false)}
         canManageSettings={canAccessPosSettings}
+        onOpenCashDrawer={handleOpenCashDrawer}
+        onPrintTestBill={handlePrintTestBill}
         onSettingsSaved={() => fetchReceiptTemplate()}
       />
 
@@ -2974,6 +2992,14 @@ export function PosTerminalClient({
 
             {/* Menu Actions List */}
             <div className="p-3 sm:p-4 overflow-y-auto space-y-2">
+              {/* Live Date & Time in Mobile Drawer */}
+              {currentTime && (
+                <div className="flex items-center justify-between py-2 px-1 text-xs select-none border-b border-border/50 mb-1">
+                  <span className="text-muted-foreground font-medium">{formattedDate}</span>
+                  <span className="text-foreground font-bold tabular-nums">{formattedTime}</span>
+                </div>
+              )}
+
               {/* Shift Details */}
               <button
                 onClick={() => {
@@ -3039,7 +3065,7 @@ export function PosTerminalClient({
               >
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-xl bg-brand-500/15 text-brand-500 shrink-0">
-                    <Sparkles className="w-4 h-4" />
+                    <Percent className="w-4 h-4" />
                   </div>
                   <div className="text-xs font-bold text-foreground group-hover:text-brand-500">Special Offers & Deals</div>
                 </div>
@@ -3109,8 +3135,8 @@ export function PosTerminalClient({
                   className="w-full p-3 rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-brand-500/10 border border-border hover:border-brand-500/30 flex items-center justify-between text-left transition-all cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-gray-500/15 text-gray-400 shrink-0">
-                      <Settings className="w-4 h-4" />
+                    <div className="p-2 rounded-xl bg-brand-500/10 text-brand-500 shrink-0">
+                      <MdPointOfSale className="w-4 h-4" />
                     </div>
                     <div className="text-xs font-bold text-foreground group-hover:text-brand-500">POS & Stock Settings</div>
                   </div>

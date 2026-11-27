@@ -9,7 +9,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { IdCard, Globe, Save, Building, Copy, Terminal, Store, Sliders, Upload, FileText, CheckCircle2, AlertCircle, X, ExternalLink, ArrowUp, ArrowDown, Palette, ChevronDown, Clock, ShieldOff, ShieldCheck, Sparkles, Info, Loader2, CreditCard, Plus, Repeat, Wallet, AlertTriangle, Tag, RefreshCw, ArrowRight, Bell, QrCode, Plug } from "lucide-react";
 import IntegrationsTab from "./IntegrationsTab";
 import { TeamPosCodeModal } from "@/components/pos/TeamPosCodeModal";
-import { MdPerson, MdMailOutline, MdKeyboardArrowRight, MdKeyboardArrowLeft, MdLocationOn, MdPhone, MdUpload, MdDownload, MdCheck, MdShowChart, MdCreditCard, MdGroup, MdBusiness, MdHistory, MdLogout, MdWarning, MdSecurity, MdDelete, MdLock } from "react-icons/md";
+import { MdPerson, MdMailOutline, MdKeyboardArrowRight, MdKeyboardArrowLeft, MdLocationOn, MdPhone, MdUpload, MdDownload, MdCheck, MdShowChart, MdCreditCard, MdGroup, MdBusiness, MdHistory, MdLogout, MdWarning, MdSecurity, MdDelete, MdLock, MdPointOfSale } from "react-icons/md";
 import AppearanceTab from "./AppearanceTab";
 import InvoiceLayoutTab from "./invoice-layout/InvoiceLayoutTab";
 import { NotificationsTab } from "./NotificationsTab";
@@ -3298,7 +3298,7 @@ function BillingView({
                   </div>
                 </div>
                 <div className="p-3 bg-brand-500/10 text-brand-500 rounded-2xl border border-brand-500/20">
-                  <Store className="w-6 h-6" />
+                  <MdPointOfSale className="w-6 h-6" />
                 </div>
               </div>
 
@@ -3317,7 +3317,7 @@ function BillingView({
                     href="/pos"
                     className="px-5 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5"
                   >
-                    <Store className="w-4 h-4" />
+                    <MdPointOfSale className="w-4 h-4" />
                     <span>Open POS Terminal</span>
                   </Link>
                 </div>

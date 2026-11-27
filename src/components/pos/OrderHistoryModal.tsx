@@ -125,9 +125,7 @@ export function OrderHistoryModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-black/5 dark:bg-white/5">
-          <div>
-            <h2 className="text-base font-bold text-foreground">POS Sales History & Orders</h2>
-          </div>
+          <h2 className="text-base font-bold text-foreground">POS Sales History & Orders</h2>
           <button
             onClick={onClose}
             className="p-1.5 text-gray-400 hover:text-foreground rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors"

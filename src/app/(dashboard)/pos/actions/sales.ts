@@ -520,6 +520,16 @@ export async function refundPosOrderAction(orderId: number, reason: string = 'Cu
           UPDATE invoices SET payment_status = 'refunded' WHERE invoice_id = ${order.invoice_id} AND tenant_id = ${tenantId}
         `;
       }
+
+      // 4. Remove income record from admin_incomes so refunded POS sale is removed from income
+      await trx`
+        DELETE FROM admin_incomes
+        WHERE tenant_id = ${tenantId}
+          AND (
+            (invoice_id IS NOT NULL AND invoice_id = ${order.invoice_id || ''})
+            OR description = ${`POS Sale #${order.order_number}`}
+          )
+      `;
     });
 
     // Push restored stock to WooCommerce immediately
@@ -538,6 +548,10 @@ export async function refundPosOrderAction(orderId: number, reason: string = 'Cu
     revalidatePath("/pos");
     revalidatePath("/user/stock");
     revalidatePath("/user/invoices");
+    revalidatePath("/user/income");
+    revalidatePath("/user/dashboard");
+    revalidatePath("/user/accounts");
+    revalidatePath("/user/reports");
     revalidatePath("/user/inventory");
     return { success: true, restoredItems };
   } catch (err: any) {
@@ -622,6 +636,16 @@ export async function voidPosOrderAction(orderId: number, reason: string = 'Void
           UPDATE invoices SET payment_status = 'cancelled' WHERE invoice_id = ${order.invoice_id} AND tenant_id = ${tenantId}
         `;
       }
+
+      // 4. Remove income record from admin_incomes so voided POS sale is removed from income
+      await trx`
+        DELETE FROM admin_incomes
+        WHERE tenant_id = ${tenantId}
+          AND (
+            (invoice_id IS NOT NULL AND invoice_id = ${order.invoice_id || ''})
+            OR description = ${`POS Sale #${order.order_number}`}
+          )
+      `;
     });
 
     // Push restored stock to WooCommerce immediately
@@ -640,6 +664,10 @@ export async function voidPosOrderAction(orderId: number, reason: string = 'Void
     revalidatePath("/pos");
     revalidatePath("/user/stock");
     revalidatePath("/user/invoices");
+    revalidatePath("/user/income");
+    revalidatePath("/user/dashboard");
+    revalidatePath("/user/accounts");
+    revalidatePath("/user/reports");
     revalidatePath("/user/inventory");
     return { success: true, restoredItems: voidRestoredItems };
   } catch (err: any) {

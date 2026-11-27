@@ -239,6 +239,19 @@ export async function ensurePosSchema() {
     await sql`ALTER TABLE pos_orders ENABLE ROW LEVEL SECURITY;`.catch(() => {});
     await sql`ALTER TABLE pos_promotions ENABLE ROW LEVEL SECURITY;`.catch(() => {});
 
+    // Reconcile and clean up any orphan incomes tied to cancelled/voided invoices or POS orders
+    await sql`
+      DELETE FROM admin_incomes
+      WHERE id IN (
+        SELECT inc.id
+        FROM admin_incomes inc
+        LEFT JOIN invoices inv ON inc.invoice_id = inv.invoice_id AND inc.tenant_id = inv.tenant_id
+        LEFT JOIN pos_orders po ON (inc.invoice_id = po.invoice_id OR inc.description = 'POS Sale #' || po.order_number) AND inc.tenant_id = po.tenant_id
+        WHERE inv.payment_status IN ('cancelled', 'canceled', 'refunded', 'voided')
+           OR po.status IN ('voided', 'refunded', 'cancelled')
+      )
+    `.catch(() => {});
+
     // Seed test stock for FT DEMO tenant if present
     await seedFtDemoTenantStock();
   } catch (err) {
@@ -265,7 +278,6 @@ export async function seedFtDemoTenantStock(targetTenantId?: number) {
       const ftTenants = await sql`
         SELECT id FROM tenants 
         WHERE name ILIKE '%FT DEMO%' 
-           OR company_name ILIKE '%FT DEMO%' 
            OR slug ILIKE '%ft-demo%'
            OR name ILIKE '%FT%DEMO%'
       `;

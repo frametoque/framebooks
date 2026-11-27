@@ -7,14 +7,12 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Loader2, CheckCircle2, ShieldCheck, Image as ImageIcon, FileText as FileIcon, Layout, FileText, Sparkles, Printer } from "lucide-react";
 import { MdDownload, MdArrowBack, MdInsertDriveFile, MdCalendarToday, MdLocalOffer, MdWorkOutline, MdImage, MdCancel, MdAttachMoney, MdClose, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdDelete, MdUpload } from "react-icons/md";
 import Link from "next/link";
-import { getInvoiceByIdAdmin, approveBankSlip, declineBankSlip, undoApprovedBankSlipPayment, recordInvoicePayment, deleteIncome, adminUploadPaymentSlip } from "../../actions/actions";
+import { getInvoiceByIdAdmin, approveBankSlip, declineBankSlip, undoApprovedBankSlipPayment, recordInvoicePayment, deleteIncome, adminUploadPaymentSlip, cancelInvoiceAction, refundInvoiceAction } from "../../actions/actions";
 import { getTenantInfo } from "../../actions/tenants";
 import { getAccounts } from "../../actions/accounts";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import Image from "next/image";
 import { InvoiceRenderer } from "@/lib/invoice-layout/renderer";
-
-
 
 const paymentStatusStyles = {
   paid: "bg-green-500/20 text-green-400 border-green-500/30",
@@ -24,6 +22,10 @@ const paymentStatusStyles = {
   "advance-paid": "bg-blue-500/20 text-blue-400 border-blue-500/30",
   "partially paid": "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
   "on review": "bg-amber-500/20 text-amber-400 border-amber-500/30",
+  cancelled: "bg-rose-500/20 text-rose-400 border-rose-500/30",
+  canceled: "bg-rose-500/20 text-rose-400 border-rose-500/30",
+  refunded: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  voided: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
 };
 
 const formatDate = (dateString: string) => {
@@ -320,19 +322,49 @@ export default function AdminInvoicePage() {
     setIncomeModalOpen(true);
   };
 
+  const handleCancelInvoice = async () => {
+    if (!invoice) return;
+    const invStatus = (invoice.payment_status || '').toLowerCase();
+    if (invStatus === 'cancelled' || invStatus === 'canceled') {
+      alert("This invoice is already cancelled.");
+      return;
+    }
+    if (!await confirm(`Are you sure you want to cancel and revoke invoice #${invoice.invoice_id}? This will remove it from your income ledger and restore any deducted inventory.`)) {
+      return;
+    }
+    try {
+      const res = await cancelInvoiceAction(invoice.invoice_id);
+      if (res.success) {
+        const updated = await getInvoiceByIdAdmin(invoice.invoice_id);
+        setInvoice(updated);
+        alert(`Invoice #${invoice.invoice_id} has been cancelled and removed from income.`);
+      } else {
+        alert(`Failed to cancel invoice: ${res.error}`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert("Failed to cancel invoice: " + (err?.message || String(err)));
+    }
+  };
+
   useEffect(() => {
     const handleCreateIncomeEvent = () => {
       if (role !== 'Viewer' && !isViewer && canWrite) openIncomeModal();
     };
     const handleDownloadEvent = () => handleDownload();
     const handlePrintEvent = () => handlePrint();
+    const handleCancelEvent = () => {
+      if (role !== 'Viewer' && !isViewer && canWrite) handleCancelInvoice();
+    };
     window.addEventListener("invoice:create-income", handleCreateIncomeEvent);
     window.addEventListener("invoice:download-pdf", handleDownloadEvent);
     window.addEventListener("invoice:print", handlePrintEvent);
+    window.addEventListener("invoice:cancel", handleCancelEvent);
     return () => {
       window.removeEventListener("invoice:create-income", handleCreateIncomeEvent);
       window.removeEventListener("invoice:download-pdf", handleDownloadEvent);
       window.removeEventListener("invoice:print", handlePrintEvent);
+      window.removeEventListener("invoice:cancel", handleCancelEvent);
     };
   }, [invoice, role, isViewer, canWrite, tenantInfo, tenantPlan, activeLayoutDef]);
 

@@ -1176,11 +1176,14 @@ export async function getInvoices() {
     const calculatedTotalDue = Math.max(0, totalVal - advance - nonAdvanceVal);
 
     let status = r.status;
-    if (calculatedTotalDue < 0.01) {
+    const isCancelledOrRefunded = ['cancelled', 'canceled', 'refunded', 'voided'].includes(String(r.status || '').toLowerCase());
+    if (!isCancelledOrRefunded && calculatedTotalDue < 0.01) {
       status = 'fully paid';
     }
 
-    if (status === 'fully paid' || status === 'paid') {
+    if (isCancelledOrRefunded) {
+      // Cancelled, refunded, or voided invoices do not count towards active paid or pending revenue totals
+    } else if (status === 'fully paid' || status === 'paid') {
       paidCount++;
     } else {
       pendingCount++;
@@ -1196,12 +1199,12 @@ export async function getInvoices() {
       legalName: r.legal_name || '',
       service: r.service,
       amount: totalVal,
-      total_due: calculatedTotalDue,
+      total_due: isCancelledOrRefunded ? 0 : calculatedTotalDue,
       due: r.due_date ? new Date(r.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Colombo' }) : '-',
       status: status,
       bank_account_id: r.bank_account_id ? Number(r.bank_account_id) : null,
       
-      overdue: r.status === 'overdue' || (r.due_date && new Date(r.due_date) < new Date() && status !== 'paid' && status !== 'fully paid')
+      overdue: !isCancelledOrRefunded && (r.status === 'overdue' || (r.due_date && new Date(r.due_date) < new Date() && status !== 'paid' && status !== 'fully paid'))
     };
   });
 
@@ -1235,6 +1238,19 @@ export async function deleteInvoice(id: string) {
     WHERE linked_invoice_id = ${id} AND tenant_id = ${tenantId}
   `;
 
+  // If this invoice had a linked POS order, void it and restore stock
+  try {
+    const posOrders = await sql`SELECT id, order_number, status FROM pos_orders WHERE invoice_id = ${id} AND tenant_id = ${tenantId}`;
+    for (const po of posOrders) {
+      if (po.status !== 'voided') {
+        const { voidPosOrderAction } = await import('@/app/(dashboard)/pos/actions/sales');
+        await voidPosOrderAction(po.id, 'Voided via invoice deletion').catch(() => {});
+      }
+    }
+  } catch (e) {
+    console.warn("Error voiding linked POS order on invoice delete:", e);
+  }
+
   await sql`DELETE FROM invoice_items WHERE invoice_id = ${id} AND tenant_id = ${tenantId}`;
   await sql`DELETE FROM admin_incomes WHERE invoice_id = ${id} AND tenant_id = ${tenantId}`;
   await sql`DELETE FROM invoices WHERE invoice_id = ${id} AND tenant_id = ${tenantId}`;
@@ -1243,7 +1259,13 @@ export async function deleteInvoice(id: string) {
 
   try {
     revalidatePath('/user/invoices');
+    revalidatePath('/user/income');
     revalidatePath('/user/dashboard');
+    revalidatePath('/user/accounts');
+    revalidatePath('/user/reports');
+    revalidatePath('/pos');
+    revalidatePath('/user/stock');
+    revalidatePath('/user/inventory');
   } catch (e) {
     console.warn("revalidatePath error:", e);
   }
@@ -2051,17 +2073,299 @@ export async function updateInvoice(invoiceId: string, invoiceData: any, lineIte
     }
   }
 
+  // Reconcile income records with new invoice totals and payment status
+  const targetPaymentStatus = String(invoiceData.paymentStatus || 'unpaid').toLowerCase();
+  if (['cancelled', 'canceled', 'refunded', 'voided', 'unpaid'].includes(targetPaymentStatus)) {
+    // If invoice is cancelled, refunded, voided, or set back to unpaid, remove linked income entries
+    await sql`DELETE FROM admin_incomes WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId}`;
+    if (['cancelled', 'canceled', 'voided'].includes(targetPaymentStatus)) {
+      await sql`UPDATE pos_orders SET status = 'voided', updated_at = NOW() WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId} AND status != 'voided'`;
+    } else if (targetPaymentStatus === 'refunded') {
+      await sql`UPDATE pos_orders SET status = 'refunded', updated_at = NOW() WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId} AND status != 'refunded'`;
+    }
+  } else if (targetPaymentStatus === 'fully paid' || targetPaymentStatus === 'paid') {
+    const existingIncomes = await sql`
+      SELECT id, amount FROM admin_incomes
+      WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId}
+      ORDER BY id ASC
+    `;
+    if (existingIncomes.length === 1) {
+      await sql`
+        UPDATE admin_incomes SET
+          amount = ${totalVal},
+          date = ${invoiceData.date || new Date().toISOString().split('T')[0]},
+          client_id = ${invoiceData.clientId || null},
+          account_id = ${invoiceData.bankAccountId ? parseInt(invoiceData.bankAccountId) : null},
+          category = ${invoiceData.category || 'Sales'}
+        WHERE id = ${existingIncomes[0].id} AND tenant_id = ${tenantId}
+      `;
+    } else if (existingIncomes.length > 1) {
+      const sumPrior = existingIncomes.slice(0, -1).reduce((s: number, r: any) => s + parseFloat(r.amount || 0), 0);
+      const lastDiff = Math.max(0, totalVal - sumPrior);
+      const lastId = existingIncomes[existingIncomes.length - 1].id;
+      await sql`
+        UPDATE admin_incomes SET
+          amount = ${lastDiff},
+          date = ${invoiceData.date || new Date().toISOString().split('T')[0]},
+          client_id = ${invoiceData.clientId || null},
+          account_id = ${invoiceData.bankAccountId ? parseInt(invoiceData.bankAccountId) : null},
+          category = ${invoiceData.category || 'Sales'}
+        WHERE id = ${lastId} AND tenant_id = ${tenantId}
+      `;
+    } else {
+      const desc = invoiceData.projectName ? `Payment for Invoice #${invoiceId} (${invoiceData.projectName})` : `Payment for Invoice #${invoiceId}`;
+      await sql`
+        INSERT INTO admin_incomes (
+          date, amount, description, category, payment_method, invoice_id, client_id, account_id, tenant_id
+        ) VALUES (
+          ${invoiceData.date || new Date().toISOString().split('T')[0]},
+          ${totalVal},
+          ${desc},
+          ${invoiceData.category || 'Sales'},
+          'Bank Transfer',
+          ${invoiceId},
+          ${invoiceData.clientId || null},
+          ${invoiceData.bankAccountId ? parseInt(invoiceData.bankAccountId) : null},
+          ${tenantId}
+        )
+      `;
+    }
+  } else if (targetPaymentStatus === 'advance-paid') {
+    const existingIncomes = await sql`
+      SELECT id FROM admin_incomes
+      WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId}
+      ORDER BY id ASC LIMIT 1
+    `;
+    if (existingIncomes.length > 0) {
+      await sql`
+        UPDATE admin_incomes SET
+          amount = ${advanceVal},
+          date = ${invoiceData.date || new Date().toISOString().split('T')[0]},
+          client_id = ${invoiceData.clientId || null},
+          account_id = ${invoiceData.bankAccountId ? parseInt(invoiceData.bankAccountId) : null}
+        WHERE id = ${existingIncomes[0].id} AND tenant_id = ${tenantId}
+      `;
+    } else if (advanceVal > 0) {
+      await sql`
+        INSERT INTO admin_incomes (
+          date, amount, description, category, payment_method, invoice_id, client_id, account_id, tenant_id
+        ) VALUES (
+          ${invoiceData.date || new Date().toISOString().split('T')[0]},
+          ${advanceVal},
+          ${`Advance Payment for Invoice #${invoiceId}`},
+          ${invoiceData.category || 'Sales'},
+          'Bank Transfer',
+          ${invoiceId},
+          ${invoiceData.clientId || null},
+          ${invoiceData.bankAccountId ? parseInt(invoiceData.bankAccountId) : null},
+          ${tenantId}
+        )
+      `;
+    }
+  }
+
   await logSystemAction(`Updated invoice: "${invoiceData.projectName}" (${invoiceId})`);
   
   try {
     revalidatePath('/user/invoices');
     revalidatePath(`/user/invoice/${invoiceId}`);
+    revalidatePath('/user/income');
     revalidatePath('/user/dashboard');
+    revalidatePath('/user/accounts');
+    revalidatePath('/user/reports');
+    revalidatePath('/pos');
+    revalidatePath('/user/stock');
+    revalidatePath('/user/inventory');
   } catch (e) {
     console.warn("revalidatePath error:", e);
   }
 
   return { success: true };
+}
+
+/**
+ * Cancel or revoke an invoice:
+ * 1. Sets payment_status = 'cancelled' and total_due = 0.
+ * 2. Removes any linked income records in `admin_incomes`.
+ * 3. If linked to a POS order, marks the POS order as voided and restores inventory stock.
+ * 4. If line items deducted stock, restores stock and logs inventory movement.
+ */
+export async function cancelInvoiceAction(invoiceId: string, reason: string = 'Cancelled by user') {
+  const { error: rbacError } = await requirePermission('invoices', 'update');
+  if (rbacError) return { success: false, error: rbacError };
+
+  const tenantId = await getTenantId();
+  if (!tenantId) return { success: false, error: "Unauthorized" };
+
+  try {
+    const invRows = await sql`
+      SELECT invoice_id, payment_status, project_name, total FROM invoices
+      WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId} LIMIT 1
+    `;
+    if (invRows.length === 0) return { success: false, error: "Invoice not found" };
+
+    const inv = invRows[0];
+    if (inv.payment_status === 'cancelled') {
+      return { success: false, error: "Invoice is already cancelled" };
+    }
+
+    // 1. Mark invoice as cancelled
+    await sql`
+      UPDATE invoices
+      SET payment_status = 'cancelled',
+          total_due = 0
+      WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId}
+    `;
+
+    // 2. Remove all income records associated with this invoice
+    await sql`
+      DELETE FROM admin_incomes
+      WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId}
+    `;
+
+    // 3. If there is a linked POS order, void it, restore stock, and delete matching income
+    const posOrders = await sql`
+      SELECT id, order_number, status, items_json
+      FROM pos_orders
+      WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId}
+    `;
+
+    for (const po of posOrders) {
+      if (po.status !== 'voided') {
+        const { voidPosOrderAction } = await import('@/app/(dashboard)/pos/actions/sales');
+        await voidPosOrderAction(po.id, `Invoice ${invoiceId} cancelled: ${reason}`).catch(() => {});
+      }
+      await sql`
+        DELETE FROM admin_incomes
+        WHERE tenant_id = ${tenantId} AND description = ${`POS Sale #${po.order_number}`}
+      `;
+    }
+
+    // 4. Restore stock if invoice line items deducted stock
+    try {
+      const stockMoves = await sql`
+        SELECT inventory_id, change_qty FROM stock_movements
+        WHERE tenant_id = ${tenantId} AND reference_type = 'invoice' AND reference_id = ${invoiceId}
+      `;
+      for (const sm of stockMoves) {
+        const qtyToRestore = Math.abs(parseFloat(sm.change_qty || 0));
+        if (qtyToRestore > 0) {
+          await sql`
+            UPDATE admin_inventory
+            SET quantity = quantity + ${qtyToRestore},
+                status = 'Available',
+                updated_at = NOW()
+            WHERE id = ${sm.inventory_id} AND tenant_id::text = ${String(tenantId)}
+          `;
+          await sql`
+            INSERT INTO stock_movements (
+              tenant_id, inventory_id, change_qty, previous_qty, new_qty, reason,
+              reference_type, reference_id, user_name, notes, created_at
+            )
+            SELECT
+              ${tenantId}, id, ${qtyToRestore}, quantity - ${qtyToRestore}, quantity, 'return',
+              'invoice_cancelled', ${invoiceId}, 'System', ${`Restored from cancelled invoice ${invoiceId}`}, NOW()
+            FROM admin_inventory WHERE id = ${sm.inventory_id} AND tenant_id::text = ${String(tenantId)}
+          `;
+        }
+      }
+    } catch (e) {
+      console.warn("Stock restore on invoice cancel non-blocking error:", e);
+    }
+
+    await logSystemAction(`Cancelled invoice #${invoiceId} ("${inv.project_name}"): ${reason}`);
+
+    revalidatePath('/user/invoices');
+    revalidatePath(`/user/invoice/${invoiceId}`);
+    revalidatePath('/user/income');
+    revalidatePath('/user/dashboard');
+    revalidatePath('/user/accounts');
+    revalidatePath('/user/reports');
+    revalidatePath('/pos');
+    revalidatePath('/user/stock');
+    revalidatePath('/user/inventory');
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("Failed to cancel invoice:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Refund an invoice:
+ * 1. Sets payment_status = 'refunded' and total_due = 0.
+ * 2. Removes any linked income records in `admin_incomes`.
+ * 3. If linked to a POS order, marks the POS order as refunded and restores inventory stock.
+ */
+export async function refundInvoiceAction(invoiceId: string, reason: string = 'Refunded to client') {
+  const { error: rbacError } = await requirePermission('invoices', 'update');
+  if (rbacError) return { success: false, error: rbacError };
+
+  const tenantId = await getTenantId();
+  if (!tenantId) return { success: false, error: "Unauthorized" };
+
+  try {
+    const invRows = await sql`
+      SELECT invoice_id, payment_status, project_name, total FROM invoices
+      WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId} LIMIT 1
+    `;
+    if (invRows.length === 0) return { success: false, error: "Invoice not found" };
+
+    const inv = invRows[0];
+    if (inv.payment_status === 'refunded') {
+      return { success: false, error: "Invoice is already refunded" };
+    }
+
+    // 1. Mark invoice as refunded
+    await sql`
+      UPDATE invoices
+      SET payment_status = 'refunded',
+          total_due = 0
+      WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId}
+    `;
+
+    // 2. Remove all income records associated with this invoice
+    await sql`
+      DELETE FROM admin_incomes
+      WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId}
+    `;
+
+    // 3. If there is a linked POS order, refund it, restore stock, and delete matching income
+    const posOrders = await sql`
+      SELECT id, order_number, status, items_json
+      FROM pos_orders
+      WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId}
+    `;
+
+    for (const po of posOrders) {
+      if (po.status !== 'refunded') {
+        const { refundPosOrderAction } = await import('@/app/(dashboard)/pos/actions/sales');
+        await refundPosOrderAction(po.id, `Invoice ${invoiceId} refunded: ${reason}`).catch(() => {});
+      }
+      await sql`
+        DELETE FROM admin_incomes
+        WHERE tenant_id = ${tenantId} AND description = ${`POS Sale #${po.order_number}`}
+      `;
+    }
+
+    await logSystemAction(`Refunded invoice #${invoiceId} ("${inv.project_name}"): ${reason}`);
+
+    revalidatePath('/user/invoices');
+    revalidatePath(`/user/invoice/${invoiceId}`);
+    revalidatePath('/user/income');
+    revalidatePath('/user/dashboard');
+    revalidatePath('/user/accounts');
+    revalidatePath('/user/reports');
+    revalidatePath('/pos');
+    revalidatePath('/user/stock');
+    revalidatePath('/user/inventory');
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("Failed to refund invoice:", err);
+    return { success: false, error: err.message };
+  }
 }
 
 // -- REPORTS --

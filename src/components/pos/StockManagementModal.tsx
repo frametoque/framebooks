@@ -7,6 +7,7 @@ import {
   Printer, Barcode, Camera, Edit2, Check, X, RefreshCw, 
   Store, Plug
 } from "lucide-react";
+import { MdPointOfSale } from "react-icons/md";
 import { 
   loadStockProductsAction, 
   loadStockSummaryAction,
@@ -26,6 +27,8 @@ interface StockManagementModalProps {
   isStandalonePage?: boolean;
   isWooConnected?: boolean;
   onStockChanged?: () => void;
+  tenantName?: string;
+  businessName?: string;
 }
 
 export function StockManagementModal({
@@ -35,6 +38,8 @@ export function StockManagementModal({
   isStandalonePage = false,
   isWooConnected = false,
   onStockChanged,
+  tenantName,
+  businessName,
 }: StockManagementModalProps) {
   const [items, setItems] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -401,16 +406,7 @@ export function StockManagementModal({
 
         {/* Right Action buttons */}
         <div className="flex items-center gap-2">
-          {isStandalonePage ? (
-            <Link
-              href="/pos"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs transition-all shadow-xs"
-              title="Open Point of Sale (POS) register"
-            >
-              <Store className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Open POS</span>
-            </Link>
-          ) : (
+          {!isStandalonePage && (
             <button
               onClick={onClose}
               className="p-2 text-gray-400 hover:text-foreground rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
@@ -976,6 +972,7 @@ export function StockManagementModal({
           product={labelProduct}
           isOpen={Boolean(labelProduct)}
           onClose={() => setLabelProduct(null)}
+          businessName={businessName || tenantName}
         />
       </div>
     );

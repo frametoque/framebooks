@@ -1,14 +1,14 @@
 export const metadata = {
   title: "Login",
-  description: "Log in to your Framebooks account to manage your dashboard, track services, and access your projects securely.",
+  description: "Log in to your Framebooks account to manage your Cloud ERP, financial ledgers, and retail POS counters securely.",
   openGraph: {
     title: "Login",
-    description: "Log in to your Framebooks account to manage your dashboard, track services, and access your projects securely.",
-    url: "https://framebooks.com/login", 
+    description: "Log in to your Framebooks account to manage your Cloud ERP, financial ledgers, and retail POS counters securely.",
+    url: "https://books.frametoque.com/login", 
     siteName: "Framebooks",
     images: [
       {
-        url: "https://framebooks.com/og-image.png",
+        url: "https://books.frametoque.com/og-image.png",
         width: 1200,
         height: 630,
         alt: "Framebooks",
@@ -20,8 +20,8 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Login",
-    description: "Log in to your Framebooks account to manage your dashboard, track services, and access your projects securely.",
-    images: ["https://framebooks.com/og-image.png"],
+    description: "Log in to your Framebooks account to manage your Cloud ERP, financial ledgers, and retail POS counters securely.",
+    images: ["https://books.frametoque.com/og-image.png"],
   },
 };
 

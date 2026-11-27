@@ -35,7 +35,7 @@ import { AdminDateRangeProvider, useAdminDateRange } from "./context/AdminDateRa
 import { TaxEstimatorProvider, useTaxEstimator } from "./context/TaxEstimatorContext";
 import { RoleProvider } from "./context/RoleContext";
 import { User as UserIcon, Building2, Receipt, Droplets, BarChart3, NotepadTextDashed, FolderOpenDot, Layers, FilePenLine, ChartLine, CalendarPlus, ExternalLink, Globe, RefreshCw, Server, Cloud, Megaphone, Store, Printer, Package, Plug } from "lucide-react";
-import { MdCreditCard, MdNotifications, MdMenu, MdSearch, MdDashboard, MdAccountBalanceWallet, MdInsertDriveFile, MdGroup, MdInventory2, MdLogout, MdClose, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdWorkOutline, MdKeyboardDoubleArrowLeft, MdKeyboardDoubleArrowRight, MdCalendarToday, MdAdd, MdAccessTime, MdSettings, MdAttachMoney, MdDownload, MdMenuBook, MdAccountBalance, MdLockOutline, MdLock, MdWarning } from "react-icons/md";
+import { MdCreditCard, MdNotifications, MdMenu, MdSearch, MdDashboard, MdAccountBalanceWallet, MdInsertDriveFile, MdGroup, MdInventory2, MdLogout, MdClose, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdWorkOutline, MdKeyboardDoubleArrowLeft, MdKeyboardDoubleArrowRight, MdCalendarToday, MdAdd, MdAccessTime, MdSettings, MdAttachMoney, MdDownload, MdMenuBook, MdAccountBalance, MdLockOutline, MdLock, MdWarning, MdCancel, MdPointOfSale } from "react-icons/md";
 import { AppLockProvider, useAppLock, LockScreen } from "./components/AppLockProvider";
 import { PrivacyBlurToggle } from "./components/PrivacyBlurToggle";
 import { ChristmasSnowfall } from "./components/ChristmasSnowfall";
@@ -260,7 +260,7 @@ function LayoutContent({ children }) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center text-center p-6 select-none">
         <div className="w-12 h-12 rounded-2xl bg-brand-500/15 text-brand-500 flex items-center justify-center animate-pulse mb-3">
-          <Store className="w-6 h-6" />
+          <MdPointOfSale className="w-6 h-6" />
         </div>
         <p className="text-sm font-semibold text-foreground">Opening Point of Sale Terminal...</p>
       </div>
@@ -613,7 +613,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
     if (p === "/dashboard") return "Dashboard";
     if (p === "/clients") return "Clients";
     if (p === "/inventory") return "Inventory";
-    if (p === "/stock" || p.startsWith("/stock")) return "Stock Management";
+    if (p === "/stock" || p.startsWith("/stock")) return "Stock";
     if (p.startsWith("/clients/")) return "Client Details";
     if (p.startsWith("/invoice/")) {
       const parts = p.split("/");
@@ -756,6 +756,17 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
                       <span>Print</span>
                     </button>
                   )}
+                  {tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
+                    <button
+                      type="button"
+                      onClick={() => window.dispatchEvent(new CustomEvent("invoice:cancel"))}
+                      className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-3xl font-bold transition-colors active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap shadow-2xs"
+                      title="Cancel & Revoke Invoice"
+                    >
+                      <MdCancel className="w-4 h-4" />
+                      <span>Cancel Invoice</span>
+                    </button>
+                  )}
                 </div>
               )}
               {isAccounts && tenantInfo.userRole !== 'Viewer' && !tenantInfo.is_read_only && (
@@ -778,16 +789,6 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
               )}
               {isStock && (
                 <div className="flex items-center gap-2">
-                  <Link
-                    href="/pos"
-                    prefetch={false}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-card hover:bg-black/5 dark:hover:bg-white/10 text-foreground border border-border rounded-full font-semibold transition-colors cursor-pointer text-xs shadow-2xs whitespace-nowrap"
-                    title="Open POS Register"
-                  >
-                    <Store className="w-4 h-4 text-brand-500" />
-                    <span>Open POS</span>
-                  </Link>
-
                   {tenantInfo?.has_woocommerce ? (
                     <>
                       <StockSyncButton />
@@ -998,9 +999,9 @@ const PosTopBarButton = ({ tenantInfo }: { tenantInfo: any }) => {
           href="/pos"
           prefetch={false}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold text-xs transition-all active:scale-95 shadow-2xs group cursor-pointer"
-          title={`POS • Shift #${shiftNumber || "1"} Active (Register Open)`}
+          title={`POS • Shift #${shiftNumber || "1"} Active`}
         >
-          <Store className="w-3.5 h-3.5 shrink-0" />
+          <MdPointOfSale className="w-3.5 h-3.5 shrink-0" />
           <span>POS</span>
           <span className="w-1.5 h-1.5 rounded-full bg-brand-900/60 animate-pulse shrink-0" />
         </Link>
@@ -1015,7 +1016,7 @@ const PosTopBarButton = ({ tenantInfo }: { tenantInfo: any }) => {
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold text-xs transition-all active:scale-95 shadow-2xs group cursor-pointer"
         title="POS • Shift Closed (Click to Open POS & Start Shift)"
       >
-        <Store className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+        <MdPointOfSale className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
         <span>POS</span>
         <span className="w-1.5 h-1.5 rounded-full bg-amber-500/70 shrink-0" />
       </Link>
@@ -1030,7 +1031,7 @@ const PosTopBarButton = ({ tenantInfo }: { tenantInfo: any }) => {
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-card hover:bg-black/5 dark:hover:bg-white/5 border border-border text-gray-400 hover:text-foreground font-semibold text-xs transition-all shadow-2xs"
         title="Get POS Add-on (Available on Pro & Pro Plus)"
       >
-        <Store className="w-3.5 h-3.5 text-brand-500 shrink-0" />
+        <MdPointOfSale className="w-3.5 h-3.5 text-brand-500 shrink-0" />
         <span>POS</span>
         <MdLockOutline className="w-3.5 h-3.5 text-gray-400 shrink-0" />
       </Link>
@@ -1044,7 +1045,7 @@ const PosTopBarButton = ({ tenantInfo }: { tenantInfo: any }) => {
       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-card hover:bg-black/5 dark:hover:bg-white/5 border border-border text-gray-400 hover:text-foreground font-semibold text-xs transition-all opacity-75 shadow-2xs"
       title="POS Add-on (Upgrade to Pro required)"
     >
-      <Store className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+      <MdPointOfSale className="w-3.5 h-3.5 text-gray-400 shrink-0" />
       <span>POS</span>
       <MdLockOutline className="w-3.5 h-3.5 text-gray-400 shrink-0" />
     </Link>

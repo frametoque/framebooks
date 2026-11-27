@@ -4,9 +4,9 @@ import { DEFAULT_ACCENT_HEX } from '@/lib/theme/accent';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Framebooks',
+    name: 'Framebooks - Cloud ERP, Accounting & Retail POS',
     short_name: 'Framebooks',
-    description: 'Run your entire business in one place. Track money, manage clients, and grow faster.',
+    description: 'Modern all-in-one Cloud ERP, Business Accounting & Counter POS System. Manage billing, stock, registers, barcodes, and finances in one platform.',
     start_url: '/dashboard',
     scope: '/',
     id: '/dashboard',
@@ -17,7 +17,7 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: 'en',
     dir: 'ltr',
     orientation: 'any',
-    categories: ['finance', 'business', 'productivity', 'accounting'],
+    categories: ['finance', 'business', 'productivity', 'accounting', 'shopping', 'utilities'],
     icons: [
       {
         src: '/favicon-16x16.png',
@@ -64,6 +64,12 @@ export default function manifest(): MetadataRoute.Manifest {
         name: 'Dashboard',
         short_name: 'Dashboard',
         url: '/dashboard',
+        icons: [{ src: '/favicon-192x192.png', sizes: '192x192' }],
+      },
+      {
+        name: 'POS Terminal',
+        short_name: 'POS',
+        url: '/pos',
         icons: [{ src: '/favicon-192x192.png', sizes: '192x192' }],
       },
       {

@@ -7,9 +7,7 @@ import {
   MdCheck, MdTrendingUp, MdAccountBalance, MdCallMade, MdCallReceived, 
   MdInsertDriveFile, MdGroup, MdInventory, MdSecurity, MdGroups, MdPerson, 
   MdArrowForward, MdPointOfSale, MdQrCodeScanner, MdPrint, MdFlashOn, 
-  MdLockOutline, MdPhoneIphone, MdSearch, MdShoppingCart, MdLocalOffer,
-  MdAdd, MdRemove, MdClose, MdPersonAdd, MdSettings, MdExitToApp,
-  MdReceiptLong, MdDeleteOutline, MdLocalAtm
+  MdLockOutline, MdPhoneIphone, MdLocalOffer
 } from 'react-icons/md';
 import { kpis, features, modulesData, workflowSteps, securityFeatures, plans, comparison, faqs, posFeatures } from '@/data/landing/content';
 import PlanFinderWidget from '@/components/landing/PlanFinderWidget';
@@ -77,7 +75,7 @@ export default function LandingClient({
               transition={{ delay: 0.1 }}
               className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.12] mb-4 sm:mb-6 text-[#082830]"
             >
-              Run your whole business finances in one place<span className="text-[#00E35B]">.</span>
+              Run your whole business finances & retail counters in one place<span className="text-[#00E35B]">.</span>
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 15 }}
@@ -85,7 +83,7 @@ export default function LandingClient({
               transition={{ delay: 0.2 }}
               className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed font-normal"
             >
-              Invoices, quotations, expenses, bank accounts, clients, inventory and reports, all in one seamless dashboard built for modern teams.
+              All-in-one Cloud ERP, Accounting & Retail POS. Invoices, quotations, barcode stock management, live counter checkout, bank accounts, and reports — built for modern businesses.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 15 }}
@@ -413,10 +411,10 @@ export default function LandingClient({
           <div className="container mx-auto px-4 sm:px-6 max-w-6xl">
             <div className="text-center mb-10 sm:mb-16">
               <h2 className="text-3xl sm:text-4xl font-black mb-3 sm:mb-4 tracking-tight">
-                Everything your finances need.<br className="hidden sm:inline" /> Nothing they don't<span className="text-[#00E35B]">.</span>
+                Everything your business & counters need.<br className="hidden sm:inline" /> Nothing they don't<span className="text-[#00E35B]">.</span>
               </h2>
               <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto">
-                Everything you need to manage your business, neatly organized into powerful features.
+                From high-speed retail checkout to back-office bookkeeping and automated stock, neatly organized into powerful modules.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">
@@ -527,19 +525,6 @@ export default function LandingClient({
               ))}
             </div>
 
-            {/* INTERACTIVE PLAN FINDER WIDGET */}
-            <div className="max-w-5xl mx-auto mb-12 sm:mb-16">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl sm:text-3xl font-black text-[#082830] mb-2 tracking-tight">
-                  <span className="text-[#00E35B]">Not sure</span> which plan you need?
-                </h3>
-                <p className="text-gray-500 max-w-lg mx-auto text-xs sm:text-sm leading-relaxed px-4">
-                  Adjust your total invoice volume, active clients, and feature needs to get an instant tailored recommendation.
-                </p>
-              </div>
-              <PlanFinderWidget plans={displayPlans} isYearly={yearly} posPricing={posPricing} />
-            </div>
-
             {/* Enterprise & Custom */}
             <div className="max-w-5xl mx-auto bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-10 border border-[#E5E7EB] shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 md:gap-8">
               <div className="text-left">
@@ -585,304 +570,6 @@ export default function LandingClient({
               </p>
             </div>
 
-            {/* POS Terminal Visual Mockup */}
-            <div className="mb-14 sm:mb-20 rounded-2xl sm:rounded-3xl border border-white/10 bg-[#0B1E22]/95 backdrop-blur-xl shadow-2xl p-4 sm:p-5 lg:p-6 overflow-hidden w-full max-w-5xl mx-auto flex flex-col justify-between">
-              {/* POS Top Bar Mockup */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 mb-3.5 border-b border-white/10 text-xs shrink-0">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#00E35B] text-[#041418] flex items-center justify-center font-black text-xs">
-                    FB
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold tracking-tight text-white text-sm">Framebooks</span>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold text-[10px] border border-emerald-500/30 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Shift #1 Active
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Action buttons matching real POS screen */}
-                <div className="hidden md:flex items-center gap-1.5 text-[11px] text-gray-300">
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 font-medium">
-                    Drawer
-                  </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 font-medium">
-                    Test Bill
-                  </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 font-medium">
-                    Stock
-                  </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 font-medium">
-                    Orders
-                  </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 font-medium">
-                    Offers
-                  </span>
-                  <span className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400">
-                    <MdSettings className="w-3.5 h-3.5" />
-                  </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-400 flex items-center gap-1 font-medium">
-                    <MdExitToApp className="w-3.5 h-3.5" />
-                    <span>Exit</span>
-                  </span>
-                </div>
-              </div>
-
-              {/* POS Interface Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 flex-1 min-h-0">
-                {/* Products Column */}
-                <div className="lg:col-span-8 flex flex-col gap-3 min-h-0">
-                  {/* Search Bar with Scan Button */}
-                  <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-gray-400">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <MdSearch className="w-4 h-4 text-gray-400 shrink-0" />
-                      <span className="text-gray-300 font-medium truncate">Scan or search products...</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="px-2.5 py-1 rounded-lg bg-[#00E35B] text-[#041418] font-bold text-[11px] flex items-center gap-1.5 shadow-sm shadow-[#00E35B]/20">
-                        <MdQrCodeScanner className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Camera Scan</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Categories */}
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 text-[11px] scrollbar-none">
-                    <span className="px-3 py-1 rounded-full bg-[#00E35B] text-[#041418] font-bold">All</span>
-                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 hover:text-white">Hardware</span>
-                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 hover:text-white">Accessories</span>
-                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 hover:text-white">Electronics</span>
-                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 hover:text-white">General</span>
-                  </div>
-
-                  {/* Products Grid Mock */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-left">
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
-                      <div className="flex justify-between items-start gap-1 mb-2">
-                        <div>
-                          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">HARDWARE</span>
-                          <span className="text-xs font-bold text-white leading-tight">Desktop Label Printer</span>
-                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FB-PRN-006</span>
-                        </div>
-                        <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">9</span>
-                      </div>
-                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
-                        <span className="text-xs font-black text-white">LKR 29,500</span>
-                        <span className="text-[10px] text-gray-400">9 pcs</span>
-                      </div>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
-                      <div className="flex justify-between items-start gap-1 mb-2">
-                        <div>
-                          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">HARDWARE</span>
-                          <span className="text-xs font-bold text-white leading-tight">Heavy Duty Cash Drawer (RJ11)</span>
-                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FB-CSH-007</span>
-                        </div>
-                        <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">8</span>
-                      </div>
-                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
-                        <span className="text-xs font-black text-white">LKR 16,500</span>
-                        <span className="text-[10px] text-gray-400">8 pcs</span>
-                      </div>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
-                      <div className="flex justify-between items-start gap-1 mb-2">
-                        <div>
-                          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">HARDWARE</span>
-                          <span className="text-xs font-bold text-white leading-tight">Omnidirectional 2D Scanner</span>
-                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FB-SCN-002</span>
-                        </div>
-                        <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">12</span>
-                      </div>
-                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
-                        <span className="text-xs font-black text-white">LKR 14,800</span>
-                        <span className="text-[10px] text-gray-400">12 pcs</span>
-                      </div>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
-                      <div className="flex justify-between items-start gap-1 mb-2">
-                        <div>
-                          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">ACCESSORIES</span>
-                          <span className="text-xs font-bold text-white leading-tight">Thermal Sticker Roll</span>
-                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FB-ACC-010</span>
-                        </div>
-                        <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">45</span>
-                      </div>
-                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
-                        <span className="text-xs font-black text-white">LKR 3,200</span>
-                        <span className="text-[10px] text-gray-400">45 pcs</span>
-                      </div>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
-                      <div className="flex justify-between items-start gap-1 mb-2">
-                        <div>
-                          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">ACCESSORIES</span>
-                          <span className="text-xs font-bold text-white leading-tight">Thermal Receipt Paper Box</span>
-                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FB-ACC-014</span>
-                        </div>
-                        <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">20</span>
-                      </div>
-                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
-                        <span className="text-xs font-black text-white">LKR 8,500</span>
-                        <span className="text-[10px] text-gray-400">20 pcs</span>
-                      </div>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
-                      <div className="flex justify-between items-start gap-1 mb-2">
-                        <div>
-                          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">ACCESSORIES</span>
-                          <span className="text-xs font-bold text-white leading-tight">QR Code Counter Stand</span>
-                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FB-ACC-009</span>
-                        </div>
-                        <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">16</span>
-                      </div>
-                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
-                        <span className="text-xs font-black text-white">LKR 1,000</span>
-                        <span className="text-[10px] text-gray-400">16 pcs</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Cart Order Summary Column */}
-                <div className="lg:col-span-4 rounded-2xl bg-black/50 border border-white/10 p-3.5 sm:p-4 flex flex-col justify-between text-left">
-                  <div>
-                    {/* Cart Header */}
-                    <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/10">
-                      <div className="flex items-center gap-1.5 font-bold text-xs text-white">
-                        <MdShoppingCart className="w-4 h-4 text-[#00E35B] shrink-0" />
-                        <span>Current Order</span>
-                        <span className="px-2 py-0.5 rounded-full bg-[#00E35B] text-[#041418] text-[10px] font-bold">2</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-[10px] text-red-400 hover:text-red-300 cursor-pointer">
-                        <MdDeleteOutline className="w-3.5 h-3.5" />
-                        <span>New Sale</span>
-                      </div>
-                    </div>
-
-                    {/* Customer Selection Bar */}
-                    <div className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 mb-3 flex items-center justify-between gap-2 text-xs">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-6 h-6 rounded-lg bg-[#00E35B]/15 text-[#00E35B] flex items-center justify-center shrink-0 text-xs font-bold">
-                          <MdPerson className="w-3.5 h-3.5" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-bold text-white truncate text-[11px]">Walk-in Customer</p>
-                          <p className="text-[9px] text-gray-400">Walk-in Account</p>
-                        </div>
-                      </div>
-                      <div className="px-2 py-1 rounded-lg bg-white/10 text-[10px] font-bold text-gray-300 hover:text-white flex items-center gap-1 shrink-0">
-                        <MdPersonAdd className="w-3 h-3 text-[#00E35B]" />
-                        <span>Assign Client</span>
-                      </div>
-                    </div>
-
-                    {/* Cart Items List */}
-                    <div className="space-y-2 mb-3">
-                      {/* Item 1 */}
-                      <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs">
-                        <div className="flex justify-between items-start gap-2 mb-1.5">
-                          <div className="min-w-0 flex-1">
-                            <p className="font-bold text-white truncate text-xs">Desktop Label Printer</p>
-                            <p className="text-[10px] text-gray-400">LKR 29,500 × 1</p>
-                          </div>
-                          <span className="font-bold text-[#00E35B] shrink-0 text-xs">LKR 29,500</span>
-                        </div>
-                        <div className="flex items-center justify-between pt-1.5 border-t border-white/5 text-[10px]">
-                          <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 flex items-center gap-1">
-                            <MdLocalOffer className="w-2.5 h-2.5 text-[#00E35B]" />
-                            <span>Discount</span>
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            {/* Quantity Controls */}
-                            <div className="flex items-center gap-1 bg-white/10 rounded-lg p-0.5">
-                              <button type="button" className="p-0.5 text-gray-400 hover:text-white rounded transition-colors">
-                                <MdRemove className="w-3 h-3" />
-                              </button>
-                              <span className="font-bold w-4 text-center text-xs text-white">1</span>
-                              <button type="button" className="p-0.5 text-gray-400 hover:text-white rounded transition-colors">
-                                <MdAdd className="w-3 h-3" />
-                              </button>
-                            </div>
-                            {/* Remove Item Button */}
-                            <button type="button" className="p-1 text-gray-400 hover:text-red-400 transition-colors">
-                              <MdClose className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Item 2 */}
-                      <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs">
-                        <div className="flex justify-between items-start gap-2 mb-1.5">
-                          <div className="min-w-0 flex-1">
-                            <p className="font-bold text-white truncate text-xs">Heavy Duty Cash Drawer (RJ11)</p>
-                            <p className="text-[10px] text-gray-400">LKR 16,500 × 1</p>
-                          </div>
-                          <span className="font-bold text-[#00E35B] shrink-0 text-xs">LKR 16,500</span>
-                        </div>
-                        <div className="flex items-center justify-between pt-1.5 border-t border-white/5 text-[10px]">
-                          <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 flex items-center gap-1">
-                            <MdLocalOffer className="w-2.5 h-2.5 text-[#00E35B]" />
-                            <span>Discount</span>
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            {/* Quantity Controls */}
-                            <div className="flex items-center gap-1 bg-white/10 rounded-lg p-0.5">
-                              <button type="button" className="p-0.5 text-gray-400 hover:text-white rounded transition-colors">
-                                <MdRemove className="w-3 h-3" />
-                              </button>
-                              <span className="font-bold w-4 text-center text-xs text-white">1</span>
-                              <button type="button" className="p-0.5 text-gray-400 hover:text-white rounded transition-colors">
-                                <MdAdd className="w-3 h-3" />
-                              </button>
-                            </div>
-                            {/* Remove Item Button */}
-                            <button type="button" className="p-1 text-gray-400 hover:text-red-400 transition-colors">
-                              <MdClose className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Cart Total & Charge Button */}
-                  <div className="pt-3 border-t border-white/10">
-                    <div className="flex justify-between items-center text-xs text-gray-300 mb-1">
-                      <span>Subtotal</span>
-                      <span className="font-semibold text-white">LKR 46,000</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs text-[#00E35B] mb-2">
-                      <div className="flex items-center gap-1">
-                        <span>% Discounts & Offers</span>
-                      </div>
-                      <span>LKR 0</span>
-                    </div>
-                    <div className="flex justify-between items-baseline mb-3">
-                      <span className="text-xs uppercase font-bold text-gray-400 tracking-wider">TOTAL</span>
-                      <span className="text-xl font-black text-[#00E35B]">LKR 46,000</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="w-full py-3 rounded-xl bg-[#00E35B] text-[#041418] font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#00E35B]/20 hover:bg-[#00c750] transition-colors"
-                    >
-                      <MdCheck className="w-4 h-4" />
-                      <span>CHARGE LKR 46,000</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* POS 6-Pillar Features Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
               {posFeatures.map((feat, idx) => (
@@ -914,7 +601,7 @@ export default function LandingClient({
                   Available as an Add-on to <span className="text-[#00E35B]">Pro</span> or <span className="text-[#00E35B]">Pro Plus</span>
                 </h3>
                 <p className="text-gray-300 text-xs sm:text-sm leading-relaxed">
-                  Already running a checkout counter, retail store, or mobile sales team? Point of Sale can be purchased as an optional add-on to your Pro or Pro Plus plan with instant counter activation and live cloud sync.
+                  Already running a checkout counter, retail store, or mobile sales team? Point of Sale can be added to your plan with instant activation and live cloud sync.
                 </p>
               </div>
 
@@ -930,6 +617,23 @@ export default function LandingClient({
                   or LKR {posPricing.priceYearly.toLocaleString()} / year (2 months free)
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* INTERACTIVE PLAN FINDER SECTION */}
+        <section className="py-16 sm:py-20 bg-[#F9FAFB] border-t border-[#E5E7EB]">
+          <div className="container mx-auto px-4 sm:px-6 max-w-6xl xl:max-w-7xl">
+            <div className="max-w-5xl mx-auto">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl sm:text-3xl font-black text-[#082830] mb-2 tracking-tight">
+                  <span className="text-[#00E35B]">Not sure</span> which plan you need?
+                </h3>
+                <p className="text-gray-500 max-w-lg mx-auto text-xs sm:text-sm leading-relaxed px-4">
+                  Adjust your total invoice volume, active clients, and feature needs to get an instant tailored recommendation.
+                </p>
+              </div>
+              <PlanFinderWidget plans={displayPlans} isYearly={yearly} posPricing={posPricing} />
             </div>
           </div>
         </section>

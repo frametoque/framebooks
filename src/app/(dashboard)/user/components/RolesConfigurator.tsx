@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { MdAdd, MdDelete, MdSave } from "react-icons/md";
+import { MdAdd, MdDelete, MdSave, MdPointOfSale } from "react-icons/md";
 import { getRoles, saveRole, deleteRole } from "../actions/roles";
 
 const RESOURCES = [
@@ -252,6 +252,7 @@ export default function RolesConfigurator({ currentUserRole }: { currentUserRole
               {/* POS & Stock Permissions */}
               <div className="pt-4 border-t border-border">
                 <h4 className="text-sm font-semibold text-brand-500 dark:text-brand-400 mb-4 flex items-center gap-2">
+                  <MdPointOfSale className="w-4 h-4 text-brand-500" />
                   <span>Point of Sale (POS) & Stock Privileges</span>
                   <span className="text-[10px] bg-brand-500/15 border border-brand-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">Add-on</span>
                 </h4>

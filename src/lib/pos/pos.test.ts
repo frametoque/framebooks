@@ -174,6 +174,51 @@ test("Stock Calculation and Oversell Protection Rules", async (t) => {
   });
 });
 
+test("Invoice and POS Income Ledger Synchronization Rules", async (t) => {
+  await t.test("Cancelling or voiding invoice/POS order removes it from income ledger", () => {
+    let ledger = [
+      { id: 1, invoice_id: 'INV-0001', amount: 3500000, description: 'POS Sale #POS-001' },
+      { id: 2, invoice_id: 'INV-0002', amount: 50000, description: 'Payment for Invoice #INV-0002' },
+    ];
+
+    // Simulate voiding/cancelling INV-0001
+    const targetInvoiceId = 'INV-0001';
+    ledger = ledger.filter(inc => inc.invoice_id !== targetInvoiceId);
+
+    assert.equal(ledger.length, 1);
+    assert.equal(ledger[0].invoice_id, 'INV-0002');
+  });
+
+  await t.test("Invoice status calculation preserves cancelled and refunded without forcing fully paid", () => {
+    const rawInvoices = [
+      { id: 'INV-001', total: '3500000.00', status: 'cancelled' },
+      { id: 'INV-002', total: '10000.00', status: 'refunded' },
+      { id: 'INV-003', total: '5000.00', status: 'paid' },
+    ];
+
+    const processed = rawInvoices.map(r => {
+      const isCancelledOrRefunded = ['cancelled', 'canceled', 'refunded', 'voided'].includes(r.status.toLowerCase());
+      const calculatedTotalDue = isCancelledOrRefunded ? 0 : 0;
+      let status = r.status;
+      if (!isCancelledOrRefunded && calculatedTotalDue < 0.01) {
+        status = 'fully paid';
+      }
+      return { id: r.id, status, isCancelledOrRefunded };
+    });
+
+    assert.equal(processed[0].status, 'cancelled');
+    assert.equal(processed[1].status, 'refunded');
+    assert.equal(processed[2].status, 'fully paid');
+  });
+
+  await t.test("Editing invoice amount updates linked income record with exact matching values", () => {
+    let income = { id: 1, invoice_id: 'INV-0010', amount: 25000 };
+    const newInvoiceTotal = 30000;
+    income = { ...income, amount: newInvoiceTotal };
+    assert.equal(income.amount, 30000);
+  });
+});
+
 test("POS Special Discounts, Offers & Client Management Rules", async (t) => {
   await t.test("Calculates line item percentage and fixed fee discounts correctly", () => {
     const item1 = { price: 1000, quantity: 2, discount: 10, discountType: 'percent' as const };

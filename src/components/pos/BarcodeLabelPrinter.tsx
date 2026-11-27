@@ -1,22 +1,45 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Printer, X, Tag } from "lucide-react";
+import { Printer, X, Tag, Plus, Minus } from "lucide-react";
 import { generateBarcodeSvg, generateQrCodeSvg } from "@/lib/pos/barcode-generator";
 import { StockItem } from "@/lib/pos/stock-service";
+import { getTenantInfo } from "@/app/(dashboard)/user/actions/tenants";
 
 interface BarcodeLabelPrinterProps {
   product: StockItem | null;
   isOpen: boolean;
   onClose: () => void;
+  businessName?: string;
 }
 
 // Standard thermal sticker roll size (58mm x 40mm)
 const labelSize = { width: 58, height: 40 };
 
-export function BarcodeLabelPrinter({ product, isOpen, onClose }: BarcodeLabelPrinterProps) {
-  const [copies, setCopies] = useState<number>(1);
+export function BarcodeLabelPrinter({ product, isOpen, onClose, businessName }: BarcodeLabelPrinterProps) {
+  const stockQuantity = Math.max(0, Number(product?.quantity ?? (product as any)?.stock_quantity ?? 0));
+  const [copies, setCopies] = useState<number>(stockQuantity > 0 ? stockQuantity : 1);
   const [labelType, setLabelType] = useState<"combo" | "barcode_only" | "qr_only">("barcode_only");
+  const [tenantName, setTenantName] = useState<string>(businessName || "");
+
+  useEffect(() => {
+    if (product) {
+      const stockQty = Math.max(0, Number(product.quantity ?? (product as any)?.stock_quantity ?? 0));
+      setCopies(stockQty > 0 ? stockQty : 1);
+    }
+  }, [product, isOpen]);
+
+  useEffect(() => {
+    if (businessName) {
+      setTenantName(businessName);
+    } else if (isOpen) {
+      getTenantInfo()
+        .then((info) => {
+          if (info?.name) setTenantName(info.name);
+        })
+        .catch(() => {});
+    }
+  }, [businessName, isOpen]);
 
   useEffect(() => {
     if (!isOpen || !product) return;
@@ -79,6 +102,7 @@ export function BarcodeLabelPrinter({ product, isOpen, onClose }: BarcodeLabelPr
   };
 
   const decodedName = decodeHtmlEntities(product.item_name);
+  const businessWatermark = tenantName || "";
 
   const handlePrint = () => {
     const printWindow = window.open("", "_blank");
@@ -92,7 +116,7 @@ export function BarcodeLabelPrinter({ product, isOpen, onClose }: BarcodeLabelPr
         () => `
         <div class="label-card">
           <div class="product-name">${decodedName}</div>
-          <div class="product-sku">SKU: ${displaySku}</div>
+          ${labelType === "qr_only" ? `<div class="product-sku">SKU: ${displaySku}</div>` : ""}
           
           <div class="code-container">
             ${
@@ -109,7 +133,10 @@ export function BarcodeLabelPrinter({ product, isOpen, onClose }: BarcodeLabelPr
             }
           </div>
 
-          <div class="price-tag">${formatLKR(product.selling_price)}</div>
+          <div class="bottom-section">
+            <div class="price-tag">${formatLKR(product.selling_price)}</div>
+            ${businessWatermark ? `<div class="branding-watermark">${businessWatermark}</div>` : ""}
+          </div>
         </div>
       `
       )
@@ -266,11 +293,31 @@ export function BarcodeLabelPrinter({ product, isOpen, onClose }: BarcodeLabelPr
               height: ${labelSize.height <= 30 ? 12 : 15}mm !important;
               display: block;
             }
+            .bottom-section {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 0.3mm;
+              width: 100%;
+            }
             .price-tag {
-              font-size: ${labelSize.width <= 40 ? 10 : 12}px;
+              font-size: ${labelSize.width <= 40 ? 13 : 15.5}px;
               font-weight: 900;
               color: #000;
+              line-height: 1.05;
+              letter-spacing: -0.2px;
+            }
+            .branding-watermark {
+              font-size: 6.5px;
+              font-weight: 700;
+              color: #444;
+              letter-spacing: 0.4px;
+              text-transform: uppercase;
               line-height: 1;
+              max-width: 100%;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
             }
 
             @media screen {
@@ -387,19 +434,64 @@ export function BarcodeLabelPrinter({ product, isOpen, onClose }: BarcodeLabelPr
 
           {/* Number of Copies */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                Copies to Print
-              </label>
-              <span className="text-xs font-bold text-foreground">{copies} {copies === 1 ? 'sticker' : 'stickers'}</span>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+              Copies to Print
+            </label>
+
+            {/* Stepper & Number Input for free customization */}
+            <div className="flex items-center gap-2 mb-2.5">
+              <button
+                type="button"
+                onClick={() => setCopies(Math.max(1, copies - 1))}
+                className="w-9 h-9 rounded-xl border border-border text-foreground hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center font-bold transition-colors cursor-pointer shrink-0"
+                title="Decrease copies"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </button>
+              <div className="flex-1 relative">
+                <input
+                  type="number"
+                  min={1}
+                  max={9999}
+                  value={copies}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    setCopies(isNaN(val) || val < 1 ? 1 : val);
+                  }}
+                  className="w-full h-9 px-3 text-center rounded-xl border border-border bg-background text-foreground font-bold text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setCopies(copies + 1)}
+                className="w-9 h-9 rounded-xl border border-border text-foreground hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center font-bold transition-colors cursor-pointer shrink-0"
+                title="Increase copies"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <div className="flex items-center gap-2">
+
+            {/* Quick preset buttons */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {stockQuantity > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setCopies(stockQuantity)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border whitespace-nowrap cursor-pointer ${
+                    copies === stockQuantity
+                      ? "bg-brand-500 text-brand-950 border-brand-500 shadow-sm"
+                      : "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20"
+                  }`}
+                >
+                  Stock ({stockQuantity}x)
+                </button>
+              )}
               {[1, 5, 10, 20, 50].map((num) => (
                 <button
                   key={num}
                   type="button"
                   onClick={() => setCopies(num)}
-                  className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                  className={`flex-1 min-w-[38px] py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
                     copies === num
                       ? "bg-brand-500 text-brand-950 border-brand-500 shadow-sm"
                       : "border-border text-gray-400 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
@@ -424,9 +516,11 @@ export function BarcodeLabelPrinter({ product, isOpen, onClose }: BarcodeLabelPr
                 <div className="font-bold text-xs max-w-full text-black leading-snug break-words line-clamp-2">
                   {decodedName}
                 </div>
-                <div className="text-[10px] text-gray-600 font-semibold mt-0.5 tracking-wide truncate max-w-full">
-                  SKU: {displaySku}
-                </div>
+                {labelType === "qr_only" && (
+                  <div className="text-[10px] text-gray-600 font-semibold mt-0.5 tracking-wide truncate max-w-full">
+                    SKU: {displaySku}
+                  </div>
+                )}
               </div>
 
               <div className="my-2 w-full flex items-center justify-center overflow-hidden">
@@ -454,8 +548,15 @@ export function BarcodeLabelPrinter({ product, isOpen, onClose }: BarcodeLabelPr
                 )}
               </div>
 
-              <div className="font-black text-sm text-black tracking-tight">
-                {formatLKR(product.selling_price)}
+              <div className="w-full flex flex-col items-center">
+                <div className="font-black text-base text-black tracking-tight leading-tight">
+                  {formatLKR(product.selling_price)}
+                </div>
+                {businessWatermark && (
+                  <div className="text-[9px] text-gray-600 font-bold tracking-wider uppercase mt-0.5 truncate max-w-full">
+                    {businessWatermark}
+                  </div>
+                )}
               </div>
             </div>
           </div>

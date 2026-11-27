@@ -33,6 +33,7 @@ import {
   KeyRound,
   Store,
 } from "lucide-react";
+import { MdPointOfSale } from "react-icons/md";
 import { toggleTenantAddonAction } from "@/app/(dashboard)/admin/users/actions";
 import { PlanBadge, RoleBadge, StatusPill, Money, formatLKR } from "@/components/Formatters";
 import { TenantLogo } from "@/components/TenantLogo";
@@ -778,7 +779,7 @@ export function BusinessDetailView({
               <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-black/5 dark:bg-white/5">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-500 font-bold shrink-0">
-                    <Store className="w-5 h-5" />
+                    <MdPointOfSale className="w-5 h-5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">

@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -7,7 +8,13 @@ import { getPosAddonStatus } from "@/lib/pos/entitlement";
 import { hasGranularPermission, isCashierOnlyUser } from "@/app/(dashboard)/user/actions/rbac";
 import { generateTenantThemeCss, DEFAULT_ACCENT_HEX, resolvePaletteId } from "@/lib/theme/accent";
 import Link from "next/link";
-import { Lock, ArrowLeft, Store, ShieldAlert } from "lucide-react";
+import { Lock, ArrowLeft, ShieldAlert } from "lucide-react";
+import { MdPointOfSale } from "react-icons/md";
+
+export const metadata: Metadata = {
+  title: "POS Terminal | Framebooks",
+  description: "Lightning-fast retail POS counter terminal with barcode scanning, automated stock tracking, and receipt printing.",
+};
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +62,7 @@ export default async function PosRootLayout({ children }: { children: React.Reac
         {accentCss && <style dangerouslySetInnerHTML={{ __html: accentCss }} />}
         
         <div className="w-20 h-20 bg-brand-500/10 text-brand-500 rounded-3xl flex items-center justify-center mb-6 border border-brand-500/20 shadow-xl shadow-brand-500/10">
-          <Store className="w-10 h-10" />
+          <MdPointOfSale className="w-10 h-10" />
         </div>
 
         {addonStatus.canPurchase ? (

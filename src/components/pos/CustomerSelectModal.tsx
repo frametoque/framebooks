@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Phone, User, X, UserPlus, Loader2, CheckCircle2 } from "lucide-react";
+import { X, Loader2, CheckCircle2 } from "lucide-react";
 import { searchPosClientsAction, savePosClientAction, findPosClientByPhoneAction, PosClient } from "@/app/(dashboard)/pos/actions/clients";
 
 interface CustomerSelectModalProps {
@@ -228,14 +228,13 @@ export function CustomerSelectModal({
               )}
             </div>
             <div className="relative flex items-center">
-              <Phone className="absolute left-3.5 w-4 h-4 text-gray-400" />
               <input
                 ref={phoneInputRef}
                 type="tel"
                 value={phone}
                 onChange={(e) => handleQueryChange(e.target.value, 'phone')}
                 onKeyDown={handlePhoneKeyDown}
-                className="w-full pl-10 pr-10 py-3 bg-black/5 dark:bg-white/5 border border-border rounded-xl text-sm font-semibold text-foreground focus:outline-none focus:border-brand-500 transition-colors"
+                className="w-full px-4 pr-10 py-3 bg-black/5 dark:bg-white/5 border border-border rounded-xl text-sm font-semibold text-foreground focus:outline-none focus:border-brand-500 transition-colors"
               />
               {isCheckingPhone && (
                 <Loader2 className="absolute right-3.5 w-4 h-4 text-brand-500 animate-spin" />
@@ -252,13 +251,12 @@ export function CustomerSelectModal({
               Customer Full Name
             </label>
             <div className="relative flex items-center">
-              <User className="absolute left-3.5 w-4 h-4 text-gray-400" />
               <input
                 ref={nameInputRef}
                 type="text"
                 value={name}
                 onChange={(e) => handleQueryChange(e.target.value, 'name')}
-                className="w-full pl-10 pr-4 py-3 bg-black/5 dark:bg-white/5 border border-border rounded-xl text-sm font-semibold text-foreground focus:outline-none focus:border-brand-500 transition-colors"
+                className="w-full px-4 py-3 bg-black/5 dark:bg-white/5 border border-border rounded-xl text-sm font-semibold text-foreground focus:outline-none focus:border-brand-500 transition-colors"
               />
             </div>
           </div>
@@ -302,7 +300,6 @@ export function CustomerSelectModal({
               disabled={saving}
               className="flex-1 py-3 px-4 bg-brand-500 hover:bg-brand-400 disabled:opacity-40 text-brand-950 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
             >
-              <UserPlus className="w-4 h-4" />
               <span>{saving ? "Saving to Clients..." : "Start Sale with Customer"}</span>
               <kbd className="text-[10px] bg-brand-600/30 text-brand-950 px-1.5 py-0.5 rounded font-bold">Enter</kbd>
             </button>

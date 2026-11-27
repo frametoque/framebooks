@@ -5,9 +5,10 @@ import Link from "next/link";
 import { 
   Package, Search, AlertTriangle, ArrowUpDown, 
   Printer, Barcode, Camera, Edit2, Check, X, RefreshCw, 
-  Store, CheckCircle2, ArrowRight, ShieldAlert, Sparkles,
+  Store, CheckCircle2, ArrowRight, ShieldAlert,
   ChevronDown
 } from "lucide-react";
+import { MdPointOfSale } from "react-icons/md";
 import { getTenantInfo } from "../actions/tenants";
 import { 
   loadStockProductsAction, 
@@ -515,35 +516,12 @@ export default function StockPage() {
           </div>
 
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-500/10 text-brand-500 text-xs font-bold">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>POS & Stock Management Add-on</span>
-            </div>
             <h1 className="text-2xl font-black text-foreground tracking-tight">
               Unlock Standalone Stock Management
             </h1>
             <p className="text-sm text-gray-400 max-w-md mx-auto leading-relaxed">
               Stock management, bulk stocktaking, barcode label printing, and live inventory auditing are part of the Framebooks POS & Retail engine.
             </p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-border max-w-md mx-auto text-left space-y-2.5 text-xs text-gray-300">
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
-              <span>Full product catalog with SKU, barcodes & category hierarchy</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
-              <span>Rapid barcode scanner stocktaking with variance tracking</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
-              <span>Audit trail for receiving, damages & count corrections</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
-              <span>Thermal barcode & QR label printing for shelf tags</span>
-            </div>
           </div>
 
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -583,7 +561,7 @@ export default function StockPage() {
               href="/pos"
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-xl text-xs transition-all shadow-md"
             >
-              <Store className="w-4 h-4" />
+              <MdPointOfSale className="w-4 h-4" />
               <span>Go to POS Register</span>
             </Link>
           </div>
@@ -749,8 +727,8 @@ export default function StockPage() {
           </div>
           <div>
             <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Stock Retail Value</p>
-            <p className="text-2xl font-bold mt-1 text-foreground">
-              {formatLKR(totalStockValue)} <span className="text-xs font-semibold text-gray-500">LKR</span>
+            <p className="text-2xl font-bold mt-1 text-foreground privacy-blur-target" data-stat-value>
+              <AnimatedNumber value={formatLKR(totalStockValue)} /> <span className="text-xs font-semibold text-gray-500">LKR</span>
             </p>
           </div>
         </div>
@@ -1267,6 +1245,7 @@ export default function StockPage() {
           isOpen={Boolean(labelProduct)}
           onClose={() => setLabelProduct(null)}
           product={labelProduct}
+          businessName={tenantInfo?.name}
         />
       )}
 
