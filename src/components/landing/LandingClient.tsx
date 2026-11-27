@@ -595,9 +595,9 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                     <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
                       <div className="flex justify-between items-start gap-1 mb-1.5">
                         <div>
-                          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">GENERAL</span>
-                          <span className="text-xs font-bold text-white leading-tight">TEST Auto QR Product</span>
-                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">SKU-00009</span>
+                          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">ACCESSORIES</span>
+                          <span className="text-xs font-bold text-white leading-tight">QR Code Counter Stand</span>
+                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FT-ACC-009</span>
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">16</span>
                       </div>
