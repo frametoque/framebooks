@@ -413,12 +413,6 @@ export function BarcodeLabelPrinter({ product, isOpen, onClose }: BarcodeLabelPr
 
           {/* Label Preview Card */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                Label Preview
-              </label>
-              <span className="text-[10px] text-gray-400 font-medium">Auto-fitted to sticker roll</span>
-            </div>
             <div
               className="bg-white text-black p-4 rounded-xl border border-gray-300 shadow-md flex flex-col items-center justify-between text-center mx-auto transition-all overflow-hidden"
               style={{
