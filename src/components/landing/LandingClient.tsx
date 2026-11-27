@@ -7,7 +7,9 @@ import {
   MdCheck, MdTrendingUp, MdAccountBalance, MdCallMade, MdCallReceived, 
   MdInsertDriveFile, MdGroup, MdInventory, MdSecurity, MdGroups, MdPerson, 
   MdArrowForward, MdPointOfSale, MdQrCodeScanner, MdPrint, MdFlashOn, 
-  MdLockOutline, MdPhoneIphone, MdSearch, MdShoppingCart, MdLocalOffer 
+  MdLockOutline, MdPhoneIphone, MdSearch, MdShoppingCart, MdLocalOffer,
+  MdAdd, MdRemove, MdClose, MdPersonAdd, MdSettings, MdExitToApp,
+  MdReceiptLong, MdDeleteOutline, MdLocalAtm
 } from 'react-icons/md';
 import { kpis, features, modulesData, workflowSteps, securityFeatures, plans, comparison, faqs, posFeatures } from '@/data/landing/content';
 import PlanFinderWidget from '@/components/landing/PlanFinderWidget';
@@ -453,35 +455,56 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
               </p>
             </div>
 
-            {/* POS Terminal Visual Mockup (16:9 Widescreen Retail Layout) */}
-            <div className="mb-14 sm:mb-20 rounded-2xl sm:rounded-3xl border border-white/10 bg-[#0B1E22]/90 backdrop-blur-xl shadow-2xl p-4 sm:p-5 lg:p-6 overflow-hidden w-full max-w-5xl mx-auto flex flex-col justify-between md:aspect-[16/9]">
+            {/* POS Terminal Visual Mockup */}
+            <div className="mb-14 sm:mb-20 rounded-2xl sm:rounded-3xl border border-white/10 bg-[#0B1E22]/95 backdrop-blur-xl shadow-2xl p-4 sm:p-5 lg:p-6 overflow-hidden w-full max-w-5xl mx-auto flex flex-col justify-between">
               {/* POS Top Bar Mockup */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-3 border-b border-white/10 text-xs shrink-0">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 mb-3.5 border-b border-white/10 text-xs shrink-0">
                 <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-[#00E35B] text-[#041418] flex items-center justify-center font-black text-xs">
+                  <div className="w-8 h-8 rounded-lg bg-[#00E35B] text-[#041418] flex items-center justify-center font-black text-xs">
                     FT
                   </div>
-                  <span className="font-bold tracking-tight text-white">FT DEMO (PRO PLUS)</span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold text-[10px] border border-emerald-500/30 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Shift #1 Active
-                  </span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold tracking-tight text-white text-sm">FT DEMO (PRO PLUS)</span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold text-[10px] border border-emerald-500/30 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Shift #1 Active
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                {/* Quick Action pills */}
-                <div className="hidden lg:flex items-center gap-2 text-[11px] text-gray-300">
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center">
-                    <span>Open Drawer</span>
+
+                {/* Quick Action buttons matching real POS screen */}
+                <div className="hidden md:flex items-center gap-1.5 text-[11px] text-gray-300">
+                  <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1 text-gray-400">
+                    <span>Keys</span>
+                    <kbd className="text-[9px] bg-white/10 px-1 py-0.2 rounded font-sans">?</kbd>
                   </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center">
-                    <span>Print Bill</span>
+                  <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1 text-gray-300">
+                    <span>Drawer</span>
+                    <kbd className="text-[9px] bg-white/10 px-1 py-0.2 rounded font-sans text-gray-400">Space</kbd>
                   </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center">
-                    <span>Camera Scan</span>
+                  <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1 text-gray-300">
+                    <span>Test Bill</span>
+                    <kbd className="text-[9px] bg-white/10 px-1 py-0.2 rounded font-sans text-gray-400">Enter</kbd>
                   </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center">
-                    <span>Stock Info</span>
+                  <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1 text-gray-300">
+                    <span>Stock</span>
+                    <kbd className="text-[9px] bg-white/10 px-1 py-0.2 rounded font-sans text-gray-400">F8</kbd>
                   </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center">
-                    <span>Discounts</span>
+                  <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1 text-gray-300">
+                    <span>Orders</span>
+                    <kbd className="text-[9px] bg-white/10 px-1 py-0.2 rounded font-sans text-gray-400">F9</kbd>
+                  </span>
+                  <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1 text-gray-300">
+                    <span>Offers</span>
+                    <kbd className="text-[9px] bg-white/10 px-1 py-0.2 rounded font-sans text-gray-400">F6</kbd>
+                  </span>
+                  <span className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400">
+                    <MdSettings className="w-3.5 h-3.5" />
+                  </span>
+                  <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-400 flex items-center gap-1">
+                    <MdExitToApp className="w-3.5 h-3.5" />
+                    <span>Exit</span>
                   </span>
                 </div>
               </div>
@@ -489,26 +512,36 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
               {/* POS Interface Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 flex-1 min-h-0">
                 {/* Products Column */}
-                <div className="lg:col-span-8 flex flex-col justify-between gap-2.5 min-h-0">
-                  {/* Search Bar */}
-                  <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-gray-400 shrink-0">
-                    <MdSearch className="w-4 h-4 text-gray-400 shrink-0" />
-                    <span className="text-gray-300 font-medium truncate">Scan barcode or search products by name, SKU, or category...</span>
+                <div className="lg:col-span-8 flex flex-col gap-3 min-h-0">
+                  {/* Search Bar with Scan Button */}
+                  <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-gray-400">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <MdSearch className="w-4 h-4 text-gray-400 shrink-0" />
+                      <span className="text-gray-300 font-medium truncate">Scan or search products...</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <kbd className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-white/10 text-gray-400 text-[10px] font-mono">/</kbd>
+                      <div className="px-2.5 py-1 rounded-lg bg-[#00E35B] text-[#041418] font-bold text-[11px] flex items-center gap-1.5 shadow-sm shadow-[#00E35B]/20">
+                        <MdQrCodeScanner className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Camera Scan</span>
+                        <kbd className="text-[9px] bg-[#041418]/20 px-1 py-0.2 rounded font-sans font-bold">F2</kbd>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Categories */}
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 text-[11px] scrollbar-none shrink-0">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 text-[11px] scrollbar-none">
                     <span className="px-3 py-1 rounded-full bg-[#00E35B] text-[#041418] font-bold">All</span>
-                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">Hardware</span>
-                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">Accessories</span>
-                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">Electronics</span>
-                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">General</span>
+                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 hover:text-white">Hardware</span>
+                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 hover:text-white">Accessories</span>
+                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 hover:text-white">Electronics</span>
+                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 hover:text-white">General</span>
                   </div>
 
-                  {/* Products Grid Mock (2x3 Grid balanced for 16:9 ratio) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-left flex-1 min-h-0">
-                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
-                      <div className="flex justify-between items-start gap-1 mb-1.5">
+                  {/* Products Grid Mock */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-left">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
+                      <div className="flex justify-between items-start gap-1 mb-2">
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">HARDWARE</span>
                           <span className="text-xs font-bold text-white leading-tight">Desktop Label Printer</span>
@@ -516,14 +549,14 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">9</span>
                       </div>
-                      <div className="flex justify-between items-end mt-1.5 pt-1.5 border-t border-white/5">
+                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
                         <span className="text-xs font-black text-white">LKR 29,500</span>
                         <span className="text-[10px] text-gray-400">9 pcs</span>
                       </div>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
-                      <div className="flex justify-between items-start gap-1 mb-1.5">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
+                      <div className="flex justify-between items-start gap-1 mb-2">
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">HARDWARE</span>
                           <span className="text-xs font-bold text-white leading-tight">Heavy Duty Cash Drawer (RJ11)</span>
@@ -531,14 +564,14 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">8</span>
                       </div>
-                      <div className="flex justify-between items-end mt-1.5 pt-1.5 border-t border-white/5">
+                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
                         <span className="text-xs font-black text-white">LKR 16,500</span>
                         <span className="text-[10px] text-gray-400">8 pcs</span>
                       </div>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
-                      <div className="flex justify-between items-start gap-1 mb-1.5">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
+                      <div className="flex justify-between items-start gap-1 mb-2">
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">HARDWARE</span>
                           <span className="text-xs font-bold text-white leading-tight">Omnidirectional 2D Scanner</span>
@@ -546,14 +579,14 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">12</span>
                       </div>
-                      <div className="flex justify-between items-end mt-1.5 pt-1.5 border-t border-white/5">
+                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
                         <span className="text-xs font-black text-white">LKR 14,800</span>
                         <span className="text-[10px] text-gray-400">12 pcs</span>
                       </div>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
-                      <div className="flex justify-between items-start gap-1 mb-1.5">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
+                      <div className="flex justify-between items-start gap-1 mb-2">
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">ACCESSORIES</span>
                           <span className="text-xs font-bold text-white leading-tight">58mm Thermal Sticker Roll</span>
@@ -561,14 +594,14 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">45</span>
                       </div>
-                      <div className="flex justify-between items-end mt-1.5 pt-1.5 border-t border-white/5">
+                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
                         <span className="text-xs font-black text-white">LKR 3,200</span>
                         <span className="text-[10px] text-gray-400">45 pcs</span>
                       </div>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
-                      <div className="flex justify-between items-start gap-1 mb-1.5">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
+                      <div className="flex justify-between items-start gap-1 mb-2">
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">ACCESSORIES</span>
                           <span className="text-xs font-bold text-white leading-tight">80mm Receipt Paper Box</span>
@@ -576,14 +609,14 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">20</span>
                       </div>
-                      <div className="flex justify-between items-end mt-1.5 pt-1.5 border-t border-white/5">
+                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
                         <span className="text-xs font-black text-white">LKR 8,500</span>
                         <span className="text-[10px] text-gray-400">20 pcs</span>
                       </div>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
-                      <div className="flex justify-between items-start gap-1 mb-1.5">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
+                      <div className="flex justify-between items-start gap-1 mb-2">
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">ACCESSORIES</span>
                           <span className="text-xs font-bold text-white leading-tight">QR Code Counter Stand</span>
@@ -591,7 +624,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">16</span>
                       </div>
-                      <div className="flex justify-between items-end mt-1.5 pt-1.5 border-t border-white/5">
+                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
                         <span className="text-xs font-black text-white">LKR 1,000</span>
                         <span className="text-[10px] text-gray-400">16 pcs</span>
                       </div>
@@ -600,57 +633,135 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                 </div>
 
                 {/* Cart Order Summary Column */}
-                <div className="lg:col-span-4 rounded-xl bg-black/40 border border-white/10 p-3 sm:p-3.5 flex flex-col justify-between text-left min-h-0">
+                <div className="lg:col-span-4 rounded-2xl bg-black/50 border border-white/10 p-3.5 sm:p-4 flex flex-col justify-between text-left">
                   <div>
-                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
+                    {/* Cart Header */}
+                    <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/10">
                       <div className="flex items-center gap-1.5 font-bold text-xs text-white">
-                        <MdShoppingCart className="w-3.5 h-3.5 text-[#00E35B] shrink-0" />
+                        <MdShoppingCart className="w-4 h-4 text-[#00E35B] shrink-0" />
                         <span>Current Order</span>
-                        <span className="px-1.5 py-0.2 rounded-full bg-[#00E35B] text-[#041418] text-[10px] font-bold">2</span>
+                        <span className="px-2 py-0.5 rounded-full bg-[#00E35B] text-[#041418] text-[10px] font-bold">2</span>
                       </div>
-                      <span className="text-[10px] text-gray-400">Walk-in Customer</span>
+                      <div className="flex items-center gap-1 text-[10px] text-red-400 hover:text-red-300 cursor-pointer">
+                        <MdDeleteOutline className="w-3.5 h-3.5" />
+                        <span>New Sale</span>
+                        <kbd className="bg-white/10 px-1 py-0.2 rounded font-sans text-[9px] text-gray-400">F7</kbd>
+                      </div>
                     </div>
 
-                    {/* Cart Items */}
-                    <div className="space-y-1.5 mb-2">
-                      <div className="p-2 rounded-lg bg-white/5 text-xs flex justify-between items-center">
-                        <div className="min-w-0 pr-2">
-                          <p className="font-bold text-white truncate text-xs">Desktop Label Printer</p>
-                          <p className="text-[10px] text-gray-400">LKR 29,500 × 1</p>
+                    {/* Customer Selection Bar */}
+                    <div className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 mb-3 flex items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-6 h-6 rounded-lg bg-[#00E35B]/15 text-[#00E35B] flex items-center justify-center shrink-0 text-xs font-bold">
+                          <MdPerson className="w-3.5 h-3.5" />
                         </div>
-                        <span className="font-bold text-[#00E35B] shrink-0 text-xs">LKR 29,500</span>
+                        <div className="min-w-0">
+                          <p className="font-bold text-white truncate text-[11px]">Walk-in Customer</p>
+                          <p className="text-[9px] text-gray-400">Walk-in Account</p>
+                        </div>
                       </div>
-                      <div className="p-2 rounded-lg bg-white/5 text-xs flex justify-between items-center">
-                        <div className="min-w-0 pr-2">
-                          <p className="font-bold text-white truncate text-xs">Cash Drawer (RJ11)</p>
-                          <p className="text-[10px] text-gray-400">LKR 16,500 × 1</p>
+                      <div className="px-2 py-1 rounded-lg bg-white/10 text-[10px] font-bold text-gray-300 hover:text-white flex items-center gap-1 shrink-0">
+                        <MdPersonAdd className="w-3 h-3 text-[#00E35B]" />
+                        <span>Assign Client</span>
+                        <kbd className="text-[8px] bg-black/30 px-1 py-0.2 rounded font-sans text-gray-400">F3</kbd>
+                      </div>
+                    </div>
+
+                    {/* Cart Items List */}
+                    <div className="space-y-2 mb-3">
+                      {/* Item 1 */}
+                      <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs">
+                        <div className="flex justify-between items-start gap-2 mb-1.5">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-white truncate text-xs">Desktop Label Printer</p>
+                            <p className="text-[10px] text-gray-400">LKR 29,500 × 1</p>
+                          </div>
+                          <span className="font-bold text-[#00E35B] shrink-0 text-xs">LKR 29,500</span>
                         </div>
-                        <span className="font-bold text-[#00E35B] shrink-0 text-xs">LKR 16,500</span>
+                        <div className="flex items-center justify-between pt-1.5 border-t border-white/5 text-[10px]">
+                          <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 flex items-center gap-1">
+                            <MdLocalOffer className="w-2.5 h-2.5 text-[#00E35B]" />
+                            <span>Discount</span>
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {/* Quantity Controls */}
+                            <div className="flex items-center gap-1 bg-white/10 rounded-lg p-0.5">
+                              <button type="button" className="p-0.5 text-gray-400 hover:text-white rounded transition-colors">
+                                <MdRemove className="w-3 h-3" />
+                              </button>
+                              <span className="font-bold w-4 text-center text-xs text-white">1</span>
+                              <button type="button" className="p-0.5 text-gray-400 hover:text-white rounded transition-colors">
+                                <MdAdd className="w-3 h-3" />
+                              </button>
+                            </div>
+                            {/* Remove Item Button */}
+                            <button type="button" className="p-1 text-gray-400 hover:text-red-400 transition-colors">
+                              <MdClose className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Item 2 */}
+                      <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs">
+                        <div className="flex justify-between items-start gap-2 mb-1.5">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-white truncate text-xs">Heavy Duty Cash Drawer (RJ11)</p>
+                            <p className="text-[10px] text-gray-400">LKR 16,500 × 1</p>
+                          </div>
+                          <span className="font-bold text-[#00E35B] shrink-0 text-xs">LKR 16,500</span>
+                        </div>
+                        <div className="flex items-center justify-between pt-1.5 border-t border-white/5 text-[10px]">
+                          <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 flex items-center gap-1">
+                            <MdLocalOffer className="w-2.5 h-2.5 text-[#00E35B]" />
+                            <span>Discount</span>
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {/* Quantity Controls */}
+                            <div className="flex items-center gap-1 bg-white/10 rounded-lg p-0.5">
+                              <button type="button" className="p-0.5 text-gray-400 hover:text-white rounded transition-colors">
+                                <MdRemove className="w-3 h-3" />
+                              </button>
+                              <span className="font-bold w-4 text-center text-xs text-white">1</span>
+                              <button type="button" className="p-0.5 text-gray-400 hover:text-white rounded transition-colors">
+                                <MdAdd className="w-3 h-3" />
+                              </button>
+                            </div>
+                            {/* Remove Item Button */}
+                            <button type="button" className="p-1 text-gray-400 hover:text-red-400 transition-colors">
+                              <MdClose className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Cart Total & Charge Button */}
-                  <div className="pt-2 border-t border-white/10">
-                    <div className="flex justify-between items-center text-[11px] text-gray-300 mb-1">
+                  <div className="pt-3 border-t border-white/10">
+                    <div className="flex justify-between items-center text-xs text-gray-300 mb-1">
                       <span>Subtotal</span>
                       <span className="font-semibold text-white">LKR 46,000</span>
                     </div>
-                    <div className="flex justify-between items-center text-[11px] text-[#00E35B] mb-2">
-                      <span>Discounts & Special Offers</span>
+                    <div className="flex justify-between items-center text-xs text-[#00E35B] mb-2">
+                      <div className="flex items-center gap-1">
+                        <span>% Discounts & Offers</span>
+                        <kbd className="text-[9px] bg-white/10 px-1 py-0.2 rounded font-sans text-gray-400">F4</kbd>
+                      </div>
                       <span>LKR 0</span>
                     </div>
-                    <div className="flex justify-between items-baseline mb-2.5">
+                    <div className="flex justify-between items-baseline mb-3">
                       <span className="text-xs uppercase font-bold text-gray-400 tracking-wider">TOTAL</span>
-                      <span className="text-lg font-black text-[#00E35B]">LKR 46,000</span>
+                      <span className="text-xl font-black text-[#00E35B]">LKR 46,000</span>
                     </div>
 
                     <button
                       type="button"
-                      className="w-full py-2.5 rounded-xl bg-[#00E35B] text-[#041418] font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-[#00E35B]/20"
+                      className="w-full py-3 rounded-xl bg-[#00E35B] text-[#041418] font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#00E35B]/20 hover:bg-[#00c750] transition-colors"
                     >
                       <MdCheck className="w-4 h-4" />
                       <span>CHARGE LKR 46,000</span>
+                      <kbd className="text-[9px] bg-[#041418]/20 px-1.5 py-0.5 rounded font-sans font-bold">F12 / SPACE</kbd>
                     </button>
                   </div>
                 </div>
