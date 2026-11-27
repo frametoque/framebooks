@@ -25,7 +25,7 @@ export const kpis = [
   { label: 'Modules', value: '11' },
   { label: 'Retail & POS', value: 'High-speed' },
   { label: 'LKR-first', value: 'accounting' },
-  { label: 'Data encryption', value: 'AES-256' },
+  { label: 'Data encryption', value: 'Bank-grade' },
 ];
 
 export const features = [
@@ -92,7 +92,7 @@ export const modulesData = [
   {
     id: 'security',
     title: 'Security & Privacy',
-    benefits: ['Field-level AES-256-GCM authenticated encryption for sensitive client and banking PII.', 'Hardware-backed biometric passkeys (Touch ID / Face ID) and app lock PIN.', 'Privacy blur mode for public spaces and comprehensive system audit logs.'],
+    benefits: ['Bank-grade data encryption for sensitive client and banking details.', 'Hardware-backed biometric passkeys (Touch ID / Face ID) and app lock PIN.', 'Privacy blur mode for public spaces and comprehensive system audit logs.'],
     align: 'left'
   }
 ];
@@ -112,7 +112,7 @@ export const securityFeatures = [
   'Privacy Blur Mode',
   'Push Notifications & Financial Reminders',
   'Data Export to CSV',
-  'AES-256-GCM Field-Level & TLS Encryption'
+  'Bank-Grade Data Encryption'
 ];
 
 export const plans = [
