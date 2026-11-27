@@ -4,7 +4,9 @@ import { getLandingPlansFormatted } from '@/lib/plans-db';
 import { getPosAddonPricing } from '@/lib/pos/entitlement';
 
 export const metadata: Metadata = {
-  title: 'Framebooks — Business finances and Point of Sale, unified',
+  title: {
+    absolute: 'Framebooks | Business finances and Point of Sale, unified'
+  },
   description: 'The all-in-one platform for Sri Lankan business. Lightning-fast retail POS, live inventory, invoices, bank ledgers, and financial intelligence.',
   keywords: [
     'Cloud ERP Sri Lanka',
@@ -19,13 +21,13 @@ export const metadata: Metadata = {
     'WooCommerce POS Sync'
   ],
   openGraph: {
-    title: 'Framebooks — Invoicing, Bookkeeping, and Point of Sale',
+    title: 'Framebooks | Invoicing, Bookkeeping, and Point of Sale',
     description: 'Create invoices, manage live stock, and run your retail counter checkout. Simple, fast, and built for Sri Lanka.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Framebooks — Invoicing, Bookkeeping, and Point of Sale',
+    title: 'Framebooks | Invoicing, Bookkeeping, and Point of Sale',
     description: 'Create invoices, manage live stock, and run your retail counter checkout. Simple, fast, and built for Sri Lanka.',
   }
 };

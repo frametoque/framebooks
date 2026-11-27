@@ -22,7 +22,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://books.frametoque.com'),
   title: {
-    default: "Framebooks - Cloud ERP, Accounting & Retail POS",
+    default: "Framebooks | Cloud ERP, Accounting & Retail POS",
     template: "%s | Framebooks"
   },
   description: "Modern Cloud ERP, Business Accounting & Retail POS for growing businesses. Run your entire business in one place: invoices, quotations, live counter registers, barcode stock management, and financial ledgers.",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     title: "Framebooks POS & ERP",
   },
   openGraph: {
-    title: "Framebooks - Cloud ERP, Accounting & Retail POS",
+    title: "Framebooks | Cloud ERP, Accounting & Retail POS",
     description: "The complete cloud ERP, accounting, and retail POS platform. Run your business finances and retail checkout counters seamlessly.",
     siteName: "Framebooks",
     type: "website",
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Framebooks - Cloud ERP, Accounting & Retail POS",
+    title: "Framebooks | Cloud ERP, Accounting & Retail POS",
     description: "Modern all-in-one platform for Cloud ERP, bookkeeping, and lightning-fast retail POS counter checkout.",
   },
   icons: {

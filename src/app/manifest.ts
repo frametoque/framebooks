@@ -4,7 +4,7 @@ import { DEFAULT_ACCENT_HEX } from '@/lib/theme/accent';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Framebooks - Cloud ERP, Accounting & Retail POS',
+    name: 'Framebooks | Cloud ERP, Accounting & Retail POS',
     short_name: 'Framebooks',
     description: 'Modern all-in-one Cloud ERP, Business Accounting & Counter POS System. Manage billing, stock, registers, barcodes, and finances in one platform.',
     start_url: '/dashboard',
