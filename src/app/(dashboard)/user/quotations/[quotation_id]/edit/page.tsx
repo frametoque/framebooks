@@ -304,7 +304,7 @@ export default function EditQuotationPage() {
           {/* Client Details */}
           <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
             <h2 className="text-xl font-semibold mb-4">Client Details</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-sm text-gray-400">Client Name</label>
                 <input type="text" name="clientName" value={formData.clientName} onChange={handleFormChange}
@@ -318,7 +318,7 @@ export default function EditQuotationPage() {
                   disabled={isConfirmed} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-sm text-gray-400">Email</label>
                 <input type="email" name="userEmail" value={formData.userEmail} onChange={handleFormChange}
@@ -332,7 +332,7 @@ export default function EditQuotationPage() {
                   disabled={isConfirmed} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-sm text-gray-400">Client Name (Legal)</label>
                 <input type="text" name="legalName" value={formData.legalName} onChange={handleFormChange}
@@ -354,7 +354,7 @@ export default function EditQuotationPage() {
           {/* Quotation Details */}
           <div className="bg-card border border-border rounded-3xl p-6 space-y-4 shadow-xs">
             <h2 className="text-xl font-semibold mb-4">Quotation Details</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-sm text-gray-400">Project Name</label>
                 <input type="text" name="projectName" value={formData.projectName} onChange={handleFormChange}
@@ -374,7 +374,7 @@ export default function EditQuotationPage() {
                 className="w-full bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors resize-none disabled:opacity-50"
                 rows={3} placeholder="Project scope and details..." disabled={isConfirmed} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-sm text-gray-400">Categories</label>
                 <CategoryPicker value={selectedCategories} onChange={setSelectedCategories} disabled={isConfirmed} type="income" />
@@ -456,33 +456,35 @@ export default function EditQuotationPage() {
             
             <div className="space-y-3">
               {lineItems.map((item) => (
-                <div key={item.id} className="flex items-start gap-3">
+                <div key={item.id} className="flex flex-col sm:flex-row items-stretch sm:items-start gap-2 sm:gap-3 p-3 sm:p-0 rounded-2xl sm:rounded-none bg-black/[0.03] dark:bg-white/[0.02] sm:bg-transparent border sm:border-0 border-border">
                   <div className="flex-1 space-y-1">
                     <input type="text" placeholder="Description" value={item.description}
                       onChange={(e) => handleLineItemChange(item.id, 'description', e.target.value)}
                       className="w-full bg-transparent border border-border rounded-xl px-4 py-2 outline-none focus:border-brand-500 transition-colors text-sm disabled:opacity-50"
                       disabled={isConfirmed} />
                   </div>
-                  <div className="w-20 space-y-1">
-                    <input type="number" placeholder="Qty" min="1" value={item.quantity}
-                      onChange={(e) => handleLineItemChange(item.id, 'quantity', Number(e.target.value))}
-                      className="w-full bg-transparent border border-border rounded-xl px-4 py-2 outline-none focus:border-brand-500 transition-colors text-sm disabled:opacity-50"
-                      disabled={isConfirmed} />
+                  <div className="flex items-center gap-2">
+                    <div className="w-20 space-y-1">
+                      <input type="number" placeholder="Qty" min="1" value={item.quantity}
+                        onChange={(e) => handleLineItemChange(item.id, 'quantity', Number(e.target.value))}
+                        className="w-full bg-transparent border border-border rounded-xl px-4 py-2 outline-none focus:border-brand-500 transition-colors text-sm disabled:opacity-50 text-center"
+                        disabled={isConfirmed} />
+                    </div>
+                    <div className="w-28 space-y-1 flex-1 sm:flex-initial">
+                      <input type="number" placeholder="Rate" min="0" step="0.01" value={item.rate || ""}
+                        onChange={(e) => handleLineItemChange(item.id, 'rate', Number(e.target.value))}
+                        className="w-full bg-transparent border border-border rounded-xl px-4 py-2 outline-none focus:border-brand-500 transition-colors text-sm disabled:opacity-50"
+                        disabled={isConfirmed} />
+                    </div>
+                    <div className="w-24 py-2 text-right text-sm font-semibold shrink-0">
+                      {formatCurrency(item.quantity * item.rate)}
+                    </div>
+                    <button onClick={() => removeLineItem(item.id)}
+                      className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={isConfirmed}>
+                      <MdDelete className="w-4 h-4" />
+                    </button>
                   </div>
-                  <div className="w-28 space-y-1">
-                    <input type="number" placeholder="Rate" min="0" step="0.01" value={item.rate || ""}
-                      onChange={(e) => handleLineItemChange(item.id, 'rate', Number(e.target.value))}
-                      className="w-full bg-transparent border border-border rounded-xl px-4 py-2 outline-none focus:border-brand-500 transition-colors text-sm disabled:opacity-50"
-                      disabled={isConfirmed} />
-                  </div>
-                  <div className="w-24 py-2 text-right text-sm font-semibold">
-                    {formatCurrency(item.quantity * item.rate)}
-                  </div>
-                  <button onClick={() => removeLineItem(item.id)}
-                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-colors mt-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={isConfirmed}>
-                    <MdDelete className="w-4 h-4" />
-                  </button>
                 </div>
               ))}
             </div>

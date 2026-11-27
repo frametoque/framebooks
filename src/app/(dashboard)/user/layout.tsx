@@ -351,35 +351,50 @@ function LayoutContent({ children }) {
               />
             )}
 
-            {/* Main Content Area – desktop */}
-            <motion.div
-              animate={{ paddingLeft: isLocked || showMaintenanceScreen ? 0 : 72 }}
-              transition={{ duration: 0.2 }}
-              className="min-h-screen lg:flex flex-col hidden"
+            {/* Main Content Area – single responsive container */}
+            <div
+              className={`min-h-screen flex flex-col transition-[padding] duration-200 ${
+                isLocked || showMaintenanceScreen ? "pl-0" : "pl-0 lg:pl-[72px]"
+              }`}
             >
               {!showMaintenanceScreen && <LimitBanner exceededLimits={exceededLimits} />}
-              {!showMaintenanceScreen && <Header user={user} isLoaded={isLoaded} setMobileMenuOpen={setMobileMenuOpen} tenantInfo={tenantInfo} />}
-              <main className="px-4 sm:px-6 lg:px-8 pt-4 pb-8 flex-1 flex flex-col">
-                {isLocked ? <LockScreen /> : isTeamLocked ? (
+              {!showMaintenanceScreen && (
+                <Header
+                  user={user}
+                  isLoaded={isLoaded}
+                  setMobileMenuOpen={setMobileMenuOpen}
+                  tenantInfo={tenantInfo}
+                />
+              )}
+              <main className="px-3 sm:px-6 lg:px-8 pt-3 sm:pt-4 pb-8 flex-1 flex flex-col">
+                {isLocked ? (
+                  <LockScreen />
+                ) : isTeamLocked ? (
                   <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
                     <div className="w-20 h-20 bg-brand-500/10 text-brand-500 rounded-3xl flex items-center justify-center mb-6">
                       <MdLockOutline className="w-10 h-10" />
                     </div>
-                    <h2 className="text-3xl font-bold text-foreground mb-3">Workspace Locked</h2>
-                    <p className="text-gray-400 max-w-md mx-auto mb-8 leading-relaxed">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">Workspace Locked</h2>
+                    <p className="text-gray-400 max-w-md mx-auto mb-8 leading-relaxed text-sm sm:text-base">
                       Your workspace owner has downgraded their plan, which means team member access is currently disabled. Please contact your workspace owner to upgrade to Pro Plus to restore access.
                     </p>
-                    <div className="flex flex-col sm:flex-row items-center gap-4">
-                      <button onClick={() => signOut()} className="px-6 py-3 bg-card hover:bg-black/10 dark:hover:bg-white/10 text-foreground border border-border rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
+                    <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                      <button
+                        onClick={() => signOut()}
+                        className="px-6 py-3 bg-card hover:bg-black/10 dark:hover:bg-white/10 text-foreground border border-border rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto cursor-pointer"
+                      >
                         <MdLogout className="w-5 h-5" />
                         Sign Out
                       </button>
-                      <button onClick={async () => {
-                        if (confirm("Are you sure you want to leave this workspace? This action cannot be undone.")) {
-                          await leaveTeam();
-                          window.location.reload();
-                        }
-                      }} className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
+                      <button
+                        onClick={async () => {
+                          if (confirm("Are you sure you want to leave this workspace? This action cannot be undone.")) {
+                            await leaveTeam();
+                            window.location.reload();
+                          }
+                        }}
+                        className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto cursor-pointer"
+                      >
                         <MdWarning className="w-5 h-5" />
                         Leave Workspace
                       </button>
@@ -390,71 +405,21 @@ function LayoutContent({ children }) {
                     {showOwnerWarning && (
                       <div className="mb-6 p-4 bg-brand-500/10 border border-brand-500/20 rounded-2xl flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-brand-500/20 rounded-lg text-brand-500">
+                          <div className="p-2 bg-brand-500/20 rounded-lg text-brand-500 shrink-0">
                             <MdGroup className="w-5 h-5" />
                           </div>
                           <div>
-                            <h3 className="text-foreground font-semibold">Team Access Disabled</h3>
-                            <p className="text-gray-600 dark:text-gray-400 text-sm">You have active team members, but your current plan doesn't support them. Upgrade to restore their access.</p>
+                            <h3 className="text-foreground font-semibold text-sm sm:text-base">Team Access Disabled</h3>
+                            <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
+                              You have active team members, but your current plan doesn't support them. Upgrade to restore their access.
+                            </p>
                           </div>
                         </div>
-                        <Link href="/settings/billing" prefetch={false} className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
-                          Upgrade Now
-                        </Link>
-                      </div>
-                    )}
-                    <GracePeriodBanner />
-                    <AnnouncementBanner userPlan={tenantInfo.plan} />
-                    {children}
-                  </>
-                )}
-              </main>
-            </motion.div>
-
-            {/* Mobile: no left padding */}
-            <div className="lg:hidden flex flex-col min-h-screen">
-              {!showMaintenanceScreen && <LimitBanner exceededLimits={exceededLimits} />}
-              {!showMaintenanceScreen && <Header user={user} isLoaded={isLoaded} setMobileMenuOpen={setMobileMenuOpen} tenantInfo={tenantInfo} />}
-              <main className="px-4 sm:px-6 pt-4 pb-8 flex-1 flex flex-col">
-                {isLocked ? <LockScreen /> : isTeamLocked ? (
-                  <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
-                    <div className="w-20 h-20 bg-brand-500/10 text-brand-500 rounded-3xl flex items-center justify-center mb-6">
-                      <MdLockOutline className="w-10 h-10" />
-                    </div>
-                    <h2 className="text-3xl font-bold text-foreground mb-3">Workspace Locked</h2>
-                    <p className="text-gray-400 max-w-md mx-auto mb-8 leading-relaxed">
-                      Your workspace owner has downgraded their plan, which means team member access is currently disabled. Please contact your workspace owner to upgrade to Pro Plus to restore access.
-                    </p>
-                    <div className="flex flex-col sm:flex-row items-center gap-4">
-                      <button onClick={() => signOut()} className="px-6 py-3 bg-card hover:bg-black/10 dark:hover:bg-white/10 text-foreground border border-border rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
-                        <MdLogout className="w-5 h-5" />
-                        Sign Out
-                      </button>
-                      <button onClick={async () => {
-                        if (confirm("Are you sure you want to leave this workspace? This action cannot be undone.")) {
-                          await leaveTeam();
-                          window.location.reload();
-                        }
-                      }} className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
-                        <MdWarning className="w-5 h-5" />
-                        Leave Workspace
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {showOwnerWarning && (
-                      <div className="mb-6 p-4 bg-brand-500/10 border border-brand-500/20 rounded-2xl flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-brand-500/20 rounded-lg text-brand-500">
-                            <MdGroup className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h3 className="text-foreground font-semibold">Team Access Disabled</h3>
-                            <p className="text-gray-600 dark:text-gray-400 text-sm">You have active team members, but your current plan doesn't support them. Upgrade to restore their access.</p>
-                          </div>
-                        </div>
-                        <Link href="/settings/billing" prefetch={false} className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors">
+                        <Link
+                          href="/settings/billing"
+                          prefetch={false}
+                          className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold rounded-xl text-sm whitespace-nowrap transition-colors w-full sm:w-auto text-center"
+                        >
                           Upgrade Now
                         </Link>
                       </div>
@@ -727,19 +692,20 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
   // Clock moved to AnimatedClock component
 
   return (
-    <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl h-20 flex-shrink-0 flex items-center">
-      <div className="w-full flex items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl h-16 sm:h-20 flex-shrink-0 flex items-center">
+      <div className="w-full flex items-center justify-between px-3 sm:px-6 lg:px-8">
 
         {/* Left Side: Title & Date Selector */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2 sm:gap-6 min-w-0">
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="lg:hidden p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-3xl"
+            className="lg:hidden p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-2xl text-foreground shrink-0 cursor-pointer"
+            aria-label="Open menu"
           >
             <MdMenu className="w-6 h-6" />
           </button>
           {/* Page Title */}
-          <h1 className="text-2xl sm:text-3xl font-bold -skew-x-6 text-foreground tracking-tight flex items-baseline">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold -skew-x-6 text-foreground tracking-tight flex items-baseline truncate">
             {dynamicTitle || getPageTitle(pathname)}<span className="text-brand-500 ml-0.5">.</span>
           </h1>
 
@@ -951,7 +917,8 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
         </div>
 
         {/* Mobile / Tablet Right Controls */}
-        <div className="xl:hidden flex items-center gap-2">
+        <div className="xl:hidden flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <NotificationBell />
           <PosTopBarButton tenantInfo={tenantInfo} />
           <BusinessSwitcher tenantInfo={tenantInfo} />
         </div>

@@ -514,9 +514,10 @@ function InvoicesPageContent() {
         )}
       </div>
 
-      {/* Table */}
+      {/* Table & Mobile Cards */}
       <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
+        {/* Desktop / Tablet Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border bg-black/[0.02] dark:bg-white/[0.02] text-gray-600 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">
@@ -638,18 +639,126 @@ function InvoicesPageContent() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Cards (Phones & Small Screens) */}
+        <div className="md:hidden divide-y divide-border">
+          {filteredInvoices.map((row: any) => {
+            const paymentStatus = row.status?.toLowerCase() || '';
+
+            let paymentColor = "text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-500/10 border-gray-200 dark:border-gray-500/20";
+            if (paymentStatus === 'fully paid') paymentColor = "text-emerald-700 bg-emerald-100/70 border-emerald-200/60 dark:text-green-400 dark:bg-green-500/10 dark:border-green-500/20";
+            else if (paymentStatus === 'on review') paymentColor = "text-amber-800 bg-amber-100/70 border-amber-200/60 dark:text-amber-400 dark:bg-amber-500/10 dark:border-amber-500/20";
+            else if (paymentStatus === 'advance-paid') paymentColor = "text-blue-700 bg-blue-100/70 border-blue-200/60 dark:text-blue-400 dark:bg-blue-500/10 dark:border-blue-500/20";
+            else if (paymentStatus === 'unpaid' || paymentStatus === 'pending') paymentColor = "text-amber-800 bg-amber-100/70 border-amber-200/60 dark:text-amber-400 dark:bg-amber-500/10 dark:border-amber-500/20";
+            else if (paymentStatus === 'overdue') paymentColor = "text-red-700 bg-red-100/70 border-red-200/60 dark:text-red-400 dark:bg-red-500/10 dark:border-red-500/20";
+            else if (paymentStatus === 'partially paid') paymentColor = "text-indigo-700 bg-indigo-100/70 border-indigo-200/60 dark:text-indigo-400 dark:bg-indigo-500/10 dark:border-indigo-500/20";
+
+            return (
+              <div key={row.id} className="p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Link href={`/user/invoice/${row.id}`} prefetch={false} className="font-bold text-emerald-700 dark:text-brand-400 hover:underline">
+                    {row.id}
+                  </Link>
+                  <span className={`px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full border ${paymentColor}`}>
+                    {row.status}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <div className="font-semibold text-foreground text-sm">{row.client}</div>
+                    {row.clientEmail && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{row.clientEmail}</div>
+                    )}
+                    <div className={`text-xs mt-1 ${row.overdue ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-400'}`}>
+                      Due: {row.due}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-foreground">{formatLKR(row.amount)}</div>
+                    {paymentStatus !== 'fully paid' && (
+                      <div className={`text-xs mt-0.5 font-medium ${
+                        paymentStatus === 'unpaid' || paymentStatus === 'pending' || paymentStatus === 'overdue'
+                          ? 'text-gray-500 dark:text-gray-400'
+                          : 'text-indigo-600 dark:text-indigo-400'
+                      }`}>
+                        Remaining: {formatLKR(row.total_due)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Mobile Action Buttons Bar */}
+                <div className="flex items-center justify-end gap-1 pt-2 border-t border-border/50">
+                  {row.status?.toLowerCase() !== 'fully paid' && role !== 'Viewer' && (
+                    <button onClick={() => openRecordPaymentModal(row)} className="p-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-400/10 rounded-xl transition-colors text-emerald-600 dark:text-emerald-400" title="Record Payment">
+                      <MdAttachMoney className="w-4 h-4" />
+                    </button>
+                  )}
+                  <Link href={`/user/invoice/${row.id}`} prefetch={false} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400" title="View">
+                    <MdRemoveRedEye className="w-4 h-4" />
+                  </Link>
+                  {role !== 'Viewer' && (
+                    <>
+                      <Link href={`/user/invoices/${row.id}/edit`} prefetch={false} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400" title="Edit">
+                        <Edit2 className="w-4 h-4" />
+                      </Link>
+                      <button onClick={() => handleSend(row.id)} className="p-2.5 hover:bg-brand-500/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400" title="Copy Link">
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => handleDownloadInvoice(row.id)}
+                    disabled={downloadingId === row.id}
+                    className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 disabled:opacity-50"
+                    title="Download PDF"
+                  >
+                    {downloadingId === row.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-brand-500" />
+                    ) : (
+                      <MdDownload className="w-4 h-4" />
+                    )}
+                  </button>
+                  {tenantPlan === "Pro Plus" && (
+                    <button
+                      onClick={() => handlePrintInvoice(row.id)}
+                      disabled={printingId === row.id}
+                      className="p-2.5 hover:bg-brand-500/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 disabled:opacity-50"
+                      title="Direct Print Invoice"
+                    >
+                      {printingId === row.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-brand-500" />
+                      ) : (
+                        <Printer className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
+                  {role !== 'Viewer' && (
+                    <button onClick={() => handleDelete(row.id)} className="p-2.5 hover:bg-red-50 dark:hover:bg-red-400/10 rounded-xl transition-colors text-red-500" title="Delete">
+                      <MdDelete className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {filteredInvoices.length === 0 && (
+            <div className="p-6 text-center text-gray-500">No invoices found.</div>
+          )}
+        </div>
       </div>
       {/* Payment Modal */}
       {paymentModalOpen && selectedInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
-          <div className="bg-card dark:bg-[#11151f]/95 backdrop-blur-xl border border-border rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-6 border-b border-border bg-transparent">
-              <h2 className="text-xl font-semibold text-foreground">Create Income from Invoice</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md">
+          <div className="bg-card dark:bg-[#11151f]/95 backdrop-blur-xl border border-border rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border bg-transparent shrink-0">
+              <h2 className="text-lg sm:text-xl font-semibold text-foreground">Create Income from Invoice</h2>
               <button onClick={() => setPaymentModalOpen(false)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground">
                 <MdClose className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleRecordPayment} className="p-6 space-y-6">
+            <form onSubmit={handleRecordPayment} className="p-4 sm:p-6 space-y-6 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left Column: Invoice Summary & Payment Details */}
                 <div className="space-y-4">

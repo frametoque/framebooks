@@ -403,8 +403,8 @@ export default function ClientsPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1 col-span-2 sm:col-span-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
                   <label className="text-sm text-gray-700 dark:text-gray-300">Full Name</label>
                   <input
                     type="text"
@@ -413,7 +413,7 @@ export default function ClientsPage() {
                     className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm text-foreground shadow-2xs placeholder-gray-400"
                   />
                 </div>
-                <div className="space-y-1 col-span-2 sm:col-span-1">
+                <div className="space-y-1">
                   <label className="text-sm text-gray-700 dark:text-gray-300">
                     Email
                     {editingId && <span className="text-amber-600 dark:text-amber-400/70 text-xs ml-1">(cascades to all records)</span>}
@@ -427,7 +427,7 @@ export default function ClientsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-sm text-gray-700 dark:text-gray-300">Company</label>
                   <input

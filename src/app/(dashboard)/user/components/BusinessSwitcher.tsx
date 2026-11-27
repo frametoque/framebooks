@@ -251,7 +251,7 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: -8 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute right-0 top-full mt-2 w-84 sm:w-96 rounded-2xl bg-popover border border-border shadow-2xl z-50 overflow-hidden"
+            className="absolute right-0 top-full mt-2 w-[calc(100vw-1.5rem)] max-w-sm sm:w-96 rounded-2xl bg-popover border border-border shadow-2xl z-50 overflow-hidden"
           >
           {/* Header */}
           <div className="p-3.5 border-b border-border/60 flex items-center justify-between bg-black/[0.02] dark:bg-white/[0.03]">

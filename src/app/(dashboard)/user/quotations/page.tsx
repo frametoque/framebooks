@@ -500,9 +500,10 @@ const handleDelete = async (id: number) => {
         )}
       </div>
 
-      {/* Table */}
+      {/* Table & Mobile Cards */}
       <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
+        {/* Desktop / Tablet Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-black/[0.02] dark:bg-white/[0.02] border-b border-border text-gray-600 dark:text-gray-400 text-sm">
@@ -621,6 +622,121 @@ const handleDelete = async (id: number) => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards (Phones & Small Screens) */}
+        <div className="md:hidden divide-y divide-border">
+          {filteredQuotations.map((row: any) => (
+            <div key={row.id} className="p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold text-brand-700 dark:text-brand-400">
+                  {row.quotationNumber || `QT-${String(row.id).padStart(4, '0')}`}
+                </span>
+                <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full border capitalize ${getStatusColor(row.status)}`}>
+                  {row.status}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-start gap-2">
+                <div>
+                  <div className="text-sm font-semibold text-foreground">{row.client || '-'}</div>
+                  {row.clientEmail && (
+                    <div className="text-xs text-gray-500">{row.clientEmail}</div>
+                  )}
+                  {row.desc && (
+                    <div className="text-xs text-gray-600 dark:text-gray-300 mt-1 line-clamp-1">{row.desc}</div>
+                  )}
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className="text-xs text-gray-500">{row.date}</span>
+                    {row.category && (
+                      <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-200/80 dark:bg-white/10 dark:text-gray-200 dark:border-border">
+                        {row.category}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold text-blue-600 dark:text-blue-400">{formatLKR(row.amount)}</div>
+                </div>
+              </div>
+
+              {/* Mobile Actions Bar */}
+              <div className="flex items-center justify-end gap-1 pt-2 border-t border-border/50">
+                {role !== 'Viewer' && row.status !== 'confirmed' && (
+                  <button 
+                    onClick={() => handleConfirmProject(row.id, row)}
+                    className="p-2.5 hover:bg-emerald-500/10 rounded-xl transition-colors text-emerald-600 dark:text-green-400 disabled:opacity-50"
+                    title="Confirm project & create invoice"
+                  >
+                    {confirmingLoading && confirmingId === row.id ? (
+                      <Loader size="sm" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
+                {row.status === 'confirmed' && (
+                  <span className="p-2.5 text-emerald-600 dark:text-green-400">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </span>
+                )}
+                {row.receiptUrl && (
+                  <button onClick={() => setViewingReceipt(row)} className="p-2.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-xl transition-colors text-blue-600 dark:text-blue-400">
+                    <MdRemoveRedEye className="w-4 h-4" />
+                  </button>
+                )}
+                <button 
+                  onClick={() => handleDownloadPDF(row)}
+                  disabled={downloadingId === row.id}
+                  className="p-2.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 disabled:opacity-50"
+                  title="Download PDF"
+                >
+                  {downloadingId === row.id ? (
+                    <Loader size="sm" />
+                  ) : (
+                    <MdDownload className="w-4 h-4" />
+                  )}
+                </button>
+                {tenantPlan === "Pro Plus" && (
+                  <button
+                    onClick={() => handlePrintQuotation(row)}
+                    disabled={printingId === row.id}
+                    className="p-2.5 hover:bg-brand-500/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 disabled:opacity-50"
+                    title="Direct Print Quotation"
+                  >
+                    {printingId === row.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-brand-500" />
+                    ) : (
+                      <Printer className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
+                {role !== 'Viewer' && (
+                  <>
+                    <button 
+                      onClick={() => router.push(`/user/quotations/${row.id}/edit`)}
+                      className="p-2.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed" 
+                      disabled={row.status === 'confirmed'}
+                      title={row.status === 'confirmed' ? 'Confirmed quotations cannot be edited' : 'Edit quotation'}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(row.id)} 
+                      className="p-2.5 hover:bg-red-500/10 rounded-xl transition-colors text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" 
+                      disabled={row.status === 'confirmed'}
+                      title={row.status === 'confirmed' ? 'Confirmed quotations cannot be deleted' : 'Delete quotation'}
+                    >
+                      <MdDelete className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+          {filteredQuotations.length === 0 && (
+            <div className="p-6 text-center text-gray-500">No quotations found.</div>
+          )}
         </div>
       </div>
 
