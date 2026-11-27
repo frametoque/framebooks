@@ -559,7 +559,7 @@ export default function LandingClient({
                 Point of Sale.<br className="hidden sm:inline" /> Engineered for speed<span className="text-[#00E35B]">.</span>
               </h2>
               <p className="text-sm sm:text-base md:text-lg text-gray-300 leading-relaxed">
-                Designed for peak rush hours. Sub-second scanning, live inventory sync, and instant receipt printing on any Mac, PC, tablet, or phone.
+                Designed for peak rush hours. Fast QR and barcode scanning, live inventory sync, and instant receipt printing on any Mac, PC, tablet, or phone.
               </p>
             </div>
 

@@ -225,7 +225,7 @@ export const plans = [
 
 export const posFeatures = [
   {
-    title: 'Sub-second scanning',
+    title: 'Fast QR and Barcode Scanning',
     description: 'Laser, Bluetooth, or your device camera. Scan any barcode or QR code instantly — keep checkout moving during the biggest rush.',
     icon: 'MdQrCodeScanner',
   },
