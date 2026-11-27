@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { footerProductLinks, footerLegalLinks } from '@/data/landing/content';
 import { FaFacebook, FaInstagram, FaTiktok, FaLinkedin } from 'react-icons/fa6';
+import { MdPhone, MdEmail } from 'react-icons/md';
 
 const socialLinks = [
   { name: 'Facebook', href: 'https://facebook.com/framebooks', icon: FaFacebook },
@@ -21,9 +22,25 @@ export default function Footer() {
             >
               Framebooks
             </Link>
-            <p className="text-gray-500 mb-5 max-w-sm text-sm leading-relaxed">
+            <p className="text-gray-500 mb-4 max-w-sm text-sm leading-relaxed">
               The complete cloud ERP and accounting system for modern businesses in Sri Lanka.
             </p>
+            <div className="space-y-2 text-xs sm:text-sm text-gray-600 mb-5">
+              <a
+                href="tel:+94775536129"
+                className="flex items-center gap-2 text-gray-600 hover:text-[#00C750] transition-colors w-fit"
+              >
+                <MdPhone className="w-4 h-4 text-[#00C750] shrink-0" />
+                <span className="font-semibold">+94 77 553 6129</span>
+              </a>
+              <a
+                href="mailto:framebooks@frametoque.com"
+                className="flex items-center gap-2 text-gray-600 hover:text-[#00C750] transition-colors w-fit"
+              >
+                <MdEmail className="w-4 h-4 text-[#00C750] shrink-0" />
+                <span className="font-semibold">framebooks@frametoque.com</span>
+              </a>
+            </div>
             <p className="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wider">
               A product of{' '}
               <a
