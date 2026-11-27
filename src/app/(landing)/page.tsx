@@ -19,14 +19,14 @@ export const metadata: Metadata = {
     'WooCommerce POS Sync'
   ],
   openGraph: {
-    title: 'Framebooks — Business finances and Point of Sale, unified',
-    description: 'Invoices, cash registers, real-time stock, and bank ledgers. Beautifully engineered to work together as one.',
+    title: 'Framebooks — Invoicing, Bookkeeping, and Point of Sale',
+    description: 'Create invoices, manage live stock, and run your retail counter checkout. Simple, fast, and built for Sri Lanka.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Framebooks — Business finances and Point of Sale, unified',
-    description: 'Invoices, cash registers, real-time stock, and bank ledgers. Beautifully engineered to work together as one.',
+    title: 'Framebooks — Invoicing, Bookkeeping, and Point of Sale',
+    description: 'Create invoices, manage live stock, and run your retail counter checkout. Simple, fast, and built for Sri Lanka.',
   }
 };
 

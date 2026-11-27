@@ -75,7 +75,7 @@ export default function LandingClient({
               transition={{ delay: 0.1 }}
               className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.12] mb-4 sm:mb-6 text-[#082830]"
             >
-              Your business finances. And the counter you run them on<span className="text-[#00E35B]">.</span>
+              Invoicing, bookkeeping, and Point of Sale. All in one<span className="text-[#00E35B]">.</span>
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 15 }}
@@ -83,7 +83,7 @@ export default function LandingClient({
               transition={{ delay: 0.2 }}
               className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed font-normal"
             >
-              Invoices, cash registers, real-time stock, and bank ledgers. Beautifully engineered to work together as one.
+              Create invoices, manage live stock, and run your retail counter checkout. Simple, fast, and built for Sri Lanka.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 15 }}
