@@ -461,11 +461,11 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
               <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 mb-3.5 border-b border-white/10 text-xs shrink-0">
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="w-8 h-8 rounded-lg bg-[#00E35B] text-[#041418] flex items-center justify-center font-black text-xs">
-                    FT
+                    FB
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold tracking-tight text-white text-sm">FT DEMO (PRO PLUS)</span>
+                      <span className="font-bold tracking-tight text-white text-sm">Framebooks</span>
                       <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold text-[10px] border border-emerald-500/30 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Shift #1 Active
                       </span>
@@ -475,34 +475,25 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
 
                 {/* Quick Action buttons matching real POS screen */}
                 <div className="hidden md:flex items-center gap-1.5 text-[11px] text-gray-300">
-                  <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1 text-gray-400">
-                    <span>Keys</span>
-                    <kbd className="text-[9px] bg-white/10 px-1 py-0.2 rounded font-sans">?</kbd>
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 font-medium">
+                    Drawer
                   </span>
-                  <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1 text-gray-300">
-                    <span>Drawer</span>
-                    <kbd className="text-[9px] bg-white/10 px-1 py-0.2 rounded font-sans text-gray-400">Space</kbd>
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 font-medium">
+                    Test Bill
                   </span>
-                  <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1 text-gray-300">
-                    <span>Test Bill</span>
-                    <kbd className="text-[9px] bg-white/10 px-1 py-0.2 rounded font-sans text-gray-400">Enter</kbd>
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 font-medium">
+                    Stock
                   </span>
-                  <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1 text-gray-300">
-                    <span>Stock</span>
-                    <kbd className="text-[9px] bg-white/10 px-1 py-0.2 rounded font-sans text-gray-400">F8</kbd>
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 font-medium">
+                    Orders
                   </span>
-                  <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1 text-gray-300">
-                    <span>Orders</span>
-                    <kbd className="text-[9px] bg-white/10 px-1 py-0.2 rounded font-sans text-gray-400">F9</kbd>
-                  </span>
-                  <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1 text-gray-300">
-                    <span>Offers</span>
-                    <kbd className="text-[9px] bg-white/10 px-1 py-0.2 rounded font-sans text-gray-400">F6</kbd>
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 font-medium">
+                    Offers
                   </span>
                   <span className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400">
                     <MdSettings className="w-3.5 h-3.5" />
                   </span>
-                  <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-400 flex items-center gap-1">
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-400 flex items-center gap-1 font-medium">
                     <MdExitToApp className="w-3.5 h-3.5" />
                     <span>Exit</span>
                   </span>
@@ -520,11 +511,9 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                       <span className="text-gray-300 font-medium truncate">Scan or search products...</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <kbd className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-white/10 text-gray-400 text-[10px] font-mono">/</kbd>
                       <div className="px-2.5 py-1 rounded-lg bg-[#00E35B] text-[#041418] font-bold text-[11px] flex items-center gap-1.5 shadow-sm shadow-[#00E35B]/20">
                         <MdQrCodeScanner className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">Camera Scan</span>
-                        <kbd className="text-[9px] bg-[#041418]/20 px-1 py-0.2 rounded font-sans font-bold">F2</kbd>
                       </div>
                     </div>
                   </div>
@@ -545,7 +534,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">HARDWARE</span>
                           <span className="text-xs font-bold text-white leading-tight">Desktop Label Printer</span>
-                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FT-PRN-006</span>
+                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FB-PRN-006</span>
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">9</span>
                       </div>
@@ -560,7 +549,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">HARDWARE</span>
                           <span className="text-xs font-bold text-white leading-tight">Heavy Duty Cash Drawer (RJ11)</span>
-                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FT-CSH-007</span>
+                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FB-CSH-007</span>
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">8</span>
                       </div>
@@ -575,7 +564,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">HARDWARE</span>
                           <span className="text-xs font-bold text-white leading-tight">Omnidirectional 2D Scanner</span>
-                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FT-SCN-002</span>
+                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FB-SCN-002</span>
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">12</span>
                       </div>
@@ -590,7 +579,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">ACCESSORIES</span>
                           <span className="text-xs font-bold text-white leading-tight">58mm Thermal Sticker Roll</span>
-                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FT-ACC-010</span>
+                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FB-ACC-010</span>
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">45</span>
                       </div>
@@ -605,7 +594,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">ACCESSORIES</span>
                           <span className="text-xs font-bold text-white leading-tight">80mm Receipt Paper Box</span>
-                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FT-ACC-014</span>
+                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FB-ACC-014</span>
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">20</span>
                       </div>
@@ -620,7 +609,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">ACCESSORIES</span>
                           <span className="text-xs font-bold text-white leading-tight">QR Code Counter Stand</span>
-                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FT-ACC-009</span>
+                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FB-ACC-009</span>
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">16</span>
                       </div>
@@ -645,7 +634,6 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                       <div className="flex items-center gap-1 text-[10px] text-red-400 hover:text-red-300 cursor-pointer">
                         <MdDeleteOutline className="w-3.5 h-3.5" />
                         <span>New Sale</span>
-                        <kbd className="bg-white/10 px-1 py-0.2 rounded font-sans text-[9px] text-gray-400">F7</kbd>
                       </div>
                     </div>
 
@@ -663,7 +651,6 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                       <div className="px-2 py-1 rounded-lg bg-white/10 text-[10px] font-bold text-gray-300 hover:text-white flex items-center gap-1 shrink-0">
                         <MdPersonAdd className="w-3 h-3 text-[#00E35B]" />
                         <span>Assign Client</span>
-                        <kbd className="text-[8px] bg-black/30 px-1 py-0.2 rounded font-sans text-gray-400">F3</kbd>
                       </div>
                     </div>
 
@@ -746,7 +733,6 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                     <div className="flex justify-between items-center text-xs text-[#00E35B] mb-2">
                       <div className="flex items-center gap-1">
                         <span>% Discounts & Offers</span>
-                        <kbd className="text-[9px] bg-white/10 px-1 py-0.2 rounded font-sans text-gray-400">F4</kbd>
                       </div>
                       <span>LKR 0</span>
                     </div>
@@ -761,7 +747,6 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                     >
                       <MdCheck className="w-4 h-4" />
                       <span>CHARGE LKR 46,000</span>
-                      <kbd className="text-[9px] bg-[#041418]/20 px-1.5 py-0.5 rounded font-sans font-bold">F12 / SPACE</kbd>
                     </button>
                   </div>
                 </div>
