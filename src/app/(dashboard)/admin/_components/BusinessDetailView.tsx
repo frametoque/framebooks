@@ -62,12 +62,14 @@ export interface BusinessDetailViewProps {
 }
 
 const ROLE_OPTIONS = [
+  { value: "super_admin", label: "Super Admin" },
   { value: "owner", label: "Owner" },
   { value: "admin", label: "Admin" },
   { value: "accountant", label: "Accountant" },
   { value: "editor", label: "Editor" },
-  { value: "viewer", label: "Viewer" },
+  { value: "cashier", label: "Cashier" },
   { value: "member", label: "Member" },
+  { value: "viewer", label: "Viewer" },
 ];
 
 export function BusinessDetailView({

@@ -93,7 +93,14 @@ export function RoleBadge({ role, className = "" }: { role: string | null | unde
       </span>
     );
   }
-  if (r === 'super_admin') {
+  if (r === 'cashier') {
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 ${className}`}>
+        Cashier
+      </span>
+    );
+  }
+  if (r === 'super_admin' || r === 'superadmin' || r === 'super admin') {
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 ${className}`}>
         Super Admin

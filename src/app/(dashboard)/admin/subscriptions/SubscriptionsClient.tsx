@@ -43,12 +43,14 @@ import {
 } from "@/app/(dashboard)/admin/subscriptions/actions";
 
 const ROLE_OPTIONS = [
+  { value: "super_admin", label: "Super Admin", description: "Platform administrator with unrestricted system-wide access" },
   { value: "owner", label: "Owner", description: "Full workspace control & billing access" },
   { value: "admin", label: "Admin", description: "Manage members, settings, and business records" },
-  { value: "editor", label: "Editor", description: "Create and update invoices, incomes, expenses" },
-  { value: "accountant", label: "Accountant", description: "View and manage financial entries and reports" },
+  { value: "accountant", label: "Accountant", description: "View and manage financial entries, reports, and POS" },
+  { value: "editor", label: "Editor", description: "Create and update invoices, incomes, expenses, and POS sales" },
+  { value: "cashier", label: "Cashier", description: "Dedicated POS counter terminal operator" },
+  { value: "member", label: "Member", description: "Standard workspace member with POS counter access" },
   { value: "viewer", label: "Viewer", description: "Read-only access to records and invoices" },
-  { value: "member", label: "Member", description: "Standard workspace member" },
 ];
 
 export function SubscriptionsClient({

@@ -58,6 +58,30 @@ test("POS Entitlement and Plan Rules", async (t) => {
     assert.ok(compatiblePlans.includes("pro_plus"));
     assert.ok(!compatiblePlans.includes("free"));
   });
+
+  await t.test("Cashier and all roles above cashier have access to POS terminal", () => {
+    const posAllowedRoles = [
+      'super_admin',
+      'super admin',
+      'owner',
+      'admin',
+      'accountant',
+      'editor',
+      'member',
+      'cashier',
+    ];
+
+    const hasPosAccess = (role: string) => posAllowedRoles.includes(role.toLowerCase());
+
+    assert.equal(hasPosAccess("Super Admin"), true, "Super Admin must have POS access");
+    assert.equal(hasPosAccess("Owner"), true, "Owner must have POS access");
+    assert.equal(hasPosAccess("Admin"), true, "Admin must have POS access");
+    assert.equal(hasPosAccess("Accountant"), true, "Accountant must have POS access");
+    assert.equal(hasPosAccess("Editor"), true, "Editor must have POS access");
+    assert.equal(hasPosAccess("Member"), true, "Member must have POS access");
+    assert.equal(hasPosAccess("Cashier"), true, "Cashier must have POS access");
+    assert.equal(hasPosAccess("Viewer"), false, "Viewer must not have POS access");
+  });
 });
 
 test("Stock Calculation and Oversell Protection Rules", async (t) => {

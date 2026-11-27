@@ -1915,7 +1915,10 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                                     )) : (
                                       <>
                                         <option value="Admin" className="bg-card text-foreground">Admin</option>
+                                        <option value="Accountant" className="bg-card text-foreground">Accountant</option>
                                         <option value="Editor" className="bg-card text-foreground">Editor</option>
+                                        <option value="Cashier" className="bg-card text-foreground">Cashier</option>
+                                        <option value="Member" className="bg-card text-foreground">Member</option>
                                         <option value="Viewer" className="bg-card text-foreground">Viewer</option>
                                       </>
                                     )}

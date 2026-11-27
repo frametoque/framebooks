@@ -79,7 +79,7 @@ export async function getUserContext() {
 export async function getRolePermissionsObject(role: Role | null, tenantId: number | null = null): Promise<Record<string, any> | null> {
   if (!role) return null;
   const lowerRole = role.toLowerCase();
-  if (lowerRole === 'owner' || lowerRole === 'super admin') return null; // full bypass
+  if (lowerRole === 'owner' || lowerRole === 'super admin' || lowerRole === 'super_admin') return null; // full bypass
 
   let result;
   if (tenantId) {
@@ -124,11 +124,24 @@ export async function hasPermission(
   const lowerRole = role.toLowerCase();
 
   // Owner and Super Admin have full access to everything
-  if (lowerRole === 'owner' || lowerRole === 'super admin') return true;
+  if (lowerRole === 'owner' || lowerRole === 'super admin' || lowerRole === 'super_admin') return true;
   
   // Billing is owner-only, not in DB
   if (resource === 'billing') {
     return lowerRole === 'owner';
+  }
+
+  // POS Access Rule: Cashier and all roles above cashier have access to POS
+  // Roles hierarchy: super_admin, owner, admin, accountant, editor, member, cashier
+  if (resource === 'pos' && action === 'use') {
+    const posRoles = ['super_admin', 'super admin', 'owner', 'admin', 'accountant', 'editor', 'member', 'cashier'];
+    if (posRoles.includes(lowerRole)) return true;
+  }
+
+  // Stock viewing for POS terminal catalog loading
+  if (resource === 'stock' && (action === 'view' || action === 'read')) {
+    const stockViewRoles = ['super_admin', 'super admin', 'owner', 'admin', 'accountant', 'editor', 'member', 'cashier'];
+    if (stockViewRoles.includes(lowerRole)) return true;
   }
 
   // Built-in cashier role defaults
@@ -215,8 +228,8 @@ export async function isCashierOnlyUser(role: Role | null, tenantId: number | nu
   if (!role) return false;
   const lowerRole = role.toLowerCase();
 
-  // Owners, Admins, Super Admins are never cashier-only
-  if (lowerRole === 'owner' || lowerRole === 'super admin' || lowerRole === 'admin') {
+  // Owners, Admins, Super Admins, Accountants, Editors, Members are general workspace users, not cashier-only
+  if (['owner', 'super admin', 'super_admin', 'admin', 'accountant', 'editor', 'member'].includes(lowerRole)) {
     return false;
   }
 

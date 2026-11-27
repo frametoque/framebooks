@@ -829,7 +829,17 @@ export async function getBusinessDetails(tenantId: number) {
     }
   });
 
-  const roleOrder: Record<string, number> = { owner: 1, admin: 2, manager: 3, member: 4, viewer: 5 };
+  const roleOrder: Record<string, number> = { 
+    super_admin: 0, 
+    owner: 1, 
+    admin: 2, 
+    manager: 3, 
+    accountant: 4, 
+    editor: 5, 
+    member: 6, 
+    cashier: 7, 
+    viewer: 8 
+  };
   const members = Array.from(memberMap.values()).sort((a, b) => {
     const rA = roleOrder[(a.role || '').toLowerCase()] || 99;
     const rB = roleOrder[(b.role || '').toLowerCase()] || 99;
@@ -1061,7 +1071,7 @@ export async function adminAddBusinessMember({
         ${fullName?.trim() || cleanEmail.split('@')[0]},
         ${role},
         ${tenantId},
-        'user',
+        ${role.toLowerCase() === 'super_admin' ? 'super_admin' : 'user'},
         NOW(),
         NOW()
       )
@@ -1136,6 +1146,14 @@ export async function adminUpdateMemberRole({
     await sql`
       UPDATE admin_users SET
         role = ${cleanRole},
+        ${cleanRole === 'super_admin' ? sql`system_role = 'super_admin',` : sql``}
+        updated_at = NOW()
+      WHERE id = ${userId}
+    `;
+  } else if (cleanRole === 'super_admin') {
+    await sql`
+      UPDATE admin_users SET
+        system_role = 'super_admin',
         updated_at = NOW()
       WHERE id = ${userId}
     `;

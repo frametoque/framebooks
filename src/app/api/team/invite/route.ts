@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   }
 
   // Only Owner can invite another Owner
-  const validRoles = ['Viewer', 'Editor', 'Accountant', 'Admin', 'Owner'];
+  const validRoles = ['Viewer', 'Editor', 'Accountant', 'Admin', 'Owner', 'Cashier', 'Member'];
   if (!validRoles.includes(inviteRole)) {
     return NextResponse.json({ error: "Invalid role specified" }, { status: 400 });
   }

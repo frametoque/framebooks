@@ -76,7 +76,9 @@ export default async function PosRootLayout({ children }: { children: React.Reac
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-400">Add-on Price:</span>
-                <span className="font-bold text-brand-500">LKR 3,000 / month</span>
+                <span className="font-bold text-brand-500">
+                  LKR {addonStatus.price ? Number(addonStatus.price).toLocaleString() : "3,000"} / month
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-400">Add-on Status:</span>
