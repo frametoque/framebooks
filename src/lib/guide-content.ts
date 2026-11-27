@@ -476,7 +476,7 @@ export const guideGroups: GuideGroup[] = [
       {
         slug: 'pos-setup-hardware',
         title: 'POS Terminal Setup & Hardware Configuration',
-        intro: 'Set up your retail counter POS terminal, configure thermal receipt printers (80mm and 58mm), electronic cash drawers, and barcode scanners.',
+        intro: 'Set up your retail counter POS terminal, configure thermal receipt printers, electronic cash drawers, and barcode scanners.',
         plan: 'Pro',
         readTime: '4 min read',
         steps: [
@@ -491,9 +491,9 @@ export const guideGroups: GuideGroup[] = [
           },
           {
             title: '2. Configuring Thermal Receipt Printers',
-            content: 'Framebooks POS works with standard 80mm and 58mm thermal receipt printers without proprietary drivers or complicated installations.',
+            content: 'Framebooks POS works with standard thermal receipt printers without proprietary drivers or complicated installations.',
             bullets: [
-              'Click Settings (gear icon in the top header) to choose your receipt paper width (80mm or 58mm)',
+              'Click Settings (gear icon in the top header) to choose your receipt paper width',
               'Print test receipts with one click to verify margins and alignment',
               'Receipts include your business logo, registration number, order number, line items, and custom thank-you footer'
             ]
@@ -1553,7 +1553,7 @@ export const guideGroups: GuideGroup[] = [
           },
           {
             title: 'What devices and hardware can I use with the POS terminal?',
-            content: 'Framebooks POS runs directly in any modern browser on laptops, tablets, and smartphones. It works with standard USB and Bluetooth barcode scanners, 80mm and 58mm thermal receipt printers, and RJ11 electronic cash drawers without needing expensive proprietary equipment.'
+            content: 'Framebooks POS runs directly in any modern browser on laptops, tablets, and smartphones. It works with standard USB and Bluetooth barcode scanners, thermal receipt printers, and RJ11 electronic cash drawers without needing expensive proprietary equipment.'
           }
         ]
       },

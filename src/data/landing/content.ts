@@ -200,7 +200,7 @@ export const posFeatures = [
   },
   {
     title: 'Receipt Printing & Cash Drawers',
-    description: 'Print clean customer receipts on standard 80mm or 58mm thermal printers and automatically pop open your cash drawer when payment completes.',
+    description: 'Print clean customer receipts on standard thermal printers and automatically pop open your cash drawer when payment completes.',
     icon: 'MdPrint',
   },
   {
@@ -250,5 +250,5 @@ export const faqs = [
   { q: 'Is my data safe?', a: 'Your data stays secure with enterprise-grade encryption in transit and at rest, regular backups, and features like two-factor authentication on higher plans.' },
   { q: 'Can I export my data?', a: 'You can export all your financial data to CSV at any time for your accountant or your own records.' },
   { q: 'Can I upgrade or downgrade later?', a: 'Of course! You can change your plan at any time to fit your growing business needs.' },
-  { q: 'What hardware do I need to use the POS?', a: 'You can use any laptop, tablet, or smartphone. Framebooks POS works with standard USB and Bluetooth barcode scanners, 80mm and 58mm thermal receipt printers, and cash drawers without needing expensive proprietary equipment.' },
+  { q: 'What hardware do I need to use the POS?', a: 'You can use any laptop, tablet, or smartphone. Framebooks POS works with standard USB and Bluetooth barcode scanners, thermal receipt printers, and cash drawers without needing expensive proprietary equipment.' },
 ];

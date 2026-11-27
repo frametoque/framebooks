@@ -56,7 +56,7 @@ export default function CookiePolicyPage() {
                   <li><code>fb_theme</code>: Remembers light or dark dashboard mode preference.</li>
                   <li><code>fb_privacy_blur</code>: Remembers your public workspace privacy blur toggle.</li>
                   <li><code>fb_cookies</code>: Remembers whether you have acknowledged the cookie banner.</li>
-                  <li><code>pos_terminal_settings</code>: Caches your preferred receipt printer width (80mm vs 58mm) and audio feedback state on counter hardware.</li>
+                  <li><code>pos_terminal_settings</code>: Caches your preferred receipt printer width and audio feedback state on counter hardware.</li>
                 </ul>
               </div>
             </div>

@@ -594,7 +594,7 @@ export default function LandingClient({
                       <div className="flex justify-between items-start gap-1 mb-2">
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">ACCESSORIES</span>
-                          <span className="text-xs font-bold text-white leading-tight">58mm Thermal Sticker Roll</span>
+                          <span className="text-xs font-bold text-white leading-tight">Thermal Sticker Roll</span>
                           <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FB-ACC-010</span>
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">45</span>
@@ -609,7 +609,7 @@ export default function LandingClient({
                       <div className="flex justify-between items-start gap-1 mb-2">
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">ACCESSORIES</span>
-                          <span className="text-xs font-bold text-white leading-tight">80mm Receipt Paper Box</span>
+                          <span className="text-xs font-bold text-white leading-tight">Thermal Receipt Paper Box</span>
                           <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FB-ACC-014</span>
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">20</span>
