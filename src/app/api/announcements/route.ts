@@ -34,6 +34,11 @@ export async function GET() {
           a.audience = 'all' 
           OR a.audience = 'everyone'
           OR ${userPlan} ILIKE a.audience
+          OR (a.audience = 'latest_signups' AND EXISTS (
+            SELECT 1 FROM admin_users u 
+            WHERE u.id = ${userId || 0} 
+              AND u.created_at >= NOW() - INTERVAL '24 hours'
+          ))
           OR (${userId ? String(userId) : ''} != '' AND a.audience = ${userId ? String(userId) : ''})
         )
         AND NOT EXISTS (

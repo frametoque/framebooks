@@ -45,6 +45,9 @@ export async function getAnnouncementsList(): Promise<AnnouncementData[]> {
         WHEN a.audience = 'all' OR a.audience = 'everyone' THEN (
           SELECT count(*)::int FROM admin_users WHERE is_banned = false OR is_banned IS NULL
         )
+        WHEN a.audience = 'latest_signups' THEN (
+          SELECT count(*)::int FROM admin_users WHERE created_at >= NOW() - INTERVAL '24 hours' AND (is_banned = false OR is_banned IS NULL)
+        )
         WHEN a.audience IN ('free', 'pro', 'pro_plus') THEN (
           SELECT count(*)::int 
           FROM admin_users u
@@ -243,6 +246,11 @@ export async function getUserAnnouncements(): Promise<AnnouncementData[]> {
           a.audience = 'all' 
           OR a.audience = 'everyone'
           OR ${userPlan} ILIKE a.audience
+          OR (a.audience = 'latest_signups' AND EXISTS (
+            SELECT 1 FROM admin_users u 
+            WHERE u.id = ${userId || 0} 
+              AND u.created_at >= NOW() - INTERVAL '24 hours'
+          ))
           OR (${userId ? String(userId) : ''} != '' AND a.audience = ${userId ? String(userId) : ''})
         )
         AND NOT EXISTS (
@@ -324,6 +332,11 @@ export async function getUserNotifications() {
           a.audience = 'all' 
           OR a.audience = 'everyone'
           OR ${userPlan} ILIKE a.audience
+          OR (a.audience = 'latest_signups' AND EXISTS (
+            SELECT 1 FROM admin_users u 
+            WHERE u.id = ${userId || 0} 
+              AND u.created_at >= NOW() - INTERVAL '24 hours'
+          ))
           OR (${userId ? String(userId) : ''} != '' AND a.audience = ${userId ? String(userId) : ''})
         )
       ORDER BY a.priority DESC, a.created_at DESC
@@ -370,6 +383,11 @@ export async function getPendingPushNotifications(): Promise<Array<{ id: number;
           a.audience = 'all' 
           OR a.audience = 'everyone'
           OR ${userPlan} ILIKE a.audience
+          OR (a.audience = 'latest_signups' AND EXISTS (
+            SELECT 1 FROM admin_users u 
+            WHERE u.id = ${userId || 0} 
+              AND u.created_at >= NOW() - INTERVAL '24 hours'
+          ))
           OR (${userId ? String(userId) : ''} != '' AND a.audience = ${userId ? String(userId) : ''})
         )
         AND a.created_at >= NOW() - INTERVAL '14 days'

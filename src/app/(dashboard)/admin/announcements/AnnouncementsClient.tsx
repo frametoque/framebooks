@@ -313,8 +313,8 @@ export function AnnouncementsClient({ announcements }: { announcements: Announce
                         </span>
                       </td>
 
-                      <td className="p-4 capitalize text-xs text-muted-foreground">
-                        {a.audience}
+                      <td className="p-4 text-xs text-muted-foreground">
+                        {a.audience === "latest_signups" ? "Latest signups (24h)" : a.audience === "pro_plus" ? "Pro Plus" : a.audience === "all" ? "Everyone" : a.audience}
                       </td>
 
                       <td className="p-4 text-xs font-medium text-foreground">
@@ -465,6 +465,7 @@ export function AnnouncementsClient({ announcements }: { announcements: Announce
                     className="w-full px-3 py-2 bg-background border border-border rounded-xl text-xs sm:text-sm text-foreground outline-none"
                   >
                     <option value="all">Everyone</option>
+                    <option value="latest_signups">Latest signups</option>
                     <option value="pro_plus">Pro Plus only</option>
                     <option value="pro">Pro only</option>
                     <option value="free">Free tier only</option>
@@ -609,6 +610,7 @@ export function AnnouncementsClient({ announcements }: { announcements: Announce
                     className="w-full px-3 py-2 bg-background border border-border rounded-xl text-xs sm:text-sm text-foreground outline-none"
                   >
                     <option value="all">Everyone</option>
+                    <option value="latest_signups">Latest signups</option>
                     <option value="pro_plus">Pro Plus only</option>
                     <option value="pro">Pro only</option>
                     <option value="free">Free tier only</option>
