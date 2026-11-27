@@ -11,6 +11,7 @@ import {
   MdKeyboardArrowDown, 
   MdKeyboardArrowRight,
   MdSettings,
+  MdPointOfSale,
   MdLayers,
   MdCheck
 } from 'react-icons/md';
@@ -117,6 +118,18 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
             }`}
           >
             All
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedCategory('pos-terminal')}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+              selectedCategory === 'pos-terminal'
+                ? 'bg-[#00E35B] text-[#082830] shadow-xs'
+                : 'bg-[#E6FDF0] text-[#007A31] hover:bg-[#cbf7df]'
+            }`}
+          >
+            <MdPointOfSale className="w-3.5 h-3.5" />
+            <span>POS ({guideGroups.find(g => g.id === 'pos-terminal')?.articles.length || 0})</span>
           </button>
           <button
             type="button"

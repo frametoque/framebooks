@@ -32,7 +32,7 @@ export const guideGroups: GuideGroup[] = [
         steps: [
           {
             title: 'The Navigation Sidebar',
-            content: 'The left sidebar is your command center. Quickly switch between your Dashboard, Invoices, Quotations, Income, Expenses, Bank Accounts, Clients, Inventory, Reports, and System Settings.',
+            content: 'The left sidebar is your command center. Quickly switch between your Dashboard, Point of Sale (POS), Invoices, Quotations, Income, Expenses, Bank Accounts, Clients, Inventory, Reports, and System Settings.',
             bullets: [
               'Click any module to access its records and actions instantly',
               'Collapse the sidebar on smaller screens to maximize working room',
@@ -464,6 +464,191 @@ export const guideGroups: GuideGroup[] = [
           {
             title: 'Inventory Asset Valuation on Balance Sheet',
             content: 'The total value of your stock on hand is automatically computed and reflected as a Current Asset on your Balance Sheet.'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'pos-terminal',
+    title: 'Point of Sale (POS)',
+    articles: [
+      {
+        slug: 'pos-setup-hardware',
+        title: 'POS Terminal Setup & Hardware Configuration',
+        intro: 'Set up your retail counter POS terminal, configure thermal receipt printers (80mm and 58mm), electronic cash drawers, and barcode scanners.',
+        plan: 'Pro',
+        readTime: '4 min read',
+        steps: [
+          {
+            title: '1. Accessing the POS Terminal',
+            content: 'Open Point of Sale from the main navigation sidebar or browse directly to the full-screen terminal at /pos. The interface is optimized for rapid retail checkout with instant access to your product catalog, current order, active register shift, and customer details.',
+            bullets: [
+              'Dedicated distraction-free counter interface built for high-speed sales',
+              'Quick access to cash shifts, customer selection, order history, and settings',
+              'Available as an add-on compatible with Pro and Pro Plus plans'
+            ]
+          },
+          {
+            title: '2. Configuring Thermal Receipt Printers',
+            content: 'Framebooks POS works with standard 80mm and 58mm thermal receipt printers without proprietary drivers or complicated installations.',
+            bullets: [
+              'Click Settings (gear icon in the top header) to choose your receipt paper width (80mm or 58mm)',
+              'Print test receipts with one click to verify margins and alignment',
+              'Receipts include your business logo, registration number, order number, line items, and custom thank-you footer'
+            ]
+          },
+          {
+            title: '3. Connecting Electronic Cash Drawers',
+            content: 'Connect any standard RJ11 cash drawer directly to your thermal receipt printer for automated kicking.',
+            bullets: [
+              'The drawer automatically pops open whenever a cash payment is completed',
+              'Use the "Drawer" button in the top navigation bar to open the drawer manually when needed',
+              'Optionally require a manager PIN or authorization code before the drawer can be kicked manually'
+            ]
+          },
+          {
+            title: '4. Barcode Scanners & Camera Scanning',
+            content: 'Ring up items in milliseconds using physical handheld barcode scanners or your device camera.',
+            bullets: [
+              'Supports standard USB and Bluetooth handheld 1D and 2D barcode scanners with automatic debouncing',
+              'Cashiers can scan immediately from anywhere in the terminal without having to click the search bar first',
+              'Built-in camera scanner modal allows laptops, iPads, and smartphones to scan barcodes without external hardware'
+            ]
+          }
+        ]
+      },
+      {
+        slug: 'pos-register-shifts-sales',
+        title: 'Running Register Shifts & Counter Sales',
+        intro: 'Open daily cashier shifts with an opening float, add items to the cart, apply discounts, authorize price changes, and process multi-payment checkouts.',
+        plan: 'Pro',
+        readTime: '5 min read',
+        steps: [
+          {
+            title: '1. Opening Register Shifts & Cash Float',
+            content: 'Before taking your first order, open a register shift to establish cash accountability. Click the "Shift" button in the top header, verify the active cashier, and enter your starting cash float in LKR.',
+            bullets: [
+              'Assigns every transaction in the session to the active cashier profile',
+              'Records the opening drawer balance for end-of-day reconciliation',
+              'Tracks cash sales, card payments, and refunds throughout the active shift'
+            ]
+          },
+          {
+            title: '2. Adding Items & Cart Management',
+            content: 'Add products to the current order by scanning their barcode, typing in the search bar, or tapping item cards organized by category tabs.',
+            bullets: [
+              'Instant search by product name, SKU, or barcode',
+              'Use the +/- quantity steppers in the order cart to adjust amounts quickly',
+              'Remove items individually or clear the entire cart with safety confirmation'
+            ]
+          },
+          {
+            title: '3. Applying Discounts & Manager Authorization',
+            content: 'Reward loyal customers or run promotions with item discounts and bundle offers while keeping revenue secure.',
+            bullets: [
+              'Apply percentage discounts or fixed-amount price deductions directly to cart items',
+              'Restricted discount actions prompt for a Manager PIN code or authorization badge scan',
+              'Special bundle offers and store promotions apply automatically when qualifying items are added'
+            ]
+          },
+          {
+            title: '4. Selecting Customers & Managing Accounts',
+            content: 'Assign sales to existing clients from your Framebooks directory or serve quick walk-in shoppers.',
+            bullets: [
+              'Default "Walk-in Customer" mode enables fast, frictionless anonymous checkout',
+              'Select an existing customer to track their purchase history and lifetime spending',
+              'Create a new customer profile right from the counter without leaving the register'
+            ]
+          },
+          {
+            title: '5. Completing Payments & Closing Shifts',
+            content: 'Accept payments through Cash, Credit/Debit Card, or direct Bank Transfer.',
+            bullets: [
+              'Enter the cash tendered amount for instant change calculation',
+              'Print or download professional thermal customer receipts immediately upon charging',
+              'Close the register shift at the end of the day by counting actual drawer cash to identify any discrepancies'
+            ]
+          }
+        ]
+      },
+      {
+        slug: 'pos-barcodes-inventory',
+        title: 'POS Inventory Sync & Barcode Label Printing',
+        intro: 'Prevent overselling with real-time stock sync across registers and print professional thermal barcode labels for your retail merchandise.',
+        plan: 'Pro Plus',
+        readTime: '4 min read',
+        steps: [
+          {
+            title: '1. Real-Time Inventory Synchronization',
+            content: 'Every sale completed at the POS terminal automatically deducts stock across all connected registers and your main Framebooks inventory module.',
+            bullets: [
+              'Live multi-register synchronization ensures stock counts stay consistent everywhere',
+              'Eliminates stock discrepancies between physical storefront counters and back-office sales',
+              'Sales revenue and inventory cost of goods sold (COGS) flow directly into your accounting reports'
+            ]
+          },
+          {
+            title: '2. Pre-Flight Oversell Protection',
+            content: 'Framebooks POS verifies item availability before allowing products to enter the cart or be charged at checkout.',
+            bullets: [
+              'Out-of-stock items are highlighted with clear visual indicators to prevent checkout delays',
+              'Guards against accidental rings when physical stock is exhausted',
+              'Authorized managers can perform quick in-terminal stock adjustments during shift operations'
+            ]
+          },
+          {
+            title: '3. Generating Code128 Barcodes & QR Codes',
+            content: 'Generate industry-standard barcodes for your retail items in seconds.',
+            bullets: [
+              'Automatic Code128 barcode generation based on product SKU or custom product codes',
+              'High-density QR code support for compact packaging and batch tracking',
+              'Scannable by all commercial USB, Bluetooth, and mobile camera barcode readers'
+            ]
+          },
+          {
+            title: '4. Printing Thermal Barcode Labels',
+            content: 'Print adhesive barcode stickers and price tags directly to thermal label printers.',
+            bullets: [
+              'Print individual product labels or batch-print stickers for new inventory shipments',
+              'Labels display product name, price in LKR, SKU, and high-contrast scannable barcode',
+              'Supports standard label sizes (e.g. 50x30mm, 40x30mm) and continuous adhesive rolls'
+            ]
+          }
+        ]
+      },
+      {
+        slug: 'pos-mobile-tablets',
+        title: 'Using POS on Mobile Phones & Tablets',
+        intro: 'Take orders anywhere on the sales floor, sidewalk pop-ups, or trade booths using an iPad, Android tablet, or smartphone.',
+        plan: 'Pro',
+        readTime: '3 min read',
+        steps: [
+          {
+            title: '1. Responsive Touch-First Design',
+            content: 'Framebooks POS is fully responsive and runs smoothly in mobile Safari and Chrome without requiring an app store install.',
+            bullets: [
+              'Touch-friendly layout with large tappable buttons and fast scrolling',
+              'Smooth view toggle between product catalog browsing and current order summary',
+              'Floating order indicator shows total items and order amount at a glance'
+            ]
+          },
+          {
+            title: '2. Camera Barcode Scanning on the Floor',
+            content: 'Use your phone or tablet camera as a portable scanner to assist customers anywhere in your shop.',
+            bullets: [
+              'Live camera viewfinder with auto-focus and target guidance',
+              'Continuous scan mode allows ringing up multiple items in rapid succession',
+              'Built-in torch toggle for scanning in dimly lit stock areas'
+            ]
+          },
+          {
+            title: '3. Portable Wireless Printing',
+            content: 'Pair your tablet or phone with a portable Bluetooth thermal receipt printer.',
+            bullets: [
+              'Print compact 58mm receipts right at the customer counter or outdoor booth',
+              'Share digital receipt links via SMS, WhatsApp, or email directly from the browser'
+            ]
           }
         ]
       }
@@ -1365,6 +1550,10 @@ export const guideGroups: GuideGroup[] = [
           {
             title: 'How do I cancel or upgrade my subscription?',
             content: 'Go to Settings > Billing to switch between monthly and annual plans or upgrade at any time with prorated billing.'
+          },
+          {
+            title: 'What devices and hardware can I use with the POS terminal?',
+            content: 'Framebooks POS runs directly in any modern browser on laptops, iPads, tablets, and smartphones. It works with standard USB and Bluetooth barcode scanners, 80mm and 58mm thermal receipt printers, and RJ11 electronic cash drawers without needing expensive proprietary equipment.'
           }
         ]
       },
