@@ -658,7 +658,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
             </div>
 
             {/* POS 6-Pillar Features Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 mb-14 sm:mb-20">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
               {posFeatures.map((feat, idx) => (
                 <div
                   key={idx}
@@ -679,32 +679,6 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                   </div>
                 </div>
               ))}
-            </div>
-
-            {/* Hardware & Compatibility Strip */}
-            <div className="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-white/[0.03] border border-white/10 flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
-              <div>
-                <h4 className="text-base sm:text-lg font-bold text-white mb-1">
-                  Ready for your existing retail counter hardware
-                </h4>
-                <p className="text-xs sm:text-sm text-gray-400">
-                  Connect any standard USB or Bluetooth scanner, 80mm/58mm thermal receipt printer, and electronic cash drawer.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
-                <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-gray-300">
-                  Barcode Scanners (1D/2D)
-                </span>
-                <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-gray-300">
-                  Thermal Printers (80mm/58mm)
-                </span>
-                <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-gray-300">
-                  RJ11 Cash Drawers
-                </span>
-                <span className="px-3 py-1.5 rounded-full bg-[#00E35B]/15 border border-[#00E35B]/30 text-xs font-bold text-[#00E35B]">
-                  LKR 3,000 / mo Add-on
-                </span>
-              </div>
             </div>
           </div>
         </section>
