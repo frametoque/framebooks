@@ -15,10 +15,10 @@ export const footerProductLinks = [
 ];
 
 export const footerLegalLinks = [
-  { name: 'Privacy Policy', href: '#' },
-  { name: 'Terms of Service', href: '#' },
-  { name: 'Cookie Policy', href: '#' },
-  { name: 'Refund Policy', href: '#' },
+  { name: 'Privacy Policy', href: '/privacy' },
+  { name: 'Terms of Service', href: '/terms' },
+  { name: 'Cookie Policy', href: '/cookies' },
+  { name: 'Refund Policy', href: '/refund' },
 ];
 
 export const kpis = [
