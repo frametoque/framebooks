@@ -49,11 +49,18 @@ export default function PlanFinderWidget({ plans: propPlans, isYearly = false }:
     (p) => p.name.toLowerCase() === recommendation.plan.toLowerCase()
   );
 
-  const priceNum =
+  const basePriceNum =
     isYearly && matchedPlan && matchedPlan.monthlyPrice > 0
       ? matchedPlan.yearlyPrice || matchedPlan.monthlyPrice * 10
       : matchedPlan?.monthlyPrice ??
-        (recommendation.plan === 'Free' ? 0 : recommendation.plan === 'Pro' ? 2500 : 5000);
+        (recommendation.plan === 'Free' ? 0 : recommendation.plan === 'Pro' ? 2600 : 5200);
+
+  const posAddonPrice = needsPos ? (isYearly ? 30000 : 3000) : 0;
+  const totalPriceNum = basePriceNum + posAddonPrice;
+
+  const posFeature = needsPos
+    ? `Cloud POS Add-on (+${(isYearly ? 30000 : 3000).toLocaleString()} LKR/${isYearly ? 'yr' : 'mo'})`
+    : 'Cloud POS Add-on compatible';
 
   const planFeatures: Record<string, string[]> = {
     Free: [
@@ -67,22 +74,25 @@ export default function PlanFinderWidget({ plans: propPlans, isYearly = false }:
       'Unlimited active clients',
       '2 bank/cash accounts',
       'Advanced P&L & Cash Flow reports',
-      'Cloud POS Add-on compatible',
+      posFeature,
     ],
     'Pro Plus': [
       'Unlimited invoices & clients',
       'Unlimited bank & cash accounts',
       'Unlimited team members & roles',
       'Complete inventory tracking',
-      'Cloud POS Add-on compatible',
+      posFeature,
       'System audit logs & priority support',
     ],
   };
 
   const planDetails = {
-    price: priceNum === 0 ? '0 LKR' : `${priceNum.toLocaleString()} LKR`,
-    period: priceNum === 0 ? 'forever free' : isYearly ? 'per year' : 'per month',
+    price: totalPriceNum === 0 ? '0 LKR' : `${totalPriceNum.toLocaleString()} LKR`,
+    period: totalPriceNum === 0 ? 'forever free' : isYearly ? 'per year' : 'per month',
     features: planFeatures[recommendation.plan] || planFeatures.Free,
+    posBreakdown: needsPos
+      ? `${matchedPlan?.name || recommendation.plan} (${basePriceNum.toLocaleString()} LKR) + POS (${posAddonPrice.toLocaleString()} LKR)`
+      : null,
   };
 
   return (
@@ -363,13 +373,20 @@ export default function PlanFinderWidget({ plans: propPlans, isYearly = false }:
                 <span className="text-[#00E35B]">.</span>
               </h3>
 
-              <div className="flex items-baseline gap-1.5 mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-[#E5E7EB]">
-                <span className="text-xl sm:text-2xl font-black text-[#007A31]">
-                  {planDetails.price}
-                </span>
-                <span className="text-xs text-gray-500 font-medium">
-                  / {planDetails.period}
-                </span>
+              <div className="flex flex-col mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-[#E5E7EB]">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xl sm:text-2xl font-black text-[#007A31]">
+                    {planDetails.price}
+                  </span>
+                  <span className="text-xs text-gray-500 font-medium">
+                    / {planDetails.period}
+                  </span>
+                </div>
+                {planDetails.posBreakdown && (
+                  <p className="text-[11px] font-semibold text-emerald-700 dark:text-brand-400 mt-1">
+                    Includes {planDetails.posBreakdown}
+                  </p>
+                )}
               </div>
 
               <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl p-2.5 sm:p-3 mb-3 sm:mb-4">
@@ -403,7 +420,7 @@ export default function PlanFinderWidget({ plans: propPlans, isYearly = false }:
             href="/login"
             className="w-full py-2.5 sm:py-3 bg-[#00E35B] hover:bg-[#00C750] active:scale-[0.98] text-[#041418] font-black rounded-xl text-center text-xs sm:text-sm transition-all shadow-md shadow-[#00E35B]/20"
           >
-            Get started with {recommendation.plan}
+            Get started with {recommendation.plan}{needsPos ? ' + POS' : ''}
           </Link>
           <Link
             href="/#pricing"

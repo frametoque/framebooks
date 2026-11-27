@@ -36,7 +36,7 @@ export function recommendPlan(
     return {
       plan: 'Pro',
       reason: needsPos
-        ? 'Point of Sale (POS) requires at least the Pro plan.'
+        ? 'Point of Sale (POS) requires at least the Pro plan (+3,000 LKR/mo POS add-on).'
         : needsAdvancedReports
           ? 'Advanced reports are available on the Pro plan.'
           : invoices > planLimits.Free.invoices
