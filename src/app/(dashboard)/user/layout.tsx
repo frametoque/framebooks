@@ -163,6 +163,8 @@ function LayoutContent({ children }) {
     can_purchase_pos?: boolean;
     can_use_pos?: boolean;
     pos_addon_status?: string;
+    has_active_shift?: boolean;
+    active_shift?: { id: number; shift_number: number } | null;
   }>({
     plan: "Loading...",
     name: "My Business",
@@ -174,6 +176,8 @@ function LayoutContent({ children }) {
     can_purchase_pos: false,
     can_use_pos: false,
     pos_addon_status: "none",
+    has_active_shift: false,
+    active_shift: null,
   });
   const [exceededLimits, setExceededLimits] = useState<string[]>([]);
 
@@ -957,17 +961,96 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
 };
 
 const PosTopBarButton = ({ tenantInfo }: { tenantInfo: any }) => {
+  const [activeShift, setActiveShift] = useState<{ id: number; shift_number: number } | null>(
+    tenantInfo?.active_shift || null
+  );
+
+  // Sync with incoming tenantInfo updates
+  useEffect(() => {
+    if (tenantInfo?.active_shift !== undefined) {
+      setActiveShift(tenantInfo.active_shift);
+    }
+  }, [tenantInfo?.active_shift]);
+
+  // Sync with client-side shift events, cross-tab storage, and window focus
+  useEffect(() => {
+    const syncFromStorage = () => {
+      try {
+        const cached = localStorage.getItem("framebooks_pos_active_shift");
+        if (cached === "closed") {
+          setActiveShift(null);
+        } else if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed?.id) {
+            setActiveShift({
+              id: Number(parsed.id),
+              shift_number: Number(parsed.shift_number || parsed.id),
+            });
+          }
+        }
+      } catch {}
+    };
+
+    syncFromStorage();
+
+    const handleShiftChange = (e: Event) => {
+      const custom = e as CustomEvent<any>;
+      if (custom.detail && custom.detail.id) {
+        setActiveShift({
+          id: Number(custom.detail.id),
+          shift_number: Number(custom.detail.shift_number || custom.detail.id),
+        });
+      } else {
+        setActiveShift(null);
+      }
+    };
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "framebooks_pos_active_shift") {
+        syncFromStorage();
+      }
+    };
+
+    window.addEventListener("pos:shift-changed", handleShiftChange);
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", syncFromStorage);
+    return () => {
+      window.removeEventListener("pos:shift-changed", handleShiftChange);
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", syncFromStorage);
+    };
+  }, []);
+
   if (tenantInfo?.has_pos_addon && tenantInfo?.can_use_pos !== false) {
+    const hasActiveShift = Boolean(activeShift || tenantInfo?.has_active_shift);
+    const shiftNumber = activeShift?.shift_number || tenantInfo?.active_shift?.shift_number;
+
+    if (hasActiveShift) {
+      return (
+        <Link
+          href="/pos"
+          prefetch={false}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold text-xs transition-all active:scale-95 shadow-2xs group cursor-pointer"
+          title={`POS • Shift #${shiftNumber || "1"} Active (Register Open)`}
+        >
+          <Store className="w-3.5 h-3.5 shrink-0" />
+          <span>POS</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-brand-900/60 animate-pulse shrink-0" />
+        </Link>
+      );
+    }
+
+    // Shift is Closed / Inactive: Amber status button
     return (
       <Link
         href="/pos"
         prefetch={false}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-500 hover:bg-brand-400 text-brand-900 font-bold text-xs transition-all active:scale-95 shadow-2xs group cursor-pointer"
-        title="Open Point of Sale (POS)"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold text-xs transition-all active:scale-95 shadow-2xs group cursor-pointer"
+        title="POS • Shift Closed (Click to Open POS & Start Shift)"
       >
-        <Store className="w-3.5 h-3.5" />
+        <Store className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
         <span>POS</span>
-        <span className="w-1.5 h-1.5 rounded-full bg-brand-900/60 animate-pulse" />
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500/70 shrink-0" />
       </Link>
     );
   }
@@ -980,9 +1063,9 @@ const PosTopBarButton = ({ tenantInfo }: { tenantInfo: any }) => {
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-card hover:bg-black/5 dark:hover:bg-white/5 border border-border text-gray-400 hover:text-foreground font-semibold text-xs transition-all shadow-2xs"
         title="Get POS Add-on (Available on Pro & Pro Plus)"
       >
-        <Store className="w-3.5 h-3.5 text-brand-500" />
+        <Store className="w-3.5 h-3.5 text-brand-500 shrink-0" />
         <span>POS</span>
-        <MdLockOutline className="w-3.5 h-3.5 text-gray-400" />
+        <MdLockOutline className="w-3.5 h-3.5 text-gray-400 shrink-0" />
       </Link>
     );
   }
@@ -994,9 +1077,9 @@ const PosTopBarButton = ({ tenantInfo }: { tenantInfo: any }) => {
       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-card hover:bg-black/5 dark:hover:bg-white/5 border border-border text-gray-400 hover:text-foreground font-semibold text-xs transition-all opacity-75 shadow-2xs"
       title="POS Add-on (Upgrade to Pro required)"
     >
-      <Store className="w-3.5 h-3.5 text-gray-400" />
+      <Store className="w-3.5 h-3.5 text-gray-400 shrink-0" />
       <span>POS</span>
-      <MdLockOutline className="w-3.5 h-3.5 text-gray-400" />
+      <MdLockOutline className="w-3.5 h-3.5 text-gray-400 shrink-0" />
     </Link>
   );
 };

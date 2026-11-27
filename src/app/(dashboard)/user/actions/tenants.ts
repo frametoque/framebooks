@@ -142,6 +142,8 @@ export const getTenantInfo = cache(async function getTenantInfo() {
         can_use_pos: false,
         pos_addon_status: 'none',
         has_woocommerce: false,
+        has_active_shift: false,
+        active_shift: null,
       };
     }
     
@@ -183,7 +185,15 @@ export const getTenantInfo = cache(async function getTenantInfo() {
         website: null,
         address: null,
         userRole: null,
-        teamMembersCount: 1
+        teamMembersCount: 1,
+        is_cashier_only: false,
+        has_pos_addon: false,
+        can_purchase_pos: false,
+        can_use_pos: false,
+        pos_addon_status: 'none',
+        has_woocommerce: false,
+        has_active_shift: false,
+        active_shift: null,
       };
     }
     
@@ -195,13 +205,27 @@ export const getTenantInfo = cache(async function getTenantInfo() {
     
     const teamMembersCount = parseInt(teamMembersCountRows[0]?.count || '1');
 
-    const [isCashierOnly, posAddon, canUsePos, wooConnRows] = await Promise.all([
+    const [isCashierOnly, posAddon, canUsePos, wooConnRows, shiftRows] = await Promise.all([
       isCashierOnlyUser(userRole, tenantId),
       getPosAddonStatus(tenantId),
       hasGranularPermission(userRole, 'pos.use', tenantId),
       sql`SELECT status FROM woocommerce_connections WHERE tenant_id = ${tenantId} AND status = 'connected' LIMIT 1`.catch(() => []),
+      sql`
+        SELECT id, shift_number, status, opened_at 
+        FROM pos_shifts 
+        WHERE tenant_id = ${tenantId} AND status = 'open' 
+        ORDER BY (CASE WHEN user_id = ${safeId} THEN 0 ELSE 1 END), id DESC 
+        LIMIT 1
+      `.catch(() => []),
     ]);
     const hasWooCommerce = Array.isArray(wooConnRows) && wooConnRows.length > 0;
+    const hasActiveShift = Boolean(shiftRows && shiftRows.length > 0);
+    const activeShift = hasActiveShift
+      ? {
+          id: Number(shiftRows[0].id),
+          shift_number: Number(shiftRows[0].shift_number || shiftRows[0].id),
+        }
+      : null;
 
     if (tenants.length > 0) {
       const grace = await resolveGraceAndReadOnly(tenants[0].plan || "Free", tenants[0].plan_expires_at, tenants[0].id, tenants[0].payment_status);
@@ -227,6 +251,8 @@ export const getTenantInfo = cache(async function getTenantInfo() {
         can_use_pos: canUsePos,
         pos_addon_status: posAddon.status,
         has_woocommerce: hasWooCommerce,
+        has_active_shift: hasActiveShift,
+        active_shift: activeShift,
       };
     }
     return {
@@ -253,6 +279,8 @@ export const getTenantInfo = cache(async function getTenantInfo() {
       can_use_pos: false,
       pos_addon_status: 'none',
       has_woocommerce: hasWooCommerce,
+      has_active_shift: false,
+      active_shift: null,
     };
   } catch (e) {
     console.error("Failed to fetch tenant info:", e);
@@ -279,6 +307,8 @@ export const getTenantInfo = cache(async function getTenantInfo() {
       can_use_pos: false,
       pos_addon_status: 'none',
       has_woocommerce: false,
+      has_active_shift: false,
+      active_shift: null,
     };
   }
 });

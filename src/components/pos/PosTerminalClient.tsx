@@ -122,6 +122,31 @@ export function PosTerminalClient({
   const [activeShift, setActiveShift] = useState<any | null>(initialShift);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(!initialShift);
 
+  // Synchronize active shift status to localStorage and dispatch custom event for top bar
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (activeShift) {
+        try {
+          localStorage.setItem("framebooks_pos_active_shift", JSON.stringify({
+            id: activeShift.id,
+            shift_number: activeShift.shift_number || activeShift.id,
+          }));
+        } catch {}
+        window.dispatchEvent(new CustomEvent("pos:shift-changed", { detail: activeShift }));
+      } else {
+        try {
+          localStorage.setItem("framebooks_pos_active_shift", "closed");
+        } catch {}
+        window.dispatchEvent(new CustomEvent("pos:shift-changed", { detail: null }));
+      }
+      try {
+        import("@/lib/tenant/clientTenantInfo").then(({ invalidateClientTenantInfo }) => {
+          invalidateClientTenantInfo();
+        });
+      } catch {}
+    }
+  }, [activeShift]);
+
   // Modals state
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);

@@ -51,6 +51,12 @@ export function ShiftModal({ isOpen, onClose, shift, onShiftUpdated }: ShiftModa
       const openingAmount = parseFloat(openingCashInput) || 0;
       const res = await getOrCreateShiftAction(openingAmount, notes);
       if (res.success && res.shift) {
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem("framebooks_pos_active_shift", JSON.stringify(res.shift));
+          } catch {}
+          window.dispatchEvent(new CustomEvent("pos:shift-changed", { detail: res.shift }));
+        }
         onShiftUpdated(res.shift);
         onClose();
       } else {
@@ -74,6 +80,12 @@ export function ShiftModal({ isOpen, onClose, shift, onShiftUpdated }: ShiftModa
       const counted = parseFloat(closingCashInput) || 0;
       const res = await closeShiftAction(shift.id, counted, notes);
       if (res.success) {
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem("framebooks_pos_active_shift", "closed");
+          } catch {}
+          window.dispatchEvent(new CustomEvent("pos:shift-changed", { detail: null }));
+        }
         onShiftUpdated(null);
         onClose();
       } else {
