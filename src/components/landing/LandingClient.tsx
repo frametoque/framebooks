@@ -555,12 +555,9 @@ export default function LandingClient({
           <div className="container mx-auto px-4 sm:px-6 max-w-6xl relative z-10">
             {/* Header */}
             <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight mb-4 sm:mb-6">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight">
                 Point of Sale.<br className="hidden sm:inline" /> Engineered for speed<span className="text-[#00E35B]">.</span>
               </h2>
-              <p className="text-sm sm:text-base md:text-lg text-gray-300 leading-relaxed">
-                Designed for peak rush hours. Fast QR and barcode scanning, live inventory sync, and instant receipt printing on any Mac, PC, tablet, or phone.
-              </p>
             </div>
 
             {/* POS 6-Pillar Features Grid */}
