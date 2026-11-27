@@ -175,28 +175,33 @@ export const plans = [
 
 export const posFeatures = [
   {
-    title: 'Continuous Barcode & QR Scanner',
-    description: 'Built-in camera scanner with live target HUD, plus native support for external USB and Bluetooth handheld 1D/2D barcode scanners with debounced precision.',
+    title: 'Fast Barcode & QR Scanning',
+    description: 'Scan items in seconds with your phone camera or any handheld USB and Bluetooth barcode scanner to keep checkout lines moving fast.',
     icon: 'MdQrCodeScanner',
   },
   {
-    title: 'Pre-Flight Stock & Oversell Protection',
-    description: 'Live inventory synchronization checks available stock before items enter the cart or charge, eliminating embarrassing stockout moments at the register.',
+    title: 'Real-Time Inventory Tracking',
+    description: 'Stock quantities sync automatically with every sale, preventing stockouts and keeping your counter shelves and catalog accurate.',
     icon: 'MdInventory',
   },
   {
-    title: 'Manager PIN & Authorization Badges',
-    description: 'Keep cashier roles locked down. Applying direct price discounts or specialized bundle promotions requires a manager PIN code or quick badge QR scan.',
-    icon: 'MdLockOutline',
-  },
-  {
-    title: 'Thermal Receipts & Cash Drawer Kick',
-    description: 'Hardware-ready for retail counters. Direct 80mm and 58mm thermal receipt printing, test bill verification (Shift+F6), and electronic RJ11 cash drawer kickoff.',
+    title: 'Receipt Printing & Cash Drawers',
+    description: 'Print clean customer receipts on standard 80mm or 58mm thermal printers and automatically pop open your cash drawer when payment completes.',
     icon: 'MdPrint',
   },
   {
-    title: 'Mobile & Tablet Dual-Mode POS',
-    description: 'Responsive handheld layout optimized for mobile and tablet sales counters. Smooth toggle between catalog and cart, floating order pill, and slide-up action drawers.',
+    title: 'Cashier Controls & Manager PIN',
+    description: 'Protect your business with role permissions. Staff can ring up sales, while applying custom discounts requires a manager PIN code.',
+    icon: 'MdLockOutline',
+  },
+  {
+    title: 'Flexible Discounts & Offers',
+    description: 'Apply percentage or fixed-amount discounts, run product bundle deals, and track walk-in or saved customers with clear price breakdowns.',
+    icon: 'MdLocalOffer',
+  },
+  {
+    title: 'Sell on Mobile, Tablet & PC',
+    description: 'Take orders from your counter desktop, an iPad, or your phone on the retail floor. Complete sales anywhere with instant cloud sync.',
     icon: 'MdPhoneIphone',
   },
 ];

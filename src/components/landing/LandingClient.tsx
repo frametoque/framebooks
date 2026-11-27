@@ -7,7 +7,7 @@ import {
   MdCheck, MdTrendingUp, MdAccountBalance, MdCallMade, MdCallReceived, 
   MdInsertDriveFile, MdGroup, MdInventory, MdSecurity, MdGroups, MdPerson, 
   MdArrowForward, MdPointOfSale, MdQrCodeScanner, MdPrint, MdFlashOn, 
-  MdLockOutline, MdPhoneIphone, MdSearch, MdShoppingCart 
+  MdLockOutline, MdPhoneIphone, MdSearch, MdShoppingCart, MdLocalOffer 
 } from 'react-icons/md';
 import { kpis, features, modulesData, workflowSteps, securityFeatures, plans, comparison, faqs, posFeatures } from '@/data/landing/content';
 import PlanFinderWidget from '@/components/landing/PlanFinderWidget';
@@ -470,27 +470,22 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Shift #1 Active
                   </span>
                 </div>
-                {/* Shortcut pills */}
+                {/* Quick Action pills */}
                 <div className="hidden lg:flex items-center gap-2 text-[11px] text-gray-300">
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
-                    <span>Drawer</span>
-                    <kbd className="px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-mono text-gray-400">F6</kbd>
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center">
+                    <span>Open Drawer</span>
                   </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
-                    <span>Test Bill</span>
-                    <kbd className="px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-mono text-gray-400">Shift+F6</kbd>
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center">
+                    <span>Print Bill</span>
                   </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center">
                     <span>Camera Scan</span>
-                    <kbd className="px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-mono text-gray-400">F2</kbd>
                   </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
-                    <span>Stock</span>
-                    <kbd className="px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-mono text-gray-400">F9</kbd>
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center">
+                    <span>Stock Info</span>
                   </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
-                    <span>Offers</span>
-                    <kbd className="px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-mono text-gray-400">F6</kbd>
+                  <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center">
+                    <span>Discounts</span>
                   </span>
                 </div>
               </div>
@@ -502,8 +497,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                   {/* Search Bar */}
                   <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-gray-400 shrink-0">
                     <MdSearch className="w-4 h-4 text-gray-400 shrink-0" />
-                    <span className="text-gray-300 font-medium truncate">Scan or search products... (Press &apos;/&apos; or F1 to focus, Enter to add)</span>
-                    <span className="ml-auto px-1.5 py-0.5 rounded bg-black/40 text-[10px] font-mono text-gray-400">/</span>
+                    <span className="text-gray-300 font-medium truncate">Scan barcode or search products by name, SKU, or category...</span>
                   </div>
 
                   {/* Categories */}
@@ -647,10 +641,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                       <span className="font-semibold text-white">LKR 46,000</span>
                     </div>
                     <div className="flex justify-between items-center text-[11px] text-[#00E35B] mb-2">
-                      <span className="flex items-center gap-1">
-                        <span>% Discounts & Offers</span>
-                        <kbd className="px-1 py-0.2 rounded bg-black/50 text-[9px] text-gray-300">F4</kbd>
-                      </span>
+                      <span>Discounts & Special Offers</span>
                       <span>LKR 0</span>
                     </div>
                     <div className="flex justify-between items-baseline mb-2.5">
@@ -664,7 +655,6 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                     >
                       <MdCheck className="w-4 h-4" />
                       <span>CHARGE LKR 46,000</span>
-                      <span className="text-[9px] font-mono opacity-70 ml-1">F12 / SPACE</span>
                     </button>
                   </div>
                 </div>
@@ -686,6 +676,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                       {feat.icon === 'MdLockOutline' && <MdLockOutline />}
                       {feat.icon === 'MdPrint' && <MdPrint />}
                       {feat.icon === 'MdPhoneIphone' && <MdPhoneIphone />}
+                      {feat.icon === 'MdLocalOffer' && <MdLocalOffer />}
                     </div>
                     <h3 className="text-lg sm:text-xl font-bold text-white mb-2">{feat.title}</h3>
                     <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">{feat.description}</p>
