@@ -115,6 +115,14 @@ export async function ensureWooCommerceSchema() {
     `;
     await sql`CREATE INDEX IF NOT EXISTS idx_woo_webhooks_tenant ON woocommerce_registered_webhooks(tenant_id);`;
 
+    // Enable Row Level Security (RLS) on all WooCommerce tables
+    await sql`ALTER TABLE woocommerce_connections ENABLE ROW LEVEL SECURITY;`.catch(() => {});
+    await sql`ALTER TABLE woocommerce_product_mappings ENABLE ROW LEVEL SECURITY;`.catch(() => {});
+    await sql`ALTER TABLE woocommerce_sync_logs ENABLE ROW LEVEL SECURITY;`.catch(() => {});
+    await sql`ALTER TABLE woocommerce_idempotency_keys ENABLE ROW LEVEL SECURITY;`.catch(() => {});
+    await sql`ALTER TABLE integration_sync_jobs ENABLE ROW LEVEL SECURITY;`.catch(() => {});
+    await sql`ALTER TABLE woocommerce_registered_webhooks ENABLE ROW LEVEL SECURITY;`.catch(() => {});
+
     isWooSchemaInitialized = true;
   } catch (err) {
     console.error("[WooCommerce Schema Init Error]", err);

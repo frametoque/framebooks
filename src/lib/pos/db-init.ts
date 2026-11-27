@@ -197,6 +197,14 @@ export async function ensurePosSchema() {
 
     isInitialized = true;
 
+    // Enable Row Level Security (RLS) on all POS & retail tables
+    await sql`ALTER TABLE tenant_addons ENABLE ROW LEVEL SECURITY;`.catch(() => {});
+    await sql`ALTER TABLE stock_movements ENABLE ROW LEVEL SECURITY;`.catch(() => {});
+    await sql`ALTER TABLE pos_settings ENABLE ROW LEVEL SECURITY;`.catch(() => {});
+    await sql`ALTER TABLE pos_shifts ENABLE ROW LEVEL SECURITY;`.catch(() => {});
+    await sql`ALTER TABLE pos_orders ENABLE ROW LEVEL SECURITY;`.catch(() => {});
+    await sql`ALTER TABLE pos_promotions ENABLE ROW LEVEL SECURITY;`.catch(() => {});
+
     // Seed test stock for FT DEMO tenant if present
     await seedFtDemoTenantStock();
   } catch (err) {
