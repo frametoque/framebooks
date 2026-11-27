@@ -1,7 +1,7 @@
 import React from 'react';
 
 export const metadata = {
-  title: 'Refund Policy - Framebooks',
+  title: 'Refund Policy',
   description: 'Understand the Framebooks refund policy for monthly and annual subscription plans.',
 };
 

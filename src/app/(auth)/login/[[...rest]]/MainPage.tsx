@@ -32,7 +32,7 @@ export default function CustomLogin() {
           router.replace(redirectPath);
         } catch (err: any) {
           if (err.name === 'TypeError' || err.message === 'Failed to fetch') return;
-          router.replace("/dashboard");
+          router.replace("/onboarding");
         }
       };
       checkAndRedirect();
@@ -44,7 +44,7 @@ export default function CustomLogin() {
     setLoadingProvider("google");
     setErrorMsg("");
     try {
-      await signIn("google", { callbackUrl: "/dashboard" });
+      await signIn("google", { callbackUrl: "/onboarding" });
     } catch (err: any) {
       console.error("SignIn Error:", err);
       setErrorMsg("Failed to sign in with Google.");

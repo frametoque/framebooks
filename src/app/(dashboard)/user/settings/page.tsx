@@ -9,10 +9,10 @@ import { isSettingsSectionAllowed } from "./settings-permissions";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Settings | Framebooks",
+  title: "Settings",
   description: "Manage your account settings, profile details, and payment methods all in one place.",
   openGraph: {
-    title: "Settings | Framebooks",
+    title: "Settings",
     description: "Manage your account settings, profile details, and payment methods all in one place.",
     url: "https://framebooks.com/dashboard/settings", 
     siteName: "Framebooks",

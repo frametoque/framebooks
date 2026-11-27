@@ -1,7 +1,7 @@
 import React from 'react';
 
 export const metadata = {
-  title: 'Terms of Service - Framebooks',
+  title: 'Terms of Service',
   description: 'Terms and conditions for using the Framebooks accounting, ERP, and Point of Sale platform.',
 };
 

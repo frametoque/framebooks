@@ -5,7 +5,7 @@ import { getInvoiceLayout, canCustomizeInvoices } from "@/app/(dashboard)/user/a
 import BuilderClient from "./BuilderClient";
 
 export const metadata: Metadata = {
-  title: "Invoice Layout | Framebooks",
+  title: "Invoice Layout",
 };
 
 export default async function BuilderPage({ params }: { params: Promise<{ id: string }> }) {

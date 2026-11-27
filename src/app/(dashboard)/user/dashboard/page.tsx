@@ -75,7 +75,14 @@ export default function DashboardPage() {
     return () => { cancelled = true; };
   }, [startDate, endDate]);
 
-  if (loading || !data) {
+  if (!loading && !data) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/onboarding";
+    }
+    return null;
+  }
+
+  if (loading) {
     return (
       <div className="space-y-4">
         {/* Skeleton Stats Cards (Row 1) */}

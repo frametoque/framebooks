@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Client Profile | Framebooks",
+  title: "Client Profile",
 };
 
 export default function ClientDetailLayout({

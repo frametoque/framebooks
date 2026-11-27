@@ -170,6 +170,8 @@ export const getTenantInfo = cache(async function getTenantInfo() {
 
     if (!tenantId) {
       return {
+        has_business: false,
+        tenantId: null,
         plan: "Free",
         plan_expires_at: null,
         grace_period_days: 7,

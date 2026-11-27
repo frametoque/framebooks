@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Stock | Framebooks",
+  title: "Stock",
   description: "Stock catalog, barcode label printing, inventory adjustments, and WooCommerce catalog sync.",
 };
 

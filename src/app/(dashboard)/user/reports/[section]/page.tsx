@@ -25,23 +25,23 @@ const SLUG_TO_REPORT_TAB: Record<string, string> = {
 };
 
 const SECTION_METADATA: Record<string, { title: string; description: string }> = {
-  "overview": { title: "Financial Overview | Framebooks", description: "Financial overview and key performance metrics." },
-  "profit-loss": { title: "Profit & Loss | Framebooks", description: "Profit and Loss statement and revenue breakdown." },
-  "profit_loss": { title: "Profit & Loss | Framebooks", description: "Profit and Loss statement and revenue breakdown." },
-  "cash-flow": { title: "Cash Flow | Framebooks", description: "Statement of cash flows from operating, investing, and financing." },
-  "cash_flow": { title: "Cash Flow | Framebooks", description: "Statement of cash flows from operating, investing, and financing." },
-  "balance-sheet": { title: "Balance Sheet | Framebooks", description: "Balance sheet statement of assets, liabilities, and equity." },
-  "balance_sheet": { title: "Balance Sheet | Framebooks", description: "Balance sheet statement of assets, liabilities, and equity." },
-  "tax-summary": { title: "Tax Estimator | Framebooks", description: "Sri Lanka business income tax and corporate tax estimator based on annual profit." },
-  "tax_summary": { title: "Tax Estimator | Framebooks", description: "Sri Lanka business income tax and corporate tax estimator based on annual profit." },
-  "tax-estimator": { title: "Tax Estimator | Framebooks", description: "Sri Lanka business income tax and corporate tax estimator based on annual profit." },
-  "tax_estimator": { title: "Tax Estimator | Framebooks", description: "Sri Lanka business income tax and corporate tax estimator based on annual profit." },
-  "trial-balance": { title: "Trial Balance | Framebooks", description: "Trial balance ledger report with debit and credit balances." },
-  "trial_balance": { title: "Trial Balance | Framebooks", description: "Trial balance ledger report with debit and credit balances." },
-  "general-ledger": { title: "General Ledger | Framebooks", description: "Complete record of all financial transactions." },
-  "general_ledger": { title: "General Ledger | Framebooks", description: "Complete record of all financial transactions." },
-  "account-ledger": { title: "Account Ledger | Framebooks", description: "Account-level transaction ledger and running balances." },
-  "account_ledger": { title: "Account Ledger | Framebooks", description: "Account-level transaction ledger and running balances." },
+  "overview": { title: "Financial Overview", description: "Financial overview and key performance metrics." },
+  "profit-loss": { title: "Profit & Loss", description: "Profit and Loss statement and revenue breakdown." },
+  "profit_loss": { title: "Profit & Loss", description: "Profit and Loss statement and revenue breakdown." },
+  "cash-flow": { title: "Cash Flow", description: "Statement of cash flows from operating, investing, and financing." },
+  "cash_flow": { title: "Cash Flow", description: "Statement of cash flows from operating, investing, and financing." },
+  "balance-sheet": { title: "Balance Sheet", description: "Balance sheet statement of assets, liabilities, and equity." },
+  "balance_sheet": { title: "Balance Sheet", description: "Balance sheet statement of assets, liabilities, and equity." },
+  "tax-summary": { title: "Tax Estimator", description: "Sri Lanka business income tax and corporate tax estimator based on annual profit." },
+  "tax_summary": { title: "Tax Estimator", description: "Sri Lanka business income tax and corporate tax estimator based on annual profit." },
+  "tax-estimator": { title: "Tax Estimator", description: "Sri Lanka business income tax and corporate tax estimator based on annual profit." },
+  "tax_estimator": { title: "Tax Estimator", description: "Sri Lanka business income tax and corporate tax estimator based on annual profit." },
+  "trial-balance": { title: "Trial Balance", description: "Trial balance ledger report with debit and credit balances." },
+  "trial_balance": { title: "Trial Balance", description: "Trial balance ledger report with debit and credit balances." },
+  "general-ledger": { title: "General Ledger", description: "Complete record of all financial transactions." },
+  "general_ledger": { title: "General Ledger", description: "Complete record of all financial transactions." },
+  "account-ledger": { title: "Account Ledger", description: "Account-level transaction ledger and running balances." },
+  "account_ledger": { title: "Account Ledger", description: "Account-level transaction ledger and running balances." },
 };
 
 export async function generateMetadata({
@@ -52,7 +52,7 @@ export async function generateMetadata({
   const resolvedParams = await params;
   const section = resolvedParams?.section || "";
   const meta = SECTION_METADATA[section];
-  if (!meta) return { title: "Reports | Framebooks" };
+  if (!meta) return { title: "Reports" };
   return {
     title: meta.title,
     description: meta.description,

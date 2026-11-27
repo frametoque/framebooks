@@ -7,7 +7,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { invoice_id } = await params;
   return {
-    title: invoice_id ? `Invoice #${invoice_id} | Framebooks` : "Invoice Details | Framebooks",
+    title: invoice_id ? `Invoice #${invoice_id}` : "Invoice Details",
   };
 }
 

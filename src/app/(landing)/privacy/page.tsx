@@ -1,7 +1,7 @@
 import React from 'react';
 
 export const metadata = {
-  title: 'Privacy Policy - Framebooks',
+  title: 'Privacy Policy',
   description: 'Learn how Framebooks protects your business, financial, and personal information.',
 };
 

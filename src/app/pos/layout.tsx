@@ -11,10 +11,27 @@ import Link from "next/link";
 import { Lock, ArrowLeft, ShieldAlert } from "lucide-react";
 import { MdPointOfSale } from "react-icons/md";
 
-export const metadata: Metadata = {
-  title: "POS Terminal | Framebooks",
-  description: "Lightning-fast retail POS counter terminal with barcode scanning, automated stock tracking, and receipt printing.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const session = await getServerSession(authOptions);
+  let bizName = "";
+  if (session?.user?.email) {
+    try {
+      const userRows = await sql`
+        SELECT t.name as tenant_name
+        FROM admin_users u
+        JOIN tenants t ON u.tenant_id = t.id
+        WHERE LOWER(u.email) = ${session.user.email.toLowerCase()}
+        LIMIT 1
+      `;
+      bizName = userRows[0]?.tenant_name?.trim();
+    } catch {}
+  }
+
+  return {
+    title: bizName ? `POS Terminal | ${bizName}` : "POS Terminal",
+    description: "Lightning-fast retail POS counter terminal with barcode scanning, automated stock tracking, and receipt printing.",
+  };
+}
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +53,7 @@ export default async function PosRootLayout({ children }: { children: React.Reac
   `;
 
   if (userRows.length === 0 || !userRows[0].tenant_id) {
-    redirect("/login");
+    redirect("/onboarding");
   }
 
   const user = userRows[0];

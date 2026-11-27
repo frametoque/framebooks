@@ -1,5 +1,6 @@
 // src/app/(dashboard)/layout.tsx
 import React, { cache } from "react";
+import type { Metadata } from "next";
 import { headers, cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -10,6 +11,36 @@ import sql from "@/lib/db";
 import { generateTenantThemeCss, DEFAULT_ACCENT_HEX, resolvePaletteId } from "@/lib/theme/accent";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") || headersList.get("next-url") || "";
+  if (pathname.startsWith("/admin")) {
+    return {};
+  }
+
+  const session = await getServerSession(authOptions);
+  let bizName = "";
+  if (session?.user?.email) {
+    try {
+      const userRows = await sql`
+        SELECT t.name as tenant_name
+        FROM admin_users u
+        JOIN tenants t ON u.tenant_id = t.id
+        WHERE LOWER(u.email) = ${session.user.email.toLowerCase()}
+        LIMIT 1
+      `;
+      bizName = userRows[0]?.tenant_name?.trim();
+    } catch {}
+  }
+
+  return {
+    title: {
+      template: bizName ? `%s | ${bizName}` : "%s",
+      default: bizName ? bizName : "Dashboard",
+    },
+  };
+}
 
 // Request-level memoized accent query to avoid duplicate database hits across layout evaluations
 const getCachedUserAccent = cache(async (email: string) => {
@@ -51,6 +82,24 @@ export default async function DashboardRootLayout({
     userSession = await getServerSession(authOptions);
     if (!userSession?.user) {
       redirect("/login");
+    }
+
+    // Enforce that user has a valid, linked business setup
+    const email = userSession.user.email?.toLowerCase();
+    const userRows = await sql`
+      SELECT u.tenant_id, t.id as active_tenant_id, t.payment_status
+      FROM admin_users u
+      LEFT JOIN tenants t ON u.tenant_id = t.id
+      WHERE LOWER(u.email) = ${email}
+      LIMIT 1
+    `;
+
+    if (userRows.length === 0 || !userRows[0].tenant_id || !userRows[0].active_tenant_id) {
+      redirect("/onboarding");
+    }
+
+    if (userRows[0].payment_status === "pending_payment") {
+      redirect("/onboarding");
     }
   }
 

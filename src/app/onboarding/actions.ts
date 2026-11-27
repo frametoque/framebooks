@@ -127,6 +127,7 @@ export async function completeOnboarding(formData: FormData) {
 
     const isFreePlan = planName.toLowerCase() === "free";
     const paymentStatus = isFreePlan ? 'paid' : 'pending_payment';
+    const includePos = formData.get("includePos") === "true";
 
     // Create a new tenant with payment_status
     const newTenant = await sql`
@@ -135,6 +136,16 @@ export async function completeOnboarding(formData: FormData) {
       RETURNING id
     `;
     const tenantId = newTenant[0].id;
+
+    if (includePos) {
+      await sql`
+        INSERT INTO tenant_addons (tenant_id, addon_key, status, price, billing_interval, purchased_at)
+        VALUES (${tenantId}, 'pos', ${isFreePlan ? 'active' : 'pending'}, 3000, 'monthly', NOW())
+        ON CONFLICT (tenant_id, addon_key) DO UPDATE SET 
+          status = ${isFreePlan ? 'active' : 'pending'},
+          updated_at = NOW()
+      `.catch(() => {});
+    }
 
     // Check if user already exists in admin_users
     const existing = await sql`
@@ -299,6 +310,7 @@ export async function initiateOnboardingCheckoutAction(params: {
   planName: string;
   billingCycle: "monthly" | "yearly";
   couponCode?: string;
+  includePos?: boolean;
 }) {
   try {
     const { userId, session } = await auth();
@@ -338,8 +350,21 @@ export async function initiateOnboardingCheckoutAction(params: {
     }
 
     const plan = planRows[0];
-    const baseAmount = params.billingCycle === "yearly" ? Number(plan.price_yearly) : Number(plan.price_monthly);
+    const planBaseAmount = params.billingCycle === "yearly" ? Number(plan.price_yearly) : Number(plan.price_monthly);
+    const posAddonAmount = params.includePos ? (params.billingCycle === "yearly" ? 30000 : 3000) : 0;
+    const baseAmount = planBaseAmount + posAddonAmount;
     let amount = addPackageGatewayFee(baseAmount, params.billingCycle);
+
+    if (params.includePos && tenantId) {
+      await sql`
+        INSERT INTO tenant_addons (tenant_id, addon_key, status, price, billing_interval, purchased_at)
+        VALUES (${tenantId}, 'pos', 'pending', ${posAddonAmount}, ${params.billingCycle}, NOW())
+        ON CONFLICT (tenant_id, addon_key) DO UPDATE SET 
+          price = ${posAddonAmount},
+          billing_interval = ${params.billingCycle},
+          updated_at = NOW()
+      `.catch(() => {});
+    }
 
     if (params.couponCode) {
       const valRes = await validateCouponAction(params.couponCode, params.planName);
@@ -379,6 +404,7 @@ export async function completeOnboardingSandboxAction(params: {
   planName: string;
   billingCycle: "monthly" | "yearly";
   amount: number;
+  includePos?: boolean;
 }) {
   try {
     const { userId } = await auth();
@@ -391,6 +417,15 @@ export async function completeOnboardingSandboxAction(params: {
       amount: params.amount,
       sessionId: sandboxSession,
     });
+
+    if (res.success && params.includePos) {
+      await sql`
+        INSERT INTO tenant_addons (tenant_id, addon_key, status, price, billing_interval, purchased_at)
+        VALUES (${params.tenantId}, 'pos', 'active', ${params.billingCycle === 'yearly' ? 30000 : 3000}, ${params.billingCycle}, NOW())
+        ON CONFLICT (tenant_id, addon_key) DO UPDATE SET status = 'active', updated_at = NOW()
+      `.catch(() => {});
+    }
+
     return res;
   } catch (err: any) {
     console.error("Error completing sandbox onboarding payment:", err);

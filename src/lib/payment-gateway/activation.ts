@@ -216,6 +216,13 @@ export async function activateSubscriptionFromGateway(params: ActivationParams):
         )
       `;
 
+      // 7. If tenant had pending POS add-on requested during onboarding, activate it
+      await sqlTx`
+        UPDATE tenant_addons 
+        SET status = 'active', expires_at = ${newEnd}, updated_at = NOW()
+        WHERE tenant_id = ${tenantId} AND addon_key = 'pos'
+      `.catch(() => {});
+
       return { success: true, paymentId };
     });
   } catch (err: any) {

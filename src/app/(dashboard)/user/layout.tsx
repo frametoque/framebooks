@@ -144,7 +144,8 @@ function LayoutContent({ children }) {
 
   const [tenantInfo, setTenantInfo] = useState<{
     id?: number;
-    tenantId?: number;
+    tenantId?: number | null;
+    has_business?: boolean;
     plan: string;
     name: string;
     logo_url: string | null;
@@ -240,15 +241,15 @@ function LayoutContent({ children }) {
 
   useEffect(() => {
     if (isLoaded && user && !(user as any).tenantId) {
-      router.push("/onboarding");
+      router.replace("/onboarding");
     }
   }, [isLoaded, user, router]);
 
   useEffect(() => {
-    if (tenantInfo.payment_status === 'pending_payment') {
-      router.push("/onboarding");
+    if (tenantInfo && tenantInfo.plan !== 'Loading...' && (tenantInfo.has_business === false || !tenantInfo.tenantId || tenantInfo.payment_status === 'pending_payment')) {
+      router.replace("/onboarding");
     }
-  }, [tenantInfo.payment_status, router]);
+  }, [tenantInfo, router]);
 
   useEffect(() => {
     if (tenantInfo.is_cashier_only) {
@@ -668,9 +669,16 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
   };
 
   useEffect(() => {
-    const pageTitle = getPageTitle(pathname);
-    document.title = pageTitle ? `${pageTitle} | Framebooks` : "Framebooks";
-  }, [pathname]);
+    const pageTitle = dynamicTitle || getPageTitle(pathname);
+    const businessName = tenantInfo?.name?.trim();
+    if (pageTitle && businessName && businessName !== "Loading...") {
+      document.title = `${pageTitle} | ${businessName} | Framebooks`;
+    } else if (pageTitle) {
+      document.title = `${pageTitle} | Framebooks`;
+    } else {
+      document.title = "Framebooks";
+    }
+  }, [pathname, dynamicTitle, tenantInfo?.name]);
 
   useEffect(() => {
     const updateDate = () => {

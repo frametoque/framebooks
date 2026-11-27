@@ -1,7 +1,7 @@
 import React from 'react';
 
 export const metadata = {
-  title: 'Cookie Policy - Framebooks',
+  title: 'Cookie Policy',
   description: 'Understand how Framebooks uses cookies and local browser storage to keep your session secure.',
 };
 

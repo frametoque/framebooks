@@ -26,7 +26,7 @@ import {
   Sparkles,
   ChevronDown
 } from "lucide-react";
-import { MdArrowForward, MdKeyboardArrowLeft, MdCheck } from "react-icons/md";
+import { MdArrowForward, MdKeyboardArrowLeft, MdCheck, MdPointOfSale } from "react-icons/md";
 import {
   completeOnboarding,
   validateCouponAction,
@@ -50,6 +50,7 @@ export default function OnboardingPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState("Pro");
+  const [includePos, setIncludePos] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -228,6 +229,7 @@ export default function OnboardingPage() {
       formData.append("logo", logoFile);
     }
     formData.append("plan", selectedPlan);
+    formData.append("includePos", includePos ? "true" : "false");
 
     const codeToApply = appliedCoupon?.code || couponInput.trim();
     if (codeToApply) {
@@ -265,6 +267,7 @@ export default function OnboardingPage() {
         planName: selectedPlan,
         billingCycle,
         couponCode: appliedCoupon?.code,
+        includePos,
       });
 
       if (!res.success || !("provider" in res)) {
@@ -316,7 +319,9 @@ export default function OnboardingPage() {
       );
       const baseMonthly = currentPlanObj?.monthlyPrice ?? currentPlanObj?.price_monthly ?? 0;
       const baseYearly = currentPlanObj?.yearlyPrice ?? currentPlanObj?.price_yearly ?? (baseMonthly * 10);
-      const basePrice = billingCycle === "monthly" ? baseMonthly : baseYearly;
+      const planBasePrice = billingCycle === "monthly" ? baseMonthly : baseYearly;
+      const posAddonPrice = includePos ? (billingCycle === "monthly" ? 3000 : 30000) : 0;
+      const basePrice = planBasePrice + posAddonPrice;
       const priceInfo = getFinalPrice(basePrice, true);
 
       const res = await completeOnboardingSandboxAction({
@@ -324,6 +329,7 @@ export default function OnboardingPage() {
         planName: selectedPlan,
         billingCycle,
         amount: priceInfo.finalPrice,
+        includePos,
       });
 
       if (res.success) {
@@ -397,7 +403,9 @@ export default function OnboardingPage() {
   );
   const baseMonthly = currentPlanObj?.monthlyPrice ?? currentPlanObj?.price_monthly ?? 0;
   const baseYearly = currentPlanObj?.yearlyPrice ?? currentPlanObj?.price_yearly ?? (baseMonthly * 10);
-  const basePrice = billingCycle === "monthly" ? baseMonthly : baseYearly;
+  const planBasePrice = billingCycle === "monthly" ? baseMonthly : baseYearly;
+  const posAddonPrice = includePos ? (billingCycle === "monthly" ? 3000 : 30000) : 0;
+  const basePrice = planBasePrice + posAddonPrice;
   const activePriceInfo = getFinalPrice(basePrice, true);
 
   if (checkingInvite) {
@@ -477,9 +485,14 @@ export default function OnboardingPage() {
             <div className="p-5 rounded-2xl bg-[#F9FAFB] border border-[#E5E7EB] space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
-                  <span className="text-xs text-gray-500 font-medium">Selected Plan:</span>
-                  <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 font-medium">Selected Plan & Add-ons:</span>
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-lg font-black text-[#082830]">{selectedPlan}</span>
+                    {includePos && (
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#E6FDF0] text-[#007A31] border border-[#00E35B]/30 font-bold">
+                        + POS Add-on
+                      </span>
+                    )}
                     {activePriceInfo.text && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#E6FDF0] text-[#007A31] font-bold">
                         {activePriceInfo.text}
@@ -512,6 +525,30 @@ export default function OnboardingPage() {
                     Yearly (Save 17% · 2 Mo Free)
                   </button>
                 </div>
+              </div>
+
+              {/* Line items breakdown */}
+              <div className="pt-3 border-t border-[#E5E7EB]/70 space-y-2 text-xs">
+                <div className="flex justify-between text-gray-600">
+                  <span>{selectedPlan} Plan ({billingCycle})</span>
+                  <span className="font-semibold text-gray-900">
+                    LKR {Number(planBasePrice).toLocaleString()}
+                  </span>
+                </div>
+                {includePos && (
+                  <div className="flex justify-between text-[#007A31]">
+                    <span>Point of Sale (POS) Add-on ({billingCycle})</span>
+                    <span className="font-semibold">
+                      +LKR {Number(posAddonPrice).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {activePriceInfo.isDiscounted && !activePriceInfo.isFree && (
+                  <div className="flex justify-between text-[#007A31] font-medium">
+                    <span>Discount applied ({activePriceInfo.text})</span>
+                    <span>-LKR {Number(basePrice - activePriceInfo.finalPrice).toLocaleString()}</span>
+                  </div>
+                )}
               </div>
 
               <div className="pt-3 border-t border-[#E5E7EB] flex items-center justify-between">
@@ -608,12 +645,14 @@ export default function OnboardingPage() {
   // STEP 3: Pricing Plans & Coupon
   // ─────────────────────────────────────────────────────────────
   if (step === 3) {
-    const isPaid = selectedPlan !== "Free" && (!appliedCoupon || !appliedCoupon.isComplimentary);
+    const isPaid = (selectedPlan !== "Free" || includePos) && (!appliedCoupon || !appliedCoupon.isComplimentary);
     const selectedPlanObj = displayPlans.find((p: any) => p.name === selectedPlan);
-    const selectedPriceInfo = getFinalPrice(selectedPlanObj?.monthlyPrice ?? selectedPlanObj?.price_monthly ?? 0, true);
+    const planBaseMonthly = selectedPlanObj?.monthlyPrice ?? selectedPlanObj?.price_monthly ?? 0;
+    const posAddonMonthly = includePos ? 3000 : 0;
+    const selectedPriceInfo = getFinalPrice(planBaseMonthly + posAddonMonthly, true);
 
     return (
-      <div className="min-h-screen md:h-screen md:overflow-hidden bg-[#F9FAFB] text-[#082830] flex flex-col">
+      <div className="min-h-screen bg-[#F9FAFB] text-[#082830] flex flex-col">
 
         {/* ── STICKY HEADER ── */}
         <div className="sticky top-0 z-20 bg-[#F9FAFB]/95 backdrop-blur-sm border-b border-[#E5E7EB]/60 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
@@ -773,6 +812,62 @@ export default function OnboardingPage() {
               })}
             </div>
 
+            {/* POS Add-on Option Card (Mobile) */}
+            <div className="md:hidden mt-3 mb-2">
+              <div
+                onClick={() => {
+                  const next = !includePos;
+                  setIncludePos(next);
+                  if (next && selectedPlan === "Free") {
+                    setSelectedPlan("Pro");
+                  }
+                }}
+                className={`rounded-3xl p-5 border transition-all cursor-pointer select-none ${
+                  includePos
+                    ? "border-[#00E35B] ring-2 ring-[#00E35B] bg-[#E6FDF0]/20 shadow-md"
+                    : "border-[#E5E7EB] bg-white hover:border-[#00E35B]/40 shadow-xs"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-[#E6FDF0] flex items-center justify-center text-[#00E35B] shrink-0 border border-[#00E35B]/20">
+                      <MdPointOfSale className="w-7 h-7 text-[#00E35B]" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-black text-[#082830]">Point of Sale (POS)</h4>
+                      <span className="text-[10px] font-bold text-[#007A31] bg-[#E6FDF0] px-2 py-0.5 rounded-full border border-[#00E35B]/30">
+                        +LKR 3,000 / mo
+                      </span>
+                    </div>
+                  </div>
+                  <div
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                      includePos
+                        ? "bg-[#00E35B] text-[#041418]"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {includePos ? "Added" : "+ Add"}
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-3 border-t border-[#E5E7EB]/70 text-xs text-gray-600">
+                  <div className="flex items-start gap-2">
+                    <MdCheck className="w-4 h-4 text-[#00E35B] shrink-0 mt-0.5" />
+                    <span>High-speed retail counter checkout with USB/Bluetooth & camera barcode scanning.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <MdCheck className="w-4 h-4 text-[#00E35B] shrink-0 mt-0.5" />
+                    <span>Auto-syncs stock with every sale, supporting thermal receipt printing and cash drawers.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <MdCheck className="w-4 h-4 text-[#00E35B] shrink-0 mt-0.5" />
+                    <span>Cashier shift management, manager PIN overrides, split tenders, and WooCommerce sync.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* ════════════════════════════════════════════
                 DESKTOP: Full 3-column plan grid
                 (hidden on <md)
@@ -875,6 +970,80 @@ export default function OnboardingPage() {
               })}
             </div>
 
+            {/* POS Add-on Option Card (Desktop) */}
+            <div className="hidden md:block max-w-5xl mx-auto w-full mb-4">
+              <div
+                onClick={() => {
+                  const next = !includePos;
+                  setIncludePos(next);
+                  if (next && selectedPlan === "Free") {
+                    setSelectedPlan("Pro");
+                  }
+                }}
+                className={`rounded-3xl p-5 lg:p-6 border transition-all cursor-pointer select-none ${
+                  includePos
+                    ? "border-[#00E35B] ring-2 ring-[#00E35B] bg-[#E6FDF0]/15 shadow-md"
+                    : "border-[#E5E7EB] bg-white hover:border-[#00E35B]/40 hover:shadow-xs"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-13 h-13 rounded-2xl bg-[#E6FDF0] flex items-center justify-center text-[#00E35B] shrink-0 border border-[#00E35B]/20">
+                      <MdPointOfSale className="w-7 h-7 text-[#00E35B]" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xl font-black text-[#082830]">Point of Sale (POS)</h4>
+                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#082830] text-white uppercase tracking-wider">
+                          Optional Add-on
+                        </span>
+                        <span className="text-xs font-bold text-[#007A31] bg-[#E6FDF0] px-2.5 py-0.5 rounded-full border border-[#00E35B]/30">
+                          +LKR 3,000 / month
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Retail terminal & stock hardware management for Pro & Pro Plus workspaces
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        includePos
+                          ? "bg-[#00E35B] text-[#041418] shadow-sm"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                    >
+                      {includePos ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 text-[#041418]" />
+                          <span>POS Added (+LKR 3,000/mo)</span>
+                        </>
+                      ) : (
+                        <span>+ Add POS to Workspace (+LKR 3,000/mo)</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 pt-4 mt-4 border-t border-[#E5E7EB]/70 text-xs text-gray-600">
+                  <div className="flex items-start gap-2">
+                    <MdCheck className="w-4 h-4 text-[#00E35B] shrink-0 mt-0.5 font-bold" />
+                    <span className="leading-relaxed">High-speed retail counter checkout with USB/Bluetooth & camera barcode scanning.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <MdCheck className="w-4 h-4 text-[#00E35B] shrink-0 mt-0.5 font-bold" />
+                    <span className="leading-relaxed">Auto-syncs stock with every sale, supporting thermal receipt printing and cash drawers.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <MdCheck className="w-4 h-4 text-[#00E35B] shrink-0 mt-0.5 font-bold" />
+                    <span className="leading-relaxed">Cashier shift management, manager PIN overrides, split tenders, and WooCommerce sync.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* ── Coupon section — inline on desktop, hidden on mobile (in sticky CTA) ── */}
             <div className="hidden md:block max-w-md mx-auto w-full space-y-2 mb-1 md:shrink-0">
               <div className="p-3.5 rounded-2xl bg-white border border-[#E5E7EB] shadow-2xs space-y-2">
@@ -936,7 +1105,7 @@ export default function OnboardingPage() {
                 {submitting ? (
                   <><Loader size="sm" /> Finalizing Setup...</>
                 ) : isPaid ? (
-                  <><span>Continue to Billing for {selectedPlan}</span> <ArrowRight className="h-4 w-4" /></>
+                  <><span>Continue to Billing for {selectedPlan}{includePos ? " + POS" : ""}</span> <ArrowRight className="h-4 w-4" /></>
                 ) : (
                   <><CheckCircle2 className="h-4 w-4" /> Complete Setup with {selectedPlan}</>
                 )}
@@ -1006,7 +1175,7 @@ export default function OnboardingPage() {
             <div className="flex-1 min-w-0">
               <div className="text-[11px] text-gray-500 font-medium">Selected plan</div>
               <div className="flex items-baseline gap-1">
-                <span className="text-sm font-black text-[#082830]">{selectedPlan}</span>
+                <span className="text-sm font-black text-[#082830]">{selectedPlan}{includePos ? " + POS" : ""}</span>
                 <span className="text-xs text-gray-500">
                   — {selectedPriceInfo.isFree ? "Free forever" : `LKR ${Number(selectedPriceInfo.finalPrice).toLocaleString()}/mo`}
                 </span>

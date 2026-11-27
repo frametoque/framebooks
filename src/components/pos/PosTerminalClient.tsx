@@ -69,6 +69,10 @@ export function PosTerminalClient({
   canViewReports,
   isWooConnected = false,
 }: PosTerminalClientProps) {
+  useEffect(() => {
+    const biz = tenantName?.trim() || "My Business";
+    document.title = `POS Terminal | ${biz} | Framebooks`;
+  }, [tenantName]);
   // Products catalog state
   const [products, setProducts] = useState<StockItem[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);

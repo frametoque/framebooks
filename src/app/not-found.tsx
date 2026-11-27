@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "404 Not Found - Framebooks",
+  title: "404 Not Found",
   description: "The page you're looking for doesn't exist.",
   robots: "noindex, follow",
 };

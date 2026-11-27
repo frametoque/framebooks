@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Income | Framebooks",
+  title: "Income",
 };
 
 export default function IncomeLayout({

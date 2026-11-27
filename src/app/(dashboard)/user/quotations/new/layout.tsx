@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "New Quotation | Framebooks",
+  title: "New Quotation",
 };
 
 export default function NewQuotationLayout({

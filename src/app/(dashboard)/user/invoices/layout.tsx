@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Invoices | Framebooks",
+  title: "Invoices",
 };
 
 export default function InvoicesLayout({
