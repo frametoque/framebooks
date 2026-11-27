@@ -7,7 +7,7 @@ import {
   MdCheck, MdTrendingUp, MdAccountBalance, MdCallMade, MdCallReceived, 
   MdInsertDriveFile, MdGroup, MdInventory, MdSecurity, MdGroups, MdPerson, 
   MdArrowForward, MdPointOfSale, MdQrCodeScanner, MdPrint, MdFlashOn, 
-  MdLockOutline, MdPhoneIphone 
+  MdLockOutline, MdPhoneIphone, MdSearch, MdShoppingCart 
 } from 'react-icons/md';
 import { kpis, features, modulesData, workflowSteps, securityFeatures, plans, comparison, faqs, posFeatures } from '@/data/landing/content';
 import PlanFinderWidget from '@/components/landing/PlanFinderWidget';
@@ -457,10 +457,10 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
               </p>
             </div>
 
-            {/* POS Terminal Visual Mockup */}
-            <div className="mb-14 sm:mb-20 rounded-2xl sm:rounded-3xl border border-white/10 bg-[#0B1E22]/90 backdrop-blur-xl shadow-2xl p-3 sm:p-6 overflow-hidden">
+            {/* POS Terminal Visual Mockup (16:9 Widescreen Retail Layout) */}
+            <div className="mb-14 sm:mb-20 rounded-2xl sm:rounded-3xl border border-white/10 bg-[#0B1E22]/90 backdrop-blur-xl shadow-2xl p-4 sm:p-5 lg:p-6 overflow-hidden w-full max-w-5xl mx-auto flex flex-col justify-between md:aspect-[16/9]">
               {/* POS Top Bar Mockup */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-white/10 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-3 border-b border-white/10 text-xs shrink-0">
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="w-7 h-7 rounded-lg bg-[#00E35B] text-[#041418] flex items-center justify-center font-black text-xs">
                     FT
@@ -496,18 +496,18 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
               </div>
 
               {/* POS Interface Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 flex-1 min-h-0">
                 {/* Products Column */}
-                <div className="lg:col-span-8 flex flex-col gap-3">
+                <div className="lg:col-span-8 flex flex-col justify-between gap-2.5 min-h-0">
                   {/* Search Bar */}
-                  <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-gray-400">
-                    <span className="text-gray-400">🔍</span>
-                    <span className="text-gray-300 font-medium truncate">Scan or search products... (Press '/' or F1 to focus, Enter to add)</span>
+                  <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-gray-400 shrink-0">
+                    <MdSearch className="w-4 h-4 text-gray-400 shrink-0" />
+                    <span className="text-gray-300 font-medium truncate">Scan or search products... (Press &apos;/&apos; or F1 to focus, Enter to add)</span>
                     <span className="ml-auto px-1.5 py-0.5 rounded bg-black/40 text-[10px] font-mono text-gray-400">/</span>
                   </div>
 
                   {/* Categories */}
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 text-[11px] scrollbar-none">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 text-[11px] scrollbar-none shrink-0">
                     <span className="px-3 py-1 rounded-full bg-[#00E35B] text-[#041418] font-bold">All</span>
                     <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">Hardware</span>
                     <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">Accessories</span>
@@ -515,10 +515,10 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                     <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">General</span>
                   </div>
 
-                  {/* Products Grid Mock */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-left">
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
-                      <div className="flex justify-between items-start gap-1 mb-2">
+                  {/* Products Grid Mock (2x3 Grid balanced for 16:9 ratio) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-left flex-1 min-h-0">
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
+                      <div className="flex justify-between items-start gap-1 mb-1.5">
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">HARDWARE</span>
                           <span className="text-xs font-bold text-white leading-tight">Desktop Label Printer</span>
@@ -526,14 +526,14 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">9</span>
                       </div>
-                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
+                      <div className="flex justify-between items-end mt-1.5 pt-1.5 border-t border-white/5">
                         <span className="text-xs font-black text-white">LKR 29,500</span>
                         <span className="text-[10px] text-gray-400">9 pcs</span>
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
-                      <div className="flex justify-between items-start gap-1 mb-2">
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
+                      <div className="flex justify-between items-start gap-1 mb-1.5">
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">HARDWARE</span>
                           <span className="text-xs font-bold text-white leading-tight">Heavy Duty Cash Drawer (RJ11)</span>
@@ -541,14 +541,59 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">8</span>
                       </div>
-                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
+                      <div className="flex justify-between items-end mt-1.5 pt-1.5 border-t border-white/5">
                         <span className="text-xs font-black text-white">LKR 16,500</span>
                         <span className="text-[10px] text-gray-400">8 pcs</span>
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
-                      <div className="flex justify-between items-start gap-1 mb-2">
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
+                      <div className="flex justify-between items-start gap-1 mb-1.5">
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">HARDWARE</span>
+                          <span className="text-xs font-bold text-white leading-tight">Omnidirectional 2D Scanner</span>
+                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FT-SCN-002</span>
+                        </div>
+                        <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">12</span>
+                      </div>
+                      <div className="flex justify-between items-end mt-1.5 pt-1.5 border-t border-white/5">
+                        <span className="text-xs font-black text-white">LKR 14,800</span>
+                        <span className="text-[10px] text-gray-400">12 pcs</span>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
+                      <div className="flex justify-between items-start gap-1 mb-1.5">
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">ACCESSORIES</span>
+                          <span className="text-xs font-bold text-white leading-tight">58mm Thermal Sticker Roll</span>
+                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FT-ACC-010</span>
+                        </div>
+                        <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">45</span>
+                      </div>
+                      <div className="flex justify-between items-end mt-1.5 pt-1.5 border-t border-white/5">
+                        <span className="text-xs font-black text-white">LKR 3,200</span>
+                        <span className="text-[10px] text-gray-400">45 pcs</span>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
+                      <div className="flex justify-between items-start gap-1 mb-1.5">
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">ACCESSORIES</span>
+                          <span className="text-xs font-bold text-white leading-tight">80mm Receipt Paper Box</span>
+                          <span className="text-[10px] text-emerald-400 font-mono block mt-0.5">FT-ACC-014</span>
+                        </div>
+                        <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">20</span>
+                      </div>
+                      <div className="flex justify-between items-end mt-1.5 pt-1.5 border-t border-white/5">
+                        <span className="text-xs font-black text-white">LKR 8,500</span>
+                        <span className="text-[10px] text-gray-400">20 pcs</span>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#00E35B]/40 transition-colors flex flex-col justify-between">
+                      <div className="flex justify-between items-start gap-1 mb-1.5">
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-gray-400 block font-semibold">GENERAL</span>
                           <span className="text-xs font-bold text-white leading-tight">TEST Auto QR Product</span>
@@ -556,7 +601,7 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                         </div>
                         <span className="w-5 h-5 rounded-full bg-[#00E35B]/20 text-[#00E35B] text-[10px] font-bold flex items-center justify-center shrink-0">16</span>
                       </div>
-                      <div className="flex justify-between items-end mt-2 pt-2 border-t border-white/5">
+                      <div className="flex justify-between items-end mt-1.5 pt-1.5 border-t border-white/5">
                         <span className="text-xs font-black text-white">LKR 1,000</span>
                         <span className="text-[10px] text-gray-400">16 pcs</span>
                       </div>
@@ -565,28 +610,29 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                 </div>
 
                 {/* Cart Order Summary Column */}
-                <div className="lg:col-span-4 rounded-xl bg-black/40 border border-white/10 p-3.5 flex flex-col justify-between text-left">
+                <div className="lg:col-span-4 rounded-xl bg-black/40 border border-white/10 p-3 sm:p-3.5 flex flex-col justify-between text-left min-h-0">
                   <div>
-                    <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/10">
+                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
                       <div className="flex items-center gap-1.5 font-bold text-xs text-white">
-                        <span>🛒 Current Order</span>
+                        <MdShoppingCart className="w-3.5 h-3.5 text-[#00E35B] shrink-0" />
+                        <span>Current Order</span>
                         <span className="px-1.5 py-0.2 rounded-full bg-[#00E35B] text-[#041418] text-[10px] font-bold">2</span>
                       </div>
                       <span className="text-[10px] text-gray-400">Walk-in Customer</span>
                     </div>
 
                     {/* Cart Items */}
-                    <div className="space-y-2 mb-3">
+                    <div className="space-y-1.5 mb-2">
                       <div className="p-2 rounded-lg bg-white/5 text-xs flex justify-between items-center">
                         <div className="min-w-0 pr-2">
-                          <p className="font-bold text-white truncate">Desktop Label Printer</p>
+                          <p className="font-bold text-white truncate text-xs">Desktop Label Printer</p>
                           <p className="text-[10px] text-gray-400">LKR 29,500 × 1</p>
                         </div>
                         <span className="font-bold text-[#00E35B] shrink-0 text-xs">LKR 29,500</span>
                       </div>
                       <div className="p-2 rounded-lg bg-white/5 text-xs flex justify-between items-center">
                         <div className="min-w-0 pr-2">
-                          <p className="font-bold text-white truncate">Cash Drawer (RJ11)</p>
+                          <p className="font-bold text-white truncate text-xs">Cash Drawer (RJ11)</p>
                           <p className="text-[10px] text-gray-400">LKR 16,500 × 1</p>
                         </div>
                         <span className="font-bold text-[#00E35B] shrink-0 text-xs">LKR 16,500</span>
@@ -600,14 +646,14 @@ export default function LandingClient({ initialPlans }: { initialPlans?: any[] }
                       <span>Subtotal</span>
                       <span className="font-semibold text-white">LKR 46,000</span>
                     </div>
-                    <div className="flex justify-between items-center text-[11px] text-[#00E35B] mb-2.5">
+                    <div className="flex justify-between items-center text-[11px] text-[#00E35B] mb-2">
                       <span className="flex items-center gap-1">
                         <span>% Discounts & Offers</span>
                         <kbd className="px-1 py-0.2 rounded bg-black/50 text-[9px] text-gray-300">F4</kbd>
                       </span>
                       <span>LKR 0</span>
                     </div>
-                    <div className="flex justify-between items-baseline mb-3">
+                    <div className="flex justify-between items-baseline mb-2.5">
                       <span className="text-xs uppercase font-bold text-gray-400 tracking-wider">TOTAL</span>
                       <span className="text-lg font-black text-[#00E35B]">LKR 46,000</span>
                     </div>
