@@ -9,6 +9,22 @@ interface HardwareBarcodeScannerOptions {
   maxIntervalMs?: number;
 }
 
+let currentBellAudioCtx: AudioContext | null = null;
+let bellRepeatTimer: any = null;
+
+export function stopManagerBellSound() {
+  if (bellRepeatTimer) {
+    clearInterval(bellRepeatTimer);
+    bellRepeatTimer = null;
+  }
+  if (currentBellAudioCtx) {
+    try {
+      currentBellAudioCtx.close();
+    } catch {}
+    currentBellAudioCtx = null;
+  }
+}
+
 /**
  * Manager Alert Service Desk Bell Synthesizer.
  * Synthesizes a realistic double-strike brass service/counter bell (Ding-Dong)
@@ -17,10 +33,12 @@ interface HardwareBarcodeScannerOptions {
  */
 export function playManagerBellSound() {
   if (typeof window === 'undefined') return;
+  stopManagerBellSound();
   try {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
+    currentBellAudioCtx = ctx;
     const t0 = ctx.currentTime;
 
     const playBellChime = (startTime: number, freq: number, duration: number, volume: number) => {
@@ -81,7 +99,7 @@ export function playManagerBellSound() {
 /**
  * Web Audio API synthesizer for instant POS hardware feedback without external audio files.
  */
-export function playScanSound(type: 'success' | 'error' | 'beep' | 'drawer' | 'bell') {
+export function playScanSound(type: 'success' | 'error' | 'beep' | 'drawer' | 'bell' = 'beep') {
   if (typeof window === 'undefined') return;
   try {
     if (type === 'bell') {
@@ -149,14 +167,28 @@ export function playScanSound(type: 'success' | 'error' | 'beep' | 'drawer' | 'b
 }
 
 /**
- * Global Hardware Barcode & QR Scanner Listener (USB / Bluetooth).
+ * Strips hardware scanner AIM symbology prefixes (e.g., ]C1, ]e0, ]Q1),
+ * control characters, carriage returns, and trims whitespace.
+ */
+export function sanitizeBarcode(raw: string): string {
+  if (!raw) return "";
+  let clean = raw.trim();
+  // Strip AIM Symbology Identifiers (e.g., ]C1, ]e0, ]Q1, ]A0)
+  clean = clean.replace(/^\][a-zA-Z0-9]{2,3}/, "");
+  // Remove non-printable / control ASCII characters
+  clean = clean.replace(/[\x00-\x1F\x7F-\x9F]/g, "").trim();
+  return clean;
+}
+
+/**
+ * Global Hardware Barcode & QR Scanner Listener (USB / Bluetooth / 2.4GHz).
  * Detects rapid automated keyboard stroke streams ending with 'Enter'.
  */
 export function useHardwareBarcodeScanner({
   onScan,
   enabled = true,
   minChars = 3,
-  maxIntervalMs = 65,
+  maxIntervalMs = 95,
 }: HardwareBarcodeScannerOptions) {
   const bufferRef = useRef<string>("");
   const lastKeyTimeRef = useRef<number>(0);
@@ -181,31 +213,37 @@ export function useHardwareBarcodeScanner({
 
       // If key is Enter, evaluate if we have a scanned sequence
       if (e.key === "Enter") {
-        const buffer = bufferRef.current.trim();
+        const rawBuffer = bufferRef.current;
+        const cleaned = sanitizeBarcode(rawBuffer);
         const deltas = timingDeltasRef.current;
 
-        // Calculate average time between keys
+        // Calculate average time between keys (excluding idle time before first char)
         const avgInterval = deltas.length > 0
           ? deltas.reduce((a, b) => a + b, 0) / deltas.length
-          : 999;
+          : 0;
 
-        // Standard hardware barcode/QR scanners operate at 10-60ms per keystroke.
-        // Human typing is typically > 100ms.
-        const isHardwareRapid = deltas.length >= minChars - 1 && avgInterval < maxIntervalMs;
-        const isBodyTarget = e.target === document.body;
+        const isTargetInput =
+          e.target instanceof HTMLInputElement ||
+          e.target instanceof HTMLTextAreaElement ||
+          Boolean((e.target as HTMLElement)?.isContentEditable);
 
-        if (buffer.length >= minChars && (isHardwareRapid || isBodyTarget)) {
+        // Rapid hardware typing (most scanners 10-60ms per keystroke, up to 95ms over Bluetooth)
+        const isHardwareRapid = deltas.length >= 2 && avgInterval < maxIntervalMs;
+        // Non-input ambient scan: user is not typing in any text box, scanning directly into the page
+        const isAmbientScan = !isTargetInput && rawBuffer.length >= minChars;
+
+        if (cleaned.length >= minChars && (isHardwareRapid || isAmbientScan)) {
           // Scanner detected - prevent duplicate propagation and clear input text
           lastHardwareScanTimeRef.current = now;
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
 
-          if (e.target && (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+          if (isTargetInput && e.target && (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
             e.target.value = "";
           }
 
-          onScan(buffer);
+          onScan(cleaned);
         }
 
         // Reset buffer
@@ -220,14 +258,17 @@ export function useHardwareBarcodeScanner({
       }
 
       // If interval between consecutive keys is too long, reset buffer (user paused or was manual typing)
-      if (delta > 300) {
+      if (delta > 250) {
         bufferRef.current = "";
         timingDeltasRef.current = [];
       }
 
       if (e.key.length === 1) {
+        // Only record intervals between characters (char 2 onwards), NOT the idle time before char 1!
+        if (bufferRef.current.length > 0) {
+          timingDeltasRef.current.push(delta);
+        }
         bufferRef.current += e.key;
-        timingDeltasRef.current.push(delta);
       }
     };
 

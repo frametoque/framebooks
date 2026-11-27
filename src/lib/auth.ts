@@ -144,32 +144,30 @@ export const authOptions: NextAuthOptions = {
             AND (last_login_at IS NULL OR last_login_at < NOW() - INTERVAL '1 hour')
         `.catch(() => {});
 
-        // Only query database if tenantId or dbId is not yet on the JWT token
-        if (token?.tenantId === undefined || token?.dbId === undefined) {
-          try {
-            const dbUser = await sql`
-              SELECT id, tenant_id, role, system_role, is_banned, full_name, avatar_url 
-              FROM admin_users 
-              WHERE LOWER(email) = ${email} 
-              LIMIT 1
-            `;
-            if (dbUser.length > 0) {
-              session.user.id = String(dbUser[0].id);
-              (session.user as any).dbId = dbUser[0].id;
-              (session.user as any).tenantId = dbUser[0].tenant_id;
-              (session.user as any).role = dbUser[0].role;
-              (session.user as any).systemRole = dbUser[0].system_role || 'user';
-              (session.user as any).isBanned = !!dbUser[0].is_banned;
-              if (dbUser[0].full_name && !session.user.name) {
-                session.user.name = dbUser[0].full_name;
-              }
-              if (dbUser[0].avatar_url) {
-                session.user.image = dbUser[0].avatar_url;
-              }
+        // Always sync tenant_id and role from admin_users so workspace switching reflects immediately
+        try {
+          const dbUser = await sql`
+            SELECT id, tenant_id, role, system_role, is_banned, full_name, avatar_url 
+            FROM admin_users 
+            WHERE LOWER(email) = ${email} 
+            LIMIT 1
+          `;
+          if (dbUser.length > 0) {
+            session.user.id = String(dbUser[0].id);
+            (session.user as any).dbId = dbUser[0].id;
+            (session.user as any).tenantId = dbUser[0].tenant_id;
+            (session.user as any).role = dbUser[0].role;
+            (session.user as any).systemRole = dbUser[0].system_role || 'user';
+            (session.user as any).isBanned = !!dbUser[0].is_banned;
+            if (dbUser[0].full_name && !session.user.name) {
+              session.user.name = dbUser[0].full_name;
             }
-          } catch (err) {
-            console.error("[Session Callback] DB lookup failed:", err);
+            if (dbUser[0].avatar_url) {
+              session.user.image = dbUser[0].avatar_url;
+            }
           }
+        } catch (err) {
+          console.error("[Session Callback] DB lookup failed:", err);
         }
       }
       return session;

@@ -9,6 +9,7 @@ import {
   MdArrowForward, MdPointOfSale, MdQrCodeScanner, MdPrint, MdFlashOn, 
   MdLockOutline, MdPhoneIphone, MdLocalOffer
 } from 'react-icons/md';
+import { SiWoocommerce } from 'react-icons/si';
 import { kpis, features, modulesData, workflowSteps, securityFeatures, plans, comparison, faqs, posFeatures } from '@/data/landing/content';
 import PlanFinderWidget from '@/components/landing/PlanFinderWidget';
 
@@ -104,11 +105,6 @@ export default function LandingClient({
               transition={{ delay: 0.4 }}
               className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-4 gap-y-1.5 text-xs sm:text-sm text-gray-500 font-medium"
             >
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#00C750]" />
-                Bank-grade encryption
-              </span>
-              <span className="hidden sm:inline text-gray-300">•</span>
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#00C750]" />
                 No credit card required
@@ -572,6 +568,7 @@ export default function LandingClient({
                       {feat.icon === 'MdLockOutline' && <MdLockOutline />}
                       {feat.icon === 'MdPrint' && <MdPrint />}
                       {feat.icon === 'MdPhoneIphone' && <MdPhoneIphone />}
+                      {feat.icon === 'SiWoocommerce' && <SiWoocommerce className="text-2xl" />}
                       {feat.icon === 'MdLocalOffer' && <MdLocalOffer />}
                     </div>
                     <h3 className="text-sm sm:text-xl font-bold text-white mb-1.5 sm:mb-2">{feat.title}</h3>

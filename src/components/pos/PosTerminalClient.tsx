@@ -7,7 +7,7 @@ import {
   CreditCard, DollarSign, UserCheck, CheckCircle2, AlertTriangle, AlertCircle, 
   Clock, X, Printer, Percent, RefreshCw, Zap, Keyboard, HelpCircle,
   Sparkles, Tag, UserPlus, Layers, Vault, Menu, ChevronRight, ShieldCheck,
-  Calendar
+  Calendar, Monitor, Building2, ChevronDown
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
@@ -26,7 +26,7 @@ import {
   getOrCreateShiftAction 
 } from "@/app/(dashboard)/pos/actions/sales";
 import { PosPromotion, loadPosPromotionsAction } from "@/app/(dashboard)/pos/actions/promotions";
-import { useHardwareBarcodeScanner, playScanSound, playManagerBellSound } from "./useHardwareBarcodeScanner";
+import { useHardwareBarcodeScanner, playScanSound, playManagerBellSound, sanitizeBarcode } from "./useHardwareBarcodeScanner";
 import { CameraScannerModal } from "./CameraScannerModal";
 import { ReceiptModal } from "./ReceiptModal";
 import { MdPointOfSale } from "react-icons/md";
@@ -38,12 +38,29 @@ import { CustomerSelectModal } from "./CustomerSelectModal";
 import { SpecialOffersModal } from "./SpecialOffersModal";
 import { ItemDiscountModal } from "./ItemDiscountModal";
 import { ManagerApprovalModal } from "./ManagerApprovalModal";
+import { PosBusinessSwitcher } from "./PosBusinessSwitcher";
+import { 
+  getUserBusinesses, 
+  UserBusinessItem, 
+  PendingInviteItem 
+} from "@/app/(dashboard)/user/actions/tenants";
 import { TenantLogo } from "@/components/TenantLogo";
+import {
+  PosClientDisplayState,
+  POS_CLIENT_CHANNEL_NAME,
+  getPosClientChannelName,
+  PosDisplayMessage,
+  PosClientDisplaySlide,
+  DEFAULT_CUSTOMER_DISPLAY_SLIDES,
+} from "@/lib/pos/client-display";
+import { printHtmlViaHiddenIframe } from "@/lib/pos/receipt-printer";
 
 interface PosTerminalClientProps {
+  tenantId?: number;
   initialShift: any | null;
   tenantName: string;
   tenantLogoUrl?: string | null;
+  tenantAccentColor?: string | null;
   userName: string;
   userRole: string;
   isCashierOnly: boolean;
@@ -56,9 +73,11 @@ interface PosTerminalClientProps {
 }
 
 export function PosTerminalClient({
+  tenantId = 1,
   initialShift,
   tenantName,
   tenantLogoUrl,
+  tenantAccentColor,
   userName,
   userRole,
   isCashierOnly,
@@ -189,6 +208,10 @@ export function PosTerminalClient({
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"Cash" | "Card" | "Bank Transfer">("Cash");
   const [tenderedCash, setTenderedCash] = useState<string>("");
+  const tenderedCashRef = useRef<string>(tenderedCash);
+  tenderedCashRef.current = tenderedCash;
+  const paymentMethodRef = useRef<"Cash" | "Card" | "Bank Transfer">(paymentMethod);
+  paymentMethodRef.current = paymentMethod;
   const [checkingOut, setCheckingOut] = useState(false);
 
   // Completed order & receipt state
@@ -197,11 +220,37 @@ export function PosTerminalClient({
   const [receiptLayout, setReceiptLayout] = useState<{ id: string; name: string; definition: any } | null>(null);
   const [receiptSettings, setReceiptSettings] = useState<{ header: string; footer: string }>({ header: "", footer: "Thank you for your purchase!" });
   const [allowNegativeStock, setAllowNegativeStock] = useState<boolean>(false);
+  const [customerDisplaySlides, setCustomerDisplaySlides] = useState<PosClientDisplaySlide[]>(DEFAULT_CUSTOMER_DISPLAY_SLIDES);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Role permissions
   const isCashier = isCashierOnly || userRole?.toLowerCase() === "cashier";
   const canAccessPosSettings = !isCashier && canManageStock;
+
+  // Business Switcher state (for users who are cashier on this business and have multiple businesses)
+  const [userBusinesses, setUserBusinesses] = useState<UserBusinessItem[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInviteItem[]>([]);
+  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+  const [isMobileSwitcherModalOpen, setIsMobileSwitcherModalOpen] = useState(false);
+  const switcherRef = useRef<HTMLDivElement>(null);
+
+  const loadBusinesses = useCallback(async () => {
+    try {
+      const res = await getUserBusinesses();
+      setUserBusinesses(res.businesses || []);
+      setPendingInvites(res.pendingInvites || []);
+    } catch (err) {
+      console.error("Failed to load user businesses in POS:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isCashier) {
+      loadBusinesses();
+    }
+  }, [isCashier, loadBusinesses]);
+
+  const shouldShowBusinessSwitcher = isCashier && (userBusinesses.length > 1 || pendingInvites.length > 0);
 
   // Live Date and Time for Counter Operations
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
@@ -244,36 +293,135 @@ export function PosTerminalClient({
   }>({ isSyncing: false, progress: null });
   const [syncCompletedNotice, setSyncCompletedNotice] = useState<{ total: number } | null>(null);
 
+  const fetchProductsRef = useRef<(silent?: boolean) => Promise<void>>(async () => {});
+
   useEffect(() => {
     let isMounted = true;
     let cleanupSync = () => {};
     let cleanupStock = () => {};
+    let es: EventSource | null = null;
+    let reconnectTimer: NodeJS.Timeout | null = null;
 
+    // 1. Local in-tab and cross-tab event listeners (BroadcastChannel + localStorage)
     import("@/lib/pos/product-sync-events").then(
-      ({ subscribeProductSync, subscribeStockUpdated, checkAndSyncRecentProducts }) => {
+      ({ subscribeProductSync, subscribeStockUpdated, checkAndSyncRecentProducts, broadcastStockUpdated }) => {
         if (!isMounted) return;
 
         cleanupSync = subscribeProductSync((state) => {
           setProductSyncState({ isSyncing: state.isSyncing, progress: state.progress });
           if (!state.isSyncing && state.lastResult) {
             setSyncCompletedNotice({ total: state.lastResult.total });
-            fetchProducts(true);
+            fetchProductsRef.current(true);
             setTimeout(() => setSyncCompletedNotice(null), 5000);
           }
         });
 
-        // Instant silent cross-tab sync when stock is adjusted anywhere
+        // Instant silent cross-tab sync when stock is adjusted anywhere on this device
         cleanupStock = subscribeStockUpdated(() => {
-          fetchProducts(true);
+          fetchProductsRef.current(true);
         });
 
         // Auto-check for new or modified WooCommerce products on initial POS load
         checkAndSyncRecentProducts();
+
+        // 2. Real-time Server-Sent Events (SSE) across separate physical cashier devices
+        const connectSSE = () => {
+          if (!isMounted) return;
+          try {
+            es = new EventSource("/api/pos/stock-events");
+
+            es.onmessage = (event) => {
+              try {
+                const data = JSON.parse(event.data);
+                if (data.type === "stock_update") {
+                  // Instant in-memory stock update for 0-latency feedback
+                  if (Array.isArray(data.items) && data.items.length > 0) {
+                    setProducts((prev) =>
+                      prev.map((p) => {
+                        const itemMatch = data.items.find((item: any) => Number(item.id) === p.id);
+                        if (itemMatch && typeof itemMatch.newQuantity === "number") {
+                          return {
+                            ...p,
+                            quantity: itemMatch.newQuantity,
+                            status: itemMatch.newQuantity <= 0 ? "Out of Stock" : "Available",
+                          };
+                        }
+                        if (itemMatch && typeof itemMatch.delta === "number") {
+                          const updatedQty = p.quantity + itemMatch.delta;
+                          return {
+                            ...p,
+                            quantity: updatedQty,
+                            status: updatedQty <= 0 ? "Out of Stock" : "Available",
+                          };
+                        }
+                        return p;
+                      })
+                    );
+                  }
+
+                  // Background silent re-fetch to ensure full catalog parity
+                  fetchProductsRef.current(true);
+
+                  // Forward to local storage/tabs on this machine
+                  broadcastStockUpdated(data);
+                }
+              } catch (parseErr) {
+                console.warn("[POS SSE Parse Error]", parseErr);
+              }
+            };
+
+            es.onerror = () => {
+              if (es) {
+                es.close();
+                es = null;
+              }
+              if (isMounted && !reconnectTimer) {
+                reconnectTimer = setTimeout(() => {
+                  reconnectTimer = null;
+                  connectSSE();
+                }, 3000);
+              }
+            };
+          } catch (err) {
+            console.warn("[POS SSE Init Error]", err);
+          }
+        };
+
+        connectSSE();
       }
     );
 
+    // 3. Ultra-lightweight version polling fallback (every 4s) to guarantee resilience over network drops
+    let lastKnownVersion = 0;
+    const pollInterval = setInterval(async () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      try {
+        const res = await fetch("/api/pos/stock-version");
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && typeof json.version === "number") {
+            if (lastKnownVersion > 0 && json.version > lastKnownVersion) {
+              fetchProductsRef.current(true);
+            }
+            lastKnownVersion = json.version;
+          }
+        }
+      } catch {}
+    }, 4000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchProductsRef.current(true);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       isMounted = false;
+      if (es) es.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      clearInterval(pollInterval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       cleanupSync();
       cleanupStock();
     };
@@ -312,6 +460,9 @@ export function PosTerminalClient({
           footer: sRes.settings.receipt_footer || "Thank you for your purchase!",
         });
         setAllowNegativeStock(Boolean(sRes.settings.allow_negative_stock));
+        if (sRes.settings.customer_display_slides && sRes.settings.customer_display_slides.length > 0) {
+          setCustomerDisplaySlides(sRes.settings.customer_display_slides);
+        }
       }
     } catch (e) {
       console.error("fetchReceiptTemplate error:", e);
@@ -335,6 +486,7 @@ export function PosTerminalClient({
       }
     }
   };
+  fetchProductsRef.current = fetchProducts;
 
   // Toast timer
   const triggerToast = (text: string, type: "success" | "error" = "success") => {
@@ -449,13 +601,43 @@ export function PosTerminalClient({
     });
   };
 
+  // Directly set item quantity from keyboard input
+  const setCartQtyDirect = (productId: number, targetQty: number) => {
+    if (!activeShift) {
+      playScanSound("error");
+      triggerToast("Please open a register counter before updating an order.", "error");
+      setIsShiftModalOpen(true);
+      return;
+    }
+
+    if (isNaN(targetQty) || targetQty < 1) {
+      return;
+    }
+
+    const product = products.find((p) => p.id === productId);
+    const cartItem = cart.find((i) => i.id === productId);
+
+    if (product && cartItem && !allowNegativeStock && targetQty > product.quantity) {
+      playScanSound("error");
+      triggerToast(
+        `Insufficient stock for "${cartItem.name}": Only ${product.quantity} ${product.unit || "pcs"} available.`,
+        "error"
+      );
+      targetQty = Math.max(1, product.quantity);
+    }
+
+    setCart((prev) =>
+      prev.map((item) => (item.id === productId ? { ...item, quantity: targetQty } : item))
+    );
+  };
+
   // Remove item from cart
   const removeFromCart = (productId: number) => {
     setCart((prev) => prev.filter((item) => item.id !== productId));
   };
 
   // Clear entire cart
-  const clearCart = () => {
+  const clearCart = (keepOrder = false) => {
     setCart([]);
     setDiscountPercent(0);
     setDiscountFixed(0);
@@ -464,8 +646,11 @@ export function PosTerminalClient({
     setCustomerName("Walk-in Customer");
     setCustomerPhone("");
     setCustomerId(null);
-    setCompletedOrder(null);
-    setIsReceiptOpen(false);
+    setTenderedCash("");
+    if (!keepOrder) {
+      setCompletedOrder(null);
+      setIsReceiptOpen(false);
+    }
     setMobileView("catalog");
     if (typeof document !== "undefined") {
       (document.activeElement as HTMLElement)?.blur();
@@ -474,7 +659,7 @@ export function PosTerminalClient({
 
   // Start new sale (clears cart and prompts customer identification)
   const startNewSale = () => {
-    clearCart();
+    clearCart(false);
     setMobileView("catalog");
     setIsCustomerModalOpen(true);
   };
@@ -595,9 +780,10 @@ export function PosTerminalClient({
       return;
     }
 
-    // Check if offer requires manager approval AND current user is a cashier (not manager/owner)
-    const isManagerUser = !isCashierOnly && canManageStock;
-    if (promo.requires_manager_approval && !isManagerUser) {
+    // Check if offer requires manager approval:
+    // Always requires authorization code even if logged in as Owner/Manager,
+    // because store owners frequently share their accounts with counter cashiers.
+    if (promo.requires_manager_approval) {
       playManagerBellSound();
       setAuthorizingPromo(promo);
       return;
@@ -605,12 +791,7 @@ export function PosTerminalClient({
 
     // Apply directly if authorized
     setAppliedPromotionIds((prev) => [...prev, promo.id]);
-    triggerToast(
-      isManagerUser && promo.requires_manager_approval
-        ? `Applied offer (Manager Verified): "${promo.name}"`
-        : `Applied offer: "${promo.name}"`,
-      "success"
-    );
+    triggerToast(`Applied offer: "${promo.name}"`, "success");
   };
 
   const handleManagerAuthorized = (promo: PosPromotion, managerName: string) => {
@@ -649,7 +830,7 @@ export function PosTerminalClient({
   // Hardware and Camera scanner integration
   const handleHardwareScan = useCallback(
     async (code: string) => {
-      const cleanCode = code.trim();
+      const cleanCode = sanitizeBarcode(code);
       if (!cleanCode) return;
 
       if (!activeShift) {
@@ -660,15 +841,15 @@ export function PosTerminalClient({
       }
 
       const now = Date.now();
-      // Strict debounce: suppress identical code within 2500ms, and minimum 1000ms between ANY scans
+      // Debounce: suppress identical code within 1800ms, and allow different items after 250ms
       if (
         lastTerminalScanRef.current &&
         lastTerminalScanRef.current.code.toLowerCase() === cleanCode.toLowerCase() &&
-        now - lastTerminalScanRef.current.time < 2500
+        now - lastTerminalScanRef.current.time < 1800
       ) {
         return;
       }
-      if (lastTerminalScanRef.current && now - lastTerminalScanRef.current.time < 1000) {
+      if (lastTerminalScanRef.current && now - lastTerminalScanRef.current.time < 250) {
         return;
       }
       lastTerminalScanRef.current = { code: cleanCode, time: now };
@@ -680,12 +861,22 @@ export function PosTerminalClient({
       }
       setHighlightedIndex(0);
 
+      // Normalize code for leading-zero tolerance (e.g. UPC-A 12-digit vs EAN-13 13-digit)
+      const cleanLower = cleanCode.toLowerCase();
+      const stripped = cleanCode.replace(/^0+/, "").toLowerCase();
+
       // Find in local products first for instant response
-      const localMatch = products.find(
-        (p) =>
-          p.sku.toLowerCase() === cleanCode.toLowerCase() ||
-          (p.barcode && p.barcode.toLowerCase() === cleanCode.toLowerCase())
-      );
+      const localMatch = products.find((p) => {
+        const skuLower = p.sku.toLowerCase();
+        const barcodeLower = (p.barcode || "").toLowerCase();
+        const skuStripped = p.sku.replace(/^0+/, "").toLowerCase();
+        const barcodeStripped = (p.barcode || "").replace(/^0+/, "").toLowerCase();
+        return (
+          skuLower === cleanLower ||
+          barcodeLower === cleanLower ||
+          (stripped && (skuStripped === stripped || barcodeStripped === stripped))
+        );
+      });
 
       if (localMatch) {
         const added = addToCart(localMatch, 1);
@@ -861,16 +1052,16 @@ export function PosTerminalClient({
       return;
     }
 
-    const isManagerUser = !isCashierOnly && canManageStock;
     const qualifiedIds = new Set(qualifiedPromotions.map((p) => p.id));
 
     // Keep applied promotions that are still qualified
     const stillQualifiedApplied = appliedPromotionIds.filter((id) => qualifiedIds.has(id));
 
-    // Automatically apply all qualified promotions that do not require manager approval,
-    // or all qualified promotions if current user is a manager/admin:
+    // Automatically apply qualified promotions that DO NOT require manager approval.
+    // Offers requiring manager approval are NEVER auto-applied without authorization PIN,
+    // even for owners, because owners often share accounts with counter cashiers:
     const toAutoApply = qualifiedPromotions
-      .filter((p) => !p.requires_manager_approval || isManagerUser)
+      .filter((p) => !p.requires_manager_approval)
       .map((p) => p.id);
 
     const merged = Array.from(new Set([...stillQualifiedApplied, ...toAutoApply]));
@@ -882,15 +1073,13 @@ export function PosTerminalClient({
     if (hasChanged) {
       setAppliedPromotionIds(merged);
     }
-  }, [qualifiedPromotions, isCashierOnly, canManageStock, appliedPromotionIds, cart.length]);
+  }, [qualifiedPromotions, appliedPromotionIds, cart.length]);
 
   const pendingManagerOffers = useMemo(() => {
-    const isManagerUser = !isCashierOnly && canManageStock;
-    if (isManagerUser) return [];
     return qualifiedPromotions.filter(
       (p) => p.requires_manager_approval && !appliedPromotionIds.includes(p.id)
     );
-  }, [isCashierOnly, canManageStock, qualifiedPromotions, appliedPromotionIds]);
+  }, [qualifiedPromotions, appliedPromotionIds]);
 
   const taxAmount = useMemo(() => {
     return cart.reduce((acc, it) => {
@@ -906,13 +1095,233 @@ export function PosTerminalClient({
   // Sync tendered cash default when payment modal opens
   useEffect(() => {
     if (isPaymentModalOpen) {
-      setTenderedCash(totalAmount.toString());
+      setTenderedCash(totalAmount % 1 !== 0 ? totalAmount.toFixed(2) : totalAmount.toString());
     }
-  }, [isPaymentModalOpen]);
+  }, [isPaymentModalOpen, totalAmount]);
 
   // Quick cash calculations
-  const parsedTendered = parseFloat(tenderedCash) || 0;
-  const changeDue = Math.max(0, parsedTendered - totalAmount);
+  const parsedTendered = Math.round((parseFloat(tenderedCash) || 0) * 100) / 100;
+  const isShortOfCash = parsedTendered > 0 && parsedTendered < totalAmount - 0.001;
+  const changeDue = Math.max(0, Math.round((parsedTendered - totalAmount) * 100) / 100);
+
+  // ── Bi-directional Sync with Customer Display (/pos-client) ──
+  // 1. Broadcast POS state to Customer Display (/pos-client) whenever cart, totals, customer, or checkout changes
+  const broadcastDisplayState = useCallback(() => {
+    const activeCounterId = activeShift?.counter_id || 1;
+    const resolvedTenantId = tenantId || activeShift?.tenant_id || 1;
+
+    const payload: PosClientDisplayState = {
+      tenantId: resolvedTenantId,
+      tenantName,
+      tenantLogoUrl,
+      accentColor: tenantAccentColor,
+      counterId: activeCounterId,
+      counterName: activeShift?.counter_name || `Counter ${activeCounterId}`,
+      cashierName: activeShift?.user_name || userName,
+      isShiftOpen: Boolean(activeShift && activeShift.status === "open"),
+      customer: {
+        id: completedOrder?.customer_id ?? customerId,
+        name: completedOrder?.customer_name || customerName,
+        phone: completedOrder?.customer_phone || customerPhone,
+      },
+      cart: (completedOrder?.items?.length ? completedOrder.items : cart).map((it: any) => ({
+        id: it.id,
+        name: it.name,
+        sku: it.sku,
+        brand: (it as any).brand,
+        price: it.price,
+        quantity: it.quantity,
+        discount: it.discount
+          ? (it.discountType === "fixed" ? it.discount : (it.price * it.quantity * it.discount) / 100)
+          : 0,
+        total: Math.max(
+          0,
+          it.price * it.quantity -
+            (it.discount
+              ? (it.discountType === "fixed" ? it.discount * it.quantity : (it.price * it.quantity * it.discount) / 100)
+              : 0)
+        ),
+      })),
+      summary: completedOrder ? {
+        subtotal: Number(completedOrder.subtotal ?? completedOrder.total_amount),
+        discountTotal: Number(completedOrder.discount_total ?? 0),
+        taxTotal: Number(completedOrder.tax_total ?? 0),
+        totalDue: Number(completedOrder.total_amount),
+        itemCount: Array.isArray(completedOrder.items) ? completedOrder.items.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0) : 0,
+      } : {
+        subtotal,
+        discountTotal: discountAmount,
+        taxTotal: taxAmount,
+        totalDue: totalAmount,
+        itemCount: cart.reduce((acc, it) => acc + it.quantity, 0),
+      },
+      payment: {
+        isOpen: isPaymentModalOpen,
+        method: completedOrder ? (completedOrder.payment_method || paymentMethod) : paymentMethod,
+        tendered: completedOrder
+          ? (Number(completedOrder.amount_tendered) || 0)
+          : (isPaymentModalOpen ? parsedTendered : 0),
+        changeDue: completedOrder
+          ? (Number(completedOrder.change_returned) ?? 0)
+          : (isPaymentModalOpen ? changeDue : 0),
+        totalPaid: completedOrder ? Number(completedOrder.total_amount) : totalAmount,
+        isCompleted: Boolean(completedOrder),
+        orderNumber: completedOrder?.order_number,
+      },
+      slides: customerDisplaySlides,
+      timestamp: Date.now(),
+    };
+
+    const channelNames = [
+      getPosClientChannelName(resolvedTenantId, activeCounterId),
+      POS_CLIENT_CHANNEL_NAME,
+    ];
+    if (activeCounterId !== 1) {
+      channelNames.push(getPosClientChannelName(resolvedTenantId, 1));
+    }
+
+    channelNames.forEach((chName) => {
+      try {
+        const bc = new BroadcastChannel(chName);
+        bc.postMessage({ type: "POS_STATE_UPDATE", payload });
+        bc.close();
+      } catch {}
+
+      try {
+        localStorage.setItem(chName, JSON.stringify({ type: "POS_STATE_UPDATE", payload }));
+      } catch {}
+    });
+
+    // Also persist via server API for standalone Wi-Fi tablets
+    fetch("/api/pos/client-display", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  }, [
+    tenantId,
+    activeShift,
+    tenantName,
+    tenantLogoUrl,
+    tenantAccentColor,
+    userName,
+    customerId,
+    customerName,
+    customerPhone,
+    cart,
+    subtotal,
+    discountAmount,
+    taxAmount,
+    totalAmount,
+    isPaymentModalOpen,
+    paymentMethod,
+    parsedTendered,
+    changeDue,
+    completedOrder,
+    customerDisplaySlides,
+  ]);
+
+  useEffect(() => {
+    broadcastDisplayState();
+  }, [broadcastDisplayState]);
+
+  // 2. Listen for Customer Info submissions or state requests from /pos-client
+  useEffect(() => {
+    const channels: BroadcastChannel[] = [];
+    const activeCounterId = activeShift?.counter_id || 1;
+    const resolvedTenantId = tenantId || activeShift?.tenant_id || 1;
+
+    try {
+      const channelNames = [
+        getPosClientChannelName(resolvedTenantId, activeCounterId),
+        POS_CLIENT_CHANNEL_NAME,
+      ];
+      if (activeCounterId !== 1) {
+        channelNames.push(getPosClientChannelName(resolvedTenantId, 1));
+      }
+
+      channelNames.forEach((name) => {
+        try {
+          const bc = new BroadcastChannel(name);
+          bc.onmessage = (event) => {
+            const msg = event.data as PosDisplayMessage;
+            if (msg?.type === "CLIENT_INFO_SUBMITTED" && msg.payload?.customer) {
+              const c = msg.payload.customer;
+              const isNew = Boolean(c.isNewClient || !c.name || c.name === "Customer" || c.name.startsWith("Customer 0"));
+              setCustomerName(c.name || "Customer");
+              setCustomerPhone(c.phone || "");
+              setCustomerId(c.id || null);
+              if (isNew) {
+                triggerToast(`New customer checked in (${c.phone || ""})! Please ask and get customer's name.`, "success");
+                setMobileView("catalog");
+                setIsCustomerModalOpen(true);
+              } else {
+                setIsCustomerModalOpen(false);
+                triggerToast(`Customer checked in on customer display: ${c.name}`, "success");
+              }
+            } else if (msg?.type === "CLIENT_REQUEST_STATE") {
+              // Immediately broadcast current state
+              broadcastDisplayState();
+            }
+          };
+          channels.push(bc);
+        } catch {}
+      });
+    } catch (e) {
+      console.warn("BroadcastChannel error:", e);
+    }
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "pos_customer_submitted_info" && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed?.payload?.customer) {
+            const c = parsed.payload.customer;
+            const isNew = Boolean(c.isNewClient || !c.name || c.name === "Customer" || c.name.startsWith("Customer 0"));
+            setCustomerName(c.name || "Customer");
+            setCustomerPhone(c.phone || "");
+            setCustomerId(c.id || null);
+            if (isNew) {
+              triggerToast(`New customer checked in (${c.phone || ""})! Please ask and get customer's name.`, "success");
+              setMobileView("catalog");
+              setIsCustomerModalOpen(true);
+            } else {
+              setIsCustomerModalOpen(false);
+              triggerToast(`Customer checked in on customer display: ${c.name}`, "success");
+            }
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      channels.forEach((bc) => {
+        try {
+          bc.close();
+        } catch {}
+      });
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [tenantId, activeShift?.counter_id, activeShift?.tenant_id, broadcastDisplayState]);
+
+  // Open /pos-client in secondary window for dual monitor counters
+  const handleOpenCustomerDisplay = () => {
+    const activeCounterId = activeShift?.counter_id || 1;
+    const resolvedTenantId = tenantId || activeShift?.tenant_id || 1;
+    const clientUrl = `/pos-client?tenantId=${resolvedTenantId}&counterId=${activeCounterId}`;
+    const w = 1024;
+    const h = 768;
+    const left = typeof window !== "undefined" && window.screen.width ? window.screen.width - w : 100;
+    const top = 100;
+    const win = window.open(clientUrl, "pos_client_display", `width=${w},height=${h},top=${top},left=${left},resizable=yes,scrollbars=yes`);
+    if (win) {
+      try {
+        win.opener = null;
+      } catch {}
+    }
+    triggerToast("Customer Display screen opened in secondary window.", "success");
+  };
 
   // Filtered products list
   const filteredProducts = useMemo(() => {
@@ -984,19 +1393,17 @@ export function PosTerminalClient({
       }
     }
 
-    // Check if there are qualified promotional offers requiring manager approval that haven't been authorized yet
-    const isManagerUser = !isCashierOnly && canManageStock;
-    if (!isManagerUser) {
-      const pendingApprovalOffer = qualifiedPromotions.find(
-        (p) => p.requires_manager_approval && !appliedPromotionIds.includes(p.id)
-      );
-      if (pendingApprovalOffer) {
-        playManagerBellSound();
-        pendingCheckoutAfterPromoRef.current = true;
-        setPendingCheckoutAfterPromo(true);
-        setAuthorizingPromo(pendingApprovalOffer);
-        return;
-      }
+    // Check if there are qualified promotional offers requiring manager approval that haven't been authorized yet:
+    // Required even if logged in as Owner, because owners often share credentials with counter cashiers
+    const pendingApprovalOffer = qualifiedPromotions.find(
+      (p) => p.requires_manager_approval && !appliedPromotionIds.includes(p.id)
+    );
+    if (pendingApprovalOffer) {
+      playManagerBellSound();
+      pendingCheckoutAfterPromoRef.current = true;
+      setPendingCheckoutAfterPromo(true);
+      setAuthorizingPromo(pendingApprovalOffer);
+      return;
     }
 
     setPaymentError(null);
@@ -1035,7 +1442,15 @@ export function PosTerminalClient({
       }
     }
 
-    if (paymentMethod === "Cash" && parsedTendered < totalAmount) {
+    const activeMethod = paymentMethodRef.current;
+    const activeTendered = activeMethod === "Cash"
+      ? Math.round((parseFloat(tenderedCashRef.current) || 0) * 100) / 100
+      : totalAmount;
+    const activeChangeDue = activeMethod === "Cash"
+      ? Math.max(0, Math.round((activeTendered - totalAmount) * 100) / 100)
+      : 0;
+
+    if (activeMethod === "Cash" && activeTendered < totalAmount - 0.001) {
       const msg = "Tendered cash is less than the total amount due.";
       setPaymentError(msg);
       triggerToast(msg, "error");
@@ -1054,9 +1469,9 @@ export function PosTerminalClient({
         discountAmount,
         taxAmount,
         totalAmount,
-        paymentMethod,
-        amountTendered: paymentMethod === "Cash" ? parsedTendered : totalAmount,
-        changeReturned: paymentMethod === "Cash" ? changeDue : 0,
+        paymentMethod: activeMethod,
+        amountTendered: activeTendered,
+        changeReturned: activeChangeDue,
       };
 
       const res = await checkoutPosOrderAction(payload, activeShift?.id || null);
@@ -1065,6 +1480,9 @@ export function PosTerminalClient({
         playScanSound("success");
         setCompletedOrder({
           ...res.order,
+          payment_method: activeMethod,
+          amount_tendered: activeTendered,
+          change_returned: activeChangeDue,
           customer_name: customerName,
           customer_phone: customerPhone,
           items: cart,
@@ -1073,7 +1491,7 @@ export function PosTerminalClient({
         });
         setIsPaymentModalOpen(false);
         setIsReceiptOpen(true);
-        clearCart();
+        clearCart(true);
         // Refresh product inventory quantities and broadcast to Stock page
         fetchProducts();
         import("@/lib/pos/product-sync-events").then(m => m.broadcastStockUpdated({
@@ -1120,16 +1538,10 @@ export function PosTerminalClient({
   const handlePrintTestBill = useCallback(() => {
     triggerToast("Printing thermal test slip & paper alignment...", "success");
 
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      alert("Please allow popups to print test bill.");
-      return;
-    }
-
     const testBarcodeSvg = generateBarcodeSvg("TEST-ROLL-80MM", { height: 32, barWidth: 1.4 });
     const nowStr = new Date().toLocaleString();
 
-    printWindow.document.write(`
+    const testSlipHtml = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -1221,17 +1633,11 @@ export function PosTerminalClient({
           </div>
 
           <div style="height: 25px;"></div>
-
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 500);
-            };
-          </script>
         </body>
       </html>
-    `);
-    printWindow.document.close();
+    `;
+
+    printHtmlViaHiddenIframe(testSlipHtml);
   }, [tenantName, userName, userRole]);
 
   // Global Keyboard Navigation for High-Speed Cashier Operations
@@ -1315,24 +1721,14 @@ export function PosTerminalClient({
 
       // If Payment Checkout Modal is open:
       if (isPaymentModalOpen) {
-        if (e.key === "1") {
-          e.preventDefault();
-          setPaymentMethod("Cash");
-          setTimeout(() => tenderedInputRef.current?.focus(), 50);
-          return;
-        }
-        if (e.key === "2") {
-          e.preventDefault();
-          setPaymentMethod("Card");
-          return;
-        }
-        if (e.key === "3") {
-          e.preventDefault();
-          setPaymentMethod("Bank Transfer");
-          return;
-        }
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
+          const currentTendered = Math.round((parseFloat(tenderedCashRef.current) || 0) * 100) / 100;
+          if (paymentMethodRef.current === "Cash" && currentTendered < totalAmount - 0.001) {
+            triggerToast("Tendered cash is less than the total amount due.", "error");
+            playScanSound("error");
+            return;
+          }
           handleExecuteCheckout();
           return;
         }
@@ -1464,6 +1860,7 @@ export function PosTerminalClient({
       // F3 or U: Select or Edit Customer Details
       if (e.key === "F3" || e.key.toLowerCase() === "u") {
         e.preventDefault();
+        setMobileView("catalog");
         setIsCustomerModalOpen(true);
         return;
       }
@@ -1594,35 +1991,62 @@ export function PosTerminalClient({
     canDiscount,
     canManageStock,
     activeShift,
+    tenderedCash,
+    paymentMethod,
     handleOpenCashDrawer,
     handlePrintTestBill,
   ]);
 
   const formatLKR = (amount: number) => {
+    const rounded = Math.round((amount || 0) * 100) / 100;
+    const hasDecimals = Math.abs(rounded) % 1 !== 0;
     return new Intl.NumberFormat("en-LK", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount || 0);
+      minimumFractionDigits: hasDecimals ? 2 : 0,
+      maximumFractionDigits: 2,
+    }).format(rounded);
   };
 
   return (
     <div className="flex flex-col h-screen h-[100dvh] w-screen overflow-hidden bg-background text-foreground">
       {/* Top POS Header Bar */}
-      <header className="h-14 sm:h-16 px-3 sm:px-4 bg-card border-b border-border flex items-center justify-between shrink-0 select-none z-20">
+      <header className="h-14 sm:h-16 px-3 sm:px-4 bg-card border-b border-border flex items-center justify-between shrink-0 select-none z-50 relative">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <TenantLogo
-              logoUrl={tenantLogoUrl}
-              name={tenantName}
-              size={36}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain p-0.5 bg-black/5 dark:bg-white/5 border border-brand-500/30 shadow-2xs shrink-0"
-              fallbackClassName="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center text-brand-500 shadow-2xs shrink-0"
-              iconClassName="w-5 h-5 text-brand-500"
-            />
-            <div className="min-w-0">
-              <span className="font-black text-xs sm:text-sm tracking-tight text-foreground uppercase truncate block max-w-[120px] xs:max-w-[160px] sm:max-w-[220px] md:max-w-xs">{tenantName}</span>
+          {isCashier ? (
+            <div
+              className="flex items-center gap-2 min-w-0 select-none"
+              title="Point of Sale"
+            >
+              <TenantLogo
+                logoUrl={tenantLogoUrl}
+                name={tenantName}
+                size={36}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain p-0.5 bg-black/5 dark:bg-white/5 border border-brand-500/30 shadow-2xs shrink-0"
+                fallbackClassName="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center text-brand-500 shadow-2xs shrink-0"
+                iconClassName="w-5 h-5 text-brand-500"
+              />
+              <div className="min-w-0">
+                <span className="font-black text-xs sm:text-sm tracking-tight text-foreground uppercase truncate block max-w-[120px] xs:max-w-[160px] sm:max-w-[220px] md:max-w-xs">{tenantName}</span>
+              </div>
             </div>
-          </div>
+          ) : (
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity cursor-pointer group"
+              title="Go to Dashboard"
+            >
+              <TenantLogo
+                logoUrl={tenantLogoUrl}
+                name={tenantName}
+                size={36}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain p-0.5 bg-black/5 dark:bg-white/5 border border-brand-500/30 shadow-2xs shrink-0 group-hover:border-brand-500/60 transition-colors"
+                fallbackClassName="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center text-brand-500 shadow-2xs shrink-0 group-hover:border-brand-500/60 transition-colors"
+                iconClassName="w-5 h-5 text-brand-500"
+              />
+              <div className="min-w-0">
+                <span className="font-black text-xs sm:text-sm tracking-tight text-foreground uppercase truncate block max-w-[120px] xs:max-w-[160px] sm:max-w-[220px] md:max-w-xs">{tenantName}</span>
+              </div>
+            </Link>
+          )}
 
           <div className="hidden md:block w-px h-6 bg-border mx-1" />
 
@@ -1636,8 +2060,8 @@ export function PosTerminalClient({
             }`}
           >
             <Clock className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">{activeShift ? `${activeShift.counter_name || "Counter 1"} • Shift #${activeShift.shift_number || activeShift.id}` : "Open Shift"}</span>
-            <span className="xs:hidden">{activeShift ? `${activeShift.counter_name || "C1"} • S#${activeShift.shift_number || activeShift.id}` : "Shift"}</span>
+            <span className="hidden xs:inline">{activeShift ? `${activeShift.counter_name || "Counter 1"} • Shift ${activeShift.shift_number || activeShift.id}` : "Open Shift"}</span>
+            <span className="xs:hidden">{activeShift ? `${activeShift.counter_name || "Counter 1"} • S${activeShift.shift_number || activeShift.id}` : "Shift"}</span>
           </button>
 
           {/* Live Date and Time Display (Plain Text) */}
@@ -1737,6 +2161,16 @@ export function PosTerminalClient({
             <kbd className="hidden sm:inline text-[10px] bg-black/10 dark:bg-white/10 text-gray-400 px-1 py-0.2 rounded font-sans font-semibold">F6</kbd>
           </button>
 
+          {/* Customer-Facing Display (/pos-client) */}
+          <button
+            onClick={handleOpenCustomerDisplay}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-border text-xs font-bold text-foreground transition-all cursor-pointer shadow-2xs"
+            title="Open Customer-Facing Display Screen (/pos-client)"
+          >
+            <Monitor className="w-4 h-4 text-brand-500" />
+            <span className="hidden xl:inline">Customer Screen</span>
+          </button>
+
           {/* POS Settings (Managers/Admins only, blocked for cashiers) */}
           {canAccessPosSettings && (
             <button
@@ -1748,12 +2182,48 @@ export function PosTerminalClient({
             </button>
           )}
 
-          {/* Cashier Name & Logout */}
+          {/* Cashier Name & Logout (+ Business Switcher for multi-business cashiers) */}
           <div className="flex items-center gap-2 pl-1">
-            <div className="hidden xl:block text-right">
-              <div className="text-xs font-bold text-foreground truncate max-w-[120px]">{userName}</div>
-              <div className="text-[10px] text-gray-400 capitalize">{userRole}</div>
+            <div className="relative" ref={switcherRef}>
+              <button
+                type="button"
+                disabled={!shouldShowBusinessSwitcher}
+                onClick={shouldShowBusinessSwitcher ? () => setIsSwitcherOpen((prev) => !prev) : undefined}
+                className={`hidden xl:block text-right transition-all rounded-xl ${
+                  shouldShowBusinessSwitcher
+                    ? "cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 px-2 py-1 -mr-1"
+                    : "cursor-default"
+                }`}
+                title={shouldShowBusinessSwitcher ? "Click to switch business profile" : undefined}
+                aria-haspopup={shouldShowBusinessSwitcher ? "true" : undefined}
+                aria-expanded={shouldShowBusinessSwitcher ? isSwitcherOpen : undefined}
+              >
+                <div className="text-xs font-bold text-foreground truncate max-w-[130px]">{userName}</div>
+                <div className="text-[10px] text-gray-400 capitalize flex items-center justify-end gap-1">
+                  <span>{userRole}</span>
+                  {shouldShowBusinessSwitcher && (
+                    <ChevronDown className={`w-3 h-3 text-brand-500 transition-transform duration-200 ${isSwitcherOpen ? "rotate-180" : ""}`} />
+                  )}
+                  {shouldShowBusinessSwitcher && pendingInvites.length > 0 && (
+                    <span className="flex h-1.5 w-1.5 relative ml-0.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
+                    </span>
+                  )}
+                </div>
+              </button>
+
+              {shouldShowBusinessSwitcher && (
+                <PosBusinessSwitcher
+                  isOpen={isSwitcherOpen}
+                  onClose={() => setIsSwitcherOpen(false)}
+                  businesses={userBusinesses}
+                  pendingInvites={pendingInvites}
+                  onRefresh={loadBusinesses}
+                />
+              )}
             </div>
+
             <button
               onClick={() => signOut()}
               className="p-2 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
@@ -1861,7 +2331,22 @@ export function PosTerminalClient({
       {/* Main Terminal Grid: Products on Left, Register Cart on Right */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Product Catalog & Search (Desktop 65% width, Full width on Mobile) */}
-        <div className={`${mobileView === "catalog" ? "flex" : "hidden"} lg:flex flex-1 flex-col min-w-0 border-r-0 lg:border-r border-border bg-background relative overflow-hidden`}>
+        <div className={`${(mobileView === "catalog" || isPaymentModalOpen || Boolean(authorizingPromo) || isAuthorizingOrderDiscount || isAuthorizingItemDiscount || isCustomerModalOpen) ? "flex" : "hidden"} lg:flex flex-1 flex-col min-w-0 border-r-0 lg:border-r border-border bg-background relative overflow-hidden`}>
+          {/* Customer / Client Selection Modal (Centered & Blurred over Product Catalog & Search Area Only) */}
+          <CustomerSelectModal
+            isOpen={isCustomerModalOpen}
+            onClose={() => setIsCustomerModalOpen(false)}
+            currentCustomerName={customerName}
+            currentCustomerPhone={customerPhone}
+            overlayMode="section"
+            onSelectCustomer={(client) => {
+              setCustomerName(client.name);
+              setCustomerPhone(client.phone || "");
+              setCustomerId(client.id || null);
+              triggerToast(`Customer assigned: ${client.name}`, "success");
+            }}
+          />
+
           {/* Continuous Camera Barcode Scanner (Centered & Blurred over Product Section Only) */}
           <CameraScannerModal
             isOpen={isCameraOpen}
@@ -1869,6 +2354,247 @@ export function PosTerminalClient({
             onDetected={handleHardwareScan}
             title="Point Camera at Barcode or QR Scanner"
             continuous={true}
+            overlayMode="section"
+          />
+
+          {/* Payment Checkout Modal (Centered & Blurred over Product Catalog & Search Area Only) */}
+          {isPaymentModalOpen && (
+            <div
+              className="absolute inset-0 z-40 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+              onClick={() => setIsPaymentModalOpen(false)}
+            >
+              <div
+                className="bg-card border border-border rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-5 sm:p-6 relative max-h-[92vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between pb-4 border-b border-border mb-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground">Process Payment</h3>
+                    <p className="text-xs text-gray-400">Total Due: LKR {formatLKR(totalAmount)}</p>
+                  </div>
+                  <button
+                    onClick={() => setIsPaymentModalOpen(false)}
+                    className="text-gray-400 hover:text-foreground cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {paymentError && (
+                  <div className="mb-4 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-500 flex items-start gap-2.5 text-xs animate-in fade-in">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div className="flex-1 font-medium leading-relaxed">{paymentError}</div>
+                  </div>
+                )}
+
+                {/* Payment Method Selector */}
+                <div className="grid grid-cols-3 gap-2 mb-6">
+                  {(["Cash", "Card", "Bank Transfer"] as const).map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => {
+                        setPaymentMethod(method);
+                        if (method === "Cash") {
+                          setTimeout(() => tenderedInputRef.current?.focus(), 50);
+                        }
+                      }}
+                      className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center cursor-pointer ${
+                        paymentMethod === method
+                          ? "bg-brand-500 text-brand-950 border-brand-500 shadow-xs"
+                          : "border-border text-gray-400 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                      }`}
+                    >
+                      <span>{method}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Cash Input & Change Due Section */}
+                {paymentMethod === "Cash" && (
+                  <div className="space-y-4 mb-6">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                          Tendered Cash Amount
+                        </label>
+                        <span className="text-[11px] text-gray-400">Total: LKR {formatLKR(totalAmount)}</span>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">
+                          LKR
+                        </span>
+                        <input
+                          ref={tenderedInputRef}
+                          type="number"
+                          min="0"
+                          step="any"
+                          autoFocus
+                          value={tenderedCash}
+                          onChange={(e) => setTenderedCash(e.target.value)}
+                          onFocus={(e) => e.target.select()}
+                          placeholder="0.00"
+                          className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl pl-16 pr-4 py-3 font-bold text-xl text-foreground outline-none focus:border-brand-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quick denomination chips */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {[
+                        { label: "Exact", val: totalAmount },
+                        ...[50, 100, 500, 1000, 2000, 5000]
+                          .filter((d) => d > totalAmount)
+                          .map((d) => ({ label: formatLKR(d), val: d })),
+                      ].slice(0, 6).map((chip) => (
+                        <button
+                          key={chip.label}
+                          type="button"
+                          onClick={() => setTenderedCash(chip.val % 1 !== 0 ? chip.val.toFixed(2) : chip.val.toString())}
+                          className="px-3 py-1.5 rounded-xl border border-border text-xs font-bold hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+                        >
+                          {chip.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Change / Balance Due Display */}
+                    {isShortOfCash ? (
+                      <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-bold text-amber-500 uppercase tracking-wider">Remaining Balance Due</span>
+                          <p className="text-[11px] text-amber-600/80 dark:text-amber-400/80">Tendered cash is less than total</p>
+                        </div>
+                        <div className="text-2xl font-black text-amber-500">
+                          -LKR {formatLKR(totalAmount - parsedTendered)}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-border flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-bold text-gray-400 uppercase">Change Due to Customer</span>
+                          <p className="text-[11px] text-gray-500">Tendered - Total Due</p>
+                        </div>
+                        <div className={`text-2xl font-black ${parsedTendered >= totalAmount && totalAmount > 0 ? "text-emerald-500" : "text-gray-400"}`}>
+                          LKR {formatLKR(changeDue)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsPaymentModalOpen(false)}
+                    className="flex-1 py-3.5 rounded-xl border border-border font-semibold text-xs text-gray-400 hover:text-foreground flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Cancel</span>
+                    <kbd className="text-[10px] bg-black/5 dark:bg-white/5 text-gray-400 px-1 rounded">Esc</kbd>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExecuteCheckout}
+                    disabled={checkingOut || (paymentMethod === "Cash" && parsedTendered < totalAmount - 0.001)}
+                    className="flex-2 py-3.5 bg-brand-500 hover:bg-brand-400 disabled:opacity-40 text-brand-950 font-bold text-sm rounded-xl transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{checkingOut ? "Processing Sale..." : "Complete Sale"}</span>
+                    <kbd className="text-[10px] bg-brand-600/30 text-brand-950 px-1.5 py-0.5 rounded font-bold">Enter</kbd>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Manager Authorization Modal for Protected Offers (Centered & Blurred over Product Catalog & Search Area Only) */}
+          <ManagerApprovalModal
+            isOpen={Boolean(authorizingPromo)}
+            onClose={() => {
+              setAuthorizingPromo(null);
+              if (pendingCheckoutAfterPromoRef.current) {
+                pendingCheckoutAfterPromoRef.current = false;
+                setPendingCheckoutAfterPromo(false);
+                setPaymentError(null);
+                setIsPaymentModalOpen(true);
+                setTimeout(() => tenderedInputRef.current?.focus(), 60);
+              }
+            }}
+            promotion={authorizingPromo}
+            onAuthorized={handleManagerAuthorized}
+            overlayMode="section"
+          />
+
+          {/* Manager Authorization Modal for Direct Order Discount (Centered & Blurred over Product Catalog & Search Area Only) */}
+          <ManagerApprovalModal
+            isOpen={isAuthorizingOrderDiscount}
+            onClose={() => {
+              setIsAuthorizingOrderDiscount(false);
+              setPendingOrderDiscount(null);
+            }}
+            actionTitle="Direct Order Discount"
+            actionBadge={
+              pendingOrderDiscount?.type === "percent"
+                ? `${pendingOrderDiscount.percent}% OFF`
+                : `LKR ${formatLKR(pendingOrderDiscount?.fixed || 0)} OFF`
+            }
+            actionDescription="Cashiers cannot apply direct discounts directly. Manager or supervisor access code authorization is required to apply this discount."
+            onAuthorized={(_promo, managerName) => {
+              if (pendingOrderDiscount) {
+                setDiscountType(pendingOrderDiscount.type);
+                setDiscountPercent(pendingOrderDiscount.percent);
+                setDiscountFixed(pendingOrderDiscount.fixed);
+                triggerToast(
+                  `Order discount (${pendingOrderDiscount.type === "percent" ? `${pendingOrderDiscount.percent}%` : `LKR ${formatLKR(pendingOrderDiscount.fixed)}`}) authorized by ${managerName}`,
+                  "success"
+                );
+              }
+              setPendingOrderDiscount(null);
+              setIsAuthorizingOrderDiscount(false);
+            }}
+            overlayMode="section"
+          />
+
+          {/* Manager Authorization Modal for Direct Item Discount (Centered & Blurred over Product Catalog & Search Area Only) */}
+          <ManagerApprovalModal
+            isOpen={isAuthorizingItemDiscount}
+            onClose={() => {
+              setIsAuthorizingItemDiscount(false);
+              setPendingItemDiscount(null);
+            }}
+            actionTitle={`Item Discount: ${pendingItemDiscount?.itemName || "Item"}`}
+            actionBadge={
+              pendingItemDiscount?.discountType === "percent"
+                ? `${pendingItemDiscount.discount}% OFF`
+                : `LKR ${formatLKR(pendingItemDiscount?.discount || 0)} OFF`
+            }
+            actionDescription="Cashiers cannot apply line item discounts directly. Manager access code authorization is required."
+            onAuthorized={(_promo, managerName) => {
+              if (pendingItemDiscount) {
+                setCart((prev) =>
+                  prev.map((it) => {
+                    if (it.id === pendingItemDiscount.itemId) {
+                      return {
+                        ...it,
+                        discount: pendingItemDiscount.discount > 0 ? pendingItemDiscount.discount : undefined,
+                        discountType: pendingItemDiscount.discountType,
+                        discountReason: pendingItemDiscount.reason
+                          ? `${pendingItemDiscount.reason} (Auth: ${managerName})`
+                          : `Auth: ${managerName}`,
+                      };
+                    }
+                    return it;
+                  })
+                );
+                triggerToast(
+                  `Item discount for "${pendingItemDiscount.itemName}" authorized by ${managerName}`,
+                  "success"
+                );
+              }
+              setPendingItemDiscount(null);
+              setIsAuthorizingItemDiscount(false);
+            }}
             overlayMode="section"
           />
 
@@ -2103,7 +2829,7 @@ export function PosTerminalClient({
         </div>
 
         {/* Right: Cart / Register Drawer (Desktop 35% width, Full width on Mobile) */}
-        <div className={`${mobileView === "cart" ? "flex" : "hidden"} lg:flex flex-1 lg:flex-none w-full lg:w-96 xl:w-[420px] bg-card flex-col shrink-0 select-none shadow-xl border-l-0 lg:border-l border-border overflow-hidden`}>
+        <div className={`${(mobileView === "cart" && !isPaymentModalOpen && !authorizingPromo && !isAuthorizingOrderDiscount && !isAuthorizingItemDiscount && !isCustomerModalOpen) ? "flex" : "hidden"} lg:flex flex-1 lg:flex-none w-full lg:w-96 xl:w-[420px] bg-card flex-col shrink-0 select-none shadow-xl border-l-0 lg:border-l border-border overflow-hidden`}>
           {/* Mobile Top Return Bar */}
           <div className="lg:hidden px-3.5 py-2.5 border-b border-border bg-black/5 dark:bg-white/5 flex items-center justify-between shrink-0">
             <button
@@ -2155,20 +2881,41 @@ export function PosTerminalClient({
                     <span className="text-[10px] text-gray-400 font-medium shrink-0">({customerPhone})</span>
                   )}
                 </div>
-                <div className="text-[10px] text-gray-400">
-                  {customerName === "Walk-in Customer" ? "Walk-in Customer" : "Registered Client"}
+                <div className="text-[10px]">
+                  {customerPhone && (!customerName || customerName === "Customer" || customerName.startsWith("Customer 0")) ? (
+                    <span className="text-amber-500 font-bold animate-pulse">
+                      New Client — Ask customer for their name
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">
+                      {customerName === "Walk-in Customer" ? "Walk-in Customer" : "Registered Client"}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
             <button
               type="button"
-              onClick={() => setIsCustomerModalOpen(true)}
-              className="px-2.5 py-1 bg-card border border-border hover:border-brand-500/50 hover:bg-brand-500/10 text-xs font-bold text-foreground hover:text-brand-500 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+              onClick={() => {
+                setMobileView("catalog");
+                setIsCustomerModalOpen(true);
+              }}
+              className={`px-2.5 py-1 bg-card border rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0 text-xs font-bold ${
+                customerPhone && (!customerName || customerName === "Customer" || customerName.startsWith("Customer 0"))
+                  ? "border-amber-500/50 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
+                  : "border-border hover:border-brand-500/50 hover:bg-brand-500/10 text-foreground hover:text-brand-500"
+              }`}
               title="Assign or edit customer details (F3)"
             >
               <UserPlus className="w-3.5 h-3.5 text-brand-500" />
-              <span>{customerName === "Walk-in Customer" ? "Assign Client" : "Change"}</span>
+              <span>
+                {customerPhone && (!customerName || customerName === "Customer" || customerName.startsWith("Customer 0"))
+                  ? "Enter Name"
+                  : customerName === "Walk-in Customer"
+                  ? "Assign Client"
+                  : "Change"}
+              </span>
               <kbd className="text-[9px] bg-black/10 dark:bg-white/10 px-1 py-0.2 rounded font-sans font-bold text-gray-400">F3</kbd>
             </button>
           </div>
@@ -2181,7 +2928,10 @@ export function PosTerminalClient({
                 <p className="text-xs font-semibold">Your cart is empty.</p>
                 <button
                   type="button"
-                  onClick={() => setIsCustomerModalOpen(true)}
+                  onClick={() => {
+                    setMobileView("catalog");
+                    setIsCustomerModalOpen(true);
+                  }}
                   className="mt-3 px-3 py-1.5 rounded-xl border border-border hover:bg-black/5 dark:hover:bg-white/5 text-xs font-bold text-foreground flex items-center gap-1.5 cursor-pointer"
                 >
                   <UserPlus className="w-3.5 h-3.5 text-brand-500" />
@@ -2238,19 +2988,34 @@ export function PosTerminalClient({
                     </div>
 
                     {/* Quantity Controls */}
-                    <div className="flex items-center gap-1 bg-card border border-border rounded-xl p-1">
+                    <div className="flex items-center gap-0.5 bg-card border border-border rounded-xl p-0.5 sm:p-1">
                       <button
+                        type="button"
                         onClick={() => updateCartQty(item.id, -1)}
                         className="p-1 text-gray-400 hover:text-foreground rounded-lg transition-colors cursor-pointer"
+                        title="Decrease quantity"
                       >
                         <Minus className="w-3.5 h-3.5" />
                       </button>
-                      <span className="font-bold w-6 text-center text-xs">
-                        {item.quantity}
-                      </span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (!isNaN(val)) {
+                            setCartQtyDirect(item.id, val);
+                          }
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        className="w-8 sm:w-10 text-center font-bold text-xs bg-transparent border-0 outline-none text-foreground p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:bg-black/5 dark:focus:bg-white/5 rounded"
+                        title="Click to type quantity directly"
+                      />
                       <button
+                        type="button"
                         onClick={() => updateCartQty(item.id, 1)}
                         className="p-1 text-gray-400 hover:text-foreground rounded-lg transition-colors cursor-pointer"
+                        title="Increase quantity"
                       >
                         <Plus className="w-3.5 h-3.5" />
                       </button>
@@ -2275,7 +3040,7 @@ export function PosTerminalClient({
             {(qualifiedPromotions.length > 0 || appliedPromotionIds.length > 0) && (
               <div className="p-2.5 bg-brand-500/10 border border-brand-500/30 rounded-2xl flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5 font-bold text-foreground truncate">
-                  <Sparkles className="w-3.5 h-3.5 text-brand-500 shrink-0 animate-pulse" />
+                  <Percent className="w-3.5 h-3.5 text-brand-500 shrink-0" />
                   <span className="truncate">
                     {appliedPromotionIds.length > 0
                       ? pendingManagerOffers.length > 0
@@ -2369,153 +3134,7 @@ export function PosTerminalClient({
         </div>
       </div>
 
-      {/* Payment Checkout Modal */}
-      {isPaymentModalOpen && (
-        <div
-          className="fixed inset-0 z-[9995] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
-          onClick={() => setIsPaymentModalOpen(false)}
-        >
-          <div
-            className="bg-card border border-border rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-5 sm:p-6 relative max-h-[92vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-4 border-b border-border mb-4">
-              <div>
-                <h3 className="text-lg font-bold text-foreground">Process Payment</h3>
-                <p className="text-xs text-gray-400">Total Due: LKR {formatLKR(totalAmount)}</p>
-              </div>
-              <button
-                onClick={() => setIsPaymentModalOpen(false)}
-                className="text-gray-400 hover:text-foreground"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            {paymentError && (
-              <div className="mb-4 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-500 flex items-start gap-2.5 text-xs animate-in fade-in">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <div className="flex-1 font-medium leading-relaxed">{paymentError}</div>
-              </div>
-            )}
-
-            {/* Payment Method Selector */}
-            <div className="grid grid-cols-3 gap-2 mb-6">
-              {[
-                { method: "Cash" as const, key: "1" },
-                { method: "Card" as const, key: "2" },
-                { method: "Bank Transfer" as const, key: "3" },
-              ].map(({ method, key }) => (
-                <button
-                  key={method}
-                  type="button"
-                  onClick={() => {
-                    setPaymentMethod(method);
-                    if (method === "Cash") {
-                      setTimeout(() => tenderedInputRef.current?.focus(), 50);
-                    }
-                  }}
-                  className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                    paymentMethod === method
-                      ? "bg-brand-500 text-brand-950 border-brand-500 shadow-xs"
-                      : "border-border text-gray-400 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
-                  }`}
-                >
-                  <kbd className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                    paymentMethod === method ? "bg-brand-600/30 text-brand-950" : "bg-black/10 dark:bg-white/10 text-gray-400"
-                  }`}>
-                    {key}
-                  </kbd>
-                  <span>{method}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Cash Input & Change Due Section */}
-            {paymentMethod === "Cash" && (
-              <div className="space-y-4 mb-6">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      Tendered Cash Amount
-                    </label>
-                    <span className="text-[11px] text-gray-400">Total: LKR {formatLKR(totalAmount)}</span>
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">
-                      LKR
-                    </span>
-                    <input
-                      ref={tenderedInputRef}
-                      type="number"
-                      min="0"
-                      step="any"
-                      autoFocus
-                      value={tenderedCash}
-                      onChange={(e) => setTenderedCash(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl pl-16 pr-4 py-3 font-bold text-xl text-foreground outline-none focus:border-brand-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Quick denomination chips */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  {[
-                    { label: "Exact", val: totalAmount },
-                    { label: "+500", val: totalAmount + 500 },
-                    { label: "+1,000", val: totalAmount + 1000 },
-                    { label: "+2,000", val: totalAmount + 2000 },
-                    { label: "+5,000", val: totalAmount + 5000 },
-                  ].map((chip) => (
-                    <button
-                      key={chip.label}
-                      type="button"
-                      onClick={() => setTenderedCash(chip.val.toString())}
-                      className="px-3 py-1.5 rounded-xl border border-border text-xs font-bold hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Change Due Display */}
-                <div className="p-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-border flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-gray-400 uppercase">Change Due to Customer</span>
-                    <p className="text-[11px] text-gray-500">Tendered - Total Due</p>
-                  </div>
-                  <div className="text-2xl font-black text-emerald-500">
-                    LKR {formatLKR(changeDue)}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setIsPaymentModalOpen(false)}
-                className="flex-1 py-3.5 rounded-xl border border-border font-semibold text-xs text-gray-400 hover:text-foreground flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <span>Cancel</span>
-                <kbd className="text-[10px] bg-black/5 dark:bg-white/5 text-gray-400 px-1 rounded">Esc</kbd>
-              </button>
-              <button
-                type="button"
-                onClick={handleExecuteCheckout}
-                disabled={checkingOut || (paymentMethod === "Cash" && parsedTendered < totalAmount)}
-                className="flex-2 py-3.5 bg-brand-500 hover:bg-brand-400 disabled:opacity-40 text-brand-950 font-bold text-sm rounded-xl transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-2"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{checkingOut ? "Processing Sale..." : "Complete Sale"}</span>
-                <kbd className="text-[10px] bg-brand-600/30 text-brand-950 px-1.5 py-0.5 rounded font-bold">Enter</kbd>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Discount Modal */}
       {isDiscountModalOpen && (
@@ -2651,6 +3270,7 @@ export function PosTerminalClient({
         onShiftUpdated={(s) => {
           setActiveShift(s);
           if (s) {
+            setMobileView("catalog");
             setIsCustomerModalOpen(true);
           }
         }}
@@ -2691,20 +3311,6 @@ export function PosTerminalClient({
         onSettingsSaved={() => fetchReceiptTemplate()}
       />
 
-      {/* Customer / Client Selection Modal */}
-      <CustomerSelectModal
-        isOpen={isCustomerModalOpen}
-        onClose={() => setIsCustomerModalOpen(false)}
-        currentCustomerName={customerName}
-        currentCustomerPhone={customerPhone}
-        onSelectCustomer={(client) => {
-          setCustomerName(client.name);
-          setCustomerPhone(client.phone || "");
-          setCustomerId(client.id || null);
-          triggerToast(`Customer assigned: ${client.name}`, "success");
-        }}
-      />
-
       {/* Special Offers & Promotions Modal */}
       <SpecialOffersModal
         isOpen={isSpecialOffersModalOpen}
@@ -2719,93 +3325,7 @@ export function PosTerminalClient({
         canManageOffers={canManageStock && !isCashierOnly}
       />
 
-      {/* Manager Authorization Modal for Protected Offers */}
-      <ManagerApprovalModal
-        isOpen={Boolean(authorizingPromo)}
-        onClose={() => {
-          setAuthorizingPromo(null);
-          if (pendingCheckoutAfterPromoRef.current) {
-            pendingCheckoutAfterPromoRef.current = false;
-            setPendingCheckoutAfterPromo(false);
-            // If manager authorization was cancelled/skipped at checkout, proceed to payment
-            setPaymentError(null);
-            setIsPaymentModalOpen(true);
-            setTimeout(() => tenderedInputRef.current?.focus(), 60);
-          }
-        }}
-        promotion={authorizingPromo}
-        onAuthorized={handleManagerAuthorized}
-      />
 
-      {/* Manager Authorization Modal for Direct Order Discount */}
-      <ManagerApprovalModal
-        isOpen={isAuthorizingOrderDiscount}
-        onClose={() => {
-          setIsAuthorizingOrderDiscount(false);
-          setPendingOrderDiscount(null);
-        }}
-        actionTitle="Direct Order Discount"
-        actionBadge={
-          pendingOrderDiscount?.type === "percent"
-            ? `${pendingOrderDiscount.percent}% OFF`
-            : `LKR ${formatLKR(pendingOrderDiscount?.fixed || 0)} OFF`
-        }
-        actionDescription="Cashiers cannot apply direct discounts directly. Manager or supervisor access code authorization is required to apply this discount."
-        onAuthorized={(_promo, managerName) => {
-          if (pendingOrderDiscount) {
-            setDiscountType(pendingOrderDiscount.type);
-            setDiscountPercent(pendingOrderDiscount.percent);
-            setDiscountFixed(pendingOrderDiscount.fixed);
-            triggerToast(
-              `Order discount (${pendingOrderDiscount.type === "percent" ? `${pendingOrderDiscount.percent}%` : `LKR ${formatLKR(pendingOrderDiscount.fixed)}`}) authorized by ${managerName}`,
-              "success"
-            );
-          }
-          setPendingOrderDiscount(null);
-          setIsAuthorizingOrderDiscount(false);
-        }}
-      />
-
-      {/* Manager Authorization Modal for Direct Item Discount */}
-      <ManagerApprovalModal
-        isOpen={isAuthorizingItemDiscount}
-        onClose={() => {
-          setIsAuthorizingItemDiscount(false);
-          setPendingItemDiscount(null);
-        }}
-        actionTitle={`Item Discount: ${pendingItemDiscount?.itemName || "Item"}`}
-        actionBadge={
-          pendingItemDiscount?.discountType === "percent"
-            ? `${pendingItemDiscount.discount}% OFF`
-            : `LKR ${formatLKR(pendingItemDiscount?.discount || 0)} OFF`
-        }
-        actionDescription="Cashiers cannot apply line item discounts directly. Manager access code authorization is required."
-        onAuthorized={(_promo, managerName) => {
-          if (pendingItemDiscount) {
-            setCart((prev) =>
-              prev.map((it) => {
-                if (it.id === pendingItemDiscount.itemId) {
-                  return {
-                    ...it,
-                    discount: pendingItemDiscount.discount > 0 ? pendingItemDiscount.discount : undefined,
-                    discountType: pendingItemDiscount.discountType,
-                    discountReason: pendingItemDiscount.reason
-                      ? `${pendingItemDiscount.reason} (Auth: ${managerName})`
-                      : `Auth: ${managerName}`,
-                  };
-                }
-                return it;
-              })
-            );
-            triggerToast(
-              `Item discount for "${pendingItemDiscount.itemName}" authorized by ${managerName}`,
-              "success"
-            );
-          }
-          setPendingItemDiscount(null);
-          setIsAuthorizingItemDiscount(false);
-        }}
-      />
 
       {/* Line Item Special Discount Modal */}
       <ItemDiscountModal
@@ -2927,15 +3447,6 @@ export function PosTerminalClient({
               </div>
 
               <div className="p-2.5 bg-black/5 dark:bg-white/5 rounded-xl flex items-center justify-between">
-                <span className="text-gray-400">Select Payment Tender (Inside Checkout)</span>
-                <span className="flex items-center gap-1">
-                  <kbd className="px-2 py-0.5 rounded bg-black/10 dark:bg-white/10 font-bold border border-border">1 Cash</kbd>
-                  <kbd className="px-2 py-0.5 rounded bg-black/10 dark:bg-white/10 font-bold border border-border">2 Card</kbd>
-                  <kbd className="px-2 py-0.5 rounded bg-black/10 dark:bg-white/10 font-bold border border-border">3 Bank</kbd>
-                </span>
-              </div>
-
-              <div className="p-2.5 bg-black/5 dark:bg-white/5 rounded-xl flex items-center justify-between">
                 <span className="text-gray-400">Complete Sale / Process Payment</span>
                 <kbd className="px-2 py-0.5 rounded bg-brand-500 text-brand-950 font-bold">Enter</kbd>
               </div>
@@ -2992,19 +3503,39 @@ export function PosTerminalClient({
           >
             {/* Drawer Header */}
             <div className="flex items-center justify-between p-4 border-b border-border bg-black/5 dark:bg-white/5 shrink-0">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <TenantLogo
-                  logoUrl={tenantLogoUrl}
-                  name={tenantName}
-                  size={32}
-                  className="w-8 h-8 rounded-xl object-contain p-0.5 bg-black/5 dark:bg-white/5 border border-brand-500/30 shrink-0"
-                  fallbackClassName="w-8 h-8 rounded-xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center text-brand-500 font-black text-xs shrink-0"
-                />
-                <div className="min-w-0">
-                  <div className="text-xs font-bold text-foreground truncate">{tenantName}</div>
-                  <div className="text-[10px] text-gray-400 truncate">{userName} • {userRole}</div>
+              {isCashier ? (
+                <div className="flex items-center gap-2.5 min-w-0 select-none">
+                  <TenantLogo
+                    logoUrl={tenantLogoUrl}
+                    name={tenantName}
+                    size={32}
+                    className="w-8 h-8 rounded-xl object-contain p-0.5 bg-black/5 dark:bg-white/5 border border-brand-500/30 shrink-0"
+                    fallbackClassName="w-8 h-8 rounded-xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center text-brand-500 font-black text-xs shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-foreground truncate">{tenantName}</div>
+                    <div className="text-[10px] text-gray-400 truncate">{userName} • {userRole}</div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-2.5 min-w-0 hover:opacity-80 transition-opacity cursor-pointer"
+                  title="Go to Dashboard"
+                >
+                  <TenantLogo
+                    logoUrl={tenantLogoUrl}
+                    name={tenantName}
+                    size={32}
+                    className="w-8 h-8 rounded-xl object-contain p-0.5 bg-black/5 dark:bg-white/5 border border-brand-500/30 shrink-0"
+                    fallbackClassName="w-8 h-8 rounded-xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center text-brand-500 font-black text-xs shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-foreground truncate">{tenantName}</div>
+                    <div className="text-[10px] text-gray-400 truncate">{userName} • {userRole}</div>
+                  </div>
+                </Link>
+              )}
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-1.5 text-gray-400 hover:text-foreground rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer shrink-0"
@@ -3023,6 +3554,31 @@ export function PosTerminalClient({
                 </div>
               )}
 
+              {/* Switch Business for Multi-Business Cashier on Mobile */}
+              {shouldShowBusinessSwitcher && (
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setIsMobileSwitcherModalOpen(true);
+                  }}
+                  className="w-full p-3 rounded-2xl bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/30 text-brand-500 flex items-center justify-between text-left transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-card text-brand-500 shrink-0">
+                      <Building2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-foreground">Switch Business</div>
+                      <div className="text-[10px] text-gray-400">
+                        {userBusinesses.length} profile{userBusinesses.length !== 1 ? "s" : ""} available
+                        {pendingInvites.length > 0 ? ` • ${pendingInvites.length} pending invite${pendingInvites.length !== 1 ? "s" : ""}` : ""}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-brand-500 shrink-0" />
+                </button>
+              )}
+
               {/* Counter Details */}
               <button
                 onClick={() => {
@@ -3036,7 +3592,7 @@ export function PosTerminalClient({
                     <Clock className="w-4 h-4" />
                   </div>
                   <div className="text-xs font-bold text-foreground group-hover:text-brand-500">
-                    {activeShift ? `${activeShift.counter_name || "Counter 1"} • Shift #${activeShift.shift_number || activeShift.id}` : "Open Shift on Counter"}
+                    {activeShift ? `${activeShift.counter_name || "Counter 1"} • Shift ${activeShift.shift_number || activeShift.id}` : "Open Shift on Counter"}
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" />
@@ -3099,6 +3655,7 @@ export function PosTerminalClient({
               <button
                 onClick={() => {
                   setIsMobileMenuOpen(false);
+                  setMobileView("catalog");
                   setIsCustomerModalOpen(true);
                 }}
                 className="w-full p-3 rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-brand-500/10 border border-border hover:border-brand-500/30 flex items-center justify-between text-left transition-all cursor-pointer group"
@@ -3200,6 +3757,18 @@ export function PosTerminalClient({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Mobile Switcher Modal */}
+      {isMobileSwitcherModalOpen && (
+        <PosBusinessSwitcher
+          isOpen={isMobileSwitcherModalOpen}
+          onClose={() => setIsMobileSwitcherModalOpen(false)}
+          businesses={userBusinesses}
+          pendingInvites={pendingInvites}
+          onRefresh={loadBusinesses}
+          isModal={true}
+        />
       )}
     </div>
   );

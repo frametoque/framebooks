@@ -161,3 +161,46 @@ export function maskSensitive(value: string | null | undefined, type: "account" 
       return `••••${str.slice(-4)}`;
   }
 }
+
+/**
+ * Generates a tamper-proof cryptographically signed customer display token.
+ * Valid for standalone customer-facing monitors/tablets.
+ */
+export function signCustomerDisplayToken(tenantId: number, counterId: number = 1): string {
+  const secret = process.env.NEXTAUTH_SECRET || process.env.APP_MASTER_KEY || "fb_customer_display_secret_fallback_key";
+  const payload = JSON.stringify({
+    tenantId: Number(tenantId),
+    counterId: Number(counterId || 1),
+    iat: Math.floor(Date.now() / 1000),
+  });
+  const b64Payload = Buffer.from(payload, "utf8").toString("base64url");
+  const sig = crypto.createHmac("sha256", secret).update(b64Payload).digest("base64url");
+  return `${b64Payload}.${sig}`;
+}
+
+/**
+ * Verifies and decodes a customer display token.
+ * Returns { tenantId, counterId } if valid, or null if invalid or tampered.
+ */
+export function verifyCustomerDisplayToken(token: string): { tenantId: number; counterId: number } | null {
+  try {
+    if (!token || typeof token !== "string") return null;
+    const parts = token.trim().split(".");
+    if (parts.length !== 2) return null;
+    const [b64Payload, sig] = parts;
+    const secret = process.env.NEXTAUTH_SECRET || process.env.APP_MASTER_KEY || "fb_customer_display_secret_fallback_key";
+    const expectedSig = crypto.createHmac("sha256", secret).update(b64Payload).digest("base64url");
+    if (sig.length !== expectedSig.length) return null;
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) {
+      return null;
+    }
+    const decoded = JSON.parse(Buffer.from(b64Payload, "base64url").toString("utf8"));
+    if (!decoded.tenantId || isNaN(Number(decoded.tenantId))) return null;
+    return {
+      tenantId: Number(decoded.tenantId),
+      counterId: Number(decoded.counterId || 1),
+    };
+  } catch {
+    return null;
+  }
+}

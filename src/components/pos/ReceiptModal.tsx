@@ -3,6 +3,7 @@
 import React, { useEffect, useCallback } from "react";
 import { Printer, X, CheckCircle2, RotateCcw, Palette } from "lucide-react";
 import { generateBarcodeSvg, generateQrCodeSvg } from "@/lib/pos/barcode-generator";
+import { printHtmlViaHiddenIframe } from "@/lib/pos/receipt-printer";
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -30,7 +31,7 @@ export function ReceiptModal({
   if (!isOpen || !order) return null;
 
   const items = Array.isArray(order.items) ? order.items : [];
-  const orderNumber = order.order_number || order.orderNumber || "POS-SALE";
+  const orderNumber = order.order_number || order.orderNumber || "REC-SALE";
   const barcodeSvg = generateBarcodeSvg(orderNumber, { height: 35, barWidth: 1.5 });
 
   const themeFont = customLayout?.definition?.theme?.fontFamily
@@ -46,12 +47,6 @@ export function ReceiptModal({
   };
 
   const handlePrint = useCallback(() => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      alert("Please allow popups to print receipt.");
-      return;
-    }
-
     const itemsRows = items
       .map(
         (it: any) => `
@@ -68,7 +63,7 @@ export function ReceiptModal({
       )
       .join("");
 
-    printWindow.document.write(`
+    const receiptHtml = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -154,12 +149,12 @@ export function ReceiptModal({
             </tr>
             <tr>
               <td style="padding-top: 6px;">Paid (${order.payment_method})</td>
-              <td style="text-align: right; padding-top: 6px;">${formatLKR(order.amount_tendered || order.total_amount)}</td>
+              <td style="text-align: right; padding-top: 6px;">${formatLKR(Number(order.amount_tendered) || Number(order.total_amount))}</td>
             </tr>
-            ${order.change_returned > 0 ? `
+            ${Number(order.change_returned) > 0 ? `
               <tr>
                 <td>Change Due</td>
-                <td style="text-align: right; font-weight: bold;">${formatLKR(order.change_returned)}</td>
+                <td style="text-align: right; font-weight: bold;">${formatLKR(Number(order.change_returned))}</td>
               </tr>
             ` : ""}
           </table>
@@ -177,18 +172,12 @@ export function ReceiptModal({
           <div class="center" style="font-size: 8px; color: #888; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
             Powered by Framebooks POS
           </div>
-
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 500);
-            };
-          </script>
         </body>
       </html>
-    `);
+    `;
 
-    printWindow.document.close();
+    printHtmlViaHiddenIframe(receiptHtml);
+
     // Auto-close receipt modal and trigger clean state so receipt modal does not linger
     setTimeout(() => {
       onClose();
@@ -317,12 +306,12 @@ export function ReceiptModal({
               </div>
               <div className="flex justify-between pt-1 text-[11px]">
                 <span>Paid ({order.payment_method})</span>
-                <span>{formatLKR(order.amount_tendered || order.total_amount)}</span>
+                <span>{formatLKR(Number(order.amount_tendered) || Number(order.total_amount))}</span>
               </div>
-              {order.change_returned > 0 && (
+              {Number(order.change_returned) > 0 && (
                 <div className="flex justify-between font-bold text-emerald-700">
                   <span>Change Due</span>
-                  <span>{formatLKR(order.change_returned)}</span>
+                  <span>{formatLKR(Number(order.change_returned))}</span>
                 </div>
               )}
             </div>

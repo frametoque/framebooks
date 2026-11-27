@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { DollarSign, X, AlertTriangle, CheckCircle2, Lock, Unlock, Clock, Store, User } from "lucide-react";
+import { DollarSign, X, AlertTriangle, CheckCircle2, Lock, Unlock, Clock, User } from "lucide-react";
 import { getShiftSummaryAction, closeShiftAction, getOrCreateShiftAction } from "@/app/(dashboard)/pos/actions/sales";
 import { getCountersAction, PosCounter } from "@/app/(dashboard)/pos/actions/counters";
 
@@ -34,7 +34,7 @@ export function ShiftModal({ isOpen, onClose, shift, onShiftUpdated }: ShiftModa
     } else {
       loadCounters();
     }
-  }, [isOpen, shift]);
+  }, [isOpen, shift?.id]);
 
   const loadCounters = async () => {
     setLoadingCounters(true);
@@ -139,29 +139,21 @@ export function ShiftModal({ isOpen, onClose, shift, onShiftUpdated }: ShiftModa
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed top-14 sm:top-16 inset-x-0 bottom-0 z-40 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="bg-card border border-border rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col relative max-h-[92vh]"
+        className="bg-card border border-border rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col relative max-h-[calc(100vh-5rem)] sm:max-h-[calc(100vh-6rem)] my-auto ring-1 ring-border/50"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-black/5 dark:bg-white/5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center font-bold text-xs">
-              <Store className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-foreground">
-                {shift
-                  ? `${shift.counter_name || "Counter 1"} • Shift #${shift.shift_number || shift.id}`
-                  : "Open Shift on Counter"}
-              </h3>
-              <p className="text-[11px] text-muted-foreground">
-                {shift ? "Active Cash Drawer Session" : "Select a cashier counter and count drawer float"}
-              </p>
-            </div>
+          <div>
+            <h3 className="text-base font-bold text-foreground">
+              {shift
+                ? `${shift.counter_name || "Counter 1"} • Shift ${shift.shift_number || shift.id}`
+                : "Open Shift on Counter"}
+            </h3>
           </div>
           <button
             onClick={onClose}
@@ -210,16 +202,11 @@ export function ShiftModal({ isOpen, onClose, shift, onShiftUpdated }: ShiftModa
                         >
                           <div className="flex items-center justify-between w-full">
                             <span className="font-bold text-xs text-foreground truncate">{c.name}</span>
-                            {c.code && (
-                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-black/10 dark:bg-white/10 text-muted-foreground">
-                                {c.code}
-                              </span>
-                            )}
                           </div>
                           {hasShift ? (
                             <span className="text-[10px] text-amber-500 font-semibold flex items-center gap-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                              Shift #{c.active_shift?.shift_number} in progress ({c.active_shift?.user_name})
+                              Shift {c.active_shift?.shift_number} in progress ({c.active_shift?.user_name})
                             </span>
                           ) : (
                             <span className="text-[10px] text-emerald-500 font-semibold flex items-center gap-1">
@@ -298,10 +285,9 @@ export function ShiftModal({ isOpen, onClose, shift, onShiftUpdated }: ShiftModa
             {/* Shift info strip */}
             <div className="p-3.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-border flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
-                <Store className="w-4 h-4 text-brand-500" />
                 <span className="font-bold text-foreground">{shift.counter_name || "Counter 1"}</span>
                 <span className="text-muted-foreground">•</span>
-                <span className="text-emerald-500 font-semibold">Shift #{shift.shift_number || shift.id} Active</span>
+                <span className="text-emerald-500 font-semibold">Shift {shift.shift_number || shift.id} Active</span>
               </div>
               <div className="flex items-center gap-1 text-muted-foreground">
                 <User className="w-3.5 h-3.5" />
@@ -331,7 +317,7 @@ export function ShiftModal({ isOpen, onClose, shift, onShiftUpdated }: ShiftModa
                     : "border-transparent text-gray-400 hover:text-foreground"
                 }`}
               >
-                Reconcile & Close Shift
+                Close Shift
               </button>
             </div>
 

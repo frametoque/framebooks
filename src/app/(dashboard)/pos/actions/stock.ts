@@ -164,6 +164,15 @@ export async function saveProductAction(data: {
         WHERE id::text = ${String(data.id)} AND tenant_id::text = ${String(tenantId)}
       `;
       await logSystemAction(`Updated stock product "${data.item_name}" (${sku})`);
+
+      try {
+        const { notifyTenantStockUpdate } = await import("@/lib/pos/server-events");
+        notifyTenantStockUpdate(tenantId, {
+          source: 'product_updated',
+          items: [{ id: Number(data.id) }],
+        });
+      } catch {}
+
       revalidatePath("/pos");
       revalidatePath("/user/stock");
       revalidatePath("/user/inventory");
@@ -243,6 +252,18 @@ export async function adjustStockAction(data: {
     );
 
     await logSystemAction(`Adjusted stock for item #${data.inventoryId}: ${data.changeQty > 0 ? '+' : ''}${data.changeQty} (${data.reason})`);
+
+    // Notify all counters and devices for this tenant instantly
+    try {
+      const { notifyTenantStockUpdate } = await import("@/lib/pos/server-events");
+      notifyTenantStockUpdate(tenantId, {
+        source: 'stock_adjustment',
+        items: [{ id: data.inventoryId, delta: data.changeQty }],
+      });
+    } catch (sseErr) {
+      console.warn("[Stock Adjustment SSE Event Error]", sseErr);
+    }
+
     revalidatePath("/pos");
     revalidatePath("/user/stock");
     revalidatePath("/user/inventory");
@@ -291,6 +312,14 @@ export async function bulkStockTakeAction(items: Array<{
     if (movements.length > 0) {
       await recordStockMovements(tenantId, movements, { id: userId });
       await logSystemAction(`Completed bulk stocktake adjusting ${movements.length} items`);
+
+      try {
+        const { notifyTenantStockUpdate } = await import("@/lib/pos/server-events");
+        notifyTenantStockUpdate(tenantId, {
+          source: 'bulk_stocktake',
+          items: movements.map((m) => ({ id: m.inventoryId })),
+        });
+      } catch {}
     }
 
     revalidatePath("/pos");

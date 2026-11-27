@@ -404,6 +404,17 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
     }
   }, [initialSection, currentUserRole]);
 
+  // Auto-scroll active tab into view when navigating or switching tabs
+  const navTabsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (activeView === "form" && activeTab) {
+      const activeEl = document.getElementById(`settings-tab-${activeTab}`);
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      }
+    }
+  }, [activeTab, activeView]);
+
   useEffect(() => {
     const tabParam = searchParams.get("tab");
     if (tabParam) {
@@ -478,9 +489,9 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
     }
   };
 
-  const fetchTeamData = async () => {
+  const fetchTeamData = async (force = false) => {
     try {
-      if (settingsMemoryCache?.teamData) {
+      if (!force && settingsMemoryCache?.teamData) {
         setSentInvitations(settingsMemoryCache.teamData.sent);
         setTeamMembers(settingsMemoryCache.teamData.members);
         setAvailableRoles(settingsMemoryCache.teamData.roles);
@@ -912,7 +923,8 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
     requireAuth(async () => {
       const res = await updateTeamMemberRole(memberId, newRole);
       if (res.success) {
-        fetchTeamData();
+        if (settingsMemoryCache) settingsMemoryCache.teamData = null;
+        fetchTeamData(true);
       } else {
         alert(res.error || "Failed to change role");
       }
@@ -924,7 +936,8 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
     requireAuth(async () => {
       const res = await removeTeamMember(memberId);
       if (res.success) {
-        fetchTeamData();
+        if (settingsMemoryCache) settingsMemoryCache.teamData = null;
+        fetchTeamData(true);
       } else {
         alert(res.error || "Failed to remove member");
       }
@@ -966,39 +979,39 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
   }
 
   return (
-    <div className="w-full mx-auto pb-20 px-6">
+    <div className="w-full mx-auto pb-4 px-4 sm:px-6">
       {activeView === "hub" && (
-        <div className="flex flex-col lg:flex-row gap-10">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
 
           {/* Left Column (Profile Card) */}
-          <div className="w-full lg:w-[340px] shrink-0 space-y-4">
+          <div className="w-full lg:w-[320px] shrink-0 space-y-3">
 
             {/* Business Card */}
-            <div className="bg-card rounded-[32px] p-8 flex flex-col items-center text-center shadow-lg">
-              <div className="mb-4">
+            <div className="bg-card border border-border rounded-2xl p-6 flex flex-col items-center text-center shadow-xs">
+              <div className="mb-3">
                 <TenantLogo
                   logoUrl={tenantInfo.logo_url}
                   name={tenantInfo.name}
-                  size={80}
-                  className="w-20 h-20 rounded-full object-cover border-2 border-border"
-                  fallbackClassName="w-20 h-20 rounded-full bg-card flex items-center justify-center border-2 border-border"
+                  size={72}
+                  className="w-[72px] h-[72px] rounded-full object-cover border-2 border-border"
+                  fallbackClassName="w-[72px] h-[72px] rounded-full bg-card flex items-center justify-center border-2 border-border"
                   iconClassName="w-8 h-8 text-gray-500"
                 />
               </div>
-              <h2 className="text-[22px] font-black uppercase leading-tight tracking-wider mb-1">
+              <h2 className="text-[22px] font-black uppercase leading-tight tracking-wider mb-1 truncate max-w-full">
                 {tenantInfo.name}
               </h2>
-              <p className="text-brand-500 text-sm font-semibold tracking-wide uppercase mb-4">Business Profile</p>
+              <p className="text-brand-500 text-sm font-semibold tracking-wide uppercase mb-3">Business Profile</p>
 
-              <div className="bg-card border border-border px-4 py-1.5 rounded-full flex items-center justify-center gap-2">
-                <span className="text-brand-500 font-bold text-xs">{tenantInfo.plan}</span>
+              <div className="bg-card border border-border px-3.5 py-1 rounded-full flex items-center justify-center gap-1.5">
+                <span className="text-brand-500 font-bold text-sm">{tenantInfo.plan}</span>
               </div>
             </div>
 
             {/* Logged-in User Info */}
-            <div className="bg-card rounded-2xl p-5 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0 border border-border">
+            <div className="bg-card border border-border rounded-xl p-3 flex items-center justify-between shadow-2xs">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0 border border-border">
                   <Image
                     src={user.image || "/logos/ft/logo.png"}
                     alt="Profile"
@@ -1011,17 +1024,17 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                     }}
                   />
                 </div>
-                <div className="overflow-hidden">
+                <div className="overflow-hidden min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">{user.name || formData.name}</p>
                   <p className="text-xs text-gray-400 truncate">{user.email}</p>
                 </div>
               </div>
               <button
                 onClick={() => signOut()}
-                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-xl transition-colors"
+                className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-colors shrink-0"
                 title="Sign Out"
               >
-                <MdLogout className="w-5 h-5" />
+                <MdLogout className="w-4 h-4" />
               </button>
             </div>
 
@@ -1030,43 +1043,40 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
               href="/guide/business-profile"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-card hover:bg-muted/60 border border-border/80 rounded-2xl p-4 flex items-center justify-between transition-colors group text-left block shadow-xs"
+              className="bg-card hover:bg-muted/60 border border-border/80 rounded-xl p-3 flex items-center justify-between transition-colors group text-left block shadow-2xs"
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-500 shrink-0">
-                  <FileText className="w-5 h-5" />
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-2 rounded-lg bg-brand-500/10 text-brand-500 shrink-0">
+                  <FileText className="w-4 h-4" />
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-foreground group-hover:text-brand-500 transition-colors">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-foreground group-hover:text-brand-500 transition-colors truncate">
                     Settings Guide & Steps
                   </p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Step-by-step documentation for all settings
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    Step-by-step documentation
                   </p>
                 </div>
               </div>
-              <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-brand-500 transition-colors shrink-0" />
+              <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-brand-500 transition-colors shrink-0" />
             </a>
 
             {/* Enterprise-grade encryption & security info */}
-            <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed pt-2 flex flex-row items-center gap-3 text-left px-1">
-              <div className="p-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 shrink-0">
-                <MdLock className="w-4 h-4 text-brand-500" />
+            <div className="text-[11px] text-gray-500 dark:text-gray-400 leading-normal pt-1 flex flex-row items-center gap-2 px-1">
+              <div className="p-1 rounded-full bg-brand-500/10 border border-brand-500/20 shrink-0">
+                <MdLock className="w-3 h-3 text-brand-500" />
               </div>
-              <p className="text-[11px] leading-relaxed">
-                Your data stays secure with <span className="text-brand-500 font-medium">enterprise-grade encryption</span>. &copy; {new Date().getFullYear()}. <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors hover:underline">FrameToque Digital</a>. All rights reserved.
+              <p className="text-[11px] leading-snug">
+                Your data stays secure with <span className="text-brand-500 font-medium">enterprise encryption</span>. &copy; {new Date().getFullYear()}. <a href="https://frametoque.com" target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors hover:underline">FrameToque</a>.
               </p>
             </div>
 
           </div>
 
           {/* Right Column (Navigation Menu) */}
-          <div className="flex-1 space-y-10 lg:pl-6">
-
-            {/* Section 2 */}
+          <div className="flex-1 lg:pl-2">
             <div>
-
-              <div className="flex flex-col">
+              <div className="flex flex-col divide-y divide-border/20">
                 {[
                   { name: "Business Profile", sub: "Update business name, contact & details.", icon: MdBusiness, id: "business", allowed: isSettingsSectionAllowed("business", currentUserRole) },
                   { name: "Invoice Layouts", sub: "Design, customize, and arrange custom invoice templates and fields.", icon: FileText, id: "invoice-layout", allowed: isSettingsSectionAllowed("invoice-layout", currentUserRole) },
@@ -1094,18 +1104,18 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                         window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
                         window.scrollTo({ top: 0, behavior: "instant" });
                       }}
-                      className="flex items-center justify-between py-4 group cursor-pointer text-left hover:bg-card px-2 -mx-2 rounded-xl transition-colors"
+                      className="flex items-center justify-between py-2 sm:py-2.5 group cursor-pointer text-left hover:bg-card px-3 -mx-3 rounded-xl transition-colors"
                     >
-                      <div className="flex items-center gap-5">
-                        <div className="p-2.5 rounded-full border border-black/20 dark:border-white/20 text-gray-300 group-hover:border-white/40 transition-colors shrink-0 mt-1">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="p-2 rounded-full border border-black/20 dark:border-white/20 text-gray-300 group-hover:border-brand-500/50 group-hover:text-brand-500 transition-colors shrink-0">
                           <item.icon className="w-[18px] h-[18px]" />
                         </div>
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-[15px]">{item.name}</span>
-                          <span className="text-sm text-gray-400 mt-0.5">{item.sub}</span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-[15px] group-hover:text-foreground transition-colors truncate">{item.name}</span>
+                          <span className="text-sm text-gray-400 mt-0.5 truncate">{item.sub}</span>
                         </div>
                       </div>
-                      <MdKeyboardArrowRight className="w-5 h-5 text-gray-500 group-hover:text-gray-300 transition-colors shrink-0" />
+                      <MdKeyboardArrowRight className="w-5 h-5 text-gray-500 group-hover:text-foreground transition-colors shrink-0 ml-2" />
                     </button>
                   ))}
               </div>
@@ -1115,266 +1125,79 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
         </div>
       )}
 
-      {/* Data Export Tab */}
-      {activeView === "form" && activeTab === "export" && isSettingsSectionAllowed("export", currentUserRole) && (
-        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 relative z-50">
+      {/* Form Views */}
+      {activeView === "form" && (
+        <div className="w-full">
+          {/* Settings Section Top Navigation Bar */}
+          <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8 w-full min-w-0">
+            {/* Back to Settings Hub Button */}
             <button
               type="button"
               onClick={(e) => {
                 e.preventDefault();
-                setActiveTab("profile");
                 setActiveView("hub");
                 window.history.pushState(null, '', "/settings");
                 window.dispatchEvent(new CustomEvent("update-title", { detail: "Settings" }));
                 window.scrollTo({ top: 0, behavior: "instant" });
               }}
-              className="flex items-center gap-2 text-gray-400 hover:text-foreground font-semibold transition-colors cursor-pointer w-fit"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card hover:bg-black/5 dark:hover:bg-white/5 text-xs font-semibold text-gray-400 hover:text-foreground transition-all cursor-pointer shrink-0 shadow-2xs group"
+              title="Back to Settings Hub"
             >
-              <MdKeyboardArrowLeft className="w-5 h-5" /> Settings
+              <MdKeyboardArrowLeft className="w-4 h-4 text-gray-400 group-hover:text-foreground transition-colors" />
+              <span>Settings</span>
             </button>
 
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
-              {[
-                { name: "Business", id: "business", icon: MdBusiness, allowed: isSettingsSectionAllowed("business", currentUserRole) },
-                { name: "Invoice Layouts", id: "invoice-layout", icon: FileText, allowed: isSettingsSectionAllowed("invoice-layout", currentUserRole) },
-                { name: "Appearance", id: "appearance", icon: Palette, allowed: isSettingsSectionAllowed("appearance", currentUserRole) },
-                { name: "Notifications", id: "notifications", icon: Bell, allowed: true },
-                { name: "Security", id: "profile", icon: MdSecurity, allowed: true },
-                { name: "Billing", id: "billing", icon: MdCreditCard, allowed: isSettingsSectionAllowed("billing", currentUserRole) },
-                { name: "Team & Permissions", id: "team", icon: MdGroup, allowed: isSettingsSectionAllowed("team", currentUserRole) },
-                { name: "3rd Party Integrations", id: "integrations", icon: Plug, allowed: isSettingsSectionAllowed("integrations", currentUserRole) },
-                { name: "Preferences", id: "prefs", icon: Sliders, allowed: isSettingsSectionAllowed("prefs", currentUserRole) },
-                { name: "Audit Logs", id: "audit_logs", icon: MdHistory, allowed: isSettingsSectionAllowed("audit_logs", currentUserRole) },
-                { name: "Export", id: "export", icon: MdDownload, allowed: isSettingsSectionAllowed("export", currentUserRole) },
-                { name: "Danger Zone", id: "danger", icon: MdWarning, allowed: isSettingsSectionAllowed("danger", currentUserRole) }
-              ]
-                .filter(item => item.allowed)
-                .map(item => {
-                  const isCurrent = activeTab === item.id;
-                  const slug = SETTINGS_TAB_TO_SLUG[item.id] || item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        setActiveTab(item.id);
-                        window.history.pushState(null, '', `/settings/${slug}`);
-                        const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
-                        window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
-                        window.scrollTo({ top: 0, behavior: "instant" });
-                      }}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${isCurrent
-                          ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs"
-                          : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
-                        }`}
-                    >
-                      <item.icon className="w-3.5 h-3.5" />
-                      {item.name}
-                    </button>
-                  );
-                })}
-            </div>
-          </div>
+            {/* Divider */}
+            <div className="h-5 w-px bg-border shrink-0" />
 
-          <div className="bg-transparent border border-border rounded-3xl p-7">
-            <p className="text-gray-400 text-sm mb-6">Export your workspace data into CSV format for your own records or to share with your accountant.</p>
-
-            {tenantInfo.plan === "Free" ? (
-              <UpgradeOverlay
-                title="Data Export"
-                description="Exporting your financial data to CSV is only available on Pro and Pro Plus plans."
-                requiredPlan="Pro"
-              >
-                <div className="h-[200px]" />
-              </UpgradeOverlay>
-            ) : (
-              <div className="space-y-8">
-                {/* Export All Section */}
-                <div className="bg-card/50 rounded-2xl p-6 border border-brand-500/20 shadow-[0_0_20px_rgba(0,227,91,0.05)]">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                        <MdDownload className="w-5 h-5 text-brand-500" /> Bulk Export
-                      </h3>
-                      <p className="text-sm text-gray-400 mt-1">Download all your lists sequentially to backup your workspace.</p>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        const items: ("invoices" | "incomes" | "expenses" | "clients")[] = ["invoices", "incomes", "expenses", "clients"];
-                        for (const item of items) {
-                          const res = await exportData(item);
-                          if (res.success && res.csv) {
-                            const blob = new Blob([res.csv], { type: 'text/csv' });
-                            const url = window.URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = `framebooks_${item}_${new Date().toISOString().split('T')[0]}.csv`;
-                            a.click();
-                            window.URL.revokeObjectURL(url);
-                          }
-                          await new Promise(r => setTimeout(r, 800)); // stagger downloads
-                        }
-                      }}
-                      className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-brand-950 font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(0,227,91,0.2)]"
-                    >
-                      Export All Data
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {[
-                      { id: "invoices", label: "Invoices" },
-                      { id: "incomes", label: "Incomes" },
-                      { id: "expenses", label: "Expenses" },
-                      { id: "clients", label: "Clients" }
-                    ].map(item => (
+            {/* Scrollable Tabs Ribbon */}
+            <div
+              ref={navTabsRef}
+              className="flex-1 min-w-0 overflow-x-auto scrollbar-none py-1 scroll-smooth"
+            >
+              <div className="flex items-center gap-1.5 w-max pr-4">
+                {[
+                  { name: "Business", id: "business", icon: MdBusiness, allowed: isSettingsSectionAllowed("business", currentUserRole) },
+                  { name: "Invoice Layouts", id: "invoice-layout", icon: FileText, allowed: isSettingsSectionAllowed("invoice-layout", currentUserRole) },
+                  { name: "Appearance", id: "appearance", icon: Palette, allowed: isSettingsSectionAllowed("appearance", currentUserRole) },
+                  { name: "Notifications", id: "notifications", icon: Bell, allowed: true },
+                  { name: "Security", id: "profile", icon: MdSecurity, allowed: true },
+                  { name: "Billing", id: "billing", icon: MdCreditCard, allowed: isSettingsSectionAllowed("billing", currentUserRole) },
+                  { name: "Team & Permissions", id: "team", icon: MdGroup, allowed: isSettingsSectionAllowed("team", currentUserRole) },
+                  { name: "3rd Party Integrations", id: "integrations", icon: Plug, allowed: isSettingsSectionAllowed("integrations", currentUserRole) },
+                  { name: "Preferences", id: "prefs", icon: Sliders, allowed: isSettingsSectionAllowed("prefs", currentUserRole) },
+                  { name: "Audit Logs", id: "audit_logs", icon: MdHistory, allowed: isSettingsSectionAllowed("audit_logs", currentUserRole) },
+                  { name: "Export", id: "export", icon: MdDownload, allowed: isSettingsSectionAllowed("export", currentUserRole) },
+                  { name: "Danger Zone", id: "danger", icon: MdWarning, allowed: isSettingsSectionAllowed("danger", currentUserRole) }
+                ]
+                  .filter(item => item.allowed)
+                  .map(item => {
+                    const isCurrent = activeTab === item.id;
+                    const slug = SETTINGS_TAB_TO_SLUG[item.id] || item.id;
+                    return (
                       <button
                         key={item.id}
-                        onClick={async () => {
-                          const res = await exportData(item.id as any);
-                          if (res.success && res.csv) {
-                            const blob = new Blob([res.csv], { type: 'text/csv' });
-                            const url = window.URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = `framebooks_${item.id}_${new Date().toISOString().split('T')[0]}.csv`;
-                            a.click();
-                            window.URL.revokeObjectURL(url);
-                          } else {
-                            alert(res.error || "Failed to export data");
-                          }
+                        id={`settings-tab-${item.id}`}
+                        type="button"
+                        onClick={() => {
+                          setActiveTab(item.id);
+                          window.history.pushState(null, '', `/settings/${slug}`);
+                          const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
+                          window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
+                          window.scrollTo({ top: 0, behavior: "instant" });
                         }}
-                        className="flex items-center justify-between p-3 border border-border rounded-xl bg-background hover:border-brand-500 transition-colors group"
-                      >
-                        <span className="font-medium text-sm text-foreground">{item.label}</span>
-                        <MdDownload className="w-4 h-4 text-gray-500 group-hover:text-brand-500" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Export Reports Section */}
-                <div>
-                  <h3 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4">
-                    <MdShowChart className="w-5 h-5 text-gray-400" /> Financial Reports
-                  </h3>
-                  <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
-                    <div className="w-full md:w-auto">
-                      <label className="block text-sm font-medium text-gray-400 mb-1">Select Report</label>
-                      <select
-                        value={reportType}
-                        onChange={(e: any) => setReportType(e.target.value)}
-                        className="w-full md:w-[250px] bg-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:border-brand-500 outline-none transition-colors cursor-pointer"
-                      >
-                        <option value="" disabled>Select a report...</option>
-                        <option value="profit_loss">Profit & Loss</option>
-                        <option value="cash_flow">Cash Flow Statement</option>
-                        <option value="balance_sheet">Balance Sheet</option>
-                      </select>
-                    </div>
-
-                    {reportType && (
-                      <div className="w-full md:w-auto animate-in fade-in duration-300">
-                        <label className="block text-sm font-medium text-gray-400 mb-1">Date Range</label>
-                        <DateRangeSelector
-                          dateRange={reportDateRange}
-                          startDate={reportStartDate}
-                          endDate={reportEndDate}
-                          onRangeChange={setReportDateRange}
-                          onStartDateChange={setReportStartDate}
-                          onEndDateChange={setReportEndDate}
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {reportType && (
-                    <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
-                      <button
-                        onClick={async () => {
-                          const res = await exportReport(reportType as any, reportStartDate, reportEndDate);
-                          if (res.success && res.csv) {
-                            const blob = new Blob([res.csv], { type: 'text/csv' });
-                            const url = window.URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = `framebooks_${reportType}_${reportStartDate}_to_${reportEndDate}.csv`;
-                            a.click();
-                            window.URL.revokeObjectURL(url);
-                          } else {
-                            alert(res.error || "Failed to export report");
-                          }
-                        }}
-                        className="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-xl transition-all font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(0,227,91,0.2)]"
-                      >
-                        <MdDownload className="w-5 h-5" /> Export Report
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Form Views */}
-      {activeView === "form" && activeTab !== "export" && (
-        <div className="w-full">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <button
-              onClick={() => {
-                setActiveView("hub");
-                window.history.pushState(null, '', "/settings");
-                window.dispatchEvent(new CustomEvent("update-title", { detail: "Settings" }));
-                window.scrollTo({ top: 0, behavior: "instant" });
-              }}
-              className="flex items-center gap-2 text-gray-400 hover:text-foreground font-semibold transition-colors cursor-pointer w-fit"
-            >
-              <MdKeyboardArrowLeft className="w-5 h-5" /> Settings
-            </button>
-
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
-              {[
-                { name: "Business", id: "business", icon: MdBusiness, allowed: isSettingsSectionAllowed("business", currentUserRole) },
-                { name: "Invoice Layouts", id: "invoice-layout", icon: FileText, allowed: isSettingsSectionAllowed("invoice-layout", currentUserRole) },
-                { name: "Appearance", id: "appearance", icon: Palette, allowed: isSettingsSectionAllowed("appearance", currentUserRole) },
-                { name: "Notifications", id: "notifications", icon: Bell, allowed: true },
-                { name: "Security", id: "profile", icon: MdSecurity, allowed: true },
-                { name: "Billing", id: "billing", icon: MdCreditCard, allowed: isSettingsSectionAllowed("billing", currentUserRole) },
-                { name: "Team & Permissions", id: "team", icon: MdGroup, allowed: isSettingsSectionAllowed("team", currentUserRole) },
-                { name: "3rd Party Integrations", id: "integrations", icon: Plug, allowed: isSettingsSectionAllowed("integrations", currentUserRole) },
-                { name: "Preferences", id: "prefs", icon: Sliders, allowed: isSettingsSectionAllowed("prefs", currentUserRole) },
-                { name: "Audit Logs", id: "audit_logs", icon: MdHistory, allowed: isSettingsSectionAllowed("audit_logs", currentUserRole) },
-                { name: "Export", id: "export", icon: MdDownload, allowed: isSettingsSectionAllowed("export", currentUserRole) },
-                { name: "Danger Zone", id: "danger", icon: MdWarning, allowed: isSettingsSectionAllowed("danger", currentUserRole) }
-              ]
-                .filter(item => item.allowed)
-                .map(item => {
-                  const isCurrent = activeTab === item.id;
-                  const slug = SETTINGS_TAB_TO_SLUG[item.id] || item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        setActiveTab(item.id);
-                        window.history.pushState(null, '', `/settings/${slug}`);
-                        const title = SETTINGS_TAB_TITLES[item.id] || "Settings";
-                        window.dispatchEvent(new CustomEvent("update-title", { detail: title }));
-                        window.scrollTo({ top: 0, behavior: "instant" });
-                      }}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${isCurrent
-                          ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs"
-                          : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                          isCurrent
+                            ? "bg-brand-500 text-brand-950 border-brand-500 font-bold shadow-xs"
+                            : "bg-card text-foreground border-border hover:bg-black/5 dark:hover:bg-white/5 shadow-2xs"
                         }`}
-                    >
-                      <item.icon className="w-3.5 h-3.5" />
-                      {item.name}
-                    </button>
-                  );
-                })}
+                      >
+                        <item.icon className="w-3.5 h-3.5" />
+                        {item.name}
+                      </button>
+                    );
+                  })}
+              </div>
             </div>
           </div>
 
@@ -1910,7 +1733,7 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                                     onChange={(e) => setInviteRole(e.target.value)}
                                     className="w-full bg-card border border-border hover:border-black/20 dark:border-white/20 rounded-2xl px-4 py-3 outline-none focus:border-brand-500 transition-colors text-sm text-foreground appearance-none cursor-pointer shadow-2xs"
                                   >
-                                    {availableRoles.length > 0 ? availableRoles.filter(r => r.role.toLowerCase() !== 'owner').map((r) => (
+                                    {availableRoles.length > 0 ? availableRoles.filter(r => r.role.toLowerCase() !== 'owner' && r.role.toLowerCase() !== 'super admin' && r.role.toLowerCase() !== 'super_admin').map((r) => (
                                       <option key={r.role} value={r.role} className="bg-card text-foreground">{r.role}</option>
                                     )) : (
                                       <>
@@ -1966,27 +1789,32 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                                   </div>
 
                                   <div className="flex items-center gap-3">
-                                    {(currentUserRole === 'owner' || currentUserRole === 'Super Admin') && member.role !== 'owner' && member.role !== 'Super Admin' ? (
+                                    {(currentUserRole === 'owner' || currentUserRole === 'Super Admin') && member.role?.toLowerCase() !== 'owner' ? (
                                       <select
-                                        value={member.role}
+                                        value={
+                                          availableRoles.find(r => r.role.toLowerCase() === member.role?.toLowerCase())?.role ||
+                                          (member.role ? member.role.charAt(0).toUpperCase() + member.role.slice(1) : 'Viewer')
+                                        }
                                         onChange={(e) => handleRoleChange(member.id, e.target.value)}
-                                        className="bg-card border border-border rounded-xl px-3 py-1.5 text-sm text-foreground outline-none cursor-pointer shadow-2xs"
+                                        className="bg-card border border-border rounded-xl px-3 py-1.5 text-sm font-medium text-foreground outline-none cursor-pointer shadow-2xs"
                                       >
                                         {availableRoles.length > 0 ? (
-                                          availableRoles.filter(r => r.role.toLowerCase() !== 'owner').map((r) => (
+                                          availableRoles.filter(r => r.role.toLowerCase() !== 'owner' && r.role.toLowerCase() !== 'super admin' && r.role.toLowerCase() !== 'super_admin').map((r) => (
                                             <option key={r.role} value={r.role} className="bg-card text-foreground">{r.role}</option>
                                           ))
                                         ) : (
                                           <>
                                             <option value="Admin" className="bg-card text-foreground">Admin</option>
                                             <option value="Editor" className="bg-card text-foreground">Editor</option>
+                                            <option value="Cashier" className="bg-card text-foreground">Cashier</option>
+                                            <option value="Accountant" className="bg-card text-foreground">Accountant</option>
                                             <option value="Viewer" className="bg-card text-foreground">Viewer</option>
                                           </>
                                         )}
                                       </select>
                                     ) : (
                                       <span className="px-3 py-1.5 text-xs font-bold uppercase rounded-full bg-slate-100 text-slate-800 border border-slate-200/80 dark:bg-card dark:text-gray-300 dark:border-border">
-                                        {member.role}
+                                        {member.role?.toLowerCase() === 'owner' ? 'OWNER' : (member.role?.charAt(0).toUpperCase() + member.role?.slice(1))}
                                       </span>
                                     )}
 
@@ -2002,19 +1830,19 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
                                       </button>
                                     )}
 
-                                    {(currentUserRole === 'owner' || currentUserRole === 'Super Admin') && member.role !== 'owner' && member.role !== 'Super Admin' && (
+                                    {(currentUserRole === 'owner' || currentUserRole === 'Super Admin') && member.role?.toLowerCase() !== 'owner' && (
                                       <button
                                         onClick={() => handleRemoveMember(member.id, member.full_name)}
-                                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 rounded-xl text-sm font-medium transition-colors border border-rose-200/60 dark:border-red-500/20"
+                                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 rounded-xl text-sm font-medium transition-colors border border-rose-200/60 dark:border-red-500/20 cursor-pointer"
                                       >
                                         Remove
                                       </button>
                                     )}
 
-                                    {(String(member.id) === String(user?.id) || String(member.id) === String((user as any)?.dbId)) && member.role !== 'owner' && member.role !== 'Super Admin' && (
+                                    {(String(member.id) === String(user?.id) || String(member.id) === String((user as any)?.dbId)) && member.role?.toLowerCase() !== 'owner' && (
                                       <button
                                         onClick={handleLeaveTeam}
-                                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 rounded-xl text-sm font-medium transition-colors border border-rose-200/60 dark:border-red-500/20"
+                                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 rounded-xl text-sm font-medium transition-colors border border-rose-200/60 dark:border-red-500/20 cursor-pointer"
                                       >
                                         Leave Team
                                       </button>
@@ -2282,6 +2110,148 @@ export default function SettingsPage({ initialPlans, initialSection }: SettingsP
 
             {activeTab === "integrations" && isSettingsSectionAllowed("integrations", currentUserRole) && (
               <IntegrationsTab />
+            )}
+
+            {activeTab === "export" && isSettingsSectionAllowed("export", currentUserRole) && (
+              <div className="bg-transparent border border-border rounded-3xl p-7 animate-in fade-in">
+                <p className="text-gray-400 text-sm mb-6">Export your workspace data into CSV format for your own records or to share with your accountant.</p>
+
+                {tenantInfo.plan === "Free" ? (
+                  <UpgradeOverlay
+                    title="Data Export"
+                    description="Exporting your financial data to CSV is only available on Pro and Pro Plus plans."
+                    requiredPlan="Pro"
+                  >
+                    <div className="h-[200px]" />
+                  </UpgradeOverlay>
+                ) : (
+                  <div className="space-y-8">
+                    {/* Export All Section */}
+                    <div className="bg-card/50 rounded-2xl p-6 border border-brand-500/20 shadow-[0_0_20px_rgba(0,227,91,0.05)]">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                            <MdDownload className="w-5 h-5 text-brand-500" /> Bulk Export
+                          </h3>
+                          <p className="text-sm text-gray-400 mt-1">Download all your lists sequentially to backup your workspace.</p>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            const items: ("invoices" | "incomes" | "expenses" | "clients")[] = ["invoices", "incomes", "expenses", "clients"];
+                            for (const item of items) {
+                              const res = await exportData(item);
+                              if (res.success && res.csv) {
+                                const blob = new Blob([res.csv], { type: 'text/csv' });
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `framebooks_${item}_${new Date().toISOString().split('T')[0]}.csv`;
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                              }
+                              await new Promise(r => setTimeout(r, 800)); // stagger downloads
+                            }
+                          }}
+                          className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-brand-950 font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(0,227,91,0.2)]"
+                        >
+                          Export All Data
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {[
+                          { id: "invoices", label: "Invoices" },
+                          { id: "incomes", label: "Incomes" },
+                          { id: "expenses", label: "Expenses" },
+                          { id: "clients", label: "Clients" }
+                        ].map(item => (
+                          <button
+                            key={item.id}
+                            onClick={async () => {
+                              const res = await exportData(item.id as any);
+                              if (res.success && res.csv) {
+                                const blob = new Blob([res.csv], { type: 'text/csv' });
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `framebooks_${item.id}_${new Date().toISOString().split('T')[0]}.csv`;
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                              } else {
+                                alert(res.error || "Failed to export data");
+                              }
+                            }}
+                            className="flex items-center justify-between p-3 border border-border rounded-xl bg-background hover:border-brand-500 transition-colors group"
+                          >
+                            <span className="font-medium text-sm text-foreground">{item.label}</span>
+                            <MdDownload className="w-4 h-4 text-gray-500 group-hover:text-brand-500" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Export Reports Section */}
+                    <div>
+                      <h3 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4">
+                        <MdShowChart className="w-5 h-5 text-gray-400" /> Financial Reports
+                      </h3>
+                      <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
+                        <div className="w-full md:w-auto">
+                          <label className="block text-sm font-medium text-gray-400 mb-1">Select Report</label>
+                          <select
+                            value={reportType}
+                            onChange={(e: any) => setReportType(e.target.value)}
+                            className="w-full md:w-[250px] bg-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:border-brand-500 outline-none transition-colors cursor-pointer"
+                          >
+                            <option value="" disabled>Select a report...</option>
+                            <option value="profit_loss">Profit & Loss</option>
+                            <option value="cash_flow">Cash Flow Statement</option>
+                            <option value="balance_sheet">Balance Sheet</option>
+                          </select>
+                        </div>
+
+                        {reportType && (
+                          <div className="w-full md:w-auto animate-in fade-in duration-300">
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Date Range</label>
+                            <DateRangeSelector
+                              dateRange={reportDateRange}
+                              startDate={reportStartDate}
+                              endDate={reportEndDate}
+                              onRangeChange={setReportDateRange}
+                              onStartDateChange={setReportStartDate}
+                              onEndDateChange={setReportEndDate}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {reportType && (
+                        <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
+                          <button
+                            onClick={async () => {
+                              const res = await exportReport(reportType as any, reportStartDate, reportEndDate);
+                              if (res.success && res.csv) {
+                                const blob = new Blob([res.csv], { type: 'text/csv' });
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `framebooks_${reportType}_${reportStartDate}_to_${reportEndDate}.csv`;
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                              } else {
+                                alert(res.error || "Failed to export report");
+                              }
+                            }}
+                            className="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-xl transition-all font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(0,227,91,0.2)]"
+                          >
+                            <MdDownload className="w-5 h-5" /> Export Report
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {currentUserRole && !isSettingsSectionAllowed(activeTab, currentUserRole) && (

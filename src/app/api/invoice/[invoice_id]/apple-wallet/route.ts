@@ -158,8 +158,8 @@ export async function POST(
     const p12Buffer           = Buffer.from(CERT_B64, "base64");
     const { certPem, keyPem } = extractFromP12(p12Buffer, CERT_PASS);
 
-    /* 5. Load logo images + Apple WWDR cert from local filesystem */
-    const logoPath = path.join(process.cwd(), "public/logos/ft/logo-main.png");
+    /* 5. Load logo images + Apple WWDR cert from local filesystem (using no-bg transparent logo) */
+    const logoPath = path.join(process.cwd(), "public/logos/ft/logo.png");
     const iconPath = path.join(process.cwd(), "public/logos/ft/logo.png");
     const wwdrPath = path.join(process.cwd(), "public/certs/AppleWWDRCAG4.cer");
 

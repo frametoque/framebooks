@@ -120,10 +120,12 @@ export async function ensurePosSchema() {
         receipt_footer TEXT,
         default_tax_rate NUMERIC(5, 2) DEFAULT 0,
         default_account_id INTEGER,
+        customer_display_slides JSONB,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
     `;
+    await sql`ALTER TABLE pos_settings ADD COLUMN IF NOT EXISTS customer_display_slides JSONB;`;
 
     // 4b. Cashier Counters (Physical or logical registers)
     await sql`
@@ -230,6 +232,13 @@ export async function ensurePosSchema() {
     await sql`CREATE INDEX IF NOT EXISTS idx_pos_orders_tenant_number ON pos_orders(tenant_id, order_number);`;
     await sql`CREATE INDEX IF NOT EXISTS idx_pos_orders_tenant_date ON pos_orders(tenant_id, created_at DESC);`;
     await sql`CREATE INDEX IF NOT EXISTS idx_pos_orders_counter ON pos_orders(tenant_id, counter_id);`;
+
+    // Migrate existing POS- orders to REC-
+    await sql`
+      UPDATE pos_orders
+      SET order_number = 'REC-' || SUBSTRING(order_number FROM 5)
+      WHERE order_number LIKE 'POS-%';
+    `.catch(() => {});
 
     // 7. POS Promotions & Special Offers (Brand discounts, bundle offers, cross-item offers, spend discounts)
     await sql`

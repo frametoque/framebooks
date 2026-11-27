@@ -21,6 +21,7 @@ import {
   switchActiveTenant, 
   respondToTeamInvitation 
 } from "@/app/(dashboard)/user/actions/tenants";
+import { invalidateClientTenantInfo } from "@/lib/tenant/clientTenantInfo";
 import { 
   isGta6Palette, 
   GTA6_PALETTE_ID, 
@@ -141,12 +142,17 @@ export default function BusinessSwitcher({ tenantInfo }: { tenantInfo: TenantInf
 
       const res = await switchActiveTenant(targetId);
       if (res.success) {
+        invalidateClientTenantInfo();
         const finalColor = (res as any).accentColor || clean;
         document.cookie = `fb_accent_color=${encodeURIComponent(finalColor)}; path=/; max-age=31536000; SameSite=Lax`;
         try {
           localStorage.setItem("framebooks_accent_color", finalColor);
+          if (targetBiz?.name) {
+            localStorage.setItem("framebooks_business_name", targetBiz.name.trim());
+          }
         } catch {}
-        window.location.reload();
+        const redirectTarget = (res as any).redirectTo || ((res as any).isCashierOnly ? "/pos" : "/dashboard");
+        window.location.href = redirectTarget;
       } else {
         setGeneralMessage({ type: "error", text: res.error || "Failed to switch workspace" });
         setSwitchingId(null);

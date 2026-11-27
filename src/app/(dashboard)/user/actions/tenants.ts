@@ -151,22 +151,15 @@ export const getTenantInfo = cache(async function getTenantInfo() {
     const numId = Number(userId) || 0;
     const safeId = (numId > 0 && numId < 2147483647) ? numId : 0;
 
-    let tenantId = (session?.user as any)?.tenantId;
-    let rawRole = (session?.user as any)?.role;
-
-    if (!tenantId) {
-      const userRows = await sql`
-        SELECT tenant_id, role 
-        FROM admin_users 
-        WHERE (id = ${safeId} AND ${safeId} > 0)
-           OR (email IS NOT NULL AND LOWER(email) = ${email || ''})
-        LIMIT 1
-      `;
-      if (userRows && userRows.length > 0) {
-        tenantId = userRows[0].tenant_id;
-        rawRole = userRows[0].role;
-      }
-    }
+    const userRows = await sql`
+      SELECT tenant_id, role 
+      FROM admin_users 
+      WHERE (id = ${safeId} AND ${safeId} > 0)
+         OR (email IS NOT NULL AND LOWER(email) = ${email || ''})
+      LIMIT 1
+    `;
+    let tenantId = userRows[0]?.tenant_id || (session?.user as any)?.tenantId;
+    let rawRole = userRows[0]?.role || (session?.user as any)?.role;
 
     if (!tenantId) {
       return {
@@ -467,6 +460,10 @@ export async function getTeamMembers() {
     if (!userRows || userRows.length === 0) return { success: false, members: [] };
     
     const tenantId = userRows[0].tenant_id;
+
+    // Fetch tenant owner email
+    const tenantRow = await sql`SELECT owner_email FROM tenants WHERE id = ${tenantId} LIMIT 1`;
+    const ownerEmail = tenantRow[0]?.owner_email?.trim().toLowerCase();
     
     const [activeMembers, invitedMembers] = await Promise.all([
       sql`
@@ -485,15 +482,47 @@ export async function getTeamMembers() {
     ]);
 
     const memberMap = new Map<number, any>();
-    activeMembers.forEach(m => memberMap.set(m.id, m));
+    activeMembers.forEach(m => {
+      const isOwner = ownerEmail && m.email?.trim().toLowerCase() === ownerEmail;
+      memberMap.set(m.id, {
+        ...m,
+        role: isOwner ? 'owner' : m.role
+      });
+    });
+
     invitedMembers.forEach(m => {
-      if (!memberMap.has(m.id)) {
-        memberMap.set(m.id, m);
+      const isOwner = ownerEmail && m.email?.trim().toLowerCase() === ownerEmail;
+      if (isOwner) {
+        if (memberMap.has(m.id)) {
+          const cur = memberMap.get(m.id);
+          memberMap.set(m.id, { ...cur, role: 'owner' });
+        } else {
+          memberMap.set(m.id, { ...m, role: 'owner' });
+        }
+      } else {
+        if (memberMap.has(m.id)) {
+          const cur = memberMap.get(m.id);
+          // Prefer tenant invitation assigned role over generic admin_users role
+          memberMap.set(m.id, {
+            ...cur,
+            role: m.role || cur.role,
+            avatar_url: cur.avatar_url || m.avatar_url,
+            pos_manager_code: cur.pos_manager_code || m.pos_manager_code,
+          });
+        } else {
+          memberMap.set(m.id, m);
+        }
       }
     });
 
     const members = Array.from(memberMap.values());
-    return { success: true, members: members.map(m => ({ ...m, created_at: m.created_at ? new Date(m.created_at).toISOString() : null })) };
+    return {
+      success: true,
+      members: members.map(m => ({
+        ...m,
+        created_at: m.created_at ? new Date(m.created_at).toISOString() : null
+      }))
+    };
   } catch (e) {
     console.error("Failed to fetch team members:", e);
     return { success: false, members: [] };
@@ -506,17 +535,31 @@ export async function updateTeamMemberRole(memberId: number, newRole: string) {
     if (rbacError || !context) return { success: false, error: rbacError };
     
     const { tenantId, userId, sql } = context;
+
+    // Fetch tenant owner email
+    const tenantRow = await sql`SELECT owner_email FROM tenants WHERE id = ${tenantId} LIMIT 1`;
+    const ownerEmail = tenantRow[0]?.owner_email?.trim().toLowerCase();
     
-    // Ensure we don't change another owner's role
-    const targetRow = await sql`SELECT role FROM admin_users WHERE id = ${memberId} AND tenant_id = ${tenantId}`;
+    const targetRow = await sql`SELECT id, role, email FROM admin_users WHERE id = ${memberId}`;
     if (targetRow.length === 0) return { success: false, error: "Member not found" };
-    if (targetRow[0].role === 'owner' || targetRow[0].role === 'Super Admin') {
-      return { success: false, error: "Cannot change Super Admin role" };
+
+    if (ownerEmail && targetRow[0].email?.trim().toLowerCase() === ownerEmail) {
+      return { success: false, error: "Cannot change workspace Owner role" };
     }
 
+    // Update in admin_users if currently active on this tenant
     await sql`UPDATE admin_users SET role = ${newRole} WHERE id = ${memberId} AND tenant_id = ${tenantId}`;
+
+    // Also update in team_invitations for this tenant so their role persists when switching workspaces
+    await sql`
+      UPDATE team_invitations 
+      SET role = ${newRole} 
+      WHERE tenant_id = ${tenantId.toString()} 
+        AND LOWER(email) = LOWER(${targetRow[0].email}) 
+        AND status = 'accepted'
+    `;
     
-    await logSystemAction(`Updated role for team member ID ${memberId} to ${newRole}`);
+    await logSystemAction(`Updated role for team member ID ${memberId} (${targetRow[0].email}) to ${newRole}`);
     revalidatePath("/user/settings");
     revalidatePath("/settings");
     
@@ -533,17 +576,30 @@ export async function removeTeamMember(memberId: number) {
     if (rbacError || !context) return { success: false, error: rbacError };
     
     const { tenantId, userId, sql } = context;
-    
-    // Ensure we don't remove another owner
-    const targetRow = await sql`SELECT role, email FROM admin_users WHERE id = ${memberId} AND tenant_id = ${tenantId}`;
+
+    const tenantRow = await sql`SELECT owner_email FROM tenants WHERE id = ${tenantId} LIMIT 1`;
+    const ownerEmail = tenantRow[0]?.owner_email?.trim().toLowerCase();
+
+    const targetRow = await sql`SELECT id, role, email FROM admin_users WHERE id = ${memberId}`;
     if (targetRow.length === 0) return { success: false, error: "Member not found" };
-    if (targetRow[0].role === 'owner' || targetRow[0].role === 'Super Admin') {
-      return { success: false, error: "Cannot remove Super Admin" };
+
+    if (ownerEmail && targetRow[0].email?.trim().toLowerCase() === ownerEmail) {
+      return { success: false, error: "Cannot remove workspace Owner" };
     }
 
-    await sql`UPDATE admin_users SET tenant_id = NULL, role = 'pending' WHERE id = ${memberId} AND tenant_id = ${tenantId}`;
+    await sql`
+      DELETE FROM team_invitations 
+      WHERE tenant_id = ${tenantId.toString()} AND LOWER(email) = LOWER(${targetRow[0].email})
+    `;
+
+    await sql`
+      UPDATE admin_users 
+      SET tenant_id = (SELECT id FROM tenants WHERE LOWER(owner_email) = LOWER(${targetRow[0].email}) LIMIT 1),
+          role = 'owner'
+      WHERE id = ${memberId} AND tenant_id = ${tenantId}
+    `;
     
-    await logSystemAction(`Removed team member ID ${memberId} from the business profile`);
+    await logSystemAction(`Removed team member ID ${memberId} (${targetRow[0].email}) from workspace`);
     revalidatePath("/user/settings");
     revalidatePath("/settings");
     
@@ -917,9 +973,17 @@ export async function switchActiveTenant(targetTenantId: number) {
       cookieStore.set("fb_accent_color", clean, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
     } catch {}
 
+    const isCashierOnly = await isCashierOnlyUser(newRole, targetTenantId);
+
     await logSystemAction(`Switched active workspace to tenant ID ${targetTenantId} as ${newRole}`);
     revalidatePath("/", "layout");
-    return { success: true, targetTenantId, accentColor: clean };
+    return {
+      success: true,
+      targetTenantId,
+      accentColor: clean,
+      isCashierOnly,
+      redirectTo: isCashierOnly ? "/pos" : "/dashboard",
+    };
   } catch (err: any) {
     console.error("switchActiveTenant error:", err);
     return { success: false, error: err?.message || "Failed to switch workspace" };

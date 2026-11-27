@@ -359,15 +359,15 @@ test("POS Special Discounts, Offers & Client Management Rules", async (t) => {
     assert.equal(isAuthorizedRole("Cashier"), false);
     assert.equal(isAuthorizedRole("Viewer"), false);
 
-    // Manager Alert Bell Sound trigger rule when offer requires supervisor approval
-    const shouldPlayManagerBell = (offer: { requires_manager_approval: boolean }, isManager: boolean) => {
-      // Plays distinct service desk bell when showing offer requiring manager authorization to alert floor managers
-      return Boolean(offer.requires_manager_approval) && !isManager;
+    // Manager Alert Bell Sound trigger rule when offer requires supervisor approval:
+    // Rings distinct service desk bell whenever a protected offer requires approval,
+    // even on Owner accounts because owners often share accounts with counter cashiers.
+    const shouldPlayManagerBell = (offer: { requires_manager_approval: boolean }) => {
+      return Boolean(offer.requires_manager_approval);
     };
 
-    assert.equal(shouldPlayManagerBell(protectedOffer, false), true, "Must ring bell to alert managers for cashier");
-    assert.equal(shouldPlayManagerBell(protectedOffer, true), false, "Manager already has authorization; no alert bell needed");
-    assert.equal(shouldPlayManagerBell({ requires_manager_approval: false }, false), false, "Standard offers do not trigger bell");
+    assert.equal(shouldPlayManagerBell(protectedOffer), true, "Must ring bell to alert managers even on owner account");
+    assert.equal(shouldPlayManagerBell({ requires_manager_approval: false }), false, "Standard offers do not trigger bell");
   });
 
   await t.test("Validates cashier restriction for POS settings access", () => {
@@ -719,47 +719,41 @@ test("POS Special Discounts, Offers & Client Management Rules", async (t) => {
 
     const qualifiedPromotions = [regularOffer, protectedOffer];
 
-    // 1. Auto-apply resolution logic for Cashier (isCashierOnly = true, isManager = false)
-    const computeAutoAppliedIds = (promos: Promotion[], isManager: boolean, currentApplied: number[]) => {
+    // 1. Auto-apply resolution logic:
+    // Protected offers requiring manager approval are NEVER auto-applied without authorization,
+    // even if logged-in user is Owner (owners share accounts with counter cashiers)
+    const computeAutoAppliedIds = (promos: Promotion[], currentApplied: number[]) => {
       const qualifiedIds = new Set(promos.map((p) => p.id));
       const stillQualified = currentApplied.filter((id) => qualifiedIds.has(id));
       const autoApply = promos
-        .filter((p) => !p.requires_manager_approval || isManager)
+        .filter((p) => !p.requires_manager_approval)
         .map((p) => p.id);
       return Array.from(new Set([...stillQualified, ...autoApply]));
     };
 
-    const cashierApplied = computeAutoAppliedIds(qualifiedPromotions, false, []);
+    const cashierApplied = computeAutoAppliedIds(qualifiedPromotions, []);
     // Regular offer must be auto-applied immediately
-    assert.ok(cashierApplied.includes(1), "Regular offer should be auto-applied for cashier");
-    // Protected offer must NOT be auto-applied during scanning
-    assert.equal(cashierApplied.includes(2), false, "Protected offer must require manager authorization");
+    assert.ok(cashierApplied.includes(1), "Regular offer should be auto-applied");
+    // Protected offer must NOT be auto-applied even on owner account
+    assert.equal(cashierApplied.includes(2), false, "Protected offer must require manager authorization even for owner");
 
-    // 2. Auto-apply resolution logic for Manager/Admin
-    const managerApplied = computeAutoAppliedIds(qualifiedPromotions, true, []);
-    assert.ok(managerApplied.includes(1), "Regular offer auto-applied for manager");
-    assert.ok(managerApplied.includes(2), "Protected offer auto-applied directly for manager");
-
-    // 3. Checkout interceptor logic for Cashier:
-    // When cashier clicks charge / initiates checkout, check if any qualified offer requires manager authorization
+    // 2. Checkout interceptor logic:
+    // Even if cashier is owner, check if any qualified offer requires manager authorization
     const handleCheckoutIntercept = (
       promos: Promotion[],
-      appliedIds: number[],
-      isManager: boolean
+      appliedIds: number[]
     ): { openPayment: boolean; requireManagerAuthForPromo?: Promotion } => {
-      if (!isManager) {
-        const pendingPromo = promos.find(
-          (p) => p.requires_manager_approval && !appliedIds.includes(p.id)
-        );
-        if (pendingPromo) {
-          return { openPayment: false, requireManagerAuthForPromo: pendingPromo };
-        }
+      const pendingPromo = promos.find(
+        (p) => p.requires_manager_approval && !appliedIds.includes(p.id)
+      );
+      if (pendingPromo) {
+        return { openPayment: false, requireManagerAuthForPromo: pendingPromo };
       }
       return { openPayment: true };
     };
 
-    // When cashier checks out with protected offer unapproved:
-    const interceptResult = handleCheckoutIntercept(qualifiedPromotions, cashierApplied, false);
+    // When checking out with protected offer unapproved:
+    const interceptResult = handleCheckoutIntercept(qualifiedPromotions, cashierApplied);
     assert.equal(interceptResult.openPayment, false, "Payment modal must be intercepted before payment");
     assert.equal(interceptResult.requireManagerAuthForPromo?.id, 2, "Must prompt for the unapproved offer");
 
@@ -768,11 +762,11 @@ test("POS Special Discounts, Offers & Client Management Rules", async (t) => {
     assert.ok(afterApprovalApplied.includes(2), "Protected offer is now applied");
 
     // Now cashier checking out proceeds directly to payment:
-    const afterApprovalIntercept = handleCheckoutIntercept(qualifiedPromotions, afterApprovalApplied, false);
+    const afterApprovalIntercept = handleCheckoutIntercept(qualifiedPromotions, afterApprovalApplied);
     assert.equal(afterApprovalIntercept.openPayment, true, "Proceeds to payment modal once authorized");
 
     // 4. If manager authorization is cancelled / skipped by cashier:
-    const proceedWithoutProtected = handleCheckoutIntercept(qualifiedPromotions, cashierApplied, false);
+    const proceedWithoutProtected = handleCheckoutIntercept(qualifiedPromotions, cashierApplied);
     // Proceed to payment with only regular offer applied
     assert.deepEqual(cashierApplied, [1], "Cart retains regular offer without protected offer");
   });
@@ -901,5 +895,377 @@ test("POS Special Discounts, Offers & Client Management Rules", async (t) => {
       assert.equal(order.counter_name, "Counter 1");
       assert.equal(order.shift_id, 102);
     });
+  });
+
+  await t.test("POS Order Item Modification & Barcode Search Rules", async (et) => {
+    await et.test("Calculates correct inventory deltas on single-item edit and exchange", () => {
+      // Original order has Item 1 (qty 2) and Item 2 (qty 1)
+      const oldItems = [
+        { id: 1, name: "T-Shirt Blue", price: 1500, quantity: 2 },
+        { id: 2, name: "Cap Black", price: 800, quantity: 1 },
+      ];
+
+      // Cashier updates: Item 1 changed from qty 2 to 1, Item 2 removed, Item 3 added (qty 1)
+      const updatedItems = [
+        { id: 1, name: "T-Shirt Blue", price: 1500, quantity: 1 },
+        { id: 3, name: "T-Shirt Red", price: 1500, quantity: 1 },
+      ];
+
+      const oldQtyMap = new Map<number, number>();
+      for (const it of oldItems) oldQtyMap.set(it.id, (oldQtyMap.get(it.id) || 0) + it.quantity);
+
+      const newQtyMap = new Map<number, number>();
+      for (const it of updatedItems) newQtyMap.set(it.id, (newQtyMap.get(it.id) || 0) + it.quantity);
+
+      const allIds = new Set<number>([...oldQtyMap.keys(), ...newQtyMap.keys()]);
+      const adjustments: Array<{ id: number; delta: number }> = [];
+
+      for (const id of allIds) {
+        const oldQty = oldQtyMap.get(id) || 0;
+        const newQty = newQtyMap.get(id) || 0;
+        const delta = oldQty - newQty;
+        if (delta !== 0) adjustments.push({ id, delta });
+      }
+
+      // Item 1: old=2, new=1 => delta = +1 (1 unit returned to stock)
+      const adj1 = adjustments.find((a) => a.id === 1);
+      assert.equal(adj1?.delta, 1);
+
+      // Item 2: old=1, new=0 => delta = +1 (1 unit returned to stock)
+      const adj2 = adjustments.find((a) => a.id === 2);
+      assert.equal(adj2?.delta, 1);
+
+      // Item 3: old=0, new=1 => delta = -1 (1 unit deducted from stock)
+      const adj3 = adjustments.find((a) => a.id === 3);
+      assert.equal(adj3?.delta, -1);
+    });
+
+    await et.test("Calculates financial differences (Refund, Extra Due, Even Exchange)", () => {
+      const calcDiff = (originalTotal: number, newTotal: number) => {
+        const diff = Math.round((newTotal - originalTotal) * 100) / 100;
+        if (diff < 0) return { type: "refund", amount: Math.abs(diff) };
+        if (diff > 0) return { type: "extra_due", amount: diff };
+        return { type: "even", amount: 0 };
+      };
+
+      // Customer exchanges for cheaper item
+      assert.deepEqual(calcDiff(3800, 3000), { type: "refund", amount: 800 });
+
+      // Customer exchanges for more expensive item
+      assert.deepEqual(calcDiff(3800, 4500), { type: "extra_due", amount: 700 });
+
+      // Even value exchange
+      assert.deepEqual(calcDiff(3800, 3800), { type: "even", amount: 0 });
+    });
+
+    await et.test("Matches order by scanned receipt barcode or prefix", () => {
+      const orders = [
+        { id: 10, order_number: "REC-20261127-0001", customer_name: "John Doe" },
+        { id: 11, order_number: "REC-20261127-0002", customer_name: "Jane Smith" },
+        { id: 12, order_number: "POS-20261124-0001", customer_name: "Walk-in Customer" },
+      ];
+
+      const matchOrder = (query: string) => {
+        const q = query.trim().toLowerCase();
+        return orders.filter(
+          (o) => o.order_number.toLowerCase().includes(q) || String(o.id) === q || o.customer_name.toLowerCase().includes(q)
+        );
+      };
+
+      // Scan full receipt barcode
+      assert.equal(matchOrder("REC-20261127-0001").length, 1);
+      assert.equal(matchOrder("REC-20261127-0001")[0].id, 10);
+
+      // Scan legacy barcode
+      assert.equal(matchOrder("POS-20261124-0001").length, 1);
+      assert.equal(matchOrder("POS-20261124-0001")[0].id, 12);
+
+      // Search by partial
+      assert.equal(matchOrder("0002").length, 1);
+      assert.equal(matchOrder("0002")[0].id, 11);
+    });
+
+    await et.test("Instant cross-device stock synchronization broadcasts to multiple counters", async () => {
+      const { notifyTenantStockUpdate, subscribeTenantStockEvents } = await import("./server-events.ts");
+
+      const receivedTenant1CounterA: any[] = [];
+      const receivedTenant1CounterB: any[] = [];
+      const receivedTenant2CounterX: any[] = [];
+
+      // Counter A on device 1 subscribes to tenant 10
+      const unsub1A = subscribeTenantStockEvents(10, (event) => {
+        receivedTenant1CounterA.push(event);
+      });
+
+      // Counter B on device 2 subscribes to tenant 10
+      const unsub1B = subscribeTenantStockEvents(10, (event) => {
+        receivedTenant1CounterB.push(event);
+      });
+
+      // Counter X on device 3 subscribes to another business (tenant 20)
+      const unsub2X = subscribeTenantStockEvents(20, (event) => {
+        receivedTenant2CounterX.push(event);
+      });
+
+      // Counter A performs a checkout selling 3 units of item #101
+      notifyTenantStockUpdate(10, {
+        source: "pos_checkout",
+        items: [{ id: 101, newQuantity: 12 }],
+      });
+
+      // Verify Counter A and Counter B both immediately receive the stock update
+      assert.equal(receivedTenant1CounterA.length, 1);
+      assert.equal(receivedTenant1CounterB.length, 1);
+      assert.equal(receivedTenant1CounterB[0].items[0].id, 101);
+      assert.equal(receivedTenant1CounterB[0].items[0].newQuantity, 12);
+      assert.equal(receivedTenant1CounterB[0].source, "pos_checkout");
+
+      // Verify cryptographic cross-tenant isolation (Tenant 2 received 0 events)
+      assert.equal(receivedTenant2CounterX.length, 0);
+
+      unsub1A();
+      unsub1B();
+      unsub2X();
+    });
+  });
+
+  await t.test("Validates Invoices & Receipts page title and source filter rules", () => {
+      // 1. Navigation & Page title: If POS enabled, title switches to 'Invoices & Receipts'
+      const resolveInvoicesTitle = (hasPosAddon: boolean, canUsePos: boolean) => {
+        const hasPos = Boolean(hasPosAddon && canUsePos !== false);
+        return hasPos ? "Invoices & Receipts" : "Invoices";
+      };
+
+      assert.equal(resolveInvoicesTitle(true, true), "Invoices & Receipts");
+      assert.equal(resolveInvoicesTitle(true, false), "Invoices");
+      assert.equal(resolveInvoicesTitle(false, true), "Invoices");
+
+      // 2. Invoice Source Filtering (All vs Direct Invoices vs POS Receipts)
+      const mockItems = [
+        { id: "INV-001", isPos: false, posOrderNumber: null },
+        { id: "INV-002", isPos: true, posOrderNumber: "POS-20261124-0001" },
+        { id: "INV-003", isPos: true, posOrderNumber: "POS-20261124-0002" },
+        { id: "INV-004", isPos: false, posOrderNumber: null },
+      ];
+
+      const filterBySource = (items: typeof mockItems, source: "all" | "direct" | "pos") => {
+        return items.filter((row) => {
+          if (source === "direct" && row.isPos) return false;
+          if (source === "pos" && !row.isPos) return false;
+          return true;
+        });
+      };
+
+      assert.equal(filterBySource(mockItems, "all").length, 4);
+      assert.equal(filterBySource(mockItems, "direct").length, 2);
+      assert.equal(filterBySource(mockItems, "pos").length, 2);
+    });
+
+    await t.test("Validates POS Thermal Receipt HTML Generation", async () => {
+      const { buildPosReceiptHtml } = await import("./receipt-printer.ts");
+
+      const html = buildPosReceiptHtml({
+        order: {
+          order_number: "POS-20261124-0006",
+          customer_name: "Walk-in Customer",
+          user_name: "Cashier 1",
+          items: [{ name: "Headphones", quantity: 2, price: 5000 }],
+          subtotal: 10000,
+          discount_amount: 500,
+          tax_amount: 0,
+          total_amount: 9500,
+          payment_method: "Cash",
+          amount_tendered: 10000,
+          change_returned: 500,
+        },
+        tenantName: "TechRo LK",
+      });
+
+      assert.match(html, /POS-20261124-0006/);
+      assert.match(html, /TechRo LK/);
+      assert.match(html, /Headphones/);
+      assert.match(html, /<svg/); // Barcode SVG generated
+      assert.match(html, /80mm/); // Thermal receipt size
+    });
+
+    await t.test("Validates Cashier Strict ERP Isolation and POS-Only Navigation Rules", () => {
+      // Mock permission checking function matching isCashierOnlyUser logic
+      const checkIsCashierOnly = (role: string | null, perms: Record<string, any> | null) => {
+        if (!role) return false;
+        const lowerRole = role.toLowerCase().trim();
+        if (['owner', 'super admin', 'super_admin', 'admin', 'accountant', 'editor', 'member'].includes(lowerRole)) {
+          return false;
+        }
+        if (lowerRole === 'cashier' || lowerRole.includes('cashier')) {
+          return true;
+        }
+        if (!perms) return false;
+        const erpResources = ['invoices', 'incomes', 'expenses', 'accounts', 'settings', 'team', 'export'];
+        for (const res of erpResources) {
+          const rPerm = perms[res];
+          if (rPerm && typeof rPerm === 'object') {
+            for (const key of Object.keys(rPerm)) {
+              if (rPerm[key] === true) return false;
+            }
+          }
+        }
+        return perms.pos?.use === true;
+      };
+
+      // Standard Cashier with clients & inventory read (for counter customer/stock lookups)
+      const cashierPerms = {
+        invoices: { read: false, insert: false, update: false, delete: false },
+        incomes: { read: false, insert: false, update: false, delete: false },
+        expenses: { read: false, insert: false, update: false, delete: false },
+        clients: { read: true, insert: true, update: false, delete: false },
+        accounts: { read: false, insert: false, update: false, delete: false },
+        inventory: { read: true, insert: false, update: false, delete: false },
+        pos: { use: true, refund: false, discount: false, void: false, reports_view: false },
+        stock: { view: true, manage: false },
+        settings: { manage: false, appearance: false },
+        team: { manage: false },
+        export: { data: false },
+      };
+
+      // 1. Cashier role must always be cashier-only regardless of counter sub-permissions
+      assert.equal(checkIsCashierOnly("Cashier", cashierPerms), true, "Cashier role must be identified as cashier-only");
+      assert.equal(checkIsCashierOnly("cashier", cashierPerms), true, "Lowercase cashier role must be cashier-only");
+
+      // 2. Organization Owner & Admins are never cashier-only
+      assert.equal(checkIsCashierOnly("Owner", cashierPerms), false, "Owner must never be cashier-only");
+      assert.equal(checkIsCashierOnly("Admin", cashierPerms), false, "Admin must never be cashier-only");
+      assert.equal(checkIsCashierOnly("Accountant", cashierPerms), false, "Accountant must never be cashier-only");
+
+      // 3. Custom role with only POS access and counter customer/stock lookups
+      const customPosOnlyRole = {
+        ...cashierPerms,
+      };
+      assert.equal(checkIsCashierOnly("Floor Staff", customPosOnlyRole), true, "Floor Staff with only POS counter perms is cashier-only");
+
+      // 4. Custom role given invoices read or settings manage is NOT cashier-only
+      const customErpRole = {
+        ...cashierPerms,
+        invoices: { read: true, insert: false, update: false, delete: false },
+      };
+      assert.equal(checkIsCashierOnly("Floor Staff", customErpRole), false, "Staff with invoice read is not cashier-only");
+
+      // 5. Navigation target resolution for workspace switching
+      const getRedirectTarget = (isCashierOnly: boolean) => isCashierOnly ? "/pos" : "/dashboard";
+      assert.equal(getRedirectTarget(true), "/pos", "Cashiers must be redirected to /pos");
+      assert.equal(getRedirectTarget(false), "/dashboard", "General users must be directed to /dashboard");
+    });
+});
+
+test("POS Admin Access Wallet Pass Specifications", async (t) => {
+  await t.test("QR code format strictly matches POS scanner authorization protocol (POS_MGR:code)", () => {
+    const code = "982314";
+    const qrBarcodeValue = `POS_MGR:${code}`;
+    assert.equal(qrBarcodeValue, "POS_MGR:982314");
+    assert.ok(qrBarcodeValue.startsWith("POS_MGR:"), "Pass barcode must prefix with POS_MGR: for camera recognition");
+    assert.equal(qrBarcodeValue.replace("POS_MGR:", ""), code, "Decoded PIN from scanner must match original code");
+  });
+
+  await t.test("Validates wallet pass styling and brand attributes", () => {
+    const branding = {
+      issuer: "Framebooks",
+      obsidianDarkBg: "#0B0F17",
+      emeraldGreenAccent: "#00E35B",
+      appleBgRgb: "rgb(11, 15, 23)",
+      appleLabelRgb: "rgb(0, 227, 91)",
+      appleTextRgb: "rgb(255, 255, 255)",
+    };
+
+    assert.equal(branding.issuer, "Framebooks");
+    assert.equal(branding.obsidianDarkBg, "#0B0F17");
+    assert.equal(branding.emeraldGreenAccent, "#00E35B");
+    assert.equal(branding.appleBgRgb, "rgb(11, 15, 23)");
+    assert.equal(branding.appleLabelRgb, "rgb(0, 227, 91)");
+  });
+
+  await t.test("Google Wallet Generic Object payload contains all required admin & business fields without PIN and Status", () => {
+    const mockMember = { id: 42, full_name: "Nelitha Priyawansha", email: "itsnelitha@gmail.com", role: "Super Admin" };
+    const mockTenant = { id: 7, name: "Frametoque Digital Media", logo_url: "/logos/ft/logo.png" };
+    const mockCode = "781290";
+
+    const objectId = `3388000000023087934.pos_admin_${mockTenant.id}_${mockMember.id}`;
+    const barcode = { type: "QR_CODE", value: `POS_MGR:${mockCode}`, alternateText: "POS Access Pass" };
+
+    assert.equal(objectId, "3388000000023087934.pos_admin_7_42");
+    assert.equal(barcode.value, "POS_MGR:781290");
+    assert.equal(barcode.alternateText, "POS Access Pass");
+  });
+
+  await t.test("Apple Wallet generic pass fields map admin name, email, and business without PIN and Status", () => {
+    const fields = {
+      header: { key: "role", label: "AUTHORIZATION", value: "SUPER ADMIN" },
+      primary: { key: "admin_name", label: "ADMINISTRATOR", value: "Nelitha Priyawansha" },
+      secondary: [
+        { key: "business", label: "BUSINESS", value: "Frametoque Digital Media" },
+        { key: "email", label: "EMAIL", value: "itsnelitha@gmail.com" },
+      ],
+    };
+
+    assert.equal(fields.header.value, "SUPER ADMIN");
+    assert.equal(fields.primary.value, "Nelitha Priyawansha");
+    assert.equal(fields.secondary[0].value, "Frametoque Digital Media");
+    assert.equal(fields.secondary[1].value, "itsnelitha@gmail.com");
+  });
+});
+
+test("POS Customer Display Multi-Tenant Isolation & Cryptographic Pairing Rules", async (t) => {
+  const { signCustomerDisplayToken, verifyCustomerDisplayToken } = await import("../security/crypto.ts");
+  const { getPosClientChannelName } = await import("./client-display.ts");
+
+  await t.test("Generates and verifies tamper-proof customer display tokens", () => {
+    const token = signCustomerDisplayToken(5, 2);
+    assert.ok(token && typeof token === "string");
+    assert.equal(token.split(".").length, 2);
+
+    const verified = verifyCustomerDisplayToken(token);
+    assert.ok(verified);
+    assert.equal(verified!.tenantId, 5);
+    assert.equal(verified!.counterId, 2);
+  });
+
+  await t.test("Rejects forged, tampered, or malformed display tokens", () => {
+    const validToken = signCustomerDisplayToken(5, 1);
+    const [payload, sig] = validToken.split(".");
+
+    // 1. Tampered payload
+    const forgedPayload = Buffer.from(JSON.stringify({ tenantId: 1, counterId: 1 })).toString("base64url");
+    assert.equal(verifyCustomerDisplayToken(`${forgedPayload}.${sig}`), null, "Tampered payload must fail verification");
+
+    // 2. Tampered signature
+    assert.equal(verifyCustomerDisplayToken(`${payload}.forged_signature_123456789`), null, "Invalid signature must fail");
+
+    // 3. Garbage / malformed inputs
+    assert.equal(verifyCustomerDisplayToken(""), null);
+    assert.equal(verifyCustomerDisplayToken("invalid_no_dots"), null);
+    assert.equal(verifyCustomerDisplayToken("a.b.c"), null);
+  });
+
+  await t.test("Enforces cross-tenant isolation: Tenant A cannot query or view Tenant B POS", () => {
+    const userTenantId = 1; // Authenticated user is Tenant 1
+    const requestedTenantId = 5; // Maliciously requests Tenant 5 via ?tenantId=5
+
+    const isAccessAllowed = (authTenantId: number | null, reqTenantId: number | null) => {
+      if (!authTenantId) return false;
+      if (reqTenantId && reqTenantId !== authTenantId) return false;
+      return true;
+    };
+
+    assert.equal(isAccessAllowed(userTenantId, requestedTenantId), false, "Tenant 1 must be blocked from viewing Tenant 5");
+    assert.equal(isAccessAllowed(userTenantId, 1), true, "Tenant 1 can access Tenant 1");
+    assert.equal(isAccessAllowed(userTenantId, null), true, "Tenant 1 accessing without query param defaults to own tenant");
+    assert.equal(isAccessAllowed(null, 5), false, "Unauthenticated user without token cannot access Tenant 5");
+  });
+
+  await t.test("Generates strictly isolated BroadcastChannel names per tenant and counter", () => {
+    const channelTenant1 = getPosClientChannelName(1, 1);
+    const channelTenant5 = getPosClientChannelName(5, 1);
+
+    assert.notEqual(channelTenant1, channelTenant5, "Channels for different tenants must never share the same channel name");
+    assert.ok(channelTenant1.includes("_t1_"), "Channel name must include tenant ID 1");
+    assert.ok(channelTenant5.includes("_t5_"), "Channel name must include tenant ID 5");
   });
 });

@@ -20,7 +20,7 @@ export default async function PosPage() {
   const email = session.user.email.toLowerCase();
 
   const userRows = await sql`
-    SELECT u.id, u.tenant_id, u.role, u.full_name, t.name as tenant_name, t.logo_url as tenant_logo_url
+    SELECT u.id, u.tenant_id, u.role, u.full_name, t.name as tenant_name, t.logo_url as tenant_logo_url, t.accent_color as tenant_accent_color
     FROM admin_users u
     JOIN tenants t ON u.tenant_id = t.id
     WHERE LOWER(u.email) = ${email}
@@ -37,6 +37,7 @@ export default async function PosPage() {
   const tenantName = user.tenant_name || "My Business";
   const userName = user.full_name || session.user.name || "Cashier";
   let tenantLogoUrl = user.tenant_logo_url || null;
+  const tenantAccentColor = user.tenant_accent_color || null;
 
   // Automatically seed test products for FT DEMO tenant
   if (tenantName.toLowerCase().includes("ft demo") || tenantName.toLowerCase().includes("ft")) {
@@ -77,9 +78,11 @@ export default async function PosPage() {
 
   return (
     <PosTerminalClient
+      tenantId={tenantId}
       initialShift={initialShift}
       tenantName={tenantName}
       tenantLogoUrl={tenantLogoUrl}
+      tenantAccentColor={tenantAccentColor}
       userName={userName}
       userRole={userRole || "Cashier"}
       isCashierOnly={isCashierOnly}

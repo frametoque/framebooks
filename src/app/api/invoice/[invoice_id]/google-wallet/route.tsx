@@ -63,7 +63,7 @@ async function ensureClass(authClient: GoogleAuth) {
 
           logo: {
             sourceUri: {
-              uri: `${ASSET_URL}/logos/ft/logo-main.png`,
+              uri: `${ASSET_URL}/logos/ft/logo.png`,
             },
             contentDescription: {
               defaultValue: { language: "en-US", value: "Framebooks Logo" },

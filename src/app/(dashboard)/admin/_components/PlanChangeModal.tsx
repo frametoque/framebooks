@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, AlertTriangle, ArrowRight, Check, Loader2 } from "lucide-react";
 import { formatLKR, PlanBadge } from "@/components/Formatters";
 import { addPackageGatewayFee } from "@/lib/payment-gateway/fee";
-import { checkDowngradeEligibility, changeSubscriptionPlan } from "@/app/(dashboard)/admin/subscriptions/actions";
+import { checkDowngradeEligibility, changeSubscriptionPlan, getTenantPosStatusAction } from "@/app/(dashboard)/admin/subscriptions/actions";
 
 interface PlanChangeModalProps {
   isOpen: boolean;
@@ -30,12 +30,24 @@ export function PlanChangeModal({
   const [customEndDate, setCustomEndDate] = useState("");
   const [reason, setReason] = useState("");
   const [overrideLimits, setOverrideLimits] = useState(false);
+  const [enablePos, setEnablePos] = useState<boolean>(false);
   const [checking, setChecking] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [downgradeWarning, setDowngradeWarning] = useState<any | null>(null);
 
   const currentPlan = allPlans.find((p) => p.id === subscription?.plan_id) || allPlans[0];
   const selectedPlan = allPlans.find((p) => p.key === targetPlanKey) || allPlans[0];
+
+  // Initialize POS Add-on state from subscription or backend
+  useEffect(() => {
+    if (subscription?.pos_active !== undefined) {
+      setEnablePos(Boolean(subscription.pos_active));
+    } else if (subscription?.tenant_id) {
+      getTenantPosStatusAction(Number(subscription.tenant_id))
+        .then((res) => setEnablePos(res.active))
+        .catch(() => {});
+    }
+  }, [subscription?.tenant_id, subscription?.pos_active]);
 
   // Whenever target plan changes, check downgrade limits
   useEffect(() => {
@@ -80,6 +92,7 @@ export function PlanChangeModal({
         customEndDate: customEndDate || undefined,
         reason: reason.trim(),
         overrideLimits,
+        enablePos,
       });
       if (onSuccess) onSuccess();
       onClose();
@@ -230,6 +243,37 @@ export function PlanChangeModal({
                   <div>
                     <span className="text-xs font-bold text-foreground block">Effective immediately</span>
                     <span className="text-[11px] text-muted-foreground">Update privileges right away</span>
+                  </div>
+                </label>
+              </div>
+
+              {/* Cloud POS Add-on Activation Option */}
+              <div>
+                <label className={`flex items-start gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                  enablePos 
+                    ? "border-amber-500/50 bg-amber-500/10 dark:bg-amber-500/15" 
+                    : "border-border bg-muted/40 hover:border-gray-500"
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={enablePos}
+                    onChange={(e) => setEnablePos(e.target.checked)}
+                    className="mt-0.5 rounded text-amber-500 focus:ring-amber-500 cursor-pointer"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-foreground">Activate Cloud POS Add-on</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full uppercase ${
+                        enablePos
+                          ? "bg-amber-500 text-amber-950"
+                          : "bg-black/10 dark:bg-white/10 text-muted-foreground"
+                      }`}>
+                        {enablePos ? "Active" : "Disabled"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Grant retail cashier terminal, fast barcode scanning, receipt printing, and cashier counters to this workspace.
+                    </p>
                   </div>
                 </label>
               </div>

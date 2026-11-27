@@ -4,6 +4,7 @@
 import sql from "@/lib/db";
 import { requireAdmin, logAdminAction } from "@/app/(dashboard)/admin/_lib/auth";
 import { revalidatePath } from "next/cache";
+import { grantPosAddon, revokePosAddon } from "@/lib/pos/entitlement";
 
 export async function getSubscriptionsList({
   search = "",
@@ -124,7 +125,13 @@ export async function getWorkspacesAndSubscriptionsList({
         SELECT SUM(p.amount) 
         FROM payments p 
         WHERE p.tenant_id = t.id AND p.status = 'paid'
-      ), 0) AS lifetime_paid
+      ), 0) AS lifetime_paid,
+      EXISTS (
+        SELECT 1 
+        FROM tenant_addons 
+        WHERE tenant_id = t.id AND addon_key = 'pos' AND status = 'active' 
+          AND (expires_at IS NULL OR expires_at > NOW())
+      ) AS pos_active
     FROM tenants t
     LEFT JOIN LATERAL (
       SELECT id, status, billing_interval, source, current_period_end 
@@ -183,7 +190,13 @@ export async function getWorkspacesAndSubscriptionsList({
         COALESCE(u.role, 'member') AS workspace_role,
         u.system_role,
         u.is_banned,
-        0::numeric AS lifetime_paid
+        0::numeric AS lifetime_paid,
+        EXISTS (
+          SELECT 1 
+          FROM tenant_addons 
+          WHERE tenant_id = t.id AND addon_key = 'pos' AND status = 'active' 
+            AND (expires_at IS NULL OR expires_at > NOW())
+        ) AS pos_active
       FROM admin_users u
       JOIN tenants t ON u.tenant_id = t.id
       WHERE u.tenant_id = ANY(${tenantIds})
@@ -270,6 +283,23 @@ export async function checkDowngradeEligibility(tenantId: number, targetPlanKey:
   };
 }
 
+export async function getTenantPosStatusAction(tenantId: number) {
+  await requireAdmin("view_subscriptions");
+  const rows = await sql`
+    SELECT status, expires_at 
+    FROM tenant_addons 
+    WHERE tenant_id = ${tenantId} AND addon_key = 'pos' 
+    LIMIT 1
+  `;
+  if (rows.length === 0) return { active: false, status: 'none' };
+  const r = rows[0];
+  const isExpired = r.expires_at ? new Date(r.expires_at) < new Date() : false;
+  return {
+    active: r.status === 'active' && !isExpired,
+    status: isExpired ? 'suspended' : r.status,
+  };
+}
+
 export async function changeSubscriptionPlan({
   subscriptionId,
   tenantId,
@@ -280,6 +310,7 @@ export async function changeSubscriptionPlan({
   customEndDate,
   reason,
   overrideLimits = false,
+  enablePos,
 }: {
   subscriptionId?: number;
   tenantId?: number;
@@ -290,6 +321,7 @@ export async function changeSubscriptionPlan({
   customEndDate?: string;
   reason: string;
   overrideLimits?: boolean;
+  enablePos?: boolean;
 }) {
   const actor = await requireAdmin("manage_subscriptions");
 
@@ -422,6 +454,15 @@ export async function changeSubscriptionPlan({
         plan_expires_at = ${newEndDate}
       WHERE id = ${effectiveTenantId}
     `;
+
+    // Handle POS Add-on activation / deactivation if requested
+    if (typeof enablePos === "boolean") {
+      if (enablePos) {
+        await grantPosAddon(effectiveTenantId);
+      } else {
+        await revokePosAddon(effectiveTenantId);
+      }
+    }
   }
 
   // Record subscription event audit

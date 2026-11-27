@@ -4,7 +4,7 @@ import { Loader } from "@/components/ui/Loader";
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { Loader2, CheckCircle2, ShieldCheck, Image as ImageIcon, FileText as FileIcon, Layout, FileText, Sparkles, Printer } from "lucide-react";
+import { Loader2, CheckCircle2, ShieldCheck, Image as ImageIcon, FileText as FileIcon, Sparkles, Printer } from "lucide-react";
 import { MdDownload, MdArrowBack, MdInsertDriveFile, MdCalendarToday, MdLocalOffer, MdWorkOutline, MdImage, MdCancel, MdAttachMoney, MdClose, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdDelete, MdUpload } from "react-icons/md";
 import Link from "next/link";
 import { getInvoiceByIdAdmin, approveBankSlip, declineBankSlip, undoApprovedBankSlipPayment, recordInvoicePayment, deleteIncome, adminUploadPaymentSlip, cancelInvoiceAction, refundInvoiceAction } from "../../actions/actions";
@@ -12,7 +12,6 @@ import { getTenantInfo } from "../../actions/tenants";
 import { getAccounts } from "../../actions/accounts";
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import Image from "next/image";
-import { InvoiceRenderer } from "@/lib/invoice-layout/renderer";
 
 const paymentStatusStyles = {
   paid: "bg-green-500/20 text-green-400 border-green-500/30",
@@ -104,7 +103,6 @@ export default function AdminInvoicePage() {
   const [convertingPdf, setConvertingPdf] = useState(false);
   const [tenantPlan, setTenantPlan] = useState<string>("Free");
   const [tenantInfo, setTenantInfo] = useState<any>(null);
-  const [activeViewTab, setActiveViewTab] = useState<"details" | "layout">("details");
 
   const convertPdfToImage = async (file: File): Promise<File> => {
     if (file.type !== "application/pdf") return file;
@@ -221,9 +219,6 @@ export default function AdminInvoicePage() {
         setTenantPlan(tInfo?.plan || "Free");
         setTenantInfo(tInfo);
         setAccounts(accs || []);
-        if (data.layout_snapshot || data.active_layout_definition) {
-          setActiveViewTab("layout");
-        }
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -253,6 +248,20 @@ export default function AdminInvoicePage() {
     if (!invoice) return;
     setDownloading(true);
     try {
+      if (invoice.is_pos && invoice.pos_order) {
+        const { downloadPosReceiptPdf } = await import("@/lib/pos/receipt-printer");
+        const { getActiveReceiptLayoutAction } = await import("@/app/(dashboard)/user/actions/invoice-layouts");
+        const receiptLayoutRes = await getActiveReceiptLayoutAction().catch(() => null);
+        await downloadPosReceiptPdf({
+          order: invoice.pos_order,
+          tenantName: tenantInfo?.name || "Framebooks Store",
+          tenantLogoUrl: tenantInfo?.logo_url || null,
+          customLayout: receiptLayoutRes?.layout || null,
+          fileName: `Receipt-${invoice.pos_order.order_number || invoice_id}.pdf`,
+        });
+        return;
+      }
+
       await downloadInvoiceWithLayout({
         invoice,
         tenantInfo,
@@ -272,6 +281,19 @@ export default function AdminInvoicePage() {
     if (!invoice) return;
     setPrinting(true);
     try {
+      if (invoice.is_pos && invoice.pos_order) {
+        const { printPosReceipt } = await import("@/lib/pos/receipt-printer");
+        const { getActiveReceiptLayoutAction } = await import("@/app/(dashboard)/user/actions/invoice-layouts");
+        const receiptLayoutRes = await getActiveReceiptLayoutAction().catch(() => null);
+        printPosReceipt({
+          order: invoice.pos_order,
+          tenantName: tenantInfo?.name || "Framebooks Store",
+          tenantLogoUrl: tenantInfo?.logo_url || null,
+          customLayout: receiptLayoutRes?.layout || null,
+        });
+        return;
+      }
+
       await printInvoiceWithLayout({
         invoice,
         tenantInfo,
@@ -566,94 +588,27 @@ export default function AdminInvoicePage() {
 
   return (
     <div className="space-y-6 pb-20">
-      {/* View Switcher (If custom layout is assigned to invoice) */}
-      {activeLayoutDef && (
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-card border border-border rounded-2xl p-2.5 px-4 shadow-xs">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveViewTab("details")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                activeViewTab === "details"
-                  ? "bg-foreground text-background shadow-xs"
-                  : "text-gray-400 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              <span>Details & Slips</span>
-            </button>
-            <button
-              onClick={() => setActiveViewTab("layout")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                activeViewTab === "layout"
-                  ? "bg-brand-500 text-brand-900 shadow-xs font-bold"
-                  : "text-gray-400 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
-              }`}
-            >
-              <Layout className="w-3.5 h-3.5" />
-              <span>Document Layout</span>
-            </button>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-xs text-gray-400 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-brand-400 animate-pulse" />
-              <span className="font-medium text-foreground">
-                {invoice.layout_name || "Custom Template"}
-              </span>
-              {invoice.layout_snapshot && (
-                <span className="text-[10px] text-gray-500 border border-border px-1.5 py-0.5 rounded">
-                  Snapshot Frozen
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-1.5 pl-2 border-l border-border">
-              <button
-                onClick={handleDownload}
-                disabled={downloading}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-xl text-xs font-semibold text-foreground transition-all cursor-pointer"
-                title="Download PDF"
-              >
-                {downloading ? <Loader size="sm" /> : <MdDownload className="w-3.5 h-3.5" />}
-                <span>PDF</span>
-              </button>
-              {tenantPlan === "Pro Plus" && (
-                <button
-                  onClick={handlePrint}
-                  disabled={printing}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-                  title="Direct Print Invoice (Pro Plus)"
-                >
-                  {printing ? <Loader size="sm" /> : <Printer className="w-3.5 h-3.5" />}
-                  <span>Print</span>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Render Document Layout if activeViewTab === 'layout' */}
-      {activeViewTab === "layout" && activeLayoutDef ? (
-        <div className="flex justify-center p-4 sm:p-8 bg-black/10 dark:bg-black/40 border border-border rounded-3xl overflow-x-auto">
-          <InvoiceRenderer
-            layout={activeLayoutDef}
-            invoice={invoice}
-            tenantInfo={tenantInfo}
-            plan={tenantPlan}
-            className="shadow-2xl"
-          />
-        </div>
-      ) : (
-        /* Main Layout */
-        <div id="invoice-content" className="flex flex-col lg:flex-row gap-6 items-start">
+      {/* Main Layout */}
+      <div id="invoice-content" className="flex flex-col lg:flex-row gap-6 items-start">
           <div className="flex-1 space-y-4 w-full">
 
             {/* Details Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-transparent border border-border rounded-2xl p-5 flex flex-col gap-2">
-                <div className="text-gray-400 text-xs flex items-center gap-2">
-                  <MdInsertDriveFile className="w-4 h-4" /> Invoice ID
+                <div className="text-gray-400 text-xs flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2"><MdInsertDriveFile className="w-4 h-4" /> Invoice ID</span>
+                  {invoice.is_pos && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/15 text-brand-700 dark:text-brand-300 border border-brand-500/30">
+                      POS Receipt
+                    </span>
+                  )}
                 </div>
-                <p className="text-foreground font-semibold text-sm">{invoice.invoice_id}</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-foreground font-semibold text-sm">{invoice.invoice_id}</p>
+                  {invoice.pos_order?.order_number && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">({invoice.pos_order.order_number})</span>
+                  )}
+                </div>
               </div>
 
               <div className="bg-transparent border border-border rounded-2xl p-5 flex flex-col gap-2">
@@ -1082,7 +1037,6 @@ export default function AdminInvoicePage() {
 
         </div>
       </div>
-      )}
 
       {/* Income Modal */}
       {incomeModalOpen && invoice && (

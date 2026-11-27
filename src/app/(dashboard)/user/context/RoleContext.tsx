@@ -14,6 +14,7 @@ interface RoleContextType {
   planName: string;
   canWrite: boolean;
   isViewer: boolean;
+  isCashier: boolean;
 }
 
 const RoleContext = createContext<RoleContextType>({
@@ -28,6 +29,7 @@ const RoleContext = createContext<RoleContextType>({
   planName: "Free",
   canWrite: true,
   isViewer: false,
+  isCashier: false,
 });
 
 export function RoleProvider({
@@ -53,10 +55,11 @@ export function RoleProvider({
   planName?: string;
   children: React.ReactNode;
 }) {
+  const isCashier = Boolean(role) && (role!.toLowerCase() === "cashier" || role!.toLowerCase().includes("cashier"));
   const isViewer = isReadOnly || (Boolean(role) && role!.toLowerCase() === "viewer");
   const effectiveRole = isViewer ? "Viewer" : role;
   const userActualRole = actualRole || role;
-  const canWrite = !isReadOnly && !isViewer;
+  const canWrite = !isReadOnly && !isViewer && !isCashier;
 
   return (
     <RoleContext.Provider
@@ -72,6 +75,7 @@ export function RoleProvider({
         planName,
         canWrite,
         isViewer,
+        isCashier,
       }}
     >
       {children}

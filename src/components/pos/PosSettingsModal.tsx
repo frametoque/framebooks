@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   X,
   Save,
@@ -13,7 +13,9 @@ import {
   CheckCircle2,
   Clock,
   Power,
-  RotateCw,
+  RotateCcw,
+  Edit2,
+  Upload,
 } from "lucide-react";
 import { loadPosSettingsAction, savePosSettingsAction } from "@/app/(dashboard)/pos/actions/stock";
 import {
@@ -24,6 +26,10 @@ import {
   PosCounter,
 } from "@/app/(dashboard)/pos/actions/counters";
 import { PosSettings } from "@/lib/pos/stock-service";
+import {
+  PosClientDisplaySlide,
+  DEFAULT_CUSTOMER_DISPLAY_SLIDES,
+} from "@/lib/pos/client-display";
 
 interface PosSettingsModalProps {
   isOpen: boolean;
@@ -42,7 +48,7 @@ export function PosSettingsModal({
   onOpenCashDrawer,
   onPrintTestBill,
 }: PosSettingsModalProps) {
-  const [activeTab, setActiveTab] = useState<"general" | "counters">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "counters" | "display">("general");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<PosSettings>({
@@ -52,8 +58,55 @@ export function PosSettingsModal({
     receipt_footer: "Thank you for your purchase!",
     default_tax_rate: 0,
     default_account_id: null,
+    customer_display_slides: DEFAULT_CUSTOMER_DISPLAY_SLIDES,
   });
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Customer Display Ads State
+  const [showSlideForm, setShowSlideForm] = useState(false);
+  const [editingSlideId, setEditingSlideId] = useState<string | null>(null);
+  const [slideDraft, setSlideDraft] = useState<Partial<PosClientDisplaySlide>>({
+    badge: "PROMO",
+    title: "",
+    subtitle: "",
+    callToAction: "",
+    imageUrl: "",
+    active: true,
+  });
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleImageUpload = (file: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxW = 1600;
+        const maxH = 1200;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxW || h > maxH) {
+          const ratio = Math.min(maxW / w, maxH / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          setSlideDraft((prev) => ({
+            ...prev,
+            imageUrl: dataUrl,
+          }));
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Counters management state
   const [counters, setCounters] = useState<PosCounter[]>([]);
@@ -63,16 +116,25 @@ export function PosSettingsModal({
   const [addingCounter, setAddingCounter] = useState(false);
   const [counterActionId, setCounterActionId] = useState<number | null>(null);
 
+  const callbacksRef = useRef({ onClose, onOpenCashDrawer, onPrintTestBill });
+  useEffect(() => {
+    callbacksRef.current = { onClose, onOpenCashDrawer, onPrintTestBill };
+  });
+
   useEffect(() => {
     if (isOpen && canManageSettings) {
       loadSettings();
       loadCounters();
     }
+  }, [isOpen, canManageSettings]);
+
+  useEffect(() => {
+    if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
+      if (e.key === "Escape") {
         e.preventDefault();
-        onClose();
+        callbacksRef.current.onClose?.();
         return;
       }
 
@@ -82,18 +144,18 @@ export function PosSettingsModal({
 
       // F5 or (Space when no input focused): Open cash drawer
       if ((e.key === "F5" && !e.shiftKey) || (e.key === " " && !isInput)) {
-        if (onOpenCashDrawer) {
+        if (callbacksRef.current.onOpenCashDrawer) {
           e.preventDefault();
-          onOpenCashDrawer();
+          callbacksRef.current.onOpenCashDrawer();
         }
         return;
       }
 
       // Shift+F5 or Alt+P: Print test bill
       if ((e.key === "F5" && e.shiftKey) || (e.altKey && e.key.toLowerCase() === "p")) {
-        if (onPrintTestBill) {
+        if (callbacksRef.current.onPrintTestBill) {
           e.preventDefault();
-          onPrintTestBill();
+          callbacksRef.current.onPrintTestBill();
         }
         return;
       }
@@ -101,7 +163,7 @@ export function PosSettingsModal({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, canManageSettings, onClose, onOpenCashDrawer, onPrintTestBill]);
+  }, [isOpen]);
 
   const loadSettings = async () => {
     setLoading(true);
@@ -221,6 +283,78 @@ export function PosSettingsModal({
     }
   };
 
+  const handleAddOrUpdateSlide = (e: React.FormEvent) => {
+    e.preventDefault();
+    const currentSlides = settings.customer_display_slides || [];
+    const img = slideDraft.imageUrl?.trim() || null;
+    const title = slideDraft.title?.trim() || (img ? `Ad Banner ${currentSlides.length + 1}` : "Ad Banner");
+
+    let updated: PosClientDisplaySlide[];
+
+    if (editingSlideId) {
+      updated = currentSlides.map((s) =>
+        s.id === editingSlideId
+          ? {
+              ...s,
+              title,
+              subtitle: slideDraft.subtitle?.trim() || "",
+              badge: slideDraft.badge?.trim() || "AD",
+              callToAction: slideDraft.callToAction?.trim() || "",
+              imageUrl: img,
+              active: slideDraft.active ?? true,
+            }
+          : s
+      );
+    } else {
+      const newSlide: PosClientDisplaySlide = {
+        id: `slide-${Date.now()}`,
+        title,
+        subtitle: slideDraft.subtitle?.trim() || "",
+        badge: slideDraft.badge?.trim() || "AD",
+        callToAction: slideDraft.callToAction?.trim() || "",
+        imageUrl: img,
+        active: slideDraft.active ?? true,
+      };
+      updated = [...currentSlides, newSlide];
+    }
+
+    setSettings({ ...settings, customer_display_slides: updated });
+    setShowSlideForm(false);
+    setEditingSlideId(null);
+    setSlideDraft({ badge: "AD", title: "", subtitle: "", callToAction: "", imageUrl: "", active: true });
+    setStatusMsg({ type: "success", text: "Ad slide saved. Click 'Save & Update Customer Screen' to apply." });
+  };
+
+  const handleToggleSlideActive = (id: string) => {
+    const currentSlides = settings.customer_display_slides || DEFAULT_CUSTOMER_DISPLAY_SLIDES;
+    const updated = currentSlides.map((s) => (s.id === id ? { ...s, active: !s.active } : s));
+    setSettings({ ...settings, customer_display_slides: updated });
+  };
+
+  const handleDeleteSlide = (id: string) => {
+    const currentSlides = settings.customer_display_slides || DEFAULT_CUSTOMER_DISPLAY_SLIDES;
+    const updated = currentSlides.filter((s) => s.id !== id);
+    setSettings({ ...settings, customer_display_slides: updated });
+  };
+
+  const handleEditSlide = (slide: PosClientDisplaySlide) => {
+    setEditingSlideId(slide.id);
+    setSlideDraft({
+      badge: slide.badge || "PROMO",
+      title: slide.title,
+      subtitle: slide.subtitle || "",
+      callToAction: slide.callToAction || "",
+      imageUrl: slide.imageUrl || "",
+      active: slide.active,
+    });
+    setShowSlideForm(true);
+  };
+
+  const handleResetDefaultSlides = () => {
+    setSettings({ ...settings, customer_display_slides: DEFAULT_CUSTOMER_DISPLAY_SLIDES });
+    setStatusMsg({ type: "success", text: "Reset to default customer promotion slides." });
+  };
+
   if (!isOpen || canManageSettings === false) return null;
 
   return (
@@ -274,6 +408,22 @@ export function PosSettingsModal({
               </span>
             )}
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("display")}
+            className={`py-2.5 px-4 text-xs font-bold border-b-2 flex items-center gap-2 transition-colors ${
+              activeTab === "display"
+                ? "border-brand-500 text-brand-500"
+                : "border-transparent text-gray-400 hover:text-foreground"
+            }`}
+          >
+            <span>Customer Display Ads</span>
+            {(settings.customer_display_slides || DEFAULT_CUSTOMER_DISPLAY_SLIDES).length > 0 && (
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-brand-500/15 text-brand-500 font-mono font-bold">
+                {(settings.customer_display_slides || DEFAULT_CUSTOMER_DISPLAY_SLIDES).filter((s) => s.active).length}
+              </span>
+            )}
+          </button>
         </div>
 
         {statusMsg && (
@@ -293,13 +443,12 @@ export function PosSettingsModal({
 
         {/* Tab Content */}
         <div className="overflow-y-auto flex-1">
-          {activeTab === "general" ? (
+          {activeTab === "general" && (
             <form onSubmit={handleSave} className="p-6 space-y-5 text-xs">
               {/* Oversell rule toggle */}
               <div className="p-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-border flex items-center justify-between gap-4">
                 <div>
                   <h4 className="font-bold text-sm text-foreground">Allow Negative Stock (Overselling)</h4>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">Let checkout proceed even when product inventory reaches zero.</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer shrink-0">
                   <input
@@ -418,7 +567,9 @@ export function PosSettingsModal({
                 </button>
               </div>
             </form>
-          ) : (
+          )}
+
+          {activeTab === "counters" && (
             /* Cashier Counters Management Tab */
             <div className="p-6 space-y-6">
               {/* Add New Counter Form */}
@@ -468,15 +619,6 @@ export function PosSettingsModal({
                   <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                     Configured Counters ({counters.length})
                   </h5>
-                  <button
-                    type="button"
-                    onClick={loadCounters}
-                    disabled={loadingCounters}
-                    className="text-[11px] text-gray-400 hover:text-foreground flex items-center gap-1 transition-colors"
-                  >
-                    <RotateCw className={`w-3 h-3 ${loadingCounters ? "animate-spin" : ""}`} />
-                    <span>Refresh</span>
-                  </button>
                 </div>
 
                 {loadingCounters && counters.length === 0 ? (
@@ -499,25 +641,9 @@ export function PosSettingsModal({
                           }`}
                         >
                           <div className="flex items-start sm:items-center gap-3 min-w-0">
-                            <div
-                              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                                hasActiveShift
-                                  ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30"
-                                  : c.is_active
-                                  ? "bg-brand-500/15 text-brand-500 border border-brand-500/30"
-                                  : "bg-gray-500/10 text-gray-400 border border-border"
-                              }`}
-                            >
-                              {c.code || c.name.slice(0, 2).toUpperCase()}
-                            </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className="font-bold text-xs text-foreground truncate">{c.name}</span>
-                                {c.code && (
-                                  <span className="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-black/10 dark:bg-white/10 text-muted-foreground">
-                                    {c.code}
-                                  </span>
-                                )}
                                 {!c.is_active && (
                                   <span className="text-[10px] px-1.5 py-0.2 rounded font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
                                     Disabled
@@ -528,7 +654,7 @@ export function PosSettingsModal({
                                 {hasActiveShift ? (
                                   <span className="text-emerald-500 font-semibold flex items-center gap-1">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                    Shift #{c.active_shift?.shift_number} Active ({c.active_shift?.user_name})
+                                    Shift {c.active_shift?.shift_number} Active ({c.active_shift?.user_name})
                                   </span>
                                 ) : (
                                   <span className="text-muted-foreground flex items-center gap-1">
@@ -583,6 +709,269 @@ export function PosSettingsModal({
                     })}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "display" && (
+            <div className="p-6 space-y-5 text-xs">
+              {/* Header Banner */}
+              <div className="p-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-border flex items-center justify-between gap-3">
+                <h4 className="font-bold text-sm text-foreground">
+                  Customer Screen Idle Ads & Promos
+                </h4>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-3.5 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload Ad Image</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Hidden File Input for Direct Ad Banner Upload */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleImageUpload(file);
+                    setEditingSlideId(null);
+                    setShowSlideForm(true);
+                  }
+                  e.target.value = "";
+                }}
+              />
+
+              {/* Slide Creator / Editor Form */}
+              {showSlideForm && (
+                <form
+                  onSubmit={handleAddOrUpdateSlide}
+                  className="p-5 rounded-2xl bg-card border-2 border-brand-500/30 space-y-4 shadow-lg animate-in fade-in"
+                >
+                  <div className="flex items-center justify-between">
+                    <h5 className="font-bold text-sm text-foreground">
+                      {editingSlideId ? "Edit Customer Screen Ad" : "Upload Customer Screen Ad"}
+                    </h5>
+                    <button
+                      type="button"
+                      onClick={() => setShowSlideForm(false)}
+                      className="text-gray-400 hover:text-foreground cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Image Upload Dropzone / Button */}
+                  <div>
+                    {slideDraft.imageUrl ? (
+                      <div className="relative rounded-2xl overflow-hidden border-2 border-brand-500/30 bg-black/20 group">
+                        <img
+                          src={slideDraft.imageUrl}
+                          alt="Ad Preview"
+                          className="w-full h-44 object-contain bg-black/40"
+                        />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="px-3.5 py-1.5 rounded-xl bg-brand-500 text-brand-950 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
+                          >
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Change Image</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSlideDraft({ ...slideDraft, imageUrl: "" })}
+                            className="px-3.5 py-1.5 rounded-xl bg-red-500 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Remove</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="py-6 px-4 border-2 border-dashed border-border hover:border-brand-500 rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer text-center group"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Upload className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-foreground">Click to upload ad banner image</p>
+                          <p className="text-[10px] text-muted-foreground">Recommended 16:9 or 4:3 ratio for counter display</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                        Ad Title / Name <span className="text-muted-foreground/60 font-normal normal-case">(optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={slideDraft.title || ""}
+                        onChange={(e) => setSlideDraft({ ...slideDraft, title: e.target.value })}
+                        placeholder="e.g. Summer Sale, New Arrivals"
+                        className="w-full px-3 py-2 rounded-xl bg-black/5 dark:bg-white/5 border border-border text-foreground font-semibold text-xs outline-none focus:border-brand-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                        Or External Image URL <span className="text-muted-foreground/60 font-normal normal-case">(optional)</span>
+                      </label>
+                      <input
+                        type="url"
+                        value={slideDraft.imageUrl || ""}
+                        onChange={(e) => setSlideDraft({ ...slideDraft, imageUrl: e.target.value })}
+                        placeholder="https://example.com/banner.jpg"
+                        className="w-full px-3 py-2 rounded-xl bg-black/5 dark:bg-white/5 border border-border text-foreground font-mono text-xs outline-none focus:border-brand-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={slideDraft.active !== false}
+                        onChange={(e) => setSlideDraft({ ...slideDraft, active: e.target.checked })}
+                        className="rounded border-border text-brand-500 focus:ring-brand-500"
+                      />
+                      <span className="font-semibold text-xs text-foreground">Active in auto-slide rotation</span>
+                    </label>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowSlideForm(false)}
+                        className="px-3 py-1.5 rounded-xl border border-border hover:bg-black/5 dark:hover:bg-white/5 text-xs font-semibold text-muted-foreground cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs cursor-pointer"
+                      >
+                        {editingSlideId ? "Update Ad" : "Save Ad Slide"}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              )}
+
+              {/* Slides List */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between text-muted-foreground px-1">
+                  <span className="font-bold text-[11px] uppercase tracking-wider">
+                    Configured Ad Slides ({(settings.customer_display_slides || []).length})
+                  </span>
+                </div>
+
+                {(settings.customer_display_slides || []).length === 0 && (
+                  <div className="p-8 border-2 border-dashed border-border rounded-2xl text-center space-y-2">
+                    <p className="text-xs font-bold text-foreground">No customer display ads uploaded yet</p>
+                    <p className="text-[11px] text-muted-foreground">Click "Upload Ad Image" above to add banners that automatically slide when the counter is idle.</p>
+                  </div>
+                )}
+
+                {(settings.customer_display_slides || []).map((slide, idx) => (
+                  <div
+                    key={slide.id || idx}
+                    className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                      slide.active
+                        ? "bg-black/5 dark:bg-white/5 border-border hover:border-brand-500/30"
+                        : "bg-black/2 dark:bg-white/2 border-border/50 opacity-60"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      {slide.imageUrl ? (
+                        <div className="w-20 h-14 rounded-xl overflow-hidden border border-border shrink-0 bg-black/40 shadow-inner">
+                          <img src={slide.imageUrl} alt={slide.title} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-14 h-14 rounded-xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center text-brand-500 font-bold text-xs shrink-0">
+                          #{idx + 1}
+                        </div>
+                      )}
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-brand-500/15 text-brand-500 border border-brand-500/30 shrink-0">
+                            {slide.imageUrl ? "AD BANNER" : "SLIDE"}
+                          </span>
+                          <h5 className="font-bold text-xs sm:text-sm text-foreground truncate">
+                            {slide.title}
+                          </h5>
+                          {!slide.active && (
+                            <span className="text-[10px] text-muted-foreground font-semibold">
+                              (Paused)
+                            </span>
+                          )}
+                        </div>
+                        {slide.subtitle && (
+                          <p className="text-[11px] text-muted-foreground truncate max-w-md mt-0.5">
+                            {slide.subtitle}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSlideActive(slide.id)}
+                        className={`p-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                          slide.active
+                            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20"
+                            : "bg-gray-500/10 text-gray-400 border-border hover:bg-black/10 dark:hover:bg-white/10"
+                        }`}
+                        title={slide.active ? "Pause slide" : "Activate slide"}
+                      >
+                        <Power className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleEditSlide(slide)}
+                        className="p-2 rounded-xl border border-border hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-foreground cursor-pointer"
+                        title="Edit Slide"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSlide(slide.id)}
+                        className="p-2 rounded-xl border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500/20 cursor-pointer"
+                        title="Delete Slide"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Save All Settings Action */}
+              <div className="pt-3 border-t border-border flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="py-2.5 px-5 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{saving ? "Saving Changes..." : "Save & Update Customer Screen"}</span>
+                </button>
               </div>
             </div>
           )}

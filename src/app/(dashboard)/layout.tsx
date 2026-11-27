@@ -9,6 +9,7 @@ import { redirect } from "next/navigation";
 
 import sql from "@/lib/db";
 import { generateTenantThemeCss, DEFAULT_ACCENT_HEX, resolvePaletteId } from "@/lib/theme/accent";
+import { isCashierOnlyUser } from "@/app/(dashboard)/user/actions/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -36,8 +37,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: {
-      template: bizName ? `%s | ${bizName}` : "%s",
-      default: bizName ? bizName : "Dashboard",
+      template: bizName ? `%s - ${bizName} | Framebooks` : "%s | Framebooks",
+      default: bizName ? `Dashboard - ${bizName} | Framebooks` : "Dashboard | Framebooks",
     },
   };
 }
@@ -87,7 +88,7 @@ export default async function DashboardRootLayout({
     // Enforce that user has a valid, linked business setup
     const email = userSession.user.email?.toLowerCase();
     const userRows = await sql`
-      SELECT u.tenant_id, t.id as active_tenant_id, t.payment_status
+      SELECT u.tenant_id, u.role, t.id as active_tenant_id, t.payment_status
       FROM admin_users u
       LEFT JOIN tenants t ON u.tenant_id = t.id
       WHERE LOWER(u.email) = ${email}
@@ -100,6 +101,14 @@ export default async function DashboardRootLayout({
 
     if (userRows[0].payment_status === "pending_payment") {
       redirect("/onboarding");
+    }
+
+    // Cashiers are strictly restricted to /pos; block access to dashboard and ERP pages
+    const userRole = userRows[0].role as string | null;
+    const activeTenantId = Number(userRows[0].active_tenant_id);
+    const isCashierOnly = await isCashierOnlyUser(userRole, activeTenantId);
+    if (isCashierOnly) {
+      redirect("/pos");
     }
   }
 

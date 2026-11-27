@@ -5,6 +5,7 @@ import { Printer, X, Tag, Plus, Minus } from "lucide-react";
 import { generateBarcodeSvg, generateQrCodeSvg } from "@/lib/pos/barcode-generator";
 import { StockItem } from "@/lib/pos/stock-service";
 import { getTenantInfo } from "@/app/(dashboard)/user/actions/tenants";
+import { printHtmlViaHiddenIframe } from "@/lib/pos/receipt-printer";
 
 interface BarcodeLabelPrinterProps {
   product: StockItem | null;
@@ -105,12 +106,6 @@ export function BarcodeLabelPrinter({ product, isOpen, onClose, businessName }: 
   const businessWatermark = tenantName || "";
 
   const handlePrint = () => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      alert("Please allow popups to print barcode labels.");
-      return;
-    }
-
     const labelsHtml = Array.from({ length: copies })
       .map(
         () => `
@@ -142,7 +137,7 @@ export function BarcodeLabelPrinter({ product, isOpen, onClose, businessName }: 
       )
       .join("");
 
-    printWindow.document.write(`
+    const labelsDocHtml = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -352,17 +347,11 @@ export function BarcodeLabelPrinter({ product, isOpen, onClose, businessName }: 
           <div class="labels-container">
             ${labelsHtml}
           </div>
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 600);
-            };
-          </script>
         </body>
       </html>
-    `);
+    `;
 
-    printWindow.document.close();
+    printHtmlViaHiddenIframe(labelsDocHtml);
   };
 
   return (

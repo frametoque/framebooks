@@ -209,35 +209,40 @@ export async function hasGranularPermission(
 
 /**
  * Checks if a user's permissions contain ONLY POS permissions.
- * STRICT RULE: if true, user is auto-redirected to /pos and blocked from /user/*.
+ * STRICT RULE: if true, user is auto-redirected to /pos and blocked from /dashboard and all /user/* pages.
  */
 export async function isCashierOnlyUser(role: Role | null, tenantId: number | null = null): Promise<boolean> {
   if (!role) return false;
-  const lowerRole = role.toLowerCase();
+  const lowerRole = role.toLowerCase().trim();
 
   // Owners, Admins, Super Admins, Accountants, Editors, Members are general workspace users, not cashier-only
   if (['owner', 'super admin', 'super_admin', 'admin', 'accountant', 'editor', 'member'].includes(lowerRole)) {
     return false;
   }
 
+  // Explicit Cashier role is strictly cashier-only (allowed only on /pos)
+  if (lowerRole === 'cashier' || lowerRole.includes('cashier')) {
+    return true;
+  }
+
   const perms = await getRolePermissionsObject(role, tenantId);
   if (!perms) return false;
 
-  // Check if user has ANY general ERP access
-  const erpResources = ['invoices', 'incomes', 'expenses', 'clients', 'accounts', 'inventory', 'settings', 'team', 'export'];
+  // Check if user has ANY general ERP access (excluding POS counter permissions like clients & inventory read)
+  const erpResources = ['invoices', 'incomes', 'expenses', 'accounts', 'settings', 'team', 'export'];
   for (const res of erpResources) {
     const rPerm = perms[res];
     if (rPerm && typeof rPerm === 'object') {
       for (const key of Object.keys(rPerm)) {
         if (rPerm[key] === true) {
-          return false; // has broader permission
+          return false; // has broader ERP permission
         }
       }
     }
   }
 
   // Must have at least pos.use to be a cashier
-  const hasPos = perms.pos?.use === true || lowerRole === 'cashier';
+  const hasPos = perms.pos?.use === true;
   return hasPos;
 }
 

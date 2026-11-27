@@ -41,11 +41,11 @@ export interface CheckoutPayload {
  */
 async function generateOrderNumber(tenantId: number): Promise<string> {
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const prefix = `POS-${dateStr}`;
+  const prefix = `REC-${dateStr}`;
 
   const lastOrder = await sql`
     SELECT order_number FROM pos_orders 
-    WHERE tenant_id = ${tenantId} AND order_number LIKE ${prefix + '%'}
+    WHERE tenant_id = ${tenantId} AND (order_number LIKE ${prefix + '%'} OR order_number LIKE ${`POS-${dateStr}%`})
     ORDER BY id DESC LIMIT 1
   `;
 
@@ -472,6 +472,20 @@ export async function checkoutPosOrderAction(payload: CheckoutPayload, shiftId?:
       console.warn("[POS Checkout WooCommerce Push Error]", pushErr);
     }
 
+    // Instantly notify all cashiers and counters for this tenant across different physical devices
+    try {
+      const { notifyTenantStockUpdate } = await import("@/lib/pos/server-events");
+      notifyTenantStockUpdate(tenantId, {
+        source: 'pos_checkout',
+        items: updatedStockItems.map((it) => ({
+          id: it.inventoryId,
+          newQuantity: it.newQuantity,
+        })),
+      });
+    } catch (sseErr) {
+      console.warn("[POS Checkout SSE Event Error]", sseErr);
+    }
+
     await logSystemAction(`Completed POS sale #${orderNumber} for LKR ${payload.totalAmount} (${payload.paymentMethod})`);
 
     revalidatePath("/pos");
@@ -595,6 +609,20 @@ export async function refundPosOrderAction(orderId: number, reason: string = 'Cu
       console.warn("[POS Refund WooCommerce Push Error]", pushErr);
     }
 
+    // Instantly notify all cashiers and counters for this tenant across different physical devices
+    try {
+      const { notifyTenantStockUpdate } = await import("@/lib/pos/server-events");
+      notifyTenantStockUpdate(tenantId, {
+        source: 'pos_refund',
+        items: restoredItems.map((it) => ({
+          id: it.inventoryId,
+          newQuantity: it.newQuantity,
+        })),
+      });
+    } catch (sseErr) {
+      console.warn("[POS Refund SSE Event Error]", sseErr);
+    }
+
     await logSystemAction(`Refunded POS order #${order.order_number}: ${reason}`);
     revalidatePath("/pos");
     revalidatePath("/user/stock");
@@ -711,6 +739,20 @@ export async function voidPosOrderAction(orderId: number, reason: string = 'Void
       console.warn("[POS Void WooCommerce Push Error]", pushErr);
     }
 
+    // Instantly notify all cashiers and counters for this tenant across different physical devices
+    try {
+      const { notifyTenantStockUpdate } = await import("@/lib/pos/server-events");
+      notifyTenantStockUpdate(tenantId, {
+        source: 'pos_void',
+        items: voidRestoredItems.map((it) => ({
+          id: it.inventoryId,
+          newQuantity: it.newQuantity,
+        })),
+      });
+    } catch (sseErr) {
+      console.warn("[POS Void SSE Event Error]", sseErr);
+    }
+
     await logSystemAction(`Voided POS order #${order.order_number}: ${reason}`);
     revalidatePath("/pos");
     revalidatePath("/user/stock");
@@ -788,5 +830,265 @@ export async function loadPosOrdersAction(options?: {
     };
   } catch (err: any) {
     return { success: false, error: err.message, orders: [], total: 0 };
+  }
+}
+
+/**
+ * Edit POS Order items (quantity adjustment, replacement, or item removal)
+ * without full refund and re-entry.
+ * Automatically recalculates inventory delta, updates stock_movements,
+ * updates pos_orders, linked invoices, and admin_incomes.
+ */
+export async function editPosOrderAction(
+  orderId: number,
+  updatedItems: CartItem[],
+  reason: string = 'Order items modified'
+) {
+  const perm = await requirePosPermission('pos.use');
+  if (perm.error || !perm.context) {
+    return { success: false, error: perm.error };
+  }
+
+  const tenantId = Number(perm.context.tenantId);
+  const userId = Number(perm.context.userId);
+
+  if (!updatedItems || updatedItems.length === 0) {
+    return { success: false, error: "Order must have at least one item. To cancel the entire order, please use Refund or Void." };
+  }
+
+  try {
+    const userRow = await sql`SELECT full_name FROM admin_users WHERE id = ${userId} LIMIT 1`;
+    const userName = userRow[0]?.full_name || 'Cashier';
+
+    const orderRows = await sql`
+      SELECT * FROM pos_orders WHERE id = ${orderId} AND tenant_id = ${tenantId} LIMIT 1
+    `;
+    if (orderRows.length === 0) return { success: false, error: "Order not found." };
+
+    const order = orderRows[0];
+    if (order.status !== 'completed') {
+      return { success: false, error: `Only completed orders can be edited. Current status is "${order.status}".` };
+    }
+
+    const { getPosSettings } = await import("@/lib/pos/stock-service");
+    const settings = await getPosSettings(tenantId);
+
+    const oldItems: CartItem[] = typeof order.items_json === 'string'
+      ? JSON.parse(order.items_json)
+      : (order.items_json || []);
+
+    // Calculate item deltas
+    // old item qty per inventory id
+    const oldQtyMap = new Map<number, number>();
+    for (const it of oldItems) {
+      const id = Number(it.id);
+      oldQtyMap.set(id, (oldQtyMap.get(id) || 0) + (Number(it.quantity) || 0));
+    }
+
+    // new item qty per inventory id
+    const newQtyMap = new Map<number, number>();
+    for (const it of updatedItems) {
+      const id = Number(it.id);
+      newQtyMap.set(id, (newQtyMap.get(id) || 0) + (Number(it.quantity) || 0));
+    }
+
+    // Union of all inventory IDs involved
+    const allIds = new Set<number>([...oldQtyMap.keys(), ...newQtyMap.keys()]);
+    const inventoryAdjustments: Array<{
+      inventoryId: number;
+      delta: number; // positive = stock returned to store (+qty), negative = stock taken from store (-qty)
+    }> = [];
+
+    for (const id of allIds) {
+      const oldQty = oldQtyMap.get(id) || 0;
+      const newQty = newQtyMap.get(id) || 0;
+      const delta = oldQty - newQty; // If old was 3, new is 2 => delta = +1 (1 unit returned to stock)
+      if (delta !== 0) {
+        inventoryAdjustments.push({ inventoryId: id, delta });
+      }
+    }
+
+    const updatedStockItems: Array<{
+      inventoryId: number;
+      name?: string;
+      sku?: string;
+      previousQty?: number;
+      newQuantity: number;
+      reason: string;
+    }> = [];
+
+    // Financial calculations
+    const newSubtotal = updatedItems.reduce((acc, it) => acc + ((Number(it.price) || 0) * (Number(it.quantity) || 0)), 0);
+    const oldSubtotal = parseFloat(order.subtotal || 0);
+    const oldDiscount = parseFloat(order.discount_amount || 0);
+    const oldTax = parseFloat(order.tax_amount || 0);
+
+    // Scale discount proportionally if original had discount
+    let newDiscount = 0;
+    if (oldSubtotal > 0 && oldDiscount > 0) {
+      const discountRatio = oldDiscount / oldSubtotal;
+      newDiscount = Math.round(newSubtotal * discountRatio * 100) / 100;
+    }
+
+    let newTax = 0;
+    if (oldSubtotal > 0 && oldTax > 0) {
+      const taxable = Math.max(0, newSubtotal - newDiscount);
+      const oldTaxable = Math.max(0, oldSubtotal - oldDiscount);
+      const taxRatio = oldTax / (oldTaxable || 1);
+      newTax = Math.round(taxable * taxRatio * 100) / 100;
+    }
+
+    const newTotal = Math.max(0, Math.round((newSubtotal - newDiscount + newTax) * 100) / 100);
+
+    await sql.begin(async (trx) => {
+      // 1. Apply stock adjustments with row-level locks
+      for (const adj of inventoryAdjustments) {
+        const itemRows = await trx`
+          SELECT id, item_name, quantity, sku
+          FROM admin_inventory
+          WHERE id::text = ${String(adj.inventoryId)} AND (tenant_id::text = ${String(tenantId)} OR tenant_id IS NULL)
+          FOR UPDATE
+        `;
+
+        if (itemRows.length > 0) {
+          const currentItem = itemRows[0];
+          const previousQty = parseFloat(currentItem.quantity || 0);
+          const newQty = previousQty + adj.delta;
+
+          if (newQty < 0 && !settings.allow_negative_stock && adj.delta < 0) {
+            throw new Error(
+              `Insufficient stock for "${currentItem.item_name}" (${currentItem.sku || 'No SKU'}). In stock: ${previousQty}, requested additional: ${Math.abs(adj.delta)}`
+            );
+          }
+
+          await trx`
+            UPDATE admin_inventory
+            SET quantity = ${newQty},
+                status = ${newQty <= 0 ? 'Out of Stock' : 'Available'},
+                updated_at = NOW()
+            WHERE id::text = ${String(currentItem.id)} AND (tenant_id::text = ${String(tenantId)} OR tenant_id IS NULL)
+          `;
+
+          await trx`
+            INSERT INTO stock_movements (
+              tenant_id, inventory_id, change_qty, previous_qty, new_qty, reason, reference_type, reference_id, user_id, user_name, notes, created_at
+            ) VALUES (
+              ${tenantId}, ${currentItem.id}, ${adj.delta}, ${previousQty}, ${newQty},
+              ${adj.delta > 0 ? 'edit_return' : 'edit_exchange'},
+              'pos_order', ${order.order_number}, ${userId}, ${userName},
+              ${`Order #${order.order_number} modified: ${reason}`}, NOW()
+            )
+          `;
+
+          updatedStockItems.push({
+            inventoryId: Number(currentItem.id),
+            name: currentItem.item_name,
+            sku: currentItem.sku || 'No SKU',
+            previousQty,
+            newQuantity: newQty,
+            reason: 'pos_edit',
+          });
+        }
+      }
+
+      // 2. Update pos_orders
+      await trx`
+        UPDATE pos_orders SET
+          items_json = ${sql.json(updatedItems as any)},
+          subtotal = ${newSubtotal},
+          discount_amount = ${newDiscount},
+          tax_amount = ${newTax},
+          total_amount = ${newTotal},
+          updated_at = NOW()
+        WHERE id = ${orderId} AND tenant_id = ${tenantId}
+      `;
+
+      // 3. Update invoices and invoice_items if invoice_id is present
+      if (order.invoice_id) {
+        await trx`
+          UPDATE invoices SET
+            subtotal = ${newSubtotal},
+            discount = ${newDiscount},
+            total = ${newTotal},
+            advance = ${newTotal}
+          WHERE invoice_id = ${order.invoice_id} AND tenant_id = ${tenantId}
+        `;
+
+        await trx`
+          DELETE FROM invoice_items WHERE invoice_id = ${order.invoice_id} AND tenant_id = ${tenantId}
+        `;
+
+        for (const item of updatedItems) {
+          const qty = Number(item.quantity) || 1;
+          const price = Number(item.price) || 0;
+          const lineTotal = qty * price;
+          await trx`
+            INSERT INTO invoice_items (invoice_id, description, quantity, price, total, tenant_id)
+            VALUES (${order.invoice_id}, ${`${item.name} (${item.sku || 'No SKU'})`}, ${qty}, ${price}, ${lineTotal}, ${tenantId})
+          `;
+        }
+      }
+
+      // 4. Update admin_incomes amount
+      await trx`
+        UPDATE admin_incomes SET
+          amount = ${newTotal}
+        WHERE tenant_id = ${tenantId}
+          AND (
+            (invoice_id IS NOT NULL AND invoice_id = ${order.invoice_id || ''})
+            OR description = ${`POS Sale #${order.order_number}`}
+          )
+      `;
+    });
+
+    // 5. Push updated stock to WooCommerce
+    if (updatedStockItems.length > 0) {
+      try {
+        const { enqueueWooStockPush } = await import("@/lib/woocommerce/push-service");
+        await enqueueWooStockPush(
+          tenantId,
+          updatedStockItems,
+          { source: 'pos_edit', immediate: true }
+        );
+      } catch (pushErr) {
+        console.warn("[POS Edit Order WooCommerce Push Error]", pushErr);
+      }
+    }
+
+    // Instantly notify all cashiers and counters for this tenant across different physical devices
+    try {
+      const { notifyTenantStockUpdate } = await import("@/lib/pos/server-events");
+      notifyTenantStockUpdate(tenantId, {
+        source: 'pos_edit',
+        items: updatedStockItems.map((it) => ({
+          id: it.inventoryId,
+          newQuantity: it.newQuantity,
+        })),
+      });
+    } catch (sseErr) {
+      console.warn("[POS Edit Order SSE Event Error]", sseErr);
+    }
+
+    await logSystemAction(
+      `Edited POS order #${order.order_number}: updated from LKR ${order.total_amount} to LKR ${newTotal} (${reason})`
+    );
+
+    revalidatePath("/pos");
+    revalidatePath("/user/stock");
+    revalidatePath("/user/invoices");
+    revalidatePath("/user/income");
+    revalidatePath("/user/dashboard");
+    revalidatePath("/user/accounts");
+    revalidatePath("/user/reports");
+    revalidatePath("/user/inventory");
+
+    return {
+      success: true,
+      updatedStockItems,
+      newTotal,
+      diff: newTotal - parseFloat(order.total_amount || 0)
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message };
   }
 }

@@ -1,9 +1,40 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, RefreshCw, Check, Printer, Shield, KeyRound, AlertCircle } from "lucide-react";
+import { X, RefreshCw, Check, Printer, Shield, KeyRound, AlertCircle, Loader2 } from "lucide-react";
 import { generateQrCodeSvg } from "@/lib/pos/barcode-generator";
 import { updateUserPosCodeAction } from "@/app/(dashboard)/pos/actions/promotions";
+import { printHtmlViaHiddenIframe } from "@/lib/pos/receipt-printer";
+
+const AppleWalletIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+    <path
+      fill="currentColor"
+      d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"
+    />
+  </svg>
+);
+
+const GoogleWalletIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+    <path
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      fill="#4285F4"
+    />
+    <path
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      fill="#34A853"
+    />
+    <path
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      fill="#EA4335"
+    />
+  </svg>
+);
 
 interface TeamPosCodeModalProps {
   isOpen: boolean;
@@ -28,6 +59,7 @@ export function TeamPosCodeModal({
 }: TeamPosCodeModalProps) {
   const [code, setCode] = useState(member?.pos_manager_code || "");
   const [saving, setSaving] = useState(false);
+  const [addingToWallet, setAddingToWallet] = useState<"apple" | "google" | null>(null);
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Sync initial code if member changes
@@ -44,6 +76,60 @@ export function TeamPosCodeModal({
     // Generate a clean 6-digit PIN code
     const randomDigits = Math.floor(100000 + Math.random() * 900000).toString();
     setCode(randomDigits);
+  };
+
+  const handleAppleWallet = async () => {
+    setAddingToWallet("apple");
+    setStatusMsg(null);
+    try {
+      const res = await fetch("/api/pos/pass/apple-wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId: member.id, code: activeCode }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail ?? body.error ?? `Server error ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `framebooks-pos-pass-${member.id}.pkpass`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatusMsg({ type: "success", text: "Apple Wallet pass downloaded successfully." });
+    } catch (err: any) {
+      console.error("Apple Wallet error:", err);
+      setStatusMsg({ type: "error", text: `Apple Wallet: ${err?.message ?? "Failed to create pass"}` });
+    } finally {
+      setAddingToWallet(null);
+    }
+  };
+
+  const handleGoogleWallet = async () => {
+    setAddingToWallet("google");
+    setStatusMsg(null);
+    try {
+      const res = await fetch("/api/pos/pass/google-wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId: member.id, code: activeCode }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Server error ${res.status}`);
+      }
+      const { saveUrl } = await res.json();
+      if (!saveUrl) throw new Error("No Google Wallet save URL returned");
+      window.open(saveUrl, "_blank");
+      setStatusMsg({ type: "success", text: "Google Wallet pass ready. Opening link..." });
+    } catch (err: any) {
+      console.error("Google Wallet error:", err);
+      setStatusMsg({ type: "error", text: `Google Wallet: ${err?.message ?? "Failed to create pass"}` });
+    } finally {
+      setAddingToWallet(null);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -76,13 +162,7 @@ export function TeamPosCodeModal({
   const qrSvg = generateQrCodeSvg(`POS_MGR:${activeCode}`, 140);
 
   const handlePrintBadge = () => {
-    const printWindow = window.open("", "_blank", "width=420,height=560");
-    if (!printWindow) {
-      alert("Please allow popups to print the manager QR badge.");
-      return;
-    }
-
-    printWindow.document.write(`
+    const badgeHtml = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -162,15 +242,11 @@ export function TeamPosCodeModal({
               Scan QR code or enter PIN at POS terminal to authorize protected discounts & offers.
             </div>
           </div>
-          <script>
-            window.onload = function() {
-              window.print();
-            };
-          </script>
         </body>
       </html>
-    `);
-    printWindow.document.close();
+    `;
+
+    printHtmlViaHiddenIframe(badgeHtml);
   };
 
   return (
@@ -192,7 +268,7 @@ export function TeamPosCodeModal({
         {/* Modal Header */}
         <div className="flex items-center gap-3">
           <div className="min-w-0">
-            <h3 className="text-base font-bold text-foreground">POS Access Code & QR Badge</h3>
+            <h3 className="text-base font-bold text-foreground">POS Access Code</h3>
             <p className="text-xs text-gray-400 truncate">
               {member.full_name || member.email} ({member.role})
             </p>
@@ -247,22 +323,88 @@ export function TeamPosCodeModal({
           </div>
         </form>
 
-        {/* QR Badge Card Preview */}
-        <div className="bg-black/5 dark:bg-white/5 border border-border rounded-2xl p-5 text-center space-y-3">
-          <div className="inline-block p-3 bg-white rounded-2xl shadow-md">
-            <div dangerouslySetInnerHTML={{ __html: qrSvg }} />
+        {/* Elegant Obsidian QR Badge Card Preview */}
+        <div className="bg-[#0B0F17] text-white border border-white/10 rounded-2xl p-5 text-center space-y-3.5 shadow-xl relative overflow-hidden">
+          <div className="flex items-center justify-between text-[11px] text-white/50 px-1 pt-1">
+            <span className="font-bold tracking-wider uppercase text-white/80">Framebooks</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase bg-[#00E35B]/15 text-[#00E35B] border border-[#00E35B]/30">
+              {member.role || "Admin"}
+            </span>
           </div>
 
-          <div className="font-mono text-sm font-black text-foreground tracking-widest">
-            PIN: {activeCode}
+          <div className="text-left px-1">
+            <h4 className="text-sm font-bold text-white truncate">{member.full_name || member.email}</h4>
+            <p className="text-[11px] text-white/50 truncate">{tenantName}</p>
+          </div>
+
+          <div className="flex justify-center py-1">
+            <div className="p-3 bg-white rounded-2xl shadow-lg ring-1 ring-black/5">
+              <div dangerouslySetInnerHTML={{ __html: qrSvg }} />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="font-mono text-xs font-bold text-[#00E35B] tracking-widest bg-white/5 py-1.5 px-3 rounded-lg border border-white/5 inline-block">
+              PIN: {activeCode}
+            </div>
+            <p className="text-[10px] text-white/40">
+              Scan QR or enter PIN at POS to authorize manager actions
+            </p>
+          </div>
+        </div>
+
+        {/* Action Buttons: Apple Wallet, Google Wallet & Print */}
+        <div className="space-y-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
+            {/* Apple Wallet Button */}
+            <button
+              type="button"
+              onClick={handleAppleWallet}
+              disabled={addingToWallet !== null}
+              className="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-white/10 bg-black text-white hover:bg-white/10 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+              title="Add POS Access Pass to Apple Wallet"
+            >
+              {addingToWallet === "apple" ? (
+                <Loader2 className="w-4 h-4 text-white animate-spin" />
+              ) : (
+                <AppleWalletIcon />
+              )}
+              <div className="text-left leading-tight">
+                <span className="block text-[9px] uppercase tracking-wider text-white/50 font-medium">
+                  {addingToWallet === "apple" ? "Adding..." : "Add to"}
+                </span>
+                <span className="block text-xs font-bold text-white">Apple Wallet</span>
+              </div>
+            </button>
+
+            {/* Google Wallet Button */}
+            <button
+              type="button"
+              onClick={handleGoogleWallet}
+              disabled={addingToWallet !== null}
+              className="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-border bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-foreground shadow-xs"
+              title="Save POS Access Pass to Google Wallet"
+            >
+              {addingToWallet === "google" ? (
+                <Loader2 className="w-4 h-4 text-foreground animate-spin" />
+              ) : (
+                <GoogleWalletIcon />
+              )}
+              <div className="text-left leading-tight">
+                <span className="block text-[9px] uppercase tracking-wider text-muted-foreground font-medium">
+                  {addingToWallet === "google" ? "Opening..." : "Save to"}
+                </span>
+                <span className="block text-xs font-bold text-foreground">Google Wallet</span>
+              </div>
+            </button>
           </div>
 
           <button
             type="button"
             onClick={handlePrintBadge}
-            className="w-full py-2 px-4 rounded-xl border border-border hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold text-foreground transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-2 px-4 rounded-xl border border-border hover:bg-black/5 dark:hover:bg-white/5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
-            <Printer className="w-4 h-4 text-brand-500" />
+            <Printer className="w-3.5 h-3.5 text-brand-500" />
             <span>Print Badge / Slip</span>
           </button>
         </div>

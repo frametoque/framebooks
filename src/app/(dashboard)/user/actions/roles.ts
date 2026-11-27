@@ -80,8 +80,10 @@ export async function getRoles() {
     rolesMap.set(r.role.toLowerCase(), { ...r, granular_permissions: perms, isCustom: true });
   }
 
-  // Never allow owner to be configured
+  // Never allow owner or super admin to be configured as a team role
   rolesMap.delete('owner');
+  rolesMap.delete('super admin');
+  rolesMap.delete('super_admin');
 
   return Array.from(rolesMap.values());
 }

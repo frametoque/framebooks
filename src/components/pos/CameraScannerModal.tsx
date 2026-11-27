@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Camera, X, RefreshCw, AlertCircle, CheckCircle2, Zap, ZapOff } from "lucide-react";
+import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from "@zxing/library";
 import { playScanSound } from "./useHardwareBarcodeScanner";
 
 interface CameraScannerModalProps {
@@ -23,6 +24,7 @@ export function CameraScannerModal({
 }: CameraScannerModalProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const zxingReaderRef = useRef<BrowserMultiFormatReader | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const lastScanRef = useRef<{ code: string; time: number } | null>(null);
   const isDetectingRef = useRef(false);
@@ -107,7 +109,41 @@ export function CameraScannerModal({
           setHasTorch(true);
         }
 
-        // Start continuous frame scanning loop
+        // Initialize ZXing Universal Reader (Code 128, Code 39, EAN-13, EAN-8, UPC-A, UPC-E, QR, etc.)
+        try {
+          const hints = new Map();
+          const formats = [
+            BarcodeFormat.QR_CODE,
+            BarcodeFormat.CODE_128,
+            BarcodeFormat.CODE_39,
+            BarcodeFormat.EAN_13,
+            BarcodeFormat.EAN_8,
+            BarcodeFormat.UPC_A,
+            BarcodeFormat.UPC_E,
+            BarcodeFormat.ITF,
+            BarcodeFormat.DATA_MATRIX,
+            BarcodeFormat.CODABAR,
+          ];
+          hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
+          hints.set(DecodeHintType.TRY_HARDER, true);
+
+          const reader = new BrowserMultiFormatReader(hints, 250);
+          zxingReaderRef.current = reader;
+
+          reader.decodeFromStream(stream, videoRef.current, (result) => {
+            if (!isMountedRef.current) return;
+            if (result) {
+              const text = result.getText();
+              if (text) {
+                handleDetection(text);
+              }
+            }
+          });
+        } catch (zxingErr) {
+          console.warn("ZXing scanner init fallback:", zxingErr);
+        }
+
+        // Also run secondary native BarcodeDetector if available for hardware acceleration
         scanVideoFrames();
       }
     } catch (err: any) {
@@ -118,6 +154,13 @@ export function CameraScannerModal({
   };
 
   const stopCamera = () => {
+    if (zxingReaderRef.current) {
+      try {
+        zxingReaderRef.current.reset();
+      } catch {}
+      zxingReaderRef.current = null;
+    }
+
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = null;
@@ -157,7 +200,7 @@ export function CameraScannerModal({
       return;
     }
 
-    // Check BarcodeDetector API
+    // Native BarcodeDetector API for browsers that support it
     const BarcodeDetectorClass = (window as any).BarcodeDetector;
     if (BarcodeDetectorClass) {
       isDetectingRef.current = true;
@@ -178,7 +221,7 @@ export function CameraScannerModal({
           if (isMountedRef.current) {
             isDetectingRef.current = false;
           }
-        }, 500);
+        }, 300);
       }
     }
 
@@ -192,15 +235,14 @@ export function CameraScannerModal({
     if (!clean || !isMountedRef.current) return;
 
     const now = Date.now();
-    // Strict cooldown debounce: prevent duplicate fire of identical barcode/QR within 2800ms
-    // Also enforce minimum 1400ms between ANY consecutive scans to avoid rapid-fire duplicates
+    // Debounce: prevent duplicate scan of identical barcode within 1800ms, and allow distinct items after 350ms
     if (lastScanRef.current) {
       const isSameCode = lastScanRef.current.code.toLowerCase() === clean.toLowerCase();
       const elapsed = now - lastScanRef.current.time;
-      if (isSameCode && elapsed < 2800) {
+      if (isSameCode && elapsed < 1800) {
         return;
       }
-      if (elapsed < 1400) {
+      if (elapsed < 350) {
         return;
       }
     }

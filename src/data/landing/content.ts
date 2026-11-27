@@ -209,9 +209,9 @@ export const posFeatures = [
     icon: 'MdLockOutline',
   },
   {
-    title: 'Split tenders & clean discounts',
-    description: 'Cash, card, bank transfer, or split across methods. Apply percentage or fixed discounts with complete transparency.',
-    icon: 'MdLocalOffer',
+    title: 'WooCommerce Live Sync',
+    description: 'Live sync your stock with the online website you already have. Counter sales and web orders stay in perfect harmony with zero overselling.',
+    icon: 'SiWoocommerce',
   },
   {
     title: 'Any screen is your register',

@@ -381,10 +381,12 @@ export function StockManagementModal({
   });
 
   const formatLKR = (amount: number) => {
+    const rounded = Math.round((amount || 0) * 100) / 100;
+    const hasDecimals = Math.abs(rounded) % 1 !== 0;
     return new Intl.NumberFormat("en-LK", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount || 0);
+      minimumFractionDigits: hasDecimals ? 2 : 0,
+      maximumFractionDigits: 2,
+    }).format(rounded);
   };
 
   if (!isStandalonePage && !isOpen) return null;

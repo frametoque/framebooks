@@ -68,6 +68,9 @@ export function isSettingsSectionAllowed(
   // Workspace Owner has full access to all sections
   if (r === "owner") return true;
 
+  // Cashiers have NO access to any settings sections; restricted to /pos
+  if (r === "cashier" || r.includes("cashier")) return false;
+
   // Super Admin has full access to all sections except export and integrations (which are owner-only)
   if (r === "super admin") {
     return tab !== "export" && tab !== "integrations" && tab !== "woocommerce";

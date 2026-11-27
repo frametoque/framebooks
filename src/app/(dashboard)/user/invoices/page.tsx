@@ -4,8 +4,8 @@ import { Loader } from "@/components/ui/Loader";
 
 import { useEffect, useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Edit2, Send, Loader2, Image as ImageIcon, FileText as FileIcon, Printer } from "lucide-react";
-import { MdInsertDriveFile, MdCheckCircle, MdAccessTime, MdErrorOutline, MdSearch, MdRemoveRedEye, MdDownload, MdDelete, MdAttachMoney, MdClose, MdUpload, MdCancel } from "react-icons/md";
+import { Edit2, Loader2, Image as ImageIcon, FileText as FileIcon, Printer } from "lucide-react";
+import { MdInsertDriveFile, MdCheckCircle, MdAccessTime, MdErrorOutline, MdSearch, MdRemoveRedEye, MdDownload, MdDelete, MdAttachMoney, MdClose, MdUpload, MdCancel, MdPointOfSale } from "react-icons/md";
 import Link from "next/link";
 import { getInvoices, deleteInvoice, recordInvoicePayment, adminUploadPaymentSlip, getInvoiceByIdAdmin, cancelInvoiceAction } from "../actions/actions";
 import { getAccounts } from "../actions/accounts";
@@ -31,6 +31,7 @@ function InvoicesPageContent() {
   const { confirm } = useConfirm();
   const searchParams = useSearchParams();
   const [activeFilter, setActiveFilter] = useState("All");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "direct" | "pos">("all");
 
   useEffect(() => {
     const statusParam = searchParams.get("status");
@@ -316,6 +317,21 @@ function InvoicesPageContent() {
         return;
       }
 
+      // If this invoice is from POS, download the thermal receipt PDF
+      if (inv.is_pos && inv.pos_order) {
+        const { downloadPosReceiptPdf } = await import("@/lib/pos/receipt-printer");
+        const { getActiveReceiptLayoutAction } = await import("@/app/(dashboard)/user/actions/invoice-layouts");
+        const receiptLayoutRes = await getActiveReceiptLayoutAction().catch(() => null);
+        await downloadPosReceiptPdf({
+          order: inv.pos_order,
+          tenantName: tInfo?.name || "Framebooks Store",
+          tenantLogoUrl: tInfo?.logo_url || null,
+          customLayout: receiptLayoutRes?.layout || null,
+          fileName: `Receipt-${inv.pos_order.order_number || invoiceId}.pdf`,
+        });
+        return;
+      }
+
       await downloadInvoiceWithLayout({
         invoice: inv,
         tenantInfo: tInfo,
@@ -346,6 +362,20 @@ function InvoicesPageContent() {
       const inv = await getInvoiceByIdAdmin(invoiceId);
       if (!inv) {
         alert("Invoice not found");
+        return;
+      }
+
+      // If this invoice is from POS, print the thermal receipt
+      if (inv.is_pos && inv.pos_order) {
+        const { printPosReceipt } = await import("@/lib/pos/receipt-printer");
+        const { getActiveReceiptLayoutAction } = await import("@/app/(dashboard)/user/actions/invoice-layouts");
+        const receiptLayoutRes = await getActiveReceiptLayoutAction().catch(() => null);
+        printPosReceipt({
+          order: inv.pos_order,
+          tenantName: tInfo?.name || "Framebooks Store",
+          tenantLogoUrl: tInfo?.logo_url || null,
+          customLayout: receiptLayoutRes?.layout || null,
+        });
         return;
       }
 
@@ -395,13 +425,15 @@ function InvoicesPageContent() {
     }
   };
 
-  const handleSend = (id: string) => {
-    const url = `${window.location.origin}/dashboard/invoice/${id}`;
-    navigator.clipboard.writeText(url);
-    alert("Invoice link copied to clipboard: " + url);
-  };
+  const hasPos = Boolean(tenantInfo?.has_pos_addon && tenantInfo?.can_use_pos !== false);
+  const directInvoicesCount = useMemo(() => data?.items?.filter((r: any) => !r.isPos).length || 0, [data]);
+  const posReceiptsCount = useMemo(() => data?.items?.filter((r: any) => Boolean(r.isPos)).length || 0, [data]);
 
   const filteredInvoices = useMemo(() => data?.items?.filter((row: any) => {
+    // Channel / Source filter (All vs Direct Invoices vs POS Receipts)
+    if (sourceFilter === "direct" && row.isPos) return false;
+    if (sourceFilter === "pos" && !row.isPos) return false;
+
     let statusMatch = false;
     const rowStatus = row.status?.toLowerCase() || '';
     if (activeFilter === "All") {
@@ -424,10 +456,11 @@ function InvoicesPageContent() {
       !search ||
       (row.client || '').toLowerCase().includes(search) ||
       (row.id || '').toLowerCase().includes(search) ||
+      (row.posOrderNumber || '').toLowerCase().includes(search) ||
       (row.service || '').toLowerCase().includes(search) ||
       (row.clientEmail || '').toLowerCase().includes(search);
     return statusMatch && searchMatch;
-  }) ?? [], [data, activeFilter, searchTerm]);
+  }) ?? [], [data, activeFilter, sourceFilter, searchTerm]);
 
   if (loading || !data) {
     return (
@@ -489,20 +522,61 @@ function InvoicesPageContent() {
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         {/* Left Side: Search & Filters */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-          {/* Search */}
-          <div className="relative w-full sm:w-64">
-            <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search invoices..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-card border border-border rounded-full pl-11 pr-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm text-foreground shadow-2xs placeholder:text-gray-400"
-            />
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {/* Search */}
+            <div className="relative w-full sm:w-64">
+              <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400" />
+              <input
+                type="text"
+                placeholder={hasPos ? "Search invoices & receipts..." : "Search invoices..."}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-card border border-border rounded-full pl-11 pr-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm text-foreground shadow-2xs placeholder:text-gray-400"
+              />
+            </div>
+
+            {/* POS vs Direct Invoices Channel Filter (Shown when POS is enabled) */}
+            {hasPos && (
+              <div className="flex items-center p-1 bg-black/5 dark:bg-white/5 border border-border rounded-full text-xs font-semibold self-start sm:self-auto shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setSourceFilter("all")}
+                  className={`px-3 py-1.5 rounded-full transition-all cursor-pointer whitespace-nowrap ${
+                    sourceFilter === "all"
+                      ? "bg-brand-500 text-brand-950 font-bold shadow-xs"
+                      : "text-gray-400 hover:text-foreground"
+                  }`}
+                >
+                  All ({data?.items?.length || 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceFilter("direct")}
+                  className={`px-3 py-1.5 rounded-full transition-all cursor-pointer whitespace-nowrap ${
+                    sourceFilter === "direct"
+                      ? "bg-brand-500 text-brand-950 font-bold shadow-xs"
+                      : "text-gray-400 hover:text-foreground"
+                  }`}
+                >
+                  Direct Invoices ({directInvoicesCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceFilter("pos")}
+                  className={`px-3 py-1.5 rounded-full transition-all cursor-pointer whitespace-nowrap ${
+                    sourceFilter === "pos"
+                      ? "bg-brand-500 text-brand-950 font-bold shadow-xs"
+                      : "text-gray-400 hover:text-foreground"
+                  }`}
+                >
+                  POS Receipts ({posReceiptsCount})
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Filters */}
+          {/* Status Filters */}
           <div className="flex flex-wrap gap-2">
             {filters.map((f) => (
               <button
@@ -525,7 +599,7 @@ function InvoicesPageContent() {
           <Link
             href="/user/invoices/new"
             prefetch={false}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-950 rounded-3xl font-bold transition-colors w-full sm:w-auto self-end lg:self-auto shadow-xs"
+            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-brand-950 rounded-3xl font-bold transition-colors w-full sm:w-auto self-end lg:self-auto shadow-xs whitespace-nowrap"
           >
             <MdInsertDriveFile className="w-5 h-5" />
             Create Invoice
@@ -540,7 +614,7 @@ function InvoicesPageContent() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border bg-black/[0.02] dark:bg-white/[0.02] text-gray-600 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">
-                <th className="p-4">Invoice #</th>
+                <th className="p-4">{hasPos ? "Invoice / Receipt #" : "Invoice #"}</th>
                 <th className="p-4">Client</th>
                 <th className="p-4">Amount</th>
                 <th className="p-4">Date</th>
@@ -565,9 +639,22 @@ function InvoicesPageContent() {
                 return (
                   <tr key={row.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
                     <td className="p-4">
-                      <Link href={`/user/invoice/${row.id}`} prefetch={false} className="font-semibold text-emerald-700 dark:text-brand-400 hover:text-emerald-800 dark:hover:text-brand-300 transition-colors">
-                        {row.id}
-                      </Link>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Link href={`/user/invoice/${row.id}`} prefetch={false} className="font-semibold text-emerald-700 dark:text-brand-400 hover:text-emerald-800 dark:hover:text-brand-300 transition-colors">
+                          {row.id}
+                        </Link>
+                        {row.isPos && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/15 text-brand-700 dark:text-brand-300 border border-brand-500/30" title={`POS Receipt: ${row.posOrderNumber || row.id}`}>
+                            <MdPointOfSale className="w-3 h-3" />
+                            POS
+                          </span>
+                        )}
+                      </div>
+                      {row.isPos && row.posOrderNumber && (
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                          {row.posOrderNumber}
+                        </div>
+                      )}
                     </td>
                     <td className="p-4">
                       <div className="text-sm font-semibold text-foreground">{row.client}</div>
@@ -607,20 +694,15 @@ function InvoicesPageContent() {
                           <MdRemoveRedEye className="w-4 h-4" />
                         </Link>
                         {role !== 'Viewer' && (
-                          <>
-                            <Link href={`/user/invoices/${row.id}/edit`} prefetch={false} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground" title="Edit">
-                              <Edit2 className="w-4 h-4" />
-                            </Link>
-                            <button onClick={() => handleSend(row.id)} className="p-2 hover:bg-brand-500/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-brand-700 dark:hover:text-brand-400" title="Copy Link">
-                              <Send className="w-4 h-4" />
-                            </button>
-                          </>
+                          <Link href={`/user/invoices/${row.id}/edit`} prefetch={false} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground" title="Edit">
+                            <Edit2 className="w-4 h-4" />
+                          </Link>
                         )}
                         <button
                           onClick={() => handleDownloadInvoice(row.id)}
                           disabled={downloadingId === row.id}
                           className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground disabled:opacity-50"
-                          title="Download PDF"
+                          title={row.isPos ? "Download POS Receipt" : "Download PDF"}
                         >
                           {downloadingId === row.id ? (
                             <Loader2 className="w-4 h-4 animate-spin text-brand-500" />
@@ -633,7 +715,7 @@ function InvoicesPageContent() {
                             onClick={() => handlePrintInvoice(row.id)}
                             disabled={printingId === row.id}
                             className="p-2 hover:bg-brand-500/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 disabled:opacity-50"
-                            title="Direct Print Invoice"
+                            title={row.isPos ? "Print POS Receipt" : "Direct Print Invoice"}
                           >
                             {printingId === row.id ? (
                               <Loader2 className="w-4 h-4 animate-spin text-brand-500" />
@@ -688,13 +770,26 @@ function InvoicesPageContent() {
             return (
               <div key={row.id} className="p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <Link href={`/user/invoice/${row.id}`} prefetch={false} className="font-bold text-emerald-700 dark:text-brand-400 hover:underline">
-                    {row.id}
-                  </Link>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Link href={`/user/invoice/${row.id}`} prefetch={false} className="font-bold text-emerald-700 dark:text-brand-400 hover:underline">
+                      {row.id}
+                    </Link>
+                    {row.isPos && (
+                      <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/15 text-brand-700 dark:text-brand-300 border border-brand-500/30">
+                        <MdPointOfSale className="w-2.5 h-2.5" />
+                        POS
+                      </span>
+                    )}
+                  </div>
                   <span className={`px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full border ${paymentColor}`}>
                     {row.status}
                   </span>
                 </div>
+                {row.isPos && row.posOrderNumber && (
+                  <div className="text-[11px] text-gray-500 dark:text-gray-400 font-mono -mt-1">
+                    {row.posOrderNumber}
+                  </div>
+                )}
 
                 <div className="flex justify-between items-start gap-2">
                   <div>
@@ -731,20 +826,15 @@ function InvoicesPageContent() {
                     <MdRemoveRedEye className="w-4 h-4" />
                   </Link>
                   {role !== 'Viewer' && (
-                    <>
-                      <Link href={`/user/invoices/${row.id}/edit`} prefetch={false} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400" title="Edit">
-                        <Edit2 className="w-4 h-4" />
-                      </Link>
-                      <button onClick={() => handleSend(row.id)} className="p-2.5 hover:bg-brand-500/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400" title="Copy Link">
-                        <Send className="w-4 h-4" />
-                      </button>
-                    </>
+                    <Link href={`/user/invoices/${row.id}/edit`} prefetch={false} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400" title="Edit">
+                      <Edit2 className="w-4 h-4" />
+                    </Link>
                   )}
                   <button
                     onClick={() => handleDownloadInvoice(row.id)}
                     disabled={downloadingId === row.id}
                     className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 disabled:opacity-50"
-                    title="Download PDF"
+                    title={row.isPos ? "Download POS Receipt" : "Download PDF"}
                   >
                     {downloadingId === row.id ? (
                       <Loader2 className="w-4 h-4 animate-spin text-brand-500" />
@@ -757,7 +847,7 @@ function InvoicesPageContent() {
                       onClick={() => handlePrintInvoice(row.id)}
                       disabled={printingId === row.id}
                       className="p-2.5 hover:bg-brand-500/10 rounded-xl transition-colors text-gray-500 dark:text-gray-400 disabled:opacity-50"
-                      title="Direct Print Invoice"
+                      title={row.isPos ? "Print POS Receipt" : "Direct Print Invoice"}
                     >
                       {printingId === row.id ? (
                         <Loader2 className="w-4 h-4 animate-spin text-brand-500" />

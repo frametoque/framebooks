@@ -140,6 +140,7 @@ export function SubscriptionsClient({
         couponValue?: number | null;
         ownerEmail?: string | null;
         createdAt?: string | null;
+        posActive?: boolean;
         users: any[];
       }
     >();
@@ -167,10 +168,14 @@ export function SubscriptionsClient({
           couponValue: u.coupon_value || null,
           ownerEmail: u.owner_email || null,
           createdAt: u.created_at || null,
+          posActive: Boolean(u.pos_active),
           users: [],
         });
       }
       const entry = map.get(key)!;
+      if (u.pos_active) {
+        entry.posActive = true;
+      }
       if (entry.paymentStatus !== "pending_payment" && u.payment_status === "pending_payment") {
         entry.paymentStatus = "pending_payment";
       }
@@ -430,6 +435,7 @@ export function SubscriptionsClient({
       plan_id: matchedPlan?.id || (allPlans[0] ? allPlans[0].id : 1),
       billing_interval: group.billingInterval || "monthly",
       current_period_end: group.currentPeriodEnd,
+      pos_active: Boolean(group.posActive),
     });
   };
 
@@ -566,6 +572,12 @@ export function SubscriptionsClient({
                         {group.name}
                       </h3>
                       <PlanBadge plan={group.plan} />
+
+                      {group.posActive && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                          POS
+                        </span>
+                      )}
 
                       {group.paymentStatus === "pending_payment" && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">

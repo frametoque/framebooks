@@ -1,7 +1,7 @@
 "use server";
 import { cache } from "react";
 import { checkLimit, incrementLifetimeUsage } from "@/lib/plans";
-import { requirePermission, checkTenantReadOnly } from "./rbac";
+import { requirePermission, checkTenantReadOnly, getUserContext, isCashierOnlyUser } from "./rbac";
 
 import sql from "@/lib/db";
 import { auth } from '@/lib/auth';
@@ -14,24 +14,24 @@ export const getTenantId = cache(async function getTenantId() {
   const { userId, session } = await auth();
   if (!userId && !session?.user?.email) throw new Error("Unauthorized");
   
-  // Fast path: use verified tenantId directly from authenticated session JWT claim
-  if ((session?.user as any)?.tenantId) {
-    return String((session.user as any).tenantId);
-  }
-
   const email = session?.user?.email?.trim().toLowerCase();
   const numId = Number(userId) || 0;
   const safeId = (numId > 0 && numId < 2147483647) ? numId : 0;
 
+  // Query active tenant_id directly from admin_users so workspace switching reflects immediately
   const userRows = safeId > 0
     ? await sql`SELECT tenant_id FROM admin_users WHERE id = ${safeId} LIMIT 1`
     : await sql`SELECT tenant_id FROM admin_users WHERE email IS NOT NULL AND LOWER(email) = ${email || ''} LIMIT 1`;
 
-  if (!userRows || userRows.length === 0 || !userRows[0].tenant_id) {
-    return null;
+  if (userRows && userRows.length > 0 && userRows[0].tenant_id) {
+    return String(userRows[0].tenant_id);
   }
-  
-  return String(userRows[0].tenant_id);
+
+  if ((session?.user as any)?.tenantId) {
+    return String((session.user as any).tenantId);
+  }
+
+  return null;
 });
 
 export async function uploadReceipt(formData: FormData, type: 'income' | 'expenses'): Promise<string> {
@@ -86,6 +86,11 @@ export async function getDashboardData(startDate?: string, endDate?: string) {
   const end = endDate || `${currentYear}-12-31`;
   const tenantId = await getTenantId();
   if (!tenantId) return null;
+
+  const { role } = await getUserContext();
+  if (role && (role.toLowerCase() === 'cashier' || await isCashierOnlyUser(role, Number(tenantId)))) {
+    return null;
+  }
 
   return await _getDashboardData(tenantId, start, end);
 }
@@ -526,6 +531,10 @@ export async function getIncomes(startDate?: string, endDate?: string) {
   const end = endDate || '2099-12-31';
 
   const tenantId = await getTenantId();
+  const { role } = await getUserContext();
+  if (role && (role.toLowerCase() === 'cashier' || await isCashierOnlyUser(role, Number(tenantId)))) {
+    return [];
+  }
   const [statsThisMonth, statsLastMonth, statsYtd, totalCountRows, rows] = await Promise.all([
     sql`SELECT SUM(amount) as total FROM admin_incomes WHERE date_trunc('month', date) = date_trunc('month', current_date) AND tenant_id = ${tenantId}`,
     sql`SELECT SUM(amount) as total FROM admin_incomes WHERE date_trunc('month', date) = date_trunc('month', current_date - interval '1 month') AND tenant_id = ${tenantId}`,
@@ -676,10 +685,14 @@ export async function updateClient(clientId: string, data: { name?: string; emai
   // Fetch current email first so we can cascade if it changes
   const existing = await sql`SELECT email, full_name FROM admin_clients WHERE id = ${clientId} AND tenant_id = ${tenantId}`;
   if (existing.length === 0) throw new Error("Client not found");
-  const oldEmail = existing[0].email as string;
+  const oldEmail = (existing[0].email as string | null) || null;
   const clientName = existing[0].full_name || clientId;
-  const newEmail = data.email?.trim() || oldEmail;
-  const emailChanged = newEmail.toLowerCase() !== oldEmail.toLowerCase();
+  const newEmail = data.email !== undefined ? (data.email?.trim() || null) : oldEmail;
+  const emailChanged = Boolean(
+    oldEmail &&
+    newEmail &&
+    oldEmail.toLowerCase() !== newEmail.toLowerCase()
+  );
 
   const encPhone = data.phone !== undefined ? (data.phone ? encryptField(data.phone, { tenantId: tenantId || 1, table: "admin_clients", column: "phone", recordId: clientId }) : null) : undefined;
   const bidxPhone = data.phone !== undefined ? (data.phone ? blindIndex(data.phone, tenantId || 1) : null) : undefined;
@@ -717,7 +730,7 @@ export async function updateClient(clientId: string, data: { name?: string; emai
   `;
 
   // Cascade email change to every table that stores user_email
-  if (emailChanged) {
+  if (emailChanged && oldEmail && newEmail) {
     await sql`UPDATE invoices SET user_email = ${newEmail} WHERE LOWER(user_email) = LOWER(${oldEmail}) AND tenant_id = ${tenantId}`;
   }
   await logSystemAction(`Updated client details for "${clientName}" (${clientId})`);
@@ -856,6 +869,16 @@ export async function getExpenses(startDate?: string, endDate?: string) {
 
   const tenantId = await getTenantId();
   if (!tenantId) {
+    return {
+      thisMonth: 0,
+      lastMonth: 0,
+      ytd: 0,
+      items: []
+    };
+  }
+
+  const { role } = await getUserContext();
+  if (role && (role.toLowerCase() === 'cashier' || await isCashierOnlyUser(role, Number(tenantId)))) {
     return {
       thisMonth: 0,
       lastMonth: 0,
@@ -1212,6 +1235,11 @@ export async function getInvoices() {
   const tenantId = await getTenantId();
   if (!tenantId) return { invoices: [], items: [], totalIssued: 0, totalRevenue: 0, totalOutstanding: 0, paid: 0, pending: 0, totalDue: 0 };
 
+  const { role } = await getUserContext();
+  if (role && (role.toLowerCase() === 'cashier' || await isCashierOnlyUser(role, Number(tenantId)))) {
+    return { invoices: [], items: [], totalIssued: 0, totalRevenue: 0, totalOutstanding: 0, paid: 0, pending: 0, totalDue: 0 };
+  }
+
   const [totalIssuedCount, rows, nonAdvancePaymentsRows] = await Promise.all([
     sql`SELECT COUNT(*) as count FROM invoices WHERE tenant_id = ${tenantId}`,
     sql`
@@ -1219,8 +1247,11 @@ export async function getInvoices() {
         i.invoice_id as id, 
         i.user_email as client_email, 
         COALESCE((SELECT full_name FROM admin_clients c WHERE (c.id = i.client_id OR c.id::text = i.client_id::text OR (i.user_email IS NOT NULL AND LOWER(c.email) = LOWER(i.user_email))) AND c.tenant_id = ${tenantId} LIMIT 1), i.user_email, 'Client') as client_name, 
-        i.project_name as service, i.subtotal, i.total, i.discount, i.advance, i.tax_rate, i.total_due, i.date as due_date, i.payment_status as status, i.legal_name, i.created_at, i.bank_account_id
+        i.project_name as service, i.subtotal, i.total, i.discount, i.advance, i.tax_rate, i.total_due, i.date as due_date, i.payment_status as status, i.legal_name, i.created_at, i.bank_account_id, i.category,
+        po.id as pos_order_id,
+        po.order_number as pos_order_number
       FROM invoices i
+      LEFT JOIN pos_orders po ON po.invoice_id = i.invoice_id AND po.tenant_id = ${tenantId}
       WHERE i.tenant_id = ${tenantId}
       ORDER BY i.date DESC, i.created_at DESC
     `,
@@ -1267,8 +1298,13 @@ export async function getInvoices() {
       computedTotalDueSum += calculatedTotalDue;
     }
 
+    const isPos = Boolean(r.pos_order_id || r.pos_order_number || r.category === 'POS' || (r.service && String(r.service).startsWith('POS Sale')));
+    const posOrderNum = r.pos_order_number || (isPos && r.service ? String(r.service).replace(/^POS Sale:\s*/, '') : null);
+
     return {
       id: r.id,
+      isPos,
+      posOrderNumber: posOrderNum,
       created_at: r.created_at,
       client: r.client_name || r.client_email?.split('@')[0] || 'Unknown',
       clientEmail: r.client_email || '',
@@ -1560,6 +1596,66 @@ export async function getInvoiceByIdAdmin(invoiceId: string) {
     }
   } catch {
     invoice.active_layout_definition = null;
+  }
+
+  try {
+    const posOrders = await sql`
+      SELECT * FROM pos_orders WHERE invoice_id = ${invoiceId} AND tenant_id = ${tenantId} LIMIT 1
+    `;
+    if (posOrders.length > 0) {
+      const po = posOrders[0];
+      invoice.is_pos = true;
+      let parsedItems = [];
+      if (Array.isArray(po.items_json)) {
+        parsedItems = po.items_json;
+      } else if (typeof po.items_json === 'string') {
+        try { parsedItems = JSON.parse(po.items_json); } catch {}
+      }
+      if (parsedItems.length === 0 && itemsResult.length > 0) {
+        parsedItems = itemsResult.map((it: any) => ({
+          name: it.description,
+          price: parseFloat(it.price || 0),
+          quantity: parseFloat(it.quantity || 1),
+        }));
+      }
+      invoice.pos_order = {
+        ...po,
+        items: parsedItems,
+        subtotal: parseFloat(po.subtotal || invoice.subtotal || 0),
+        discount_amount: parseFloat(po.discount_amount || invoice.discount || 0),
+        tax_amount: parseFloat(po.tax_amount || 0),
+        total_amount: parseFloat(po.total_amount || invoice.total || 0),
+        amount_tendered: parseFloat(po.amount_tendered || po.total_amount || invoice.total || 0),
+        change_returned: parseFloat(po.change_returned || 0),
+      };
+    } else if (invoice.category === 'POS' || (invoice.project_name && String(invoice.project_name).startsWith('POS Sale'))) {
+      invoice.is_pos = true;
+      invoice.pos_order = {
+        order_number: invoice.project_name?.replace(/^POS Sale:\s*/, '') || invoice.invoice_id,
+        items: itemsResult.map((it: any) => ({
+          name: it.description,
+          price: parseFloat(it.price || 0),
+          quantity: parseFloat(it.quantity || 1),
+        })),
+        subtotal: parseFloat(invoice.subtotal || 0),
+        discount_amount: parseFloat(invoice.discount || 0),
+        tax_amount: (parseFloat(invoice.subtotal || 0) * (parseFloat(invoice.tax_rate || 0) / 100)),
+        total_amount: parseFloat(invoice.total || 0),
+        payment_method: payments[0]?.method || payments[0]?.payment_method || 'Cash',
+        amount_tendered: parseFloat(invoice.total || 0),
+        change_returned: 0,
+        customer_name: invoice.legal_name || invoice.client_name || 'Walk-in Customer',
+        customer_phone: invoice.client_phone || null,
+        user_name: 'Cashier',
+        created_at: invoice.created_at || invoice.date,
+      };
+    } else {
+      invoice.is_pos = false;
+      invoice.pos_order = null;
+    }
+  } catch {
+    invoice.is_pos = false;
+    invoice.pos_order = null;
   }
 
   return invoice;

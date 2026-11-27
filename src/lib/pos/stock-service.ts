@@ -3,6 +3,11 @@ import { ensurePosSchema } from "./db-init";
 import { requirePosAddon } from "./entitlement";
 import { requirePermission, hasGranularPermission, getUserContext } from "@/app/(dashboard)/user/actions/rbac";
 
+import {
+  PosClientDisplaySlide,
+  DEFAULT_CUSTOMER_DISPLAY_SLIDES,
+} from '@/lib/pos/client-display';
+
 export interface StockItem {
   id: number;
   item_name: string;
@@ -47,6 +52,7 @@ export interface PosSettings {
   receipt_footer: string;
   default_tax_rate: number;
   default_account_id: number | null;
+  customer_display_slides?: PosClientDisplaySlide[];
 }
 
 /**
@@ -56,7 +62,7 @@ export async function getPosSettings(tenantId: number): Promise<PosSettings> {
   await ensurePosSchema();
 
   const rows = await sql`
-    SELECT allow_negative_stock, sku_prefix, receipt_header, receipt_footer, default_tax_rate, default_account_id
+    SELECT allow_negative_stock, sku_prefix, receipt_header, receipt_footer, default_tax_rate, default_account_id, customer_display_slides
     FROM pos_settings
     WHERE tenant_id = ${tenantId}
     LIMIT 1
@@ -70,10 +76,18 @@ export async function getPosSettings(tenantId: number): Promise<PosSettings> {
       receipt_footer: 'Thank you for your purchase!',
       default_tax_rate: 0,
       default_account_id: null,
+      customer_display_slides: DEFAULT_CUSTOMER_DISPLAY_SLIDES,
     };
   }
 
   const r = rows[0];
+  let parsedSlides: PosClientDisplaySlide[] | undefined;
+  if (r.customer_display_slides) {
+    parsedSlides = typeof r.customer_display_slides === 'string'
+      ? JSON.parse(r.customer_display_slides)
+      : r.customer_display_slides;
+  }
+
   return {
     allow_negative_stock: Boolean(r.allow_negative_stock),
     sku_prefix: r.sku_prefix || 'SKU',
@@ -81,6 +95,7 @@ export async function getPosSettings(tenantId: number): Promise<PosSettings> {
     receipt_footer: r.receipt_footer || 'Thank you for your purchase!',
     default_tax_rate: parseFloat(r.default_tax_rate || 0),
     default_account_id: r.default_account_id || null,
+    customer_display_slides: parsedSlides && parsedSlides.length > 0 ? parsedSlides : DEFAULT_CUSTOMER_DISPLAY_SLIDES,
   };
 }
 
@@ -90,9 +105,11 @@ export async function getPosSettings(tenantId: number): Promise<PosSettings> {
 export async function updatePosSettings(tenantId: number, settings: Partial<PosSettings>) {
   await ensurePosSchema();
 
+  const slidesJson = settings.customer_display_slides ? JSON.stringify(settings.customer_display_slides) : null;
+
   await sql`
     INSERT INTO pos_settings (
-      tenant_id, allow_negative_stock, sku_prefix, receipt_header, receipt_footer, default_tax_rate, default_account_id, updated_at
+      tenant_id, allow_negative_stock, sku_prefix, receipt_header, receipt_footer, default_tax_rate, default_account_id, customer_display_slides, updated_at
     ) VALUES (
       ${tenantId}, 
       ${settings.allow_negative_stock ?? false}, 
@@ -101,6 +118,7 @@ export async function updatePosSettings(tenantId: number, settings: Partial<PosS
       ${settings.receipt_footer ?? 'Thank you for your purchase!'}, 
       ${settings.default_tax_rate ?? 0}, 
       ${settings.default_account_id ?? null}, 
+      ${slidesJson ? sql`${slidesJson}::jsonb` : sql`NULL`},
       NOW()
     )
     ON CONFLICT (tenant_id) DO UPDATE SET
@@ -110,6 +128,7 @@ export async function updatePosSettings(tenantId: number, settings: Partial<PosS
       receipt_footer = COALESCE(EXCLUDED.receipt_footer, pos_settings.receipt_footer),
       default_tax_rate = COALESCE(EXCLUDED.default_tax_rate, pos_settings.default_tax_rate),
       default_account_id = COALESCE(EXCLUDED.default_account_id, pos_settings.default_account_id),
+      customer_display_slides = CASE WHEN ${settings.customer_display_slides !== undefined} THEN EXCLUDED.customer_display_slides ELSE pos_settings.customer_display_slides END,
       updated_at = NOW()
   `;
 
@@ -432,6 +451,7 @@ export async function findProductByCode(tenantId: number, code: string): Promise
   await ensurePosSchema();
   const trimmed = code.trim();
   if (!trimmed) return null;
+  const stripped = trimmed.replace(/^0+/, "") || trimmed;
 
   const rows = await sql`
     SELECT 
@@ -441,7 +461,11 @@ export async function findProductByCode(tenantId: number, code: string): Promise
     WHERE tenant_id::text = ${String(tenantId)}
       AND (
         LOWER(sku) = LOWER(${trimmed}) OR 
-        LOWER(COALESCE(barcode, '')) = LOWER(${trimmed})
+        LOWER(COALESCE(barcode, '')) = LOWER(${trimmed}) OR
+        LOWER(sku) = LOWER(${stripped}) OR 
+        LOWER(COALESCE(barcode, '')) = LOWER(${stripped}) OR
+        LTRIM(sku, '0') = ${stripped} OR
+        LTRIM(COALESCE(barcode, ''), '0') = ${stripped}
       )
     LIMIT 1
   `;

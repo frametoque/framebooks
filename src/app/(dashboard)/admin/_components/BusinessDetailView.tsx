@@ -401,6 +401,11 @@ export function BusinessDetailView({
                 {tenant.name || "Business Profile"}
               </h2>
               <PlanBadge plan={tenant.plan || "Free"} />
+              {posAddon?.status === 'active' && (!posAddon.expires_at || new Date(posAddon.expires_at) > new Date()) && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                  POS
+                </span>
+              )}
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/10 text-muted-foreground border border-border">
                 Tenant #{tenant.id}
               </span>
@@ -649,7 +654,14 @@ export function BusinessDetailView({
                 <h3 className="font-bold text-foreground text-base">Plan Quota & Usage</h3>
                 <p className="text-xs text-gray-500">Usage vs maximum capacity for current {tenant.plan || "Free"} plan</p>
               </div>
-              <PlanBadge plan={tenant.plan || "Free"} />
+              <div className="flex items-center gap-2">
+                <PlanBadge plan={tenant.plan || "Free"} />
+                {posAddon?.status === 'active' && (!posAddon.expires_at || new Date(posAddon.expires_at) > new Date()) && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                    POS
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
@@ -1510,6 +1522,7 @@ export function BusinessDetailView({
             plan_id: plan?.id || 1,
             current_plan: tenant.plan,
             current_plan_name: tenant.plan,
+            pos_active: posAddon?.status === 'active' && (!posAddon.expires_at || new Date(posAddon.expires_at) > new Date()),
           }}
           allPlans={allPlans || []}
           onClose={() => setIsChangePlanOpen(false)}

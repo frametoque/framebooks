@@ -60,6 +60,8 @@ export interface DashboardShellProps {
     logo_url?: string | null;
     industry?: string | null;
     userRole?: string | null;
+    has_pos_addon?: boolean;
+    can_use_pos?: boolean;
   };
   children: React.ReactNode;
 }
@@ -138,7 +140,10 @@ export function DashboardShell({
     }
     if (path === "/user/invoices/new") return "New Invoice";
     if (path.startsWith("/user/invoices/") && path.endsWith("/edit")) return "Edit Invoice";
-    if (path.startsWith("/user/invoices")) return "Invoices";
+    if (path.startsWith("/user/invoices") || path.startsWith("/invoices")) {
+      const hasPos = Boolean(tenantInfo?.has_pos_addon && tenantInfo?.can_use_pos !== false);
+      return hasPos ? "Invoices & Receipts" : "Invoices";
+    }
     if (path === "/user/quotations/new") return "New Quotation";
     if (path.startsWith("/user/quotations/") && path.endsWith("/edit")) return "Edit Quotation";
     if (path.startsWith("/user/quotations")) return "Quotations";
@@ -173,7 +178,11 @@ export function DashboardShell({
     { name: "Income", href: "/income", icon: MdAccountBalanceWallet },
     { name: "Expenses", href: "/expenses", icon: Receipt },
     { name: "Accounts", href: "/accounts", icon: MdAccountBalance },
-    { name: "Invoices", href: "/invoices", icon: MdInsertDriveFile },
+    {
+      name: "Invoices",
+      href: "/invoices",
+      icon: MdInsertDriveFile,
+    },
     { name: "Quotations", href: "/quotations", icon: NotepadTextDashed },
     { name: "Clients", href: "/clients", icon: MdGroup },
     { name: "Inventory", href: "/inventory", icon: MdInventory2 },

@@ -10,6 +10,7 @@ interface CustomerSelectModalProps {
   currentCustomerName: string;
   currentCustomerPhone?: string;
   onSelectCustomer: (customer: { name: string; phone?: string; id?: string }) => void;
+  overlayMode?: "fixed" | "section";
 }
 
 export function CustomerSelectModal({
@@ -18,6 +19,7 @@ export function CustomerSelectModal({
   currentCustomerName,
   currentCustomerPhone = "",
   onSelectCustomer,
+  overlayMode = "section",
 }: CustomerSelectModalProps) {
   const [name, setName] = useState(currentCustomerName === "Walk-in Customer" ? "" : currentCustomerName);
   const [phone, setPhone] = useState(currentCustomerPhone || "");
@@ -186,11 +188,15 @@ export function CustomerSelectModal({
 
   return (
     <div
-      className="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+      className={
+        overlayMode === "section"
+          ? "absolute inset-0 z-40 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+          : "fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+      }
       onClick={onClose}
     >
       <div
-        className="bg-card border border-border rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col relative"
+        className="bg-card border border-border rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col relative max-h-[92%] my-auto ring-1 ring-border/50"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -240,9 +246,6 @@ export function CustomerSelectModal({
                 <Loader2 className="absolute right-3.5 w-4 h-4 text-brand-500 animate-spin" />
               )}
             </div>
-            <p className="text-[11px] text-gray-500 mt-1">
-              Enter phone & press <kbd className="text-[10px] bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded text-gray-400">Enter</kbd> to lookup customer or advance to name.
-            </p>
           </div>
 
           {/* 2. Customer Full Name */}

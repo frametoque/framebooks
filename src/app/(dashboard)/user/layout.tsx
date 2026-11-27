@@ -252,18 +252,19 @@ function LayoutContent({ children }) {
   }, [tenantInfo, router]);
 
   useEffect(() => {
-    if (tenantInfo.is_cashier_only) {
+    if (tenantInfo.is_cashier_only || tenantInfo.userRole?.toLowerCase() === 'cashier') {
       router.replace("/pos");
     }
-  }, [tenantInfo.is_cashier_only, router]);
+  }, [tenantInfo.is_cashier_only, tenantInfo.userRole, router]);
 
-  if (tenantInfo.is_cashier_only) {
+  if (tenantInfo.is_cashier_only || tenantInfo.userRole?.toLowerCase() === 'cashier') {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center text-center p-6 select-none">
         <div className="w-12 h-12 rounded-2xl bg-brand-500/15 text-brand-500 flex items-center justify-center animate-pulse mb-3">
           <MdPointOfSale className="w-6 h-6" />
         </div>
         <p className="text-sm font-semibold text-foreground">Opening Point of Sale Terminal...</p>
+        <p className="text-xs text-muted-foreground mt-1">Cashier accounts are restricted to the POS counter.</p>
       </div>
     );
   }
@@ -623,7 +624,10 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
     }
     if (p === "/invoices/new") return "New Invoice";
     if (p.startsWith("/invoices/") && p.endsWith("/edit")) return "Edit Invoice";
-    if (p.startsWith("/invoices")) return "Invoices";
+    if (p.startsWith("/invoices")) {
+      const hasPos = Boolean(tenantInfo?.has_pos_addon && tenantInfo?.can_use_pos !== false);
+      return hasPos ? "Invoices & Receipts" : "Invoices";
+    }
     if (p === "/quotations/new") return "New Quotation";
     if (p.startsWith("/quotations/") && p.endsWith("/edit")) return "Edit Quotation";
     if (p.startsWith("/quotations")) return "Quotations";
@@ -691,13 +695,12 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
     }
 
     // Guard against Next.js router resetting document.title on page switch
-    const titleEl = document.querySelector("title");
     let observer: MutationObserver | null = null;
-    if (titleEl) {
+    if (typeof document !== "undefined" && document.head) {
       observer = new MutationObserver(() => {
         applyTitle();
       });
-      observer.observe(titleEl, { childList: true, characterData: true, subtree: true });
+      observer.observe(document.head, { childList: true, characterData: true, subtree: true });
     }
 
     return () => {
@@ -1364,7 +1367,12 @@ const Sidebar = ({
     { name: "Income", href: "/income", icon: MdAccountBalanceWallet },
     { name: "Expenses", href: "/expenses", icon: Receipt },
     { name: "Accounts", href: "/accounts", icon: MdAccountBalance, divider: false },
-    { name: "Invoices", href: "/invoices", icon: MdInsertDriveFile, divider: true },
+    {
+      name: "Invoices",
+      href: "/invoices",
+      icon: MdInsertDriveFile,
+      divider: true,
+    },
     { name: "Quotations", href: "/quotations", icon: NotepadTextDashed },
     { name: "Clients", href: "/clients", icon: MdGroup },
     { name: "Inventory", href: "/inventory", icon: MdInventory2 },
