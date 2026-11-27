@@ -513,7 +513,7 @@ export const guideGroups: GuideGroup[] = [
             bullets: [
               'Supports standard USB and Bluetooth handheld 1D and 2D barcode scanners with automatic debouncing',
               'Cashiers can scan immediately from anywhere in the terminal without having to click the search bar first',
-              'Built-in camera scanner modal allows laptops, iPads, and smartphones to scan barcodes without external hardware'
+              'Built-in camera scanner modal allows laptops, tablets, and smartphones to scan barcodes without external hardware'
             ]
           }
         ]
@@ -620,7 +620,7 @@ export const guideGroups: GuideGroup[] = [
       {
         slug: 'pos-mobile-tablets',
         title: 'Using POS on Mobile Phones & Tablets',
-        intro: 'Take orders anywhere on the sales floor, sidewalk pop-ups, or trade booths using an iPad, Android tablet, or smartphone.',
+        intro: 'Take orders anywhere on the sales floor, sidewalk pop-ups, or trade booths using any tablet or smartphone.',
         plan: 'Pro',
         readTime: '3 min read',
         steps: [
@@ -1553,7 +1553,7 @@ export const guideGroups: GuideGroup[] = [
           },
           {
             title: 'What devices and hardware can I use with the POS terminal?',
-            content: 'Framebooks POS runs directly in any modern browser on laptops, iPads, tablets, and smartphones. It works with standard USB and Bluetooth barcode scanners, 80mm and 58mm thermal receipt printers, and RJ11 electronic cash drawers without needing expensive proprietary equipment.'
+            content: 'Framebooks POS runs directly in any modern browser on laptops, tablets, and smartphones. It works with standard USB and Bluetooth barcode scanners, 80mm and 58mm thermal receipt printers, and RJ11 electronic cash drawers without needing expensive proprietary equipment.'
           }
         ]
       },
