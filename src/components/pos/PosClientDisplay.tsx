@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   CheckCircle2,
   ShoppingBag,
@@ -140,6 +140,35 @@ export function PosClientDisplay({
   }, [displayState.isShiftOpen, displayState.cart.length, displayState.payment.isCompleted, slidesToUse.length]);
 
   const channelRef = useRef<BroadcastChannel | null>(null);
+  const lastBroadcastTimeRef = useRef<number>(0);
+
+  // Helper to safely apply incoming state without overwriting active orders with stale data
+  const applyIncomingDisplayState = useCallback((incoming: PosClientDisplayState, source: "broadcast" | "storage" | "poll") => {
+    if (!incoming) return;
+
+    if (source === "broadcast" || source === "storage") {
+      lastBroadcastTimeRef.current = Date.now();
+    }
+
+    setDisplayState((prev) => {
+      // 1. If incoming timestamp is older than what we currently have, ignore it
+      if (incoming.timestamp && prev.timestamp && incoming.timestamp < prev.timestamp) {
+        return prev;
+      }
+
+      // 2. If polling, and local state currently has items in the ongoing order (> 0), while incoming has 0 items and no payment completion:
+      // Protect the active order from being wiped by stale server polling
+      if (source === "poll" && prev.cart.length > 0 && incoming.cart.length === 0 && !incoming.payment?.isCompleted) {
+        if (!incoming.timestamp || incoming.timestamp <= prev.timestamp + 2000) {
+          return prev;
+        }
+      }
+
+      return incoming;
+    });
+
+    setIsConnected(true);
+  }, []);
 
   // 1. Setup BroadcastChannel and Listeners for 0ms dual-monitor / secondary window sync
   useEffect(() => {
@@ -160,8 +189,7 @@ export function PosClientDisplay({
           bc.onmessage = (event) => {
             const msg = event.data as PosDisplayMessage;
             if (msg?.type === "POS_STATE_UPDATE" && msg.payload) {
-              setDisplayState(msg.payload);
-              setIsConnected(true);
+              applyIncomingDisplayState(msg.payload, "broadcast");
             }
           };
           // Request immediate state sync from active POS terminal
@@ -179,8 +207,7 @@ export function PosClientDisplay({
         try {
           const parsed = JSON.parse(e.newValue);
           if (parsed?.type === "POS_STATE_UPDATE" && parsed.payload) {
-            setDisplayState(parsed.payload);
-            setIsConnected(true);
+            applyIncomingDisplayState(parsed.payload, "storage");
           }
         } catch {}
       }
@@ -194,8 +221,7 @@ export function PosClientDisplay({
         if (stored) {
           const parsed = JSON.parse(stored);
           if (parsed?.payload) {
-            setDisplayState(parsed.payload);
-            setIsConnected(true);
+            applyIncomingDisplayState(parsed.payload, "storage");
             break;
           }
         }
@@ -204,14 +230,17 @@ export function PosClientDisplay({
 
     // Polling fallback every 3s via API for tablets running on different machines/Wi-Fi
     const interval = setInterval(async () => {
+      // If we recently received a broadcast on this machine in the last 8 seconds, don't let slow polling overwrite real-time tab sync
+      if (Date.now() - lastBroadcastTimeRef.current < 8000) {
+        return;
+      }
       try {
         const tokenQuery = initialToken ? `&token=${encodeURIComponent(initialToken)}` : "";
         const res = await fetch(`/api/pos/client-display?tenantId=${displayState.tenantId}&counterId=${displayState.counterId || 1}${tokenQuery}`);
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.state) {
-            setDisplayState(data.state);
-            setIsConnected(true);
+            applyIncomingDisplayState(data.state, "poll");
           }
         }
       } catch {}
@@ -226,7 +255,7 @@ export function PosClientDisplay({
       window.removeEventListener("storage", handleStorage);
       clearInterval(interval);
     };
-  }, [displayState.tenantId, displayState.counterId, initialToken]);
+  }, [displayState.tenantId, displayState.counterId, initialToken, applyIncomingDisplayState]);
 
   const FULLSCREEN_PREF_KEY = "pos_client_fullscreen_pref";
 
@@ -322,6 +351,9 @@ export function PosClientDisplay({
     displayState.customer &&
     displayState.customer.name &&
     displayState.customer.name !== "Walk-in Customer";
+  const hasActiveOrder = displayState.cart.length > 0;
+  const isPaymentCompleted = displayState.payment.isCompleted;
+  const showOrderDetails = hasActiveOrder || isPaymentCompleted;
 
   // Dynamic tenant accent theme CSS
   const activeAccent = displayState.accentColor || initialAccentColor || DEFAULT_ACCENT_HEX;
@@ -586,28 +618,63 @@ export function PosClientDisplay({
           )}
         </div>
 
-        {/* RIGHT PANE: Customer Check-in / Identity & Financial Breakdown OR Closed Counter Notice */}
+        {/* RIGHT PANE: Ongoing Order Summary OR Welcome & Ads Showcase */}
         <div className="w-full lg:w-[460px] xl:w-[500px] flex flex-col bg-[#0E131F] overflow-y-auto shrink-0 p-5 sm:p-6 space-y-6">
-          {!displayState.isShiftOpen ? (
-            /* Counter Closed Notice Card in Sidebar */
-            <div className="rounded-3xl bg-white/5 border border-white/10 p-6 sm:p-8 flex flex-col items-center text-center space-y-5 animate-in fade-in">
-              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-400 shadow-xl shadow-amber-500/10">
-                <Clock className="w-8 h-8" />
+          {!showOrderDetails ? (
+            /* When no active order with at least 1 product (or counter closed) */
+            !displayState.isShiftOpen ? (
+              /* Counter Closed Notice Card in Sidebar */
+              <div className="rounded-3xl bg-white/5 border border-white/10 p-6 sm:p-8 flex flex-col items-center text-center space-y-5 animate-in fade-in">
+                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-400 shadow-xl shadow-amber-500/10">
+                  <Clock className="w-8 h-8" />
+                </div>
+                <div className="space-y-2 max-w-sm">
+                  <h3 className="text-lg sm:text-xl font-bold text-white">
+                    Counter Closed
+                  </h3>
+                  <p className="text-sm text-white/60 leading-relaxed">
+                    This counter is currently closed, Sorry for the incovenience
+                  </p>
+                </div>
+                <div className="pt-2 w-full flex items-center justify-center gap-1.5 text-[11px] text-white/40 select-none">
+                  <span>Powered by <strong className="text-white/70 font-bold">Framebooks POS</strong></span>
+                </div>
               </div>
-              <div className="space-y-2 max-w-sm">
-                <h3 className="text-lg sm:text-xl font-bold text-white">
-                  Counter Closed
-                </h3>
-                <p className="text-sm text-white/60 leading-relaxed">
-                  This counter is currently closed, Sorry for the incovenience
-                </p>
+            ) : (
+              /* Counter Open but Waiting for Order / No Products Added Yet: Welcome Card */
+              <div className="rounded-3xl bg-white/5 border border-white/10 p-6 sm:p-8 flex flex-col items-center text-center space-y-5 animate-in fade-in">
+                <div className="w-16 h-16 rounded-2xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center text-brand-500 shadow-xl shadow-brand-500/10">
+                  <ShoppingBag className="w-8 h-8" />
+                </div>
+                <div className="space-y-2 max-w-sm">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-brand-400 bg-brand-500/10 border border-brand-500/20 px-2.5 py-1 rounded-full">
+                    {displayState.counterName || "Counter 1"} • Ready
+                  </span>
+                  <h3 className="text-lg sm:text-xl font-black text-white tracking-tight">
+                    Welcome to {displayState.tenantName}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-white/60 leading-relaxed">
+                    {isCustomerAssigned
+                      ? `Welcome, ${displayState.customer.name}! We're ready to ring up your order.`
+                      : "Next customer please — we are ready to assist you!"}
+                  </p>
+                </div>
+
+                <div className="w-full pt-4 border-t border-white/10 flex items-center justify-between text-xs text-white/50">
+                  <span>Cashier: <strong className="text-white/80">{displayState.cashierName || "Active"}</strong></span>
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Counter Open
+                  </span>
+                </div>
+
+                <div className="pt-2 w-full flex items-center justify-center gap-1.5 text-[11px] text-white/40 select-none">
+                  <span>Powered by <strong className="text-white/70 font-bold">Framebooks POS</strong></span>
+                </div>
               </div>
-              <div className="pt-2 w-full flex items-center justify-center gap-1.5 text-[11px] text-white/40 select-none">
-                <span>Powered by <strong className="text-white/70 font-bold">Framebooks POS</strong></span>
-              </div>
-            </div>
+            )
           ) : (
-            /* Financial Breakdown & Grand Total Due */
+            /* Ongoing Active Order (At least 1 product added) OR Completed Payment */
             <div className="rounded-3xl bg-white/5 border border-white/10 p-5 space-y-4">
               {/* Customer Details / Walk-in Customer Header */}
               <div>

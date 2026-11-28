@@ -136,7 +136,7 @@ export async function GET(req: NextRequest) {
         summary: { subtotal: 0, discountTotal: 0, taxTotal: 0, totalDue: 0, itemCount: 0 },
         payment: { isOpen: false, method: "Cash", tendered: 0, changeDue: 0, isCompleted: false },
         slides: parsedSlides,
-        timestamp: Date.now(),
+        timestamp: 0,
       };
     }
 
@@ -149,18 +149,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    let authorizedTenantId: number | null = null;
-
-    if (session?.user?.email) {
-      const userRows = await sql`
-        SELECT tenant_id FROM admin_users WHERE LOWER(email) = ${session.user.email.toLowerCase()} LIMIT 1
-      `;
-      if (userRows.length > 0 && userRows[0].tenant_id) {
-        authorizedTenantId = Number(userRows[0].tenant_id);
-      }
-    }
-
-    if (!authorizedTenantId) {
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: "Unauthorized: Valid cashier session required to update display state" },
         { status: 401 }
@@ -172,8 +161,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid state payload" }, { status: 400 });
     }
 
-    // Critical security check: Cashier cannot broadcast/overwrite display state for another business!
-    if (Number(body.tenantId) !== authorizedTenantId) {
+    const targetTenantId = Number(body.tenantId);
+    const email = session.user.email.toLowerCase();
+
+    // Verify cashier / owner / team member permission for this tenant
+    const accessCheck = await sql`
+      SELECT t.id FROM tenants t
+      WHERE t.id = ${targetTenantId}
+        AND (
+          LOWER(t.owner_email) = ${email}
+          OR EXISTS (SELECT 1 FROM team_invitations ti WHERE ti.tenant_id = ${targetTenantId.toString()} AND LOWER(ti.email) = ${email} AND ti.status = 'accepted')
+          OR EXISTS (SELECT 1 FROM admin_users au WHERE au.tenant_id = ${targetTenantId} AND LOWER(au.email) = ${email})
+        )
+      LIMIT 1
+    `;
+
+    if (accessCheck.length === 0) {
       return NextResponse.json(
         { error: "Forbidden: Cannot update other business display" },
         { status: 403 }

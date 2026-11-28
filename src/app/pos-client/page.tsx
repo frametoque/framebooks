@@ -66,6 +66,24 @@ export default async function PosClientPage({
         }
       }
 
+      if (!matchingTenant) {
+        const ownerRows = await sql`
+          SELECT t.id, t.name as tenant_name, t.logo_url as tenant_logo_url, t.accent_color as tenant_accent_color
+          FROM tenants t
+          WHERE LOWER(t.owner_email) = ${email}
+          ORDER BY t.id ASC
+          LIMIT 1
+        `;
+        if (ownerRows.length > 0) {
+          matchingTenant = {
+            id: ownerRows[0].id,
+            name: ownerRows[0].tenant_name,
+            logo_url: ownerRows[0].tenant_logo_url,
+            accent_color: ownerRows[0].tenant_accent_color,
+          };
+        }
+      }
+
       if (matchingTenant) {
         authorizedTenantId = Number(matchingTenant.id);
         tenantName = matchingTenant.name || "Framebooks POS";
@@ -102,7 +120,7 @@ export default async function PosClientPage({
 
   // Security Check 1: Deny unauthenticated access without a valid signed pairing token
   if (!authorizedTenantId) {
-    redirect("/login?callbackUrl=" + encodeURIComponent(`/pos-client${resolvedParams.counterId ? `?counterId=${resolvedParams.counterId}` : ""}`));
+    redirect("/login?callbackUrl=" + encodeURIComponent("/pos-client"));
   }
 
   // Security Check 2: Multi-tenant isolation guard. If query passes a tenantId, it MUST match the authorized tenant!
