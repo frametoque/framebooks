@@ -291,12 +291,14 @@ export async function getStockSummary(tenantId: number): Promise<StockSummary> {
       COALESCE(SUM(i.quantity * COALESCE(i.selling_price, 0)), 0)::float AS total_stock_value
     FROM admin_inventory i
     WHERE (i.tenant_id::text = ${String(tenantId)} OR i.tenant_id IS NULL)
+      AND (i.is_asset IS FALSE OR i.is_asset IS NULL)
   `;
 
   const catRows = await sql`
     SELECT DISTINCT i.category
     FROM admin_inventory i
     WHERE (i.tenant_id::text = ${String(tenantId)} OR i.tenant_id IS NULL)
+      AND (i.is_asset IS FALSE OR i.is_asset IS NULL)
       AND i.category IS NOT NULL 
       AND TRIM(i.category) != ''
     ORDER BY i.category ASC
@@ -398,6 +400,7 @@ export async function getStockProducts(
     LEFT JOIN woocommerce_product_mappings m 
       ON m.tenant_id::text = i.tenant_id::text AND m.inventory_id::text = i.id::text
     WHERE (i.tenant_id::text = ${String(tenantId)} OR i.tenant_id IS NULL)
+      AND (i.is_asset IS FALSE OR i.is_asset IS NULL)
       ${searchFilter}
       ${categoryFilter}
       ${lowStockFilter}
@@ -409,6 +412,7 @@ export async function getStockProducts(
     SELECT COUNT(*) as total
     FROM admin_inventory i
     WHERE (i.tenant_id::text = ${String(tenantId)} OR i.tenant_id IS NULL)
+      AND (i.is_asset IS FALSE OR i.is_asset IS NULL)
       ${searchFilter}
       ${categoryFilter}
       ${lowStockFilter}
@@ -459,6 +463,7 @@ export async function findProductByCode(tenantId: number, code: string): Promise
       cost_price, selling_price, tax_rate, unit, reorder_level, status, notes
     FROM admin_inventory
     WHERE tenant_id::text = ${String(tenantId)}
+      AND (is_asset IS FALSE OR is_asset IS NULL)
       AND (
         LOWER(sku) = LOWER(${trimmed}) OR 
         LOWER(COALESCE(barcode, '')) = LOWER(${trimmed}) OR

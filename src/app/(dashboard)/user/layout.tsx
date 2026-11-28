@@ -549,7 +549,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
   const pathname = usePathname();
   const cleanPath = pathname.replace(/^\/user/, "") || "/dashboard";
   const isClients = cleanPath === "/clients";
-  const isInventory = cleanPath === "/inventory";
+  const isAssets = cleanPath === "/assets" || cleanPath === "/assests";
   const isStock = cleanPath === "/stock" || cleanPath.startsWith("/stock");
   const isInvoiceDetail = cleanPath.startsWith("/invoice/");
   const isInvoiceNewOrEdit = cleanPath === "/invoices/new" || (cleanPath.startsWith("/invoices/") && cleanPath.endsWith("/edit"));
@@ -566,7 +566,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
     pathname.includes("tax-estimator") ||
     pathname.includes("tax_estimator")
   );
-  const hideSelector = isInvoiceDetail || isInvoiceNewOrEdit || isAccounts || isSettings || isLogs || isStock || (isInventory && tenantInfo.plan !== 'Pro Plus') || (isReports && tenantInfo.plan !== 'Pro Plus' && reportsActiveTab !== 'overview' && reportsActiveTab !== 'profit_loss' && !isTaxEstimator);
+  const hideSelector = isInvoiceDetail || isInvoiceNewOrEdit || isAccounts || isSettings || isLogs || isStock || (isAssets && tenantInfo.plan !== 'Pro Plus') || (isReports && tenantInfo.plan !== 'Pro Plus' && reportsActiveTab !== 'overview' && reportsActiveTab !== 'profit_loss' && !isTaxEstimator);
   const { dateRange, startDate, endDate, setDateRange, setStartDate, setEndDate } = useAdminDateRange();
   const [currentTime, setCurrentTime] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
@@ -614,7 +614,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
 
     if (p === "/dashboard") return "Dashboard";
     if (p === "/clients") return "Clients";
-    if (p === "/inventory") return "Inventory";
+    if (p === "/assets" || p === "/assests") return "Assets";
     if (p === "/stock" || p.startsWith("/stock")) return "Stock";
     if (p.startsWith("/clients/")) return "Client Details";
     if (p.startsWith("/invoice/")) {
@@ -862,7 +862,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
               <>
                 <span className="w-[1px] h-5 bg-border" />
                 <div className="flex items-center">
-                  {(isClients || isInventory) ? (
+                  {(isClients || isAssets) ? (
                     <div className="flex items-center gap-3">
                       <div className="relative w-32 sm:w-64">
                         <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
@@ -873,18 +873,18 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
                           onChange={(e) => {
                             const val = e.target.value;
                             setHeaderSearchTerm(val);
-                            window.dispatchEvent(new CustomEvent(isInventory ? "inventory:search" : "clients:search", { detail: val }));
+                            window.dispatchEvent(new CustomEvent(isAssets ? "assets:search" : "clients:search", { detail: val }));
                           }}
                           className="w-full bg-card border border-border rounded-full pl-10 pr-4 py-2 outline-none focus:border-brand-500 transition-colors text-sm text-foreground placeholder:text-gray-500 dark:placeholder:text-gray-400 shadow-2xs"
                         />
                       </div>
                       {tenantInfo.userRole !== 'Viewer' && (
                         <button
-                          onClick={() => window.dispatchEvent(new CustomEvent(isInventory ? "inventory:open-new" : "clients:open-new"))}
+                          onClick={() => window.dispatchEvent(new CustomEvent(isAssets ? "assets:open-new" : "clients:open-new"))}
                           className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors active:scale-95 duration-200 cursor-pointer text-xs whitespace-nowrap"
                         >
                           <MdAdd className="w-4 h-4" />
-                          {isInventory ? "Add Item" : "Add Client"}
+                          {isAssets ? "Add Asset" : "Add Client"}
                         </button>
                       )}
                     </div>
@@ -1071,7 +1071,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
 
           {hasSelectorControls && (
             <div className="flex items-center w-full">
-              {(isClients || isInventory) ? (
+              {(isClients || isAssets) ? (
                 <div className="flex items-center gap-2 w-full">
                   <div className="relative flex-1">
                     <MdSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
@@ -1082,18 +1082,18 @@ const Header = ({ user, isLoaded, setMobileMenuOpen, tenantInfo }) => {
                       onChange={(e) => {
                         const val = e.target.value;
                         setHeaderSearchTerm(val);
-                        window.dispatchEvent(new CustomEvent(isInventory ? "inventory:search" : "clients:search", { detail: val }));
+                        window.dispatchEvent(new CustomEvent(isAssets ? "assets:search" : "clients:search", { detail: val }));
                       }}
                       className="w-full bg-card border border-border rounded-full pl-9 pr-3 py-1.5 outline-none focus:border-brand-500 transition-colors text-xs text-foreground placeholder:text-gray-500 dark:placeholder:text-gray-400 shadow-2xs"
                     />
                   </div>
                   {tenantInfo.userRole !== 'Viewer' && (
                     <button
-                      onClick={() => window.dispatchEvent(new CustomEvent(isInventory ? "inventory:open-new" : "clients:open-new"))}
+                      onClick={() => window.dispatchEvent(new CustomEvent(isAssets ? "assets:open-new" : "clients:open-new"))}
                       className="flex items-center gap-1 px-3 py-1.5 bg-brand-500 hover:bg-brand-400 text-brand-900 rounded-3xl font-bold transition-colors text-xs whitespace-nowrap shrink-0"
                     >
                       <MdAdd className="w-3.5 h-3.5" />
-                      <span>{isInventory ? "Add Item" : "Add Client"}</span>
+                      <span>{isAssets ? "Add Asset" : "Add Client"}</span>
                     </button>
                   )}
                 </div>
@@ -1202,7 +1202,6 @@ const PosTopBarButton = ({ tenantInfo }: { tenantInfo: any }) => {
         >
           <MdPointOfSale className="w-3.5 h-3.5 shrink-0" />
           <span>POS</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-brand-900/60 animate-pulse shrink-0" />
         </Link>
       );
     }
@@ -1217,7 +1216,6 @@ const PosTopBarButton = ({ tenantInfo }: { tenantInfo: any }) => {
       >
         <MdPointOfSale className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
         <span>POS</span>
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-500/70 shrink-0" />
       </Link>
     );
   }
@@ -1366,20 +1364,19 @@ const Sidebar = ({
     { name: "Dashboard", href: "/dashboard", icon: MdDashboard },
     { name: "Income", href: "/income", icon: MdAccountBalanceWallet },
     { name: "Expenses", href: "/expenses", icon: Receipt },
-    { name: "Accounts", href: "/accounts", icon: MdAccountBalance, divider: false },
+    { name: "Accounts", href: "/accounts", icon: MdAccountBalance },
     {
       name: "Invoices",
       href: "/invoices",
       icon: MdInsertDriveFile,
-      divider: true,
     },
     { name: "Quotations", href: "/quotations", icon: NotepadTextDashed },
-    { name: "Clients", href: "/clients", icon: MdGroup },
-    { name: "Inventory", href: "/inventory", icon: MdInventory2 },
     ...(tenantInfo?.has_pos_addon && tenantInfo?.can_use_pos !== false
       ? [{ name: "Stock", href: "/stock", icon: Package }]
       : []),
-    { name: "Reports", href: "/reports", icon: BarChart3, divider: true },
+    { name: "Assets", href: "/assets", icon: Building2 },
+    { name: "Clients", href: "/clients", icon: MdGroup },
+    { name: "Reports", href: "/reports", icon: BarChart3 },
     { name: "Settings", href: "/settings", icon: MdSettings },
   ];
 
@@ -1389,6 +1386,9 @@ const Sidebar = ({
     if (target === "/dashboard") return cur === "/dashboard";
     if (target === "/invoices") {
       return cur.startsWith("/invoices") || cur.startsWith("/invoice");
+    }
+    if (target === "/assets" || target === "/assests") {
+      return cur.startsWith("/assets") || cur.startsWith("/assests");
     }
     return cur.startsWith(target);
   };

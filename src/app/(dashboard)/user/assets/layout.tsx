@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Inventory",
+  title: "Assets",
 };
 
 export default function InventoryLayout({

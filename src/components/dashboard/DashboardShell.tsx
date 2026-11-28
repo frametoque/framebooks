@@ -131,7 +131,8 @@ export function DashboardShell({
     // User paths
     if (path === "/user/dashboard") return "Dashboard";
     if (path === "/user/clients") return "Clients";
-    if (path === "/user/inventory") return "Inventory";
+    if (path === "/user/assets" || path === "/assets" || path === "/assests") return "Assets";
+    if (path === "/user/stock" || path === "/stock") return "Stock";
     if (path.startsWith("/user/clients/")) return "Client Details";
     if (path.startsWith("/user/invoice/")) {
       const parts = path.split("/");
@@ -184,8 +185,8 @@ export function DashboardShell({
       icon: MdInsertDriveFile,
     },
     { name: "Quotations", href: "/quotations", icon: NotepadTextDashed },
+    { name: "Assets", href: "/assets", icon: Building2 },
     { name: "Clients", href: "/clients", icon: MdGroup },
-    { name: "Inventory", href: "/inventory", icon: MdInventory2 },
     { name: "Reports", href: "/reports", icon: BarChart3 },
     { name: "Settings", href: "/settings", icon: MdSettings },
   ];

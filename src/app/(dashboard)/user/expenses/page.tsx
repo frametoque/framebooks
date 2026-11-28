@@ -737,16 +737,17 @@ export default function ExpensesPage() {
       </div>
 
       {/* Record Expense Modal Form */}
+      {/* Record / Edit Expense Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-card border border-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-border bg-card">
+          <div className="bg-card border border-border rounded-3xl w-full max-w-4xl lg:max-w-5xl max-h-[92vh] overflow-hidden shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-border bg-card shrink-0">
               <h2 className="text-xl font-semibold text-foreground">{editingId ? 'Edit Expense' : 'Record Expense'}</h2>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors cursor-pointer">
                 <MdClose className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
-             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+             <div className="p-6 space-y-5 overflow-y-auto flex-1">
               {/* Recurring / Scheduled Switch Toggle - ONLY show on creating new expense */}
               {!editingId && (
                 <div className="space-y-4">
@@ -813,101 +814,109 @@ export default function ExpensesPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
-                  <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Amount (LKR)</label>
-                  <input type="number" placeholder="0.00" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground placeholder:text-gray-400" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
-                <input type="text" placeholder="What was this expense for?" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground placeholder:text-gray-400" />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Categories</label>
-                <CategoryPicker 
-                  categories={dynamicCategories} 
-                  value={selectedCategories} 
-                  onChange={setSelectedCategories} 
-                  placeholder="Select categories..."
-                  type="expense"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method</label>
-                  <select value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs">
-                    <option className="bg-card text-foreground">Corporate Card</option>
-                    <option className="bg-card text-foreground">Bank Transfer</option>
-                    <option className="bg-card text-foreground">Personal Card</option>
-                    <option className="bg-card text-foreground">Cash</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Source Account</label>
-                  <select value={formData.accountId} onChange={e => setFormData({ ...formData, accountId: e.target.value })}
-                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs">
-                    <option value="" className="bg-card text-foreground">No Account (Unlinked)</option>
-                    {accounts.map(a => <option key={a.id} value={a.id} className="bg-card text-foreground">{a.name} ({formatLKR(a.currentBalance || 0)})</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {convertingPdf ? "Processing PDF..." : "Receipt Image / PDF"}
-                  {tenantPlan !== 'Pro Plus' && (
-                    <span className="ml-2 text-[10px] uppercase font-bold tracking-wider text-brand-700 dark:text-brand-500 bg-brand-500/15 px-2 py-0.5 rounded-md">Pro Plus</span>
-                  )}
-                </label>
-                <input 
-                  type="file" 
-                  accept="image/*,application/pdf" 
-                  disabled={convertingPdf || tenantPlan !== 'Pro Plus'}
-                  onChange={async (e) => {
-                    const selected = e.target.files?.[0];
-                    if (!selected) {
-                      setReceiptFile(null);
-                      return;
-                    }
-                    if (selected.type === "application/pdf") {
-                      setConvertingPdf(true);
-                      try {
-                        const imgFile = await convertPdfToImage(selected);
-                        setReceiptFile(imgFile);
-                      } catch (err) {
-                        console.error(err);
-                        alert("Failed to convert PDF to image. Please upload a normal image.");
-                      } finally {
-                        setConvertingPdf(false);
-                      }
-                    } else {
-                      setReceiptFile(selected);
-                    }
-                  }}
-                  className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2 outline-none focus:border-brand-500 transition-colors text-sm text-foreground disabled:opacity-50" 
-                />
-                {convertingPdf && (
-                  <p className="text-xs text-brand-600 dark:text-brand-400 animate-pulse px-2">Converting PDF to Image...</p>
-                )}
-                {formData.receiptUrl && !receiptFile && (
-                  <div className="flex items-center gap-3 mt-1 px-2">
-                    <a href={formData.receiptUrl} target="_blank" className="text-xs text-blue-600 dark:text-blue-400 underline font-medium">View current receipt</a>
-                    <button 
-                      type="button"
-                      onClick={() => setFormData({ ...formData, receiptUrl: '' })}
-                      className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-semibold cursor-pointer"
-                    >
-                      Delete current image
-                    </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
+                      <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Amount (LKR)</label>
+                      <input type="number" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground" />
+                    </div>
                   </div>
-                )}
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                    <input type="text" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Categories</label>
+                    <CategoryPicker 
+                      categories={dynamicCategories} 
+                      value={selectedCategories} 
+                      onChange={setSelectedCategories} 
+                      placeholder="Select categories..."
+                      type="expense"
+                    />
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method</label>
+                      <select value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs">
+                        <option className="bg-card text-foreground">Corporate Card</option>
+                        <option className="bg-card text-foreground">Bank Transfer</option>
+                        <option className="bg-card text-foreground">Personal Card</option>
+                        <option className="bg-card text-foreground">Cash</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Source Account</label>
+                      <select value={formData.accountId} onChange={e => setFormData({ ...formData, accountId: e.target.value })}
+                        className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs">
+                        <option value="" className="bg-card text-foreground">No Account (Unlinked)</option>
+                        {accounts.map(a => <option key={a.id} value={a.id} className="bg-card text-foreground">{a.name} ({formatLKR(a.currentBalance || 0)})</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {convertingPdf ? "Processing PDF..." : "Receipt Image / PDF"}
+                      {tenantPlan !== 'Pro Plus' && (
+                        <span className="ml-2 text-[10px] uppercase font-bold tracking-wider text-brand-700 dark:text-brand-500 bg-brand-500/15 px-2 py-0.5 rounded-md">Pro Plus</span>
+                      )}
+                    </label>
+                    <input 
+                      type="file" 
+                      accept="image/*,application/pdf" 
+                      disabled={convertingPdf || tenantPlan !== 'Pro Plus'}
+                      onChange={async (e) => {
+                        const selected = e.target.files?.[0];
+                        if (!selected) {
+                          setReceiptFile(null);
+                          return;
+                        }
+                        if (selected.type === "application/pdf") {
+                          setConvertingPdf(true);
+                          try {
+                            const imgFile = await convertPdfToImage(selected);
+                            setReceiptFile(imgFile);
+                          } catch (err) {
+                            console.error(err);
+                            alert("Failed to convert PDF to image. Please upload a normal image.");
+                          } finally {
+                            setConvertingPdf(false);
+                          }
+                        } else {
+                          setReceiptFile(selected);
+                        }
+                      }}
+                      className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2 outline-none focus:border-brand-500 transition-colors text-sm text-foreground disabled:opacity-50" 
+                    />
+                    {convertingPdf && (
+                      <p className="text-xs text-brand-600 dark:text-brand-400 animate-pulse px-2">Converting PDF to Image...</p>
+                    )}
+                    {formData.receiptUrl && !receiptFile && (
+                      <div className="flex items-center gap-3 mt-1 px-2">
+                        <a href={formData.receiptUrl} target="_blank" className="text-xs text-blue-600 dark:text-blue-400 underline font-medium">View current receipt</a>
+                        <button 
+                          type="button"
+                          onClick={() => setFormData({ ...formData, receiptUrl: '' })}
+                          className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-semibold cursor-pointer"
+                        >
+                          Delete current image
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
             <div className="p-6 border-t border-border flex justify-end gap-3 bg-card">
@@ -985,8 +994,8 @@ export default function ExpensesPage() {
       {/* Schedule / Edit Recurring Expense Modal */}
       {isScheduleModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-card border border-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-border bg-card">
+          <div className="bg-card border border-border rounded-3xl w-full max-w-4xl lg:max-w-5xl max-h-[92vh] overflow-hidden shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-border bg-card shrink-0">
               <div className="flex items-center gap-2">
                 <RefreshCw className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 <h2 className="text-xl font-semibold text-foreground">
@@ -1001,105 +1010,111 @@ export default function ExpensesPage() {
               </button>
             </div>
 
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Expense Title / Description</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Office Rent, Cloud Server Subscription..." 
-                  value={scheduleFormData.title} 
-                  onChange={e => setScheduleFormData({...scheduleFormData, title: e.target.value})} 
-                  className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground placeholder:text-gray-400" 
-                />
-              </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Expense Title / Description</label>
+                    <input 
+                      type="text" 
+                      value={scheduleFormData.title} 
+                      onChange={e => setScheduleFormData({...scheduleFormData, title: e.target.value})} 
+                      className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground" 
+                    />
+                  </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Amount (LKR)</label>
-                  <input 
-                    type="number" 
-                    placeholder="0.00" 
-                    value={scheduleFormData.amount} 
-                    onChange={e => setScheduleFormData({...scheduleFormData, amount: e.target.value})} 
-                    className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground placeholder:text-gray-400" 
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Repeat Frequency</label>
-                  <select 
-                    value={scheduleFormData.frequency} 
-                    onChange={e => setScheduleFormData({...scheduleFormData, frequency: e.target.value})} 
-                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs cursor-pointer"
-                  >
-                    <option value="weekly" className="bg-card text-foreground">Weekly</option>
-                    <option value="monthly" className="bg-card text-foreground">Monthly</option>
-                    <option value="yearly" className="bg-card text-foreground">Yearly</option>
-                  </select>
-                </div>
-              </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Amount (LKR)</label>
+                      <input 
+                        type="number" 
+                        value={scheduleFormData.amount} 
+                        onChange={e => setScheduleFormData({...scheduleFormData, amount: e.target.value})} 
+                        className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Repeat Frequency</label>
+                      <select 
+                        value={scheduleFormData.frequency} 
+                        onChange={e => setScheduleFormData({...scheduleFormData, frequency: e.target.value})} 
+                        className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs cursor-pointer"
+                      >
+                        <option value="weekly" className="bg-card text-foreground">Weekly</option>
+                        <option value="monthly" className="bg-card text-foreground">Monthly</option>
+                        <option value="yearly" className="bg-card text-foreground">Yearly</option>
+                      </select>
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Next Due Date</label>
-                  <input 
-                    type="date" 
-                    value={scheduleFormData.next_due_date} 
-                    onChange={e => setScheduleFormData({...scheduleFormData, next_due_date: e.target.value})} 
-                    className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground" 
-                  />
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Categories</label>
+                    <CategoryPicker 
+                      categories={dynamicCategories} 
+                      value={selectedScheduleCategories} 
+                      onChange={setSelectedScheduleCategories} 
+                      placeholder="Select categories..."
+                      type="expense"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Schedule Status</label>
-                  <select 
-                    value={scheduleFormData.status} 
-                    onChange={e => setScheduleFormData({...scheduleFormData, status: e.target.value})} 
-                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs cursor-pointer"
-                  >
-                    <option value="active" className="bg-card text-foreground">Active (Auto-processed)</option>
-                    <option value="paused" className="bg-card text-foreground">Paused</option>
-                  </select>
-                </div>
-              </div>
 
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Categories</label>
-                <CategoryPicker 
-                  categories={dynamicCategories} 
-                  value={selectedScheduleCategories} 
-                  onChange={setSelectedScheduleCategories} 
-                  placeholder="Select categories..."
-                  type="expense"
-                />
-              </div>
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Next Due Date</label>
+                      <input 
+                        type="date" 
+                        value={scheduleFormData.next_due_date} 
+                        onChange={e => setScheduleFormData({...scheduleFormData, next_due_date: e.target.value})} 
+                        className="w-full bg-black/5 dark:bg-transparent border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-foreground" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Schedule Status</label>
+                      <select 
+                        value={scheduleFormData.status} 
+                        onChange={e => setScheduleFormData({...scheduleFormData, status: e.target.value})} 
+                        className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs cursor-pointer"
+                      >
+                        <option value="active" className="bg-card text-foreground">Active (Auto-processed)</option>
+                        <option value="paused" className="bg-card text-foreground">Paused</option>
+                      </select>
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method</label>
-                  <select 
-                    value={scheduleFormData.paymentMethod} 
-                    onChange={e => setScheduleFormData({ ...scheduleFormData, paymentMethod: e.target.value })} 
-                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs cursor-pointer"
-                  >
-                    <option className="bg-card text-foreground">Bank Transfer</option>
-                    <option className="bg-card text-foreground">Corporate Card</option>
-                    <option className="bg-card text-foreground">Personal Card</option>
-                    <option className="bg-card text-foreground">Cash</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Bank / Source Account</label>
-                  <select 
-                    value={scheduleFormData.accountId} 
-                    onChange={e => setScheduleFormData({ ...scheduleFormData, accountId: e.target.value })}
-                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs cursor-pointer"
-                  >
-                    <option value="" className="bg-card text-foreground">No Account (Unlinked)</option>
-                    {accounts.map(a => (
-                      <option key={a.id} value={a.id} className="bg-card text-foreground">
-                        {a.name} {a.bankName ? `(${a.bankName})` : ''} ({formatLKR(a.currentBalance || 0)})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method</label>
+                      <select 
+                        value={scheduleFormData.paymentMethod} 
+                        onChange={e => setScheduleFormData({ ...scheduleFormData, paymentMethod: e.target.value })} 
+                        className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs cursor-pointer"
+                      >
+                        <option className="bg-card text-foreground">Bank Transfer</option>
+                        <option className="bg-card text-foreground">Corporate Card</option>
+                        <option className="bg-card text-foreground">Personal Card</option>
+                        <option className="bg-card text-foreground">Cash</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Bank / Source Account</label>
+                      <select 
+                        value={scheduleFormData.accountId} 
+                        onChange={e => setScheduleFormData({ ...scheduleFormData, accountId: e.target.value })}
+                        className="w-full bg-card border border-border rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors appearance-none text-foreground shadow-2xs cursor-pointer"
+                      >
+                        <option value="" className="bg-card text-foreground">No Account (Unlinked)</option>
+                        {accounts.map(a => (
+                          <option key={a.id} value={a.id} className="bg-card text-foreground">
+                            {a.name} {a.bankName ? `(${a.bankName})` : ''} ({formatLKR(a.currentBalance || 0)})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

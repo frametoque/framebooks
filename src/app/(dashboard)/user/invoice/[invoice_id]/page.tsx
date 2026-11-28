@@ -1041,14 +1041,14 @@ export default function AdminInvoicePage() {
       {/* Income Modal */}
       {incomeModalOpen && invoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
-          <div className="bg-card dark:bg-[#11151f]/95 backdrop-blur-xl border border-border rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-6 border-b border-border bg-transparent">
+          <div className="bg-card dark:bg-[#11151f]/95 backdrop-blur-xl border border-border rounded-3xl w-full max-w-4xl lg:max-w-5xl max-h-[92vh] overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-border bg-transparent shrink-0">
               <h2 className="text-xl font-semibold text-foreground">Create Income from Invoice</h2>
               <button onClick={() => setIncomeModalOpen(false)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-foreground">
                 <MdClose className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleCreateIncomeSubmit} className="p-6 space-y-6">
+            <form onSubmit={handleCreateIncomeSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left Column: Invoice Details & Amount */}
                 <div className="space-y-4">

@@ -97,8 +97,10 @@ export default async function middleware(req: NextRequest) {
     pathname.startsWith("/quotations/") ||
     pathname === "/clients" ||
     pathname.startsWith("/clients/") ||
-    pathname === "/inventory" ||
-    pathname.startsWith("/inventory/") ||
+    pathname === "/assets" ||
+    pathname.startsWith("/assets/") ||
+    pathname === "/assests" ||
+    pathname.startsWith("/assests/") ||
     pathname === "/reports" ||
     pathname.startsWith("/reports/") ||
     pathname === "/settings" ||
@@ -149,8 +151,10 @@ export const config = {
     "/quotations/:path*",
     "/clients",
     "/clients/:path*",
-    "/inventory",
-    "/inventory/:path*",
+    "/assets",
+    "/assets/:path*",
+    "/assests",
+    "/assests/:path*",
     "/reports",
     "/reports/:path*",
     "/settings",

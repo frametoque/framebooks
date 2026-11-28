@@ -701,8 +701,8 @@ export default function AccountsPage() {
 
       {showCreate && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-3xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="text-xl font-semibold mb-6 text-foreground">
+          <div className="bg-card border border-border rounded-3xl p-6 w-full max-w-3xl lg:max-w-4xl max-h-[92vh] shadow-2xl overflow-hidden flex flex-col">
+            <h2 className="text-xl font-semibold mb-6 text-foreground shrink-0">
               {editingId
                 ? isDebtTaken(formData.type)
                   ? "Edit Debt Taken Account"
@@ -715,98 +715,107 @@ export default function AccountsPage() {
                     ? "Create Debt Given Account"
                     : "Create Account"}
             </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Account Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
-                  className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs"
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-sm text-gray-700 dark:text-gray-300 block">Account Type</label>
-                  {!isProPlus && (
-                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
-                      Debt accounts need Pro Plus
-                    </span>
-                  )}
-                </div>
-                <select
-                  value={formData.type}
-                  onChange={e => handleTypeChange(e.target.value)}
-                  className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs"
-                >
-                  <option value="Cash Account" className="bg-card text-foreground">Cash Account</option>
-                  <option value="Bank Account" className="bg-card text-foreground">Bank Account</option>
-                  <option value="Debt Given" className="bg-card text-foreground">
-                    Debt Given (Lent to others / Receivable){!isProPlus ? ' (Pro Plus only)' : ''}
-                  </option>
-                  <option value="Debt Taken" className="bg-card text-foreground">
-                    Debt Taken (Borrowed from others / Payable){!isProPlus ? ' (Pro Plus only)' : ''}
-                  </option>
-                </select>
-              </div>
-
-              {isDebt(formData.type) ? (
-                <div>
-                  <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Terms / Notes (Optional)</label>
-                  <input
-                    type="text"
-                    placeholder={isDebtTaken(formData.type) ? "e.g. 12% annual, 24 monthly installments" : "e.g. 6-mo repayment schedule"}
-                    value={formData.branch}
-                    onChange={e => setFormData({...formData, branch: e.target.value})}
-                    className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs"
-                  />
-                </div>
-              ) : isBank(formData.type) ? (
-                <>
+            <div className="overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
                   <div>
-                    <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Account Owner Name</label>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Account Name</label>
                     <input
                       type="text"
-                      value={formData.ownerName}
-                      onChange={e => setFormData({...formData, ownerName: e.target.value})}
+                      value={formData.name}
+                      onChange={e => setFormData({...formData, name: e.target.value})}
                       className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs"
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Bank Name</label>
-                    <input type="text" placeholder="e.g. Bank of Ceylon" value={formData.bankName} onChange={e => setFormData({...formData, bankName: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Account Number</label>
-                      <input type="text" placeholder="e.g. 0004833004" value={formData.accountNumber} onChange={e => setFormData({...formData, accountNumber: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block">Account Type</label>
+                      {!isProPlus && (
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
+                          Debt accounts need Pro Plus
+                        </span>
+                      )}
                     </div>
-                    <div>
-                      <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Branch</label>
-                      <input type="text" placeholder="e.g. Moratuwa" value={formData.branch} onChange={e => setFormData({...formData, branch: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
-                    </div>
+                    <select
+                      value={formData.type}
+                      onChange={e => handleTypeChange(e.target.value)}
+                      className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs"
+                    >
+                      <option value="Cash Account" className="bg-card text-foreground">Cash Account</option>
+                      <option value="Bank Account" className="bg-card text-foreground">Bank Account</option>
+                      <option value="Debt Given" className="bg-card text-foreground">
+                        Debt Given (Lent to others / Receivable){!isProPlus ? ' (Pro Plus only)' : ''}
+                      </option>
+                      <option value="Debt Taken" className="bg-card text-foreground">
+                        Debt Taken (Borrowed from others / Payable){!isProPlus ? ' (Pro Plus only)' : ''}
+                      </option>
+                    </select>
                   </div>
-                </>
-              ) : null}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+                      {isDebtTaken(formData.type)
+                        ? "Initial Outstanding Debt Owed (LKR)"
+                        : isDebt(formData.type)
+                          ? "Initial Outstanding Debt Receivable (LKR)"
+                          : "Initial Balance (LKR)"}
+                    </label>
+                    <input
+                      type="number"
+                      value={Number.isNaN(Number(formData.initialBalance)) ? formData.initialBalance : formData.initialBalance}
+                      onChange={e => setFormData({...formData, initialBalance: e.target.value === "" ? "" : e.target.value as any})}
+                      className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs"
+                    />
+                  </div>
+                </div>
 
-              <div>
-                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">
-                  {isDebtTaken(formData.type)
-                    ? "Initial Outstanding Debt Owed (LKR)"
-                    : isDebt(formData.type)
-                      ? "Initial Outstanding Debt Receivable (LKR)"
-                      : "Initial Balance (LKR)"}
-                </label>
-                <input
-                  type="number"
-                  value={Number.isNaN(Number(formData.initialBalance)) ? formData.initialBalance : formData.initialBalance}
-                  onChange={e => setFormData({...formData, initialBalance: e.target.value === "" ? "" : e.target.value as any})}
-                  placeholder="0"
-                  className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs"
-                />
+                {/* Right Column */}
+                <div className="space-y-4">
+                  {isDebt(formData.type) ? (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Terms / Notes (Optional)</label>
+                      <textarea
+                        rows={5}
+                        value={formData.branch}
+                        onChange={e => setFormData({...formData, branch: e.target.value})}
+                        className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs resize-none"
+                      />
+                    </div>
+                  ) : isBank(formData.type) ? (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Account Owner Name</label>
+                        <input
+                          type="text"
+                          value={formData.ownerName}
+                          onChange={e => setFormData({...formData, ownerName: e.target.value})}
+                          className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Bank Name</label>
+                        <input type="text" value={formData.bankName} onChange={e => setFormData({...formData, bankName: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Account Number</label>
+                          <input type="text" value={formData.accountNumber} onChange={e => setFormData({...formData, accountNumber: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Branch</label>
+                          <input type="text" value={formData.branch} onChange={e => setFormData({...formData, branch: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-4 bg-black/5 dark:bg-white/5 border border-border rounded-2xl text-xs text-gray-500 dark:text-gray-400">
+                      Cash account tracks cash on hand or in registered cash registers/drawers.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex gap-4 mt-8">
+            <div className="flex gap-4 mt-6 pt-4 border-t border-border shrink-0">
               <button onClick={() => { setShowCreate(false); setEditingId(null); setFormData({ name: "", ownerName: "", type: "Cash Account", bankName: "", accountNumber: "", branch: "", initialBalance: 0 }); }} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-card transition-colors">Cancel</button>
               <button onClick={handleSave} className="flex-1 px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold transition-colors shadow-xs">Save Account</button>
             </div>
@@ -816,46 +825,54 @@ export default function AccountsPage() {
 
       {showTransfer && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-3xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="text-xl font-semibold mb-6 text-foreground">{editingTransferId ? "Edit Transfer" : "Transfer Funds"}</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Date</label>
-                <input type="date" value={transferData.date} onChange={e => setTransferData({...transferData, date: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
-              </div>
-              <div>
-                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Source Account (From)</label>
-                <select value={transferData.sourceAccountId} onChange={e => setTransferData({...transferData, sourceAccountId: parseInt(e.target.value)})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs">
-                  <option value={0} className="bg-card text-foreground">Select Source Account</option>
-                  {accounts.map(a => (
-                    <option key={a.id} value={a.id} className="bg-card text-foreground">
-                      {a.name} [{isDebtTaken(a.type) ? 'Debt Taken' : isDebt(a.type) ? 'Debt Given' : isBank(a.type) ? 'Bank' : 'Cash'}] ({formatLKR(a.currentBalance)})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Destination Account (To)</label>
-                <select value={transferData.destinationAccountId} onChange={e => setTransferData({...transferData, destinationAccountId: parseInt(e.target.value)})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs">
-                  <option value={0} className="bg-card text-foreground">Select Destination Account</option>
-                  {accounts.map(a => (
-                    <option key={a.id} value={a.id} className="bg-card text-foreground">
-                      {a.name} [{isDebtTaken(a.type) ? 'Debt Taken' : isDebt(a.type) ? 'Debt Given' : isBank(a.type) ? 'Bank' : 'Cash'}] ({formatLKR(a.currentBalance)})
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <div className="bg-card border border-border rounded-3xl p-6 w-full max-w-3xl lg:max-w-4xl max-h-[92vh] shadow-2xl overflow-hidden flex flex-col">
+            <h2 className="text-xl font-semibold mb-6 text-foreground shrink-0">{editingTransferId ? "Edit Transfer" : "Transfer Funds"}</h2>
+            <div className="overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Date</label>
+                    <input type="date" value={transferData.date} onChange={e => setTransferData({...transferData, date: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Amount (LKR)</label>
+                    <input type="number" value={Number.isNaN(Number(transferData.amount)) ? transferData.amount : transferData.amount} onChange={e => setTransferData({...transferData, amount: e.target.value === "" ? "" : e.target.value as any})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Description</label>
+                    <input type="text" value={transferData.description} onChange={e => setTransferData({...transferData, description: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
+                  </div>
+                </div>
 
-              <div>
-                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Amount (LKR)</label>
-                <input type="number" value={Number.isNaN(Number(transferData.amount)) ? transferData.amount : transferData.amount} onChange={e => setTransferData({...transferData, amount: e.target.value === "" ? "" : e.target.value as any})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
-              </div>
-              <div>
-                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">Description</label>
-                <input type="text" placeholder="e.g. Debt transfer or settlement installment" value={transferData.description} onChange={e => setTransferData({...transferData, description: e.target.value})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs" />
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Source Account (From)</label>
+                    <select value={transferData.sourceAccountId} onChange={e => setTransferData({...transferData, sourceAccountId: parseInt(e.target.value)})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs">
+                      <option value={0} className="bg-card text-foreground">Select Source Account</option>
+                      {accounts.map(a => (
+                        <option key={a.id} value={a.id} className="bg-card text-foreground">
+                          {a.name} [{isDebtTaken(a.type) ? 'Debt Taken' : isDebt(a.type) ? 'Debt Given' : isBank(a.type) ? 'Bank' : 'Cash'}] ({formatLKR(a.currentBalance)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Destination Account (To)</label>
+                    <select value={transferData.destinationAccountId} onChange={e => setTransferData({...transferData, destinationAccountId: parseInt(e.target.value)})} className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:border-brand-500 shadow-2xs">
+                      <option value={0} className="bg-card text-foreground">Select Destination Account</option>
+                      {accounts.map(a => (
+                        <option key={a.id} value={a.id} className="bg-card text-foreground">
+                          {a.name} [{isDebtTaken(a.type) ? 'Debt Taken' : isDebt(a.type) ? 'Debt Given' : isBank(a.type) ? 'Bank' : 'Cash'}] ({formatLKR(a.currentBalance)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="flex gap-4 mt-8">
+            <div className="flex gap-4 mt-6 pt-4 border-t border-border shrink-0">
               <button onClick={() => { setShowTransfer(false); setEditingTransferId(null); setTransferData({ date: new Date().toISOString().split("T")[0], sourceAccountId: 0, destinationAccountId: 0, amount: 0, description: "" }); }} className="flex-1 px-4 py-2.5 rounded-xl border border-border text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-card transition-colors">Cancel</button>
               <button onClick={handleTransfer} className="flex-1 px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold transition-colors shadow-xs">{editingTransferId ? "Save Changes" : "Transfer Funds"}</button>
             </div>

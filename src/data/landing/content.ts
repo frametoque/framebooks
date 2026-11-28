@@ -48,40 +48,41 @@ export const modulesData = [
     align: 'left'
   },
   {
-    id: 'invoices',
-    title: 'Invoices',
-    description: 'Professional billing with automated payment links and tracking.',
+    id: 'invoices-quotations',
+    title: 'Invoices & Quotations',
+    description: 'Professional billing and estimates that convert to invoices with automated payment tracking.',
     align: 'right'
-  },
-  {
-    id: 'quotations',
-    title: 'Quotations',
-    description: 'Fast, polished estimates that convert to invoices in one tap.',
-    align: 'left'
   },
   {
     id: 'income-expenses',
     title: 'Income & Expenses',
     description: 'Categorized cash flow tracking without spreadsheet chaos.',
-    align: 'right'
+    align: 'left'
   },
   {
     id: 'accounts',
     title: 'Account Ledgers',
     description: 'Unified balances across bank accounts, petty cash, and cards.',
-    align: 'left'
+    align: 'right'
   },
   {
     id: 'clients',
     title: 'Clients',
     description: 'Complete customer directory with contact info and lifetime revenue.',
+    align: 'left'
+  },
+  {
+    id: 'assets',
+    title: 'Assets',
+    description: 'Track internal company property, equipment, and furniture with serials and warranties.',
     align: 'right'
   },
   {
-    id: 'inventory',
-    title: 'Inventory',
-    description: 'Live stock tracking with barcodes and automatic sales deductions.',
-    align: 'left'
+    id: 'stock',
+    title: 'Stock',
+    description: 'Real-time retail inventory with barcode scanning, reorder alerts, and POS sync.',
+    align: 'left',
+    badge: 'Available with POS'
   },
   {
     id: 'team',
@@ -194,9 +195,9 @@ export const posFeatures = [
     icon: 'MdQrCodeScanner',
   },
   {
-    title: 'Live inventory sync',
-    description: 'Every sale updates inventory across your registers and online catalog in real time. Zero double-counting. Zero overselling.',
-    icon: 'MdInventory',
+    title: 'Live Inventory & WooCommerce Sync',
+    description: 'Every sale updates inventory across your registers and WooCommerce store in real time. Counter sales and web orders stay in perfect harmony with zero overselling.',
+    icon: 'SiWoocommerce',
   },
   {
     title: 'External Printer and Cash Drawer Support',
@@ -209,9 +210,10 @@ export const posFeatures = [
     icon: 'MdLockOutline',
   },
   {
-    title: 'WooCommerce Live Sync',
-    description: 'Live sync your stock with the online website you already have. Counter sales and web orders stay in perfect harmony with zero overselling.',
-    icon: 'SiWoocommerce',
+    title: 'Offline Support',
+    description: 'Keep ringing up sales even when the internet drops. Transactions queue locally and sync automatically the moment your connection restores.',
+    icon: 'MdWifiOff',
+    badge: 'Coming Soon',
   },
   {
     title: 'Any screen is your register',

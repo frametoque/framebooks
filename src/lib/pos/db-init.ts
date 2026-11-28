@@ -61,7 +61,7 @@ export async function ensurePosSchema() {
       ON CONFLICT (key) DO NOTHING;
     `;
 
-    // 2. Extend admin_inventory for retail & POS stock
+    // 2. Extend admin_inventory for retail & POS stock and internal business assets
     await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS sku VARCHAR(100);`;
     await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS barcode VARCHAR(100);`;
     await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS brand VARCHAR(100);`;
@@ -70,6 +70,9 @@ export async function ensurePosSchema() {
     await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS tax_rate NUMERIC(5, 2) DEFAULT 0;`;
     await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS unit VARCHAR(20) DEFAULT 'pcs';`;
     await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS reorder_level NUMERIC(12, 2) DEFAULT 5;`;
+    await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS is_asset BOOLEAN DEFAULT FALSE;`;
+    await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS location VARCHAR(150);`;
+    await sql`ALTER TABLE admin_inventory ADD COLUMN IF NOT EXISTS assigned_to VARCHAR(150);`;
 
     await sql`CREATE INDEX IF NOT EXISTS idx_inventory_tenant_sku ON admin_inventory(tenant_id, sku);`;
     await sql`CREATE INDEX IF NOT EXISTS idx_inventory_tenant_barcode ON admin_inventory(tenant_id, barcode);`;

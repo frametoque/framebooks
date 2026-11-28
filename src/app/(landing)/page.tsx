@@ -5,7 +5,7 @@ import { getPosAddonPricing } from '@/lib/pos/entitlement';
 
 export const metadata: Metadata = {
   title: {
-    absolute: 'Framebooks | Business finances and Point of Sale, unified'
+    absolute: 'Framebooks | Run your whole business finance from one place',
   },
   description: 'The all-in-one platform for Sri Lankan business. Lightning-fast retail POS, live inventory, invoices, bank ledgers, and financial intelligence.',
   keywords: [

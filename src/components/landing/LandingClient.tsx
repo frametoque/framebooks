@@ -7,9 +7,24 @@ import {
   MdCheck, MdTrendingUp, MdAccountBalance, MdCallMade, MdCallReceived, 
   MdInsertDriveFile, MdGroup, MdInventory, MdSecurity, MdGroups, MdPerson, 
   MdArrowForward, MdPointOfSale, MdQrCodeScanner, MdPrint, MdFlashOn, 
-  MdLockOutline, MdPhoneIphone, MdLocalOffer
+  MdLockOutline, MdPhoneIphone, MdLocalOffer, MdWifiOff
 } from 'react-icons/md';
+import { Building2, Package } from 'lucide-react';
 import { SiWoocommerce } from 'react-icons/si';
+
+function WooMarkIcon({ className = "w-6 sm:w-8 h-auto shrink-0" }: { className?: string }) {
+  return (
+    <svg
+      role="img"
+      viewBox="0 9.5 8.2 4.3"
+      fill="currentColor"
+      className={className}
+      aria-label="WooCommerce"
+    >
+      <path d="M.754 9.58a.754.754 0 00-.754.758v2.525c0 .42.339.758.758.758h3.135l1.431.799-.326-.799h2.373a.757.757 0 00.758-.758v-2.525a.757.757 0 00-.758-.758H.754zm2.709.445h.03c.065.001.124.023.179.067a.26.26 0 01.103.19.29.29 0 01-.033.16c-.13.239-.236.64-.322 1.199-.083.541-.114.965-.094 1.267a.392.392 0 01-.039.219.213.213 0 01-.176.12c-.086.006-.177-.034-.263-.124-.31-.316-.555-.788-.735-1.416-.216.425-.375.744-.478.957-.196.376-.363.568-.502.578-.09.007-.166-.069-.233-.228-.17-.436-.352-1.277-.548-2.524a.297.297 0 01.054-.222c.047-.064.116-.095.21-.102.169-.013.265.065.288.238.103.695.217 1.284.336 1.766l.727-1.387c.066-.126.15-.192.25-.199.146-.01.237.083.273.28.083.441.188.817.315 1.136.086-.844.233-1.453.44-1.828a.255.255 0 01.218-.147zm1.293.36c.056 0 .116.006.18.02.232.05.411.177.53.386.107.18.161.395.161.654 0 .343-.087.654-.26.94-.2.332-.459.5-.781.5a.88.88 0 01-.18-.022.763.763 0 01-.531-.384 1.287 1.287 0 01-.158-.659c0-.342.085-.655.258-.937.202-.333.462-.498.78-.498zm2.084 0c.056 0 .116.006.18.02.236.05.411.177.53.386.107.18.16.395.16.654 0 .343-.086.654-.259.94-.2.332-.459.5-.781.5a.88.88 0 01-.18-.022.763.763 0 01-.531-.384 1.287 1.287 0 01-.16-.659c0-.342.087-.655.26-.937.202-.333.462-.498.78-.498zm-15.22.011c-.104 0-.205.069-.301.211a1.078 1.078 0 00-.2.639c0 .096.02.2.06.303.049.13.117.198.196.215.083.016.173-.02.27-.106.123-.11.205-.273.252-.492.016-.077.023-.16.023-.246 0-.097-.02-.2-.06-.303-.05-.13-.116-.198-.196-.215a.246.246 0 00-.045-.006zm2.083 0c-.103 0-.204.069-.3.211a1.078 1.078 0 00-.2.639c0 .096.02.2.06.303.049.13.117.198.196.215.083.016.173-.02.27-.106.123-.11.205-.273.252-.492.013-.077.023-.16.023-.246 0-.097-.02-.2-.06-.303-.05-.13-.116-.198-.196-.215a.246.246 0 00-.045-.006z" />
+    </svg>
+  );
+}
 import { kpis, features, modulesData, workflowSteps, securityFeatures, plans, comparison, faqs, posFeatures } from '@/data/landing/content';
 import PlanFinderWidget from '@/components/landing/PlanFinderWidget';
 
@@ -408,14 +423,14 @@ export default function LandingClient({
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-8">
               {modulesData.map((mod) => {
-                let Icon = MdCheck;
+                let Icon: any = MdCheck;
                 if (mod.id === 'dashboard') Icon = MdTrendingUp;
-                if (mod.id === 'invoices') Icon = MdInsertDriveFile;
-                if (mod.id === 'quotations') Icon = MdInsertDriveFile;
+                if (mod.id === 'invoices' || mod.id === 'quotations' || mod.id === 'invoices-quotations') Icon = MdInsertDriveFile;
                 if (mod.id === 'income-expenses') Icon = MdCallReceived;
                 if (mod.id === 'accounts') Icon = MdAccountBalance;
                 if (mod.id === 'clients') Icon = MdGroup;
-                if (mod.id === 'inventory') Icon = MdInventory;
+                if (mod.id === 'assets') Icon = Building2;
+                if (mod.id === 'stock') Icon = Package;
                 if (mod.id === 'pos') Icon = MdPointOfSale;
                 if (mod.id === 'team') Icon = MdGroups;
                 if (mod.id === 'security') Icon = MdSecurity;
@@ -423,8 +438,15 @@ export default function LandingClient({
                 return (
                   <div key={mod.id} className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#E5E7EB] shadow-xs hover:shadow-md transition-shadow group flex flex-col justify-between">
                     <div>
-                      <div className="w-10 h-10 sm:w-14 sm:h-14 bg-[#F9FAFB] rounded-xl sm:rounded-2xl flex items-center justify-center mb-3 sm:mb-6 text-[#00C750] group-hover:scale-105 group-hover:bg-[#E6FDF0] transition-all">
-                        <Icon className="w-5 h-5 sm:w-7 sm:h-7" />
+                      <div className="flex items-start justify-between mb-3 sm:mb-6">
+                        <div className="w-10 h-10 sm:w-14 sm:h-14 bg-[#F9FAFB] rounded-xl sm:rounded-2xl flex items-center justify-center text-[#00C750] group-hover:scale-105 group-hover:bg-[#E6FDF0] transition-all">
+                          <Icon className="w-5 h-5 sm:w-7 sm:h-7" />
+                        </div>
+                        {('badge' in mod && (mod as any).badge) && (
+                          <span className="text-[10px] sm:text-xs font-bold text-[#007A31] bg-[#E6FDF0] px-2.5 py-1 rounded-full border border-[#00E35B]/30 whitespace-nowrap">
+                            {(mod as any).badge}
+                          </span>
+                        )}
                       </div>
                       <h3 className="text-base sm:text-2xl font-black mb-1.5 sm:mb-3">{mod.title}</h3>
                       <p className="text-xs sm:text-sm text-gray-600 leading-snug sm:leading-relaxed">
@@ -561,15 +583,23 @@ export default function LandingClient({
                   className="p-3.5 sm:p-7 rounded-2xl sm:rounded-3xl bg-white/[0.04] border border-white/10 hover:border-[#00E35B]/40 hover:bg-white/[0.06] transition-all flex flex-col justify-between"
                 >
                   <div>
-                    <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#00E35B]/10 border border-[#00E35B]/20 text-[#00E35B] flex items-center justify-center mb-3 sm:mb-5 text-xl sm:text-2xl">
-                      {feat.icon === 'MdFlashOn' && <MdFlashOn />}
-                      {feat.icon === 'MdQrCodeScanner' && <MdQrCodeScanner />}
-                      {feat.icon === 'MdInventory' && <MdInventory />}
-                      {feat.icon === 'MdLockOutline' && <MdLockOutline />}
-                      {feat.icon === 'MdPrint' && <MdPrint />}
-                      {feat.icon === 'MdPhoneIphone' && <MdPhoneIphone />}
-                      {feat.icon === 'SiWoocommerce' && <SiWoocommerce className="text-2xl" />}
-                      {feat.icon === 'MdLocalOffer' && <MdLocalOffer />}
+                    <div className="flex items-start justify-between mb-3 sm:mb-5">
+                      <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#00E35B]/10 border border-[#00E35B]/20 text-[#00E35B] flex items-center justify-center text-xl sm:text-2xl">
+                        {feat.icon === 'MdFlashOn' && <MdFlashOn />}
+                        {feat.icon === 'MdQrCodeScanner' && <MdQrCodeScanner />}
+                        {feat.icon === 'MdInventory' && <MdInventory />}
+                        {feat.icon === 'MdLockOutline' && <MdLockOutline />}
+                        {feat.icon === 'MdPrint' && <MdPrint />}
+                        {feat.icon === 'MdPhoneIphone' && <MdPhoneIphone />}
+                        {feat.icon === 'SiWoocommerce' && <WooMarkIcon className="w-5 sm:w-7 h-auto" />}
+                        {feat.icon === 'MdLocalOffer' && <MdLocalOffer />}
+                        {feat.icon === 'MdWifiOff' && <MdWifiOff />}
+                      </div>
+                      {('badge' in feat && (feat as any).badge) && (
+                        <span className="text-[10px] sm:text-xs font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-[#00E35B]/15 text-[#00E35B] border border-[#00E35B]/30 tracking-wide uppercase whitespace-nowrap">
+                          {(feat as any).badge}
+                        </span>
+                      )}
                     </div>
                     <h3 className="text-sm sm:text-xl font-bold text-white mb-1.5 sm:mb-2">{feat.title}</h3>
                     <p className="text-xs sm:text-sm text-gray-400 leading-snug sm:leading-relaxed">{feat.description}</p>

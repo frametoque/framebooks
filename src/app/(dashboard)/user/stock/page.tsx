@@ -975,10 +975,10 @@ export default function StockPage() {
           onClick={() => setIsProductModalOpen(false)}
         >
           <div
-            className="bg-card border border-border rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col relative"
+            className="bg-card border border-border rounded-3xl w-full max-w-4xl lg:max-w-5xl max-h-[92vh] shadow-2xl overflow-hidden flex flex-col relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-black/5 dark:bg-white/5">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-black/5 dark:bg-white/5 shrink-0">
               <h3 className="text-base font-bold text-foreground">
                 {editingProduct ? "Edit Stock Product" : "Add Stock Product to Catalog"}
               </h3>
@@ -990,127 +990,132 @@ export default function StockPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveProduct} className="p-6 space-y-4 text-xs">
-              <div>
-                <label className="block text-gray-400 font-semibold mb-1">Product Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={productForm.item_name}
-                  onChange={(e) => setProductForm({ ...productForm, item_name: e.target.value })}
-                  placeholder="e.g. Ergonomic Wireless Mouse 2.4G"
-                  className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 font-semibold text-foreground outline-none focus:border-brand-500"
-                />
+            <form onSubmit={handleSaveProduct} className="p-6 overflow-y-auto flex-1 flex flex-col justify-between text-xs space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-gray-400 font-semibold mb-1">Product Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={productForm.item_name}
+                      onChange={(e) => setProductForm({ ...productForm, item_name: e.target.value })}
+                      className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 font-semibold text-foreground outline-none focus:border-brand-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-gray-400 font-semibold mb-1">Category</label>
+                      <CategoryPicker
+                        value={productForm.category ? [productForm.category] : []}
+                        onChange={(selected) =>
+                          setProductForm({ ...productForm, category: selected[0] || "General" })
+                        }
+                        placeholder="Select category..."
+                        type="all"
+                        categories={categories.filter((c) => c !== "All")}
+                        singleSelect={true}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-400 font-semibold mb-1">Unit of Measure</label>
+                      <input
+                        type="text"
+                        value={productForm.unit}
+                        onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })}
+                        className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 text-foreground outline-none focus:border-brand-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-400 font-semibold mb-1">
+                      SKU (Key Product Identifier)
+                    </label>
+                    <div className="relative flex items-center">
+                      <input
+                        type="text"
+                        value={productForm.sku}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          setProductForm({ ...productForm, sku: val, barcode: val });
+                        }}
+                        className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl pl-3.5 pr-10 py-2 font-sans font-bold text-brand-500 outline-none focus:border-brand-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCameraTarget("barcode_field");
+                          setIsCameraOpen(true);
+                        }}
+                        className="absolute right-2.5 text-gray-400 hover:text-brand-500 cursor-pointer"
+                        title="Scan barcode or QR code"
+                      >
+                        <Barcode className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-gray-400 font-semibold mb-1">Selling Price (LKR) *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        required
+                        value={productForm.selling_price}
+                        onChange={(e) => setProductForm({ ...productForm, selling_price: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 font-bold text-foreground outline-none focus:border-brand-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-400 font-semibold mb-1">Cost Price (LKR)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={productForm.cost_price}
+                        onChange={(e) => setProductForm({ ...productForm, cost_price: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 text-foreground outline-none focus:border-brand-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-400 font-semibold mb-1">Reorder Alert Qty</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={productForm.reorder_level}
+                        onChange={(e) => setProductForm({ ...productForm, reorder_level: parseInt(e.target.value) || 0 })}
+                        className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 text-foreground outline-none focus:border-brand-500"
+                      />
+                    </div>
+                  </div>
+
+                  {!editingProduct && (
+                    <div>
+                      <label className="block text-gray-400 font-semibold mb-1">Opening Stock Quantity</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={productForm.quantity}
+                        onChange={(e) => setProductForm({ ...productForm, quantity: parseInt(e.target.value) || 0 })}
+                        className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 text-foreground outline-none focus:border-brand-500"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-gray-400 font-semibold mb-1">Category</label>
-                  <CategoryPicker
-                    value={productForm.category ? [productForm.category] : []}
-                    onChange={(selected) =>
-                      setProductForm({ ...productForm, category: selected[0] || "General" })
-                    }
-                    placeholder="Select or add category..."
-                    type="all"
-                    categories={categories.filter((c) => c !== "All")}
-                    singleSelect={true}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 font-semibold mb-1">Unit of Measure</label>
-                  <input
-                    type="text"
-                    value={productForm.unit}
-                    onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })}
-                    placeholder="pcs, box, kg"
-                    className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 text-foreground outline-none focus:border-brand-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-gray-400 font-semibold mb-1">
-                  SKU (Key Product Identifier) <span className="text-[10px] text-gray-500">(Auto if blank)</span>
-                </label>
-                <div className="relative flex items-center">
-                  <input
-                    type="text"
-                    value={productForm.sku}
-                    onChange={(e) => {
-                      const val = e.target.value.toUpperCase();
-                      setProductForm({ ...productForm, sku: val, barcode: val });
-                    }}
-                    placeholder="Scan barcode/QR or enter SKU (e.g. SKU-00010)"
-                    className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl pl-3.5 pr-10 py-2 font-sans font-bold text-brand-500 outline-none focus:border-brand-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCameraTarget("barcode_field");
-                      setIsCameraOpen(true);
-                    }}
-                    className="absolute right-2.5 text-gray-400 hover:text-brand-500 cursor-pointer"
-                    title="Scan barcode or QR code"
-                  >
-                    <Barcode className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-gray-400 font-semibold mb-1">Selling Price (LKR) *</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    required
-                    value={productForm.selling_price}
-                    onChange={(e) => setProductForm({ ...productForm, selling_price: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 font-bold text-foreground outline-none focus:border-brand-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 font-semibold mb-1">Cost Price (LKR)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={productForm.cost_price}
-                    onChange={(e) => setProductForm({ ...productForm, cost_price: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 text-foreground outline-none focus:border-brand-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 font-semibold mb-1">Reorder Alert Qty</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={productForm.reorder_level}
-                    onChange={(e) => setProductForm({ ...productForm, reorder_level: parseInt(e.target.value) || 0 })}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 text-foreground outline-none focus:border-brand-500"
-                  />
-                </div>
-              </div>
-
-              {!editingProduct && (
-                <div>
-                  <label className="block text-gray-400 font-semibold mb-1">Opening Stock Quantity</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={productForm.quantity}
-                    onChange={(e) => setProductForm({ ...productForm, quantity: parseInt(e.target.value) || 0 })}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 text-foreground outline-none focus:border-brand-500"
-                  />
-                </div>
-              )}
-
-              <div className="pt-3 flex justify-end gap-2 border-t border-border">
+              <div className="pt-4 flex justify-end gap-2 border-t border-border shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsProductModalOpen(false)}
@@ -1140,10 +1145,10 @@ export default function StockPage() {
           onClick={() => setAdjustingProduct(null)}
         >
           <div
-            className="bg-card border border-border rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col relative"
+            className="bg-card border border-border rounded-3xl w-full max-w-3xl lg:max-w-4xl max-h-[92vh] shadow-2xl overflow-hidden flex flex-col relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-black/5 dark:bg-white/5">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-black/5 dark:bg-white/5 shrink-0">
               <h3 className="text-base font-bold text-foreground">Adjust Stock Inventory</h3>
               <button
                 onClick={() => setAdjustingProduct(null)}
@@ -1153,70 +1158,75 @@ export default function StockPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveAdjust} className="p-6 space-y-4 text-xs">
-              <div className="p-3 bg-black/5 dark:bg-white/5 border border-border rounded-xl">
-                <div className="font-bold text-foreground">{adjustingProduct.item_name}</div>
-                <div className="font-sans text-[11px] font-semibold text-brand-500 mt-0.5">{adjustingProduct.sku}</div>
-                <div className="text-gray-400 text-xs mt-1">Current Stock: <span className="font-bold text-foreground">{adjustingProduct.quantity} {adjustingProduct.unit || 'pcs'}</span></div>
-              </div>
+            <form onSubmit={handleSaveAdjust} className="p-6 overflow-y-auto flex-1 flex flex-col justify-between text-xs space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column: Product Info, Qty & Notes */}
+                <div className="space-y-4">
+                  <div className="p-4 bg-black/5 dark:bg-white/5 border border-border rounded-2xl">
+                    <div className="font-bold text-foreground text-sm">{adjustingProduct.item_name}</div>
+                    <div className="font-sans text-xs font-semibold text-brand-500 mt-1">{adjustingProduct.sku}</div>
+                    <div className="text-gray-400 text-xs mt-2">Current Stock: <span className="font-bold text-foreground">{adjustingProduct.quantity} {adjustingProduct.unit || 'pcs'}</span></div>
+                  </div>
 
-              <div>
-                <label className="block text-gray-400 font-semibold mb-1">Reason for Adjustment</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: "received", label: "+ Stock Received", type: "pos" },
-                    { id: "damaged", label: "- Damaged / Scrap", type: "neg" },
-                    { id: "correction", label: "Count Correction", type: "neutral" },
-                    { id: "count", label: "Stocktake Count", type: "neutral" },
-                  ].map((r) => (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => {
-                        setAdjustReason(r.id as any);
-                        if (r.id === "damaged" && adjustQty > 0) setAdjustQty(-adjustQty);
-                        if (r.id === "received" && adjustQty < 0) setAdjustQty(-adjustQty);
-                      }}
-                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-left cursor-pointer ${
-                        adjustReason === r.id
-                          ? "bg-brand-500/15 border-brand-500 text-brand-500"
-                          : "border-border text-gray-400 hover:text-foreground"
-                      }`}
-                    >
-                      {r.label}
-                    </button>
-                  ))}
+                  <div>
+                    <label className="block text-gray-400 font-semibold mb-1">
+                      Quantity Change (+ to add, - to deduct)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={adjustQty}
+                      onChange={(e) => setAdjustQty(parseInt(e.target.value) || 0)}
+                      className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 font-bold text-foreground text-sm outline-none focus:border-brand-500"
+                    />
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Resulting balance: <span className="font-bold text-foreground">{adjustingProduct.quantity + adjustQty}</span>
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-400 font-semibold mb-1">Notes / Remarks</label>
+                    <input
+                      type="text"
+                      value={adjustNotes}
+                      onChange={(e) => setAdjustNotes(e.target.value)}
+                      className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 text-foreground outline-none focus:border-brand-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Right Column: Reason */}
+                <div>
+                  <label className="block text-gray-400 font-semibold mb-2">Reason for Adjustment</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      { id: "received", label: "+ Stock Received", type: "pos" },
+                      { id: "damaged", label: "- Damaged / Scrap", type: "neg" },
+                      { id: "correction", label: "Count Correction", type: "neutral" },
+                      { id: "count", label: "Stocktake Count", type: "neutral" },
+                    ].map((r) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => {
+                          setAdjustReason(r.id as any);
+                          if (r.id === "damaged" && adjustQty > 0) setAdjustQty(-adjustQty);
+                          if (r.id === "received" && adjustQty < 0) setAdjustQty(-adjustQty);
+                        }}
+                        className={`p-3 rounded-xl border text-xs font-bold transition-all text-left cursor-pointer ${
+                          adjustReason === r.id
+                            ? "bg-brand-500/15 border-brand-500 text-brand-500"
+                            : "border-border text-gray-400 hover:text-foreground"
+                        }`}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-gray-400 font-semibold mb-1">
-                  Quantity Change (+ to add, - to deduct)
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={adjustQty}
-                  onChange={(e) => setAdjustQty(parseInt(e.target.value) || 0)}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 font-bold text-foreground text-sm outline-none focus:border-brand-500"
-                />
-                <p className="text-[11px] text-gray-500 mt-1">
-                  Resulting balance: <span className="font-bold text-foreground">{adjustingProduct.quantity + adjustQty}</span>
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-gray-400 font-semibold mb-1">Notes / Remarks</label>
-                <input
-                  type="text"
-                  value={adjustNotes}
-                  onChange={(e) => setAdjustNotes(e.target.value)}
-                  placeholder="e.g. Batch #42 received from supplier"
-                  className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3.5 py-2 text-foreground outline-none focus:border-brand-500"
-                />
-              </div>
-
-              <div className="pt-3 flex justify-end gap-2 border-t border-border">
+              <div className="pt-4 flex justify-end gap-2 border-t border-border shrink-0">
                 <button
                   type="button"
                   onClick={() => setAdjustingProduct(null)}
@@ -1227,8 +1237,8 @@ export default function StockPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
-                  className="px-6 py-2 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-xl shadow-xs flex items-center gap-2 cursor-pointer"
+                  disabled={saving || adjustQty === 0}
+                  className="px-6 py-2 bg-brand-500 hover:bg-brand-400 text-brand-950 font-bold rounded-xl shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   <span>{saving ? "Saving..." : "Apply Adjustment"}</span>
                   <kbd className="text-[10px] bg-brand-600/30 text-brand-950 px-1.5 py-0.5 rounded font-bold">Enter</kbd>

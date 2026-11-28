@@ -5,7 +5,7 @@ import { Loader } from "@/components/ui/Loader";
 import { useEffect, useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Edit2, Loader2, Image as ImageIcon, FileText as FileIcon, Printer } from "lucide-react";
-import { MdInsertDriveFile, MdCheckCircle, MdAccessTime, MdErrorOutline, MdSearch, MdRemoveRedEye, MdDownload, MdDelete, MdAttachMoney, MdClose, MdUpload, MdCancel, MdPointOfSale } from "react-icons/md";
+import { MdInsertDriveFile, MdCheckCircle, MdAccessTime, MdErrorOutline, MdSearch, MdRemoveRedEye, MdDownload, MdDelete, MdAttachMoney, MdClose, MdUpload, MdCancel } from "react-icons/md";
 import Link from "next/link";
 import { getInvoices, deleteInvoice, recordInvoicePayment, adminUploadPaymentSlip, getInvoiceByIdAdmin, cancelInvoiceAction } from "../actions/actions";
 import { getAccounts } from "../actions/accounts";
@@ -644,8 +644,7 @@ function InvoicesPageContent() {
                           {row.id}
                         </Link>
                         {row.isPos && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/15 text-brand-700 dark:text-brand-300 border border-brand-500/30" title={`POS Receipt: ${row.posOrderNumber || row.id}`}>
-                            <MdPointOfSale className="w-3 h-3" />
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/15 text-brand-700 dark:text-brand-300 border border-brand-500/30" title={`POS Receipt: ${row.posOrderNumber || row.id}`}>
                             POS
                           </span>
                         )}
@@ -775,8 +774,7 @@ function InvoicesPageContent() {
                       {row.id}
                     </Link>
                     {row.isPos && (
-                      <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/15 text-brand-700 dark:text-brand-300 border border-brand-500/30">
-                        <MdPointOfSale className="w-2.5 h-2.5" />
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/15 text-brand-700 dark:text-brand-300 border border-brand-500/30">
                         POS
                       </span>
                     )}
@@ -882,7 +880,7 @@ function InvoicesPageContent() {
       {/* Payment Modal */}
       {paymentModalOpen && selectedInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md">
-          <div className="bg-card dark:bg-[#11151f]/95 backdrop-blur-xl border border-border rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+          <div className="bg-card dark:bg-[#11151f]/95 backdrop-blur-xl border border-border rounded-3xl w-full max-w-4xl lg:max-w-5xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border bg-transparent shrink-0">
               <h2 className="text-lg sm:text-xl font-semibold text-foreground">Create Income from Invoice</h2>
               <button onClick={() => setPaymentModalOpen(false)} className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors text-gray-500 dark:text-gray-400 hover:text-foreground">
